@@ -203,9 +203,8 @@ module.exports = { enrollUser };
 
 ---
 
-## **4. Bonus : Gestion des inscriptions**
+## **4. Gestion des inscriptions**
 
-Ajouter des relations dans la base de données pour les inscriptions :
 
 ```javascript
 // /server/models/Course.js
@@ -224,3 +223,15 @@ User.belongsToMany(Course, { through: 'Enrollments' });
 module.exports = Course;
 ```
 
+### Répartition des tâches
+
+1. Adrien DE CASTRO: Chef de projet (Gestion administrative e.g. Gantt + Jalons)
+   Gestion de la partie réseau du projet (Synoptique avec pare-feu + routeur, etc.)
+   Responsable Espace Numérique de formation (système de QCM, conversion de cours pdf en cours intéractifs html + js + css ).
+   Droit de véto sur la partie réseau et sur l'organisation administrative du projet
+2. Clément BÉLAISE: Chef Technique du projet (Lancement de la structure du projet, coordination des différentes tâches)&
+   gestion du git, protection des branches main & devel, Droit de veto sur l'arborescence du projet et les technologies du projet
+3. Ewen Williart: Directeur Artistique (LOL) + IHM Admin.
+   Droit de veto sur l'apparence complète du site
+
+Tout le monde peut participer partout, mais sous la régie du chef de partie.
