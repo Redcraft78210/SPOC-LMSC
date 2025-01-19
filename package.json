@@ -1,0 +1,20 @@
+{
+  "name": "spoc-lmsc",
+  "version": "1.0.0",
+  "description": "SPOC (Small Private Online Course) application with Node.js, React, PostgreSQL, Bootstrap, and Tailwind CSS",
+  "scripts": {
+    "start": "npm run build && npm run server",
+    "server": "cd server && npm run server",
+    "build": "cd client && npm run build",
+    "install-root": "npm install",
+    "install-client": "cd client && npm install",
+    "install-server": "cp server && npm install",
+    "setup": "npm run install-client && npm run install-server",
+    "docker-build": "cd docker && docker-compose build",
+    "docker-start": "cd docker && docker-compose up",
+    "docker-clear": "cd docker && docker-compose down --rmi all"
+  },
+  "author": "SPOC TEAM",
+  "license": "GPL-3.0"
+}
+
