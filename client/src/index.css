@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+/* Import Bootstrap styles */
+@import 'bootstrap/dist/css/bootstrap.min.css';
+
+/* Add your custom global styles below */
+body {
+  font-family: 'Arial', sans-serif;
+}
+
+
+
