@@ -1,0 +1,27 @@
+:root {
+    --luxury-100: rgb(0% 0% 0%);
+    --luxury-200: rgb(13.3% 13.3% 13.3%);
+    --luxury-300: rgb(20% 20% 20%);
+}
+body,
+head,
+footer {
+    background-color: var(--luxury-100);
+}
+
+.dashboard-container{
+    height: 90vh;
+    background-color: var(--luxury-300);
+    border-radius: 1.5rem;
+    padding: 1rem;
+}
+#title{
+    margin-top: 0.5rem;
+    margin-left: 9rem;
+    color: #0022FF;
+    font-size: 2rem;
+}
+.navBar{
+    margin-top: 0rem;
+    margin-left: 2rem;
+}
