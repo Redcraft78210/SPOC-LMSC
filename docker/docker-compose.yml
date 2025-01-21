@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  main:
+    build:
+      context: ..
+      dockerfile: ./docker/Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - DB_HOST=database
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=securepassword
+      - DB_NAME=spoc_app
+    depends_on:
+      - database
+
+  database:
+    image: postgres:15
+    container_name: spoc_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: securepassword
+      POSTGRES_DB: spoc_app
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+
+volumes:
+  db_data:

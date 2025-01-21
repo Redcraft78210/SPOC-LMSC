@@ -1,0 +1,36 @@
+
+.NavigationBar-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    height: 90vh;
+    width: 5rem;
+   
+}
+
+.NavigationBar-container ul {
+    list-style-type: none;
+}
+
+.NavigationBar-container li {
+    margin-bottom: 4rem;
+}
+.NavigationBar-container li a {
+    color: rgb(255, 255, 255);
+    cursor: pointer;
+   
+}
+.NavigationBar-container li a:hover {
+    color: #0022FF;
+}
+
+#toggle {
+    color: rgb(255, 255, 255);
+    cursor: pointer;
+    margin-left: 0px;
+    margin-top: -30px;
+    margin-bottom: 3.5rem;
+}
+#toggle:hover {
+    color: #0022FF;
+}
