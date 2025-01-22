@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import './index.css';
+import NavigationBar from './components/NavigationBar'
 
 // Components
 import Home from './pages/Home';
@@ -15,6 +16,7 @@ function App() {
     <Router>
       <div>
         {/* Navigation Bar */}
+        <NavigationBar />
 
         {/* Main Content */}
         <div className="container mt-4">

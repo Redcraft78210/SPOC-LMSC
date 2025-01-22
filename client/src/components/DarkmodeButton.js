@@ -4,7 +4,7 @@ import './style/DarkmodeButton.css'
 const DarkmodeButton = () => {
   return (
         <div className='DarkmodeButton-container'>
-            <input id="switch" type="checkbox" />
+            <input id="switch" type="checkbox"/>
             <div className="app">
                 <div className="body">
                 
