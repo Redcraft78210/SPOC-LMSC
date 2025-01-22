@@ -2,7 +2,6 @@ import './style/NavigationBar.css'
 import React, { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { AlignJustify, AppWindow, Cog, House, LibraryBig, UserRoundCog } from 'lucide-react'
-import is from '../../node_modules/typescript/lib/typescriptServices';
 
 const NavigationBar = () => {
     const navigate = useNavigate();
