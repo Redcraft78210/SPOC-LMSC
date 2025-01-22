@@ -71,7 +71,7 @@
   backface-visibility: hidden;
   transition: all 0.2s ease;
   font-family: sans-serif;
-  background: #888;
+  background: #424040;
 }
 
 .checkbox-wrapper-8 .tgl-skewed + .tgl-btn:after,
@@ -107,7 +107,7 @@
 }
 
 .checkbox-wrapper-8 .tgl-skewed:checked + .tgl-btn {
-  background: #86d993;
+  background: #2b00ff;
 }
 
 .checkbox-wrapper-8 .tgl-skewed:checked + .tgl-btn:before {

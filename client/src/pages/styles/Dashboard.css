@@ -1,27 +1,97 @@
 :root {
-    --luxury-100: rgb(0% 0% 0%);
-    --luxury-200: rgb(13.3% 13.3% 13.3%);
-    --luxury-300: rgb(20% 20% 20%);
+  --luxury-100: rgb(0% 0% 0%);
+  --luxury-200: rgb(13.3% 13.3% 13.3%);
+  --luxury-300: rgb(20% 20% 20%);
+  --bg-card: #1D1D1D;
 }
 body,
 head,
 footer {
-    background-color: var(--luxury-100);
+  background-color: var(--luxury-100);
 }
 
-.dashboard-container{
-    height: 90vh;
-    background-color: var(--luxury-300);
-    border-radius: 1.5rem;
-    padding: 1rem;
+.dashboard-container {
+  height: 94vh;
+  width: 99%;
+  background-color: var(--luxury-300);
+  border-radius: 1.5rem;
+  padding: 1rem;
+  align-items: center;
+  justify-content: center;
 }
-#title{
-    margin-top: 0.5rem;
-    margin-left: 9rem;
-    color: #0022FF;
-    font-size: 2rem;
+.grid-container {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: 100px auto;
+  grid-gap: 10px;
+  grid-auto-rows: minmax(100px, auto);
+  column-width: auto;
 }
-.navBar{
-    margin-top: 0rem;
-    margin-left: 2rem;
+#title {
+  margin-top: 0.5rem;
+  margin-left: 8rem;
+  color: #0022ff;
+  font-size: 2rem;
+}
+.titlee {
+  grid-column: 1 / 4;
+  grid-row: 1;
+  height: 3rem;
+  width: 17rem;
+  /* border: solid black; */
+}
+.navBar {
+  margin-top: 2.5rem;
+  margin-left: 0.7rem;
+  grid-column: 1;
+  grid-row: 1 / 4;
+  width: 3rem;
+  /* border: dotted blue; */
+}
+
+/* Gestion de la grid des card (conteneur)  */
+.card {
+  width: 18rem;
+}
+
+.card-container {
+  margin-left: -15px;
+  margin-top: -40px;
+  grid-column: 2;
+  grid-row: 2;
+  display: grid;
+  grid-template-columns: repeat(4,1fr);
+  grid-template-rows: repeat(3, 1fr);
+  display: flex;
+  justify-content: space-between;
+  border: dotted red;
+  width: 103%;
+  height: 80vh;
+}
+
+.most-done {
+  grid-column: 1;
+  grid-row: 1;
+}
+.allClasse {
+  grid-column: 2;
+  grid-row: 1;
+}
+.sideRightArea {
+  width: 1rem;
+  grid-column: 4;
+  grid-row: 3 / 3;
+}
+
+.statForClasse {
+  grid-column: 2;
+  grid-row: 2;
+  margin-top: 8rem;
+  margin-left: -0.5rem;
+}
+
+
+.ModeDark {
+  border: solid black;
+
 }
