@@ -3,25 +3,27 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import './index.css';
 
 // Components
-import Navbar from './components/Navbar';
 import Home from './pages/Home';
-import Courses from './pages/Courses';
 import Profile from './pages/Profile';
 import NotFound from './pages/NotFound';
+import Dashboard from './pages/Dashboard';
+import CompTest from './pages/CompTest';
+import CoursesLibrary from './pages/CoursesLibrary';
 
 function App() {
   return (
     <Router>
       <div>
         {/* Navigation Bar */}
-        <Navbar />
 
         {/* Main Content */}
         <div className="container mt-4">
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/courses" element={<Courses />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/comp-test" element={<CompTest />} />
+            <Route path="/courses-library" element={<CoursesLibrary />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </div>
