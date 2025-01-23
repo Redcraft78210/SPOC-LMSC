@@ -5,11 +5,7 @@
   "scripts": {
     "start": "npm run build && npm run server",
     "server": "cd server && npm run server",
-<<<<<<< HEAD
-    "build": "cd client && npx tailwindcss -i src/index.css -o public/styles/output.css && npm run build",
-=======
     "build": "cd client && npm run build",
->>>>>>> 7a099cc2 (Création de la base du projet.)
     "install-root": "npm install",
     "install-client": "cd client && npm install",
     "install-server": "cp server && npm install",

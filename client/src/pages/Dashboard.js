@@ -5,7 +5,7 @@ import PresentationCard from '../components/PresentationCard';
 import SideRightCard from '../components/SideRightCard';
 import TraductionToggle from '../components/TraductionToggle';
 import DarkmodeButton from '../components/DarkmodeButton';
-
+import StatForClasse from '../components/StatForClasse';
 const Dashboard = () => {
   return (
     <div className='container'>
@@ -29,10 +29,13 @@ const Dashboard = () => {
               <SideRightCard content={<p>test</p>} />
             </div>
             <div className="statForClasse">
-              <PresentationCard className="card" content={<h1 className='text-3.5xl'>Statistique for class</h1>} />
+              <StatForClasse className="card" content={<h1 className='text-3.5xl'>Statistique for class</h1>} />
             </div>
             <div className="most-done">
               <PresentationCard className="card" content={<h1 className='text-3.5xl text-center'>The most done</h1>} />
+            </div>
+            <div className="Under600PX">
+              <PresentationCard className="card" content={<h1 className='text-3.5xl'>Under 600px</h1>} />
             </div>
           </div>
         </div>
