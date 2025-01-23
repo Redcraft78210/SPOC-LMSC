@@ -1,6 +1,5 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ReactDOM } from 'react-dom/client';
 import { Button } from 'react-bootstrap';
 
 function Home() {

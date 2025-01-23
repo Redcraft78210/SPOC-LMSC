@@ -15,6 +15,7 @@ function App() {
     <Router>
       <div>
         {/* Navigation Bar */}
+        <Navbar />
 
         {/* Main Content */}
         <div className="container mt-4">
