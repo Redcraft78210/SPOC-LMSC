@@ -13,29 +13,26 @@ const Dashboard = ({ Content }) => {
     switch (Content) {
       case "Home":
         return (
-          <div className="grid-container">
-            <div className="allClasses">Welcome to the Home Page</div>
-            <Home></Home>
-          </div>
+          <Home></Home>
         );
       case "Profile":
         return (
           <div className="profile">
-            <div className="profileclass">Profile Section</div>
+            <div className="profileclass">Profile page</div>
             <Profile></Profile>
           </div>
         );
       case "CompTest":
         return (
           <div className="comp-test">
-            <div>Component Test Section</div>
+            <div>Component Test page</div>
             <CompTest></CompTest>
           </div>
         );
       case "CoursesLibrary":
         return (
           <div className="courses-library">
-            <div>Courses Library Section</div>
+            <div>Courses Library page</div>
             <CoursesLibrary></CoursesLibrary>
           </div>
         );
