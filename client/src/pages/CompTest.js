@@ -4,10 +4,6 @@ import TraductionToggle from '../components/TraductionToggle';
 import PresentationCard from '../components/PresentationCard';
 import ExploreCourses from '../components/ExploreCourses';
 import ClassicButton from '../components/ClassicButton';
-<<<<<<< HEAD
-import NavigationBar from '../components/NavigationBar';
-=======
->>>>>>> 4bca485a (Création du Dashboard, pas très optimisé react pour l'instant)
 
 const CompTest = () => {
   return (
