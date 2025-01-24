@@ -1,32 +1,30 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import './index.css';
-import NavigationBar from './components/NavigationBar'
 
-// Components
-import Home from './pages/Home';
-import Profile from './pages/Profile';
-import NotFound from './pages/NotFound';
+import NavigationBar from './components/NavigationBar'
 import Dashboard from './pages/Dashboard';
-import CompTest from './pages/CompTest';
-import CoursesLibrary from './pages/CoursesLibrary';
+
+const routeConfig = [
+  { path: '/', content: 'Home' },
+  { path: '/profile', content: 'Profile' },
+  { path: '/comp-test', content: 'Test' },
+  { path: '/courses-library', content: 'Courses' },
+  { path: '/sign-in', content: 'Login' },
+  { path: '/sign-up', content: 'Register' },
+  { path: '*', content: '' },
+];
 
 function App() {
   return (
     <Router>
       <div>
-        {/* Navigation Bar */}
-        <NavigationBar />
-
         {/* Main Content */}
         <div className="container mt-4">
           <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/comp-test" element={<CompTest />} />
-            <Route path="/courses-library" element={<CoursesLibrary />} />
-            <Route path="*" element={<NotFound />} />
+            {routeConfig.map((route, index) => (
+              <Route key={index} path={route.path} element={<Dashboard Content={route.content} />} />
+            ))}
           </Routes>
         </div>
       </div>
