@@ -9,18 +9,22 @@ import NotFound from './pages/NotFound';
 import Dashboard from './pages/Dashboard';
 import CompTest from './pages/CompTest';
 import CoursesLibrary from './pages/CoursesLibrary';
+import Signup from './pages/Signup';
+import LoginPage from './pages/LoginPage';
 
 function App() {
   return (
     <Router>
       <div>
         {/* Navigation Bar */}
-        <Navbar />
+        {/* <Navbar /> */}
 
         {/* Main Content */}
         <div className="container mt-4">
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<Signup />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/comp-test" element={<CompTest />} />
