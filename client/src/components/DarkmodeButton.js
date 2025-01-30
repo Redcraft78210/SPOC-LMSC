@@ -1,16 +1,18 @@
 import React from 'react'
+import Clock from 'react-live-clock';
+
 import './style/DarkmodeButton.css'
 
 const DarkmodeButton = () => {
-  return (
-        <div className='DarkmodeButton-container'>
-            <input id="switch" type="checkbox"/>
-            <div className="app">
+    return (
+        <>
+            <input id="switch" type="checkbox" />
+            <div className="app mb-4">
                 <div className="body">
-                
-                    <div className="phone">
+
+                    <div className="phone m-auto">
                         <div className="menu">
-                            <div className="time">4:20</div>
+                            <div className="time"><Clock format={'HH:mm:ss'} ticking={true} timezone={'Fr/Europe'} /></div>
                             <div className="icons">
                                 <div className="network"></div>
                                 <div className="battery"></div>
@@ -31,8 +33,8 @@ const DarkmodeButton = () => {
                     </div>
                 </div>
             </div>
-        </div>
-  )
+        </>
+    )
 }
 
 export default DarkmodeButton
