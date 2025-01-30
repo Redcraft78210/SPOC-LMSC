@@ -5,7 +5,6 @@
   --grey: #93a1a1;
   --bg-card: #1d1d1d;
   position: relative;
-  padding: 9px;
   background-color: transparent;
   border: none;
 }
@@ -24,7 +23,6 @@
   justify-content: center;
   align-items: center;
   overflow: hidden;
-  width: 10rem;
   height: 25rem;
   background-color: var(--bg-card);
   border-radius: 30px;

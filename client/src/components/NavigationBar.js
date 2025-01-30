@@ -1,56 +1,53 @@
-import './style/NavigationBar.css'
-import React, { useEffect } from 'react'
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlignJustify, AppWindow, Cog, House, LibraryBig, UserRoundCog } from 'lucide-react'
+import { AlignJustify, House, LibraryBig, UserRoundCog } from 'lucide-react';
+import './style/NavigationBar.css'
 
-const NavigationBar = () => {
-    const navigate = useNavigate();
-    const page = window.location.href;
-    const [isActive, setIsActive] = React.useState(true);
-    const [isDashboardActive, setIsDashboardActive] = React.useState(false);
-    const [isProfileActive, setIsProfileActive] = React.useState(false);
-    const [isCoursesLibraryActive, setIsCoursesLibraryActive] = React.useState(false);
+const NavigationBar = ({ page }) => {
+  const navigate = useNavigate();
+  const [isActive, setIsActive] = React.useState(true);
 
-    useEffect(() => {
-        if (page.includes('/dashboard')) {
-            setIsDashboardActive(true);
-        } else {
-            setIsDashboardActive(false);
-        }
-        if (page.includes('/profile')) {
-            setIsProfileActive(true);
-        } else {
-            setIsProfileActive(false);
-        }
-        if (page.includes('/courses-library')) {
-            setIsCoursesLibraryActive(true);
-        } else {
-            setIsCoursesLibraryActive(false);
-        }
-    }, [page]);
+  const handleNavigate = (path) => () => navigate(path);
 
-    const handleNavigate = (path) => {
-        return () => navigate(path);
-    }
+  const renderNavItems = () => {
+    const navItems = [
+      { name: 'Courses', path: '/courses-library', icon: <LibraryBig /> },
+      { name: 'Profile', path: '/profile', icon: <UserRoundCog /> },
+    ];
+
+    return navItems
+      .filter((item) => item.name !== page) // Exclude the active page
+      .map((item) => (
+        <li className="nav-item" key={item.name}>
+          <a className="nav-link" href="#" onClick={handleNavigate(item.path)}>
+            {item.icon}
+          </a>
+        </li>
+      ));
+  };
 
   return (
-    <div>
-        <div className='NavigationBar-container'>
-            <a id="toggle" onClick={(event)=> {
-                    event.preventDefault();
-                    setIsActive(!isActive)
-                }} href=""><AlignJustify /></a>
-            {isActive && (
-            <ul>
-                <li><a onClick={handleNavigate('/')} href=""><House /></a></li>
-                {!isDashboardActive && (<li><a onClick={handleNavigate('/dashboard')} href=""><AppWindow /></a></li>)}
-                {!isCoursesLibraryActive && (<li><a onClick={handleNavigate('/courses-library')} href=""><LibraryBig /></a></li>)}
-                {!isProfileActive && (<li><a onClick={handleNavigate('/profile')} href=""><UserRoundCog /></a></li>)}
-            </ul>)}
-        </div>
-    </div>
-    
-  )
-}
+    <nav className="navbar NavigationBar-container">
+      <button
+        className="btn btn-outline-secondary mb-3"
+        id="toggle"
+        onClick={() => setIsActive(!isActive)}
+      >
+        <AlignJustify />
+      </button>
 
-export default NavigationBar
+      {isActive && (
+        <ul className="navbar-nav">
+          <li className="nav-item">
+            <a className="nav-link" href="#" onClick={handleNavigate('/')}>
+              <House />
+            </a>
+          </li>
+          {renderNavItems()}
+        </ul>
+      )}
+    </nav>
+  );
+};
+
+export default NavigationBar;

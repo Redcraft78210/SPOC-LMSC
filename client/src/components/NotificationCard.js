@@ -1,15 +1,13 @@
 import React from 'react'
-import './style/SideRightCard.css'
+import './style/NotificationCard.css'
 
-const SideRightCard = (props) => {
+const NotificationCard = (props) => {
   return (
-    <div>
         <div className="cardR">
             <div className="card-overlayR"></div>
             <div className="card-innerR">{props.content}</div>
         </div>
-    </div>
   )
 }
 
-export default SideRightCard
+export default NotificationCard
