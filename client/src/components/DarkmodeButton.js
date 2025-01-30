@@ -12,7 +12,7 @@ const DarkmodeButton = () => {
 
                     <div className="phone m-auto">
                         <div className="menu">
-                            <div className="time"><Clock format={'HH:mm:ss'} ticking={true} timezone={'Fr/Europe'} /></div>
+                            <div className="time"><Clock format={'HH:mm:ss'} ticking={true} timezone={'Europe/Paris'} /></div>
                             <div className="icons">
                                 <div className="network"></div>
                                 <div className="battery"></div>
