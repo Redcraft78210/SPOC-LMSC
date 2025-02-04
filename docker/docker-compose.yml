@@ -4,7 +4,7 @@ services:
   main:
     build:
       context: ..
-      dockerfile: ./docker/Dockerfile
+      dockerfile: ./Dockerfile
     ports:
       - "5000:5000"
     environment:
@@ -27,7 +27,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ../db/init.sql:/docker-entrypoint-initdb.d/init.sql
 
 
 volumes:
