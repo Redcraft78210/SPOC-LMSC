@@ -12,6 +12,11 @@ const router = express.Router();
 router.post('/register', validateUser, async (req, res) => {
   const { email, password, name } = req.body;
   
+  if (!email || !password || !name ) {
+    return res.status(400).json({ message: 'Email, password and name are required for registration' });
+  }
+
+
   try {
     const existingUser = await User.findOne({ where: { email } });
     if (existingUser) {
@@ -36,6 +41,11 @@ router.post('/register', validateUser, async (req, res) => {
 // Login route with validation (no additional validation middleware required for login)
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
+  
+  if (!email || !password) {
+    return res.status(400).json({ message: 'Email and password are required' });
+  }
+
 
   try {
     const user = await User.findOne({ where: { email } });
