@@ -58,7 +58,7 @@ function DashboardHome() {
       </div>
 
       {/* Notification Card */}
-      <div className="row col-2 col-md-4 col-lg-3">
+      <div className="row col-2 col-md-6 col-lg-3">
         <NotificationCard content={<p>PLACEHOLDER</p>} />
       </div>
     </div>
