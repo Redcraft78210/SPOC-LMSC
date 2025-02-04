@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import './styles/LoginPage.css'
-const LoginPage = () => {
+import './styles/Sign.css'
+const Sign = () => {
     const [isRegistered, setIsRegistered] = useState(true);
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
@@ -52,4 +52,4 @@ const LoginPage = () => {
   )
 }
 
-export default LoginPage;
+export default Sign;
