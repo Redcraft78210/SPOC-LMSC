@@ -4,7 +4,7 @@ import './index.css';
 
 import NavigationBar from './components/NavigationBar'
 import Dashboard from './pages/Dashboard';
-import LoginPage from './pages/LoginPage';
+import Sign from './pages/Sign';
 import NotFound from './pages/NotFound';
 
 const routeConfig = [
@@ -22,7 +22,7 @@ function App() {
         {/* Main Content */}
         <div className="container mt-4">
           <Routes>
-            <Route path="/login" element={<LoginPage />} />
+            <Route path="/login" element={<Sign />} />
             {routeConfig.map((route, index) => (
               <Route key={index} path={route.path} element={<Dashboard Content={route.content} />} />
             ))}
