@@ -4,16 +4,16 @@ import './index.css';
 
 import NavigationBar from './components/NavigationBar'
 import Dashboard from './pages/Dashboard';
+import Sign from './pages/Sign';
+import NotFound from './pages/NotFound';
 
 const routeConfig = [
   { path: '/', content: 'Home' },
   { path: '/profile', content: 'Profile' },
-  { path: '/comp-test', content: 'Test' },
   { path: '/courses-library', content: 'Courses' },
-  { path: '/sign-in', content: 'Login' },
-  { path: '/sign-up', content: 'Register' },
-  { path: '*', content: '' },
+
 ];
+
 
 function App() {
   return (
@@ -22,9 +22,11 @@ function App() {
         {/* Main Content */}
         <div className="container mt-4">
           <Routes>
+            <Route path="/login" element={<Sign />} />
             {routeConfig.map((route, index) => (
               <Route key={index} path={route.path} element={<Dashboard Content={route.content} />} />
             ))}
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </div>
       </div>

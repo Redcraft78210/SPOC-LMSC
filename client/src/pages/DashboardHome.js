@@ -4,6 +4,7 @@ import PresentationCard from '../components/PresentationCard';
 import NotificationCard from '../components/NotificationCard';
 // import TraductionToggle from '../components/TraductionToggle';
 import DarkmodeButton from '../components/DarkmodeButton';
+import OnAir from '../components/OnAir';
 
 
 function DashboardHome() {
@@ -28,7 +29,7 @@ function DashboardHome() {
         <div className="col-12 col-md-7 col-lg-4 mb-4 statistique">
           <PresentationCard
             className="card"
-            content={<h1 className="text-3.5xl">Statistique</h1>}
+            content={<OnAir title="Statistique" />}
           />
         </div>
 
@@ -58,7 +59,7 @@ function DashboardHome() {
       </div>
 
       {/* Notification Card */}
-      <div className="row col-2 col-md-4 col-lg-3">
+      <div className="row col-2 col-md-6 col-lg-3">
         <NotificationCard content={<p>PLACEHOLDER</p>} />
       </div>
     </div>
