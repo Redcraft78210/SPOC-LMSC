@@ -6,6 +6,12 @@ import NavigationBar from './components/NavigationBar'
 import Dashboard from './pages/Dashboard';
 import LoginPage from './pages/LoginPage';
 
+const routeConfig = [
+  { path: '/', content: 'Home' },
+  { path: '/profile', content: 'Profile' },
+  { path: '/courses-library', content: 'Courses' },
+  { path: '*', content: '' },
+];
 
 function App() {
   return (
@@ -15,9 +21,9 @@ function App() {
         <div className="container mt-4">
           <Routes>
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/profile" element={<Dashboard Content="Profile" />} />
-            <Route path="/courses-library" element={<Dashboard Content="CoursesLibrary" />} />
-            <Route path="*" element={<Dashboard Content="Home" />} />
+            {routeConfig.map((route, index) => (
+              <Route key={index} path={route.path} element={<Dashboard Content={route.content} />} />
+            ))}
           </Routes>
         </div>
       </div>
