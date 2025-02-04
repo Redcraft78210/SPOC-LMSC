@@ -6,7 +6,6 @@ import NavigationBar from '../components/NavigationBar';
 import DashboardHome from './DashboardHome';
 import Profile from './Profile';
 import NotFound from './NotFound';
-import CompTest from './CompTest';
 import CoursesLibrary from './CoursesLibrary';
 
 const Dashboard = ({ Content }) => {
@@ -21,13 +20,6 @@ const Dashboard = ({ Content }) => {
           <div className="profile">
             <div className="profileclass">Profile page</div>
             <Profile/>
-          </div>
-        );
-      case "CompTest":
-        return (
-          <div className="comp-test">
-            <div>Component Test page</div>
-            <CompTest/>
           </div>
         );
       case "CoursesLibrary":

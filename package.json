@@ -4,6 +4,7 @@
   "description": "SPOC (Small Private Online Course) application with Node.js, React, PostgreSQL, Bootstrap, and Tailwind CSS",
   "scripts": {
     "start": "npm run build && npm run server",
+    "client": "cd client && npm run start",
     "server": "cd server && npm run server",
     "build": "cd client && npx tailwindcss -i src/index.css -o public/styles/output.css && npm run build",
     "install-root": "npm install",
