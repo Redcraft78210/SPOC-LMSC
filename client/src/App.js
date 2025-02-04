@@ -8,10 +8,7 @@ import Dashboard from './pages/Dashboard';
 const routeConfig = [
   { path: '/', content: 'Home' },
   { path: '/profile', content: 'Profile' },
-  { path: '/comp-test', content: 'Test' },
   { path: '/courses-library', content: 'Courses' },
-  { path: '/sign-in', content: 'Login' },
-  { path: '/sign-up', content: 'Register' },
   { path: '*', content: '' },
 ];
 
