@@ -24,7 +24,7 @@ coverage/
 
 # Fichiers de documentation
 docs/
-
+.vscode
 # Fichiers de dépendances système
 .DS_Store
 Thumbs.db
