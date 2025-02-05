@@ -20,4 +20,15 @@
  
   ### DE CASTRO
 
+  Du 16 janvier au 03 février 2025  :
+    -Je me suis approprié le sujet également (Attribution du rôle de chaque élèves)
+    -J'ai créer un schéma globale du réseau  .
+    -J'ai commencer les diagrammes SYSML de use case , missions et des exigences
+
+  Et puis depuis le 04 février j'ai :
+    -fini le diagramme SYSML dont celui de séquence 
+    -réalisé le gantt prévisionel du projet
+    -rajouter mes parties dans la présentation pour la revue 0
+    -Envoyer le matériel dont j'avais besoin pour l'élèves réalisant l'étude marché
+  
   ### BELAISE
