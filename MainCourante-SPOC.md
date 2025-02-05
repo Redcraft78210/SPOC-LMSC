@@ -18,17 +18,18 @@
   - Note : J'ai fait uniquement le frontend, pas la liaison avec le serveur de streaming.
   - J'ai commencer la rédaction du compte rendu de la revue 0 sur la base de mes notes de revue.
  
-  ### DE CASTRO
+### DE CASTRO
 
-  Du 16 janvier au 03 février 2025  :
-    -Je me suis approprié le sujet également (Attribution du rôle de chaque élèves)
-    -J'ai créer un schéma globale du réseau  .
-    -J'ai commencer les diagrammes SYSML de use case , missions et des exigences
+- Du 16 janvier au 03 février 2025  :
+  - Je me suis également approprié le sujet (Attribution du rôle de chaque élèves).
+  - J'ai créer un schéma globale du réseau  .
+  - J'ai commencer les diagrammes SYSML de use case , missions et des exigences.
 
-  Et puis depuis le 04 février j'ai :
-    -fini le diagramme SYSML dont celui de séquence 
-    -réalisé le gantt prévisionel du projet
-    -rajouter mes parties dans la présentation pour la revue 0
-    -Envoyer le matériel dont j'avais besoin pour l'élèves réalisant l'étude marché
-  
-  ### BELAISE
+- Et puis depuis le 04 février j'ai :
+    
+  - fini le diagramme SYSML dont celui de séquence.
+  - réalisé le gantt prévisionel du projet.
+  - rajouter mes parties dans la présentation pour la revue 0.
+  - Envoyer le matériel dont j'avais besoin pour l'élèves réalisant l'étude marché.
+
+### BELAISE
