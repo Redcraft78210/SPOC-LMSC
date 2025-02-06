@@ -9,7 +9,7 @@
   - J'ai commencé la présentation pour une revue 0 de compréhension.
   - J'ai réaliser les UI préliminaire afin d'offrire une base de discussion.
   - Mise en place sur le temps pérsonnel (en dehors  des cours) du code de base:
-    -  Écrittue de la base JSX pour la page de dashboard
+    -  Écrittue de la base JS pour la page de dashboard
     -  Choix des composant UI sur [le site de UIverse](https://uiverse.io/).
     -  Developpemennt des solution élémentaire comme la login/register page.
     -  Mise en place du toogle pour le darkmode
@@ -30,7 +30,8 @@
   - Amélioration du style du composant de preview des lives.
 
 - Le 06 février 2025 :
-    - Début du developement de la page avec le retour du live, les sliders pour déplacer la caméra.
+    - Début du developement de la page changement de mots de passe.
+  
       
 ### DE CASTRO
 
