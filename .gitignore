@@ -10,6 +10,7 @@ dist
 .eslintcache
 
 # Fichiers de dépendances
+
 package-lock.json
 
 # Fichiers de logs

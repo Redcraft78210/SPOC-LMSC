@@ -80,11 +80,8 @@ function App() {
         {/* Main Content */}
         <div className="container mt-4">
           <Routes>
-            {!auth && <Route path='/' element={<Home />} />}
-            <Route path="/sign"
-              element={auth ? <Navigate to='/' /> : <Sign setAuth={handleSetAuth} unsetLoggedOut={setIsLoggedOut} />}
-            />
-            {auth && routeConfig.map((route, index) => (
+            <Route path="/sign" element={<Sign />} /> 
+            {routeConfig.map((route, index) => (
               <Route key={index} path={route.path} element={<Dashboard Content={route.content} />} />
             ))}
             <Route path="/logout" element={<Logout onLogout={handleLogout} />} />
