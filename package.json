@@ -13,6 +13,7 @@
     "setup": "npm run install-client && npm run install-server",
     "docker-build": "cd docker && docker-compose build",
     "docker-start": "cd docker && docker-compose up",
+    "docker-stop": "cd docker && docker-compose down --volumes",
     "docker-clear": "cd docker && docker-compose down --rmi all"
   },
   "author": "SPOC TEAM",
