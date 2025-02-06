@@ -47,6 +47,12 @@
   - rajouté mes parties dans la présentation pour la revue 0,
   - Envoyé la liste du matériel dont j'avais besoin pour l'élève réalisant l'étude de marché.
 
+- Depuis le 4 février j'ai :
+  - Adapter le synoptique à notre besoin,
+  - Adresser et configurer tout les appareils présent dans le synoptique sur Cisco packet Tracer,
+  - Etabli un document répertoriant chaque ip de chaque interface,
+  - Commencer à configurer le FireWall qui nous a été confié.  
+
 ### BELAISE
 - Du 16 janvier au 19 février, j'ai :
   - Je me suis également approprié le sujet (Attribution du rôle de chaque élèves),
