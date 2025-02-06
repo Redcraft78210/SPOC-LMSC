@@ -1,12 +1,21 @@
 import React from 'react'
 import Clock from 'react-live-clock';
 
+import { ThemeContext } from '../contexts/ThemeContext';
 import './style/DarkmodeButton.css'
 
 const DarkmodeButton = () => {
+    const { darkMode, toggleDarkMode } = useContext(ThemeContext);
+
     return (
         <>
-            <input id="switch" type="checkbox" />
+            <input
+                id="switch"
+                type="checkbox"
+                onChange={toggleDarkMode}
+                checked={darkMode}
+            />
+
             <div className="app mb-4">
                 <div className="body">
 
