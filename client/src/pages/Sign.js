@@ -27,26 +27,15 @@ const Sign = ({setAuth}) => {
     }
     const handleSubmit = async (e) => {
         e.preventDefault();
-        //  For debug
-        // console.log(username + "||" + password)
-        // console.log("Is registered ?  " + isRegistered )
-        // console.log("if no, " + confirmPassword)
-        // console.log("if no, " + name)
-        // console.log("if no, " + email)
-        // console.log(username)
-        // end of debug console LOg
-
         if (isRegistered) {
-            
             try {
+                const request = await axios.post('http://localhost:5000/api/auth/login', {email, password});
+                console.log(request.data.token);
 
-                const request = await axios.post('/api/auth/login', {email, password});
-                console.log(request);
-                
                 if (request.data.token) {
-                    setError("");
+                    console.log(request.data.token);
                     setAuth(request.data.token);
-                    console.log("data." + request.data.token);                    
+                    navigate('/dashboard');
                 }
             }catch (error) {
                 if (error.response) {
@@ -61,6 +50,7 @@ const Sign = ({setAuth}) => {
                 } else  {
                   // Handle errors not related to the server (e.g., network issues)
                   setError('Unable to connect to the server. Please check your network connection.');
+                  
                 }
               }
             if (!isRegistered) {

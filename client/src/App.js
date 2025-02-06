@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import React, { useState, useEffect, use } from 'react';
+import { Navigate, BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { jwtDecode } from 'jwt-decode';
 import './index.css';
 
 import Home from './pages/Home';
@@ -18,6 +19,7 @@ const routeConfig = [
 
 
 function App() {
+
 
   const [auth, setAuth] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -75,13 +77,17 @@ function App() {
 
   return (
     <Router>
+
       {isLoggedOut && window.location.pathname !== "/sign" && <Navigate to="/sign" />}
       <div>
         {/* Main Content */}
         <div className="container mt-4">
           <Routes>
-            <Route path="/sign" element={<Sign />} /> 
-            {routeConfig.map((route, index) => (
+            {!auth && <Route path='/' element={<Home />} />}
+            <Route path="/sign"
+              element={auth ? <Navigate to='/' /> : <Sign setAuth={handleSetAuth} unsetLoggedOut={setIsLoggedOut} />}
+            />
+            {auth && routeConfig.map((route, index) => (
               <Route key={index} path={route.path} element={<Dashboard Content={route.content} />} />
             ))}
             <Route path="/logout" element={<Logout onLogout={handleLogout} />} />
@@ -93,4 +99,4 @@ function App() {
   );
 }
 
-export default App;
+export default App; 
