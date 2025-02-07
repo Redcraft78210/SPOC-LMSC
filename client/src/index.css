@@ -4,13 +4,25 @@
 
 
 /* Import Bootstrap styles */
-@import 'bootstrap/dist/css/bootstrap.min.css';
+@import "~bootstrap/dist/css/bootstrap.min.css";
 
 /* Add your custom global styles below */
 body {
   font-family: 'Arial', sans-serif;
 }
 
+
+[data-bs-theme="dark"] {
+  --luxury-100: rgb(0% 0% 0%);
+  --luxury-200: rgb(13.3% 13.3% 13.3%);
+  --luxury-300: rgb(20% 20% 20%);
+}
+
+[data-bs-theme="light"] {
+  --luxury-100: rgb(255, 255, 255);
+  --luxury-200: rgb(255, 247, 236);
+  --luxury-300: rgb(255, 222, 176);
+}
 
 
 .navbar-square-first {

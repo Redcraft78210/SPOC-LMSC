@@ -34,12 +34,12 @@ if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../client/build')));
  
   // Serve all frontend routes as the index.html page for React Router to handle
-  app.get('/', (req, res) => {
+  app.get('*', (req, res) => {
     res.sendFile(path.resolve(__dirname, '../client/build', 'index.html'));
   });
 } else {
   // In development mode, fallback to React's development server
-  app.get('/', (req, res) => {
+  app.get('*', (req, res) => {
     res.send('API is running');
   });
 }

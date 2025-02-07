@@ -9,7 +9,6 @@ import Logout from './components/Logout';
 import NotFound from './pages/NotFound';
 
 const routeConfig = [
-  { path: '/', content: 'Home' },
   { path: '/dashboard', content: 'Home' },
   { path: '/profile', content: 'Profile' },
   { path: '/courses-library', content: 'Courses' },
@@ -80,7 +79,7 @@ function App() {
         {/* Main Content */}
         <div className="container mt-4">
           <Routes>
-            {!auth && <Route path='/' element={<Home />} />}
+            <Route path="/" element={auth ? <Dashboard Content={Home} /> : <Home />} />
             <Route path="/sign"
               element={auth ? <Navigate to='/' /> : <Sign setAuth={handleSetAuth} unsetLoggedOut={setIsLoggedOut} />}
             />
