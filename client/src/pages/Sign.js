@@ -43,7 +43,7 @@ const Sign = ({setAuth}) => {
                   if (error.response.status === 401) {
                     setError(error.response.data);  // Show the error message from the server for 400 error
                   } else if (error.response.status === 500) {
-                    setError('An internal server error occurred. Please try again later.');
+                    setError('An ,internal server error occurred. Please try again later.');
                   } else {
                     setError('An unexpected error occurred. Please try again.');
                   }
