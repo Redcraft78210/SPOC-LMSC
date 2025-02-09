@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr" data-bs-theme="light">
 
 <head>
   <meta charset="UTF-8">
@@ -15,8 +15,6 @@
   <meta name="apple-mobile-web-app-title" content="SPOC LMSC" />
   <link rel="manifest" href="%PUBLIC_URL%/site.webmanifest" />
 
-  <!-- Local Bootstrap CSS -->
-  <link rel="stylesheet" href="/styles/bootstrap.min.css">
   <link rel="stylesheet" href="/styles/output.css">
 
   <!-- Bootstrap JS -->
@@ -24,11 +22,16 @@
 
 </head>
 
-<body class="bg-gray-100">
+<body>
   <noscript>You need to enable JavaScript to run this app.</noscript>
   <div id="root"></div>
 
 
+  <script>
+    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      document.documentElement.setAttribute('data-bs-theme', 'dark');
+    }
+  </script>
 
 </body>
 
