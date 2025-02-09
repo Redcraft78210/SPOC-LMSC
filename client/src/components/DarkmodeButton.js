@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useContext } from 'react'
 import Clock from 'react-live-clock';
 
 import { ThemeContext } from '../contexts/ThemeContext';

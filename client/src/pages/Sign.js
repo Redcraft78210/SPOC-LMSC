@@ -1,10 +1,23 @@
-import React, { useState, useEffect } from 'react'
 import './styles/Sign.css'
-const Sign = () => {
+import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+// import {jwtDecode } from 'jwt-decode';
+// import moment from 'moment-timezone';
+
+const Sign = ({setAuth}) => {
+    const navigate = useNavigate();
+    const [error, setError] = useState("");
     const [isRegistered, setIsRegistered] = useState(true);
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
+    const [email, setEmail] = useState("");
+    const [name, setName] = useState("");
+
+    if (localStorage.getItem('authToken')) {
+        navigate('/dashboard');
+    }
 
     const handleRegisterTrue = () => {
         setIsRegistered(true);
@@ -12,32 +25,85 @@ const Sign = () => {
     const handleRegisterFalse = () => {
         setIsRegistered(false);
     }
-    const handleSubmit = (e) => {
-        console.log(username + "||" + password)
-        console.log("Is registered ?  " + isRegistered )
-        console.log("if no, " + confirmPassword)
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (isRegistered) {
+            try {
+                const request = await axios.post('http://localhost:5000/api/auth/login', {email, password});
+                console.log(request.data.token);
+
+                if (request.data.token) {
+                    console.log(request.data.token);
+                    setAuth(request.data.token);
+                    navigate('/dashboard');
+                }
+            }catch (error) {
+                if (error.response) {
+                  // Check for 400 and 500 error codes
+                  if (error.response.status === 401) {
+                    setError(error.response.data);  // Show the error message from the server for 400 error
+                  } else if (error.response.status === 500) {
+                    setError('An ,internal server error occurred. Please try again later.');
+                  } else {
+                    setError('An unexpected error occurred. Please try again.');
+                  }
+                } else  {
+                  // Handle errors not related to the server (e.g., network issues)
+                  setError('Unable to connect to the server. Please check your network connection.');
+                  
+                }
+              }
+            if (!isRegistered) {
+                checkSamePwd();
+            }
+        }
+        // ici ecrit la request post pour /api/auth/register
+    }   
+    const checkSamePwd = () => {
+        if (password !== confirmPassword) {
+            setError("Passwords don't match");
+            // alert("Passwords don't match");// for debug
+            return false;
+        }
+        // console.log("Passwords match"); // for debug
+        return true;
     }
-    const useEffect = () => {
-        // 
-    }
+
+
 
   return (
         <div className="form-container">
             {isRegistered ? (<p className="title">Login</p>) : (<p className="title">Register</p>)}
             <form onSubmit={handleSubmit} className="form">
                 <div className="input-group">
-                    <label htmlFor="username">Username</label>
-                    <input onChange={(e) => {setUsername(e.target.value)}} type="text" name="username" id="username" placeholder=""/>
+                    <label htmlFor="email">Email</label>
+                    <input onChange={(e) => {setEmail(e.target.value)}} type="email" name="email" id="email" placeholder="example@lmsc.com"/>
+                    
                 </div>
+                {!isRegistered && 
+                (<div className="input-group">
+                    <label htmlFor="name">Name</label>
+                    <input onChange={(e) => {setName(e.target.value)}} type="text" name="name" id="name" placeholder="John Doe" />
+                </div>)
+                }
+                {!isRegistered && 
+                (<div className="input-group">
+                    <label htmlFor="username">Username</label>
+                    <input onChange={(e) => {setUsername(e.target.value)}} type="text" name="username" id="username" placeholder="johndoe67"/>
+                </div>)
+                }
                 <div className="input-group">
                     <label htmlFor="password">Password</label>
-                    <input onChange={(e) => {setPassword(e.target.value)}} type="password" name="password" id="password" placeholder=""/>
+                    <input onChange={(e) => {setPassword(e.target.value)}} type="password" name="password" id="password" placeholder="Min 8 characters and 1 number"/>
                     {!isRegistered && (<label htmlFor="confirmpassword">Confirm Password</label>)}
-                    {!isRegistered && (<input onChange={(e)=> {setConfirmPassword(e.target.value)}} type="password" name='confirmpassword' id='confirmpassword' placeholder="" />)}
-                    <div className="forgot">
+                    {!isRegistered && (<input onChange={(e)=> {setConfirmPassword(e.target.value)}} type="password" name='confirmpassword' id='confirmpassword' placeholder="Same password plz ..." />)}
+                    {isRegistered && 
+                    (<div className="forgot">
                         <a rel="noopener noreferrer" href="#">Forgot Password ?</a>
-                    </div>
+                    </div>)}
                 </div>
+                {/* Conditionally render the error message if it exists */}
+                 {error && <p className="error-message">{error}</p>}
                 <br />
                 {isRegistered ? (<button type="submit" className="sign">Sign in</button>) : (<button type="submit" className="sign">Sign Up</button>)}
             </form>
@@ -52,4 +118,6 @@ const Sign = () => {
   )
 }
 
+
 export default Sign;
+
