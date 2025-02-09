@@ -19,6 +19,7 @@ const routeConfig = [
 
 function App() {
 
+
   const [auth, setAuth] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isfirstAuth, setFirstAuth] = useState(false);
@@ -75,6 +76,7 @@ function App() {
 
   return (
     <Router>
+
       {isLoggedOut && window.location.pathname !== "/sign" && <Navigate to="/sign" />}
       <div>
         {/* Main Content */}
@@ -96,4 +98,4 @@ function App() {
   );
 }
 
-export default App;
+export default App; 
