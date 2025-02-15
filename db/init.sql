@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(255) UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
+    "rôle" VARCHAR(32) NULL,
     password VARCHAR(255) NOT NULL,
     "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -23,7 +24,7 @@ CREATE TABLE IF NOT EXISTS courses (
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
+    NEW."updatedAt" = CURRENT_TIMESTAMP;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -45,10 +46,10 @@ CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
 
 -- Insert initial data into the users table (example user data)
-INSERT INTO users (id, username, name, email, password)
+INSERT INTO users (id, username, name, email, "rôle", password)
 VALUES
-    ('a6fa5fc1-1234-4321-0000-000000000001','jdoe1', 'john doe','john.doe@example.com', 'hashedpassword'),
-    ('a6fa5fc1-1234-4321-0000-000000000002','jdoe2', 'jane doe','jane.doe@example.com', 'hashedpassword');
+    ('a6fa5fc1-1234-4321-0000-000000000001','jdoe1', 'john doe','john.doe@example.com', 'Professeur', '$2b$10$1Tl7ARRSx3HHsS8nehhTF.asiDLQ7IOzCJ1EzCoMGQBFysfFCdQc2'),
+    ('a6fa5fc1-1234-4321-0000-000000000002','jdoe2', 'jane doe','jane.doe@example.com', '','$2b$10$1Tl7ARRSx3HHsS8nehhTF.asiDLQ7IOzCJ1EzCoMGQBFysfFCdQc2');
 
 -- Insert initial courses data
 -- Assuming you know the UUIDs of the users, use them here:

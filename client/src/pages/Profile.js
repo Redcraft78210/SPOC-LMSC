@@ -6,7 +6,6 @@ function Profile() {
     <div>
       <h1>Your Profile</h1>
       <p>Manage your account and view your enrolled courses here.</p>
-      <NavigationBar />
     </div>
   );
 }

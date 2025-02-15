@@ -6,13 +6,13 @@ export const ThemeContext = createContext();
 export const ThemeProvider = ({ children }) => {
   const [darkMode, setDarkMode] = useState(false);
 
-  const toggleDarkMode = () => setDarkMode(prevMode => !prevMode);
-
-  // You can define your CSS classes or variables based on the mode.
-  const themeClass = darkMode ? 'dark-mode' : 'light-mode';
+  const toggleDarkMode = () => {
+    setDarkMode(prevMode => !prevMode);
+    document.documentElement.setAttribute('data-bs-theme', darkMode ? 'dark' : 'light');
+  };
 
   return (
-    <ThemeContext.Provider value={{ darkMode, toggleDarkMode, themeClass }}>
+    <ThemeContext.Provider value={{ darkMode, toggleDarkMode }}>
       {children}
     </ThemeContext.Provider>
   );
