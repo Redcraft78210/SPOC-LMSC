@@ -13,7 +13,7 @@ const DarkmodeButton = () => {
                 id="switch"
                 type="checkbox"
                 onChange={toggleDarkMode}
-                checked={darkMode}
+                checked={!darkMode}
             />
 
             <div className="app mb-4">

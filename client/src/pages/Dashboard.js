@@ -1,39 +1,41 @@
 import React from 'react';
 import './styles/Dashboard.css';
 import NavigationBar from '../components/NavigationBar';
+import Logo from "../Logo";
 
+import ProfDashboardHome from './Professeur/DashboardHome';
+import EleveDashboardHome from './Eleve/DashboardHome';
 
-import DashboardHome from './DashboardHome';
 import Profile from './Profile';
 import NotFound from './NotFound';
 import CoursesLibrary from './CoursesLibrary';
 
-const Dashboard = ({ Content }) => {
+const Dashboard = ({ Content, isProf }) => {
   const renderContent = () => {
     switch (Content) {
       case "Home":
         return (
-          <DashboardHome/>
+          isProf ? <ProfDashboardHome /> : <EleveDashboardHome />
         );
       case "Profile":
         return (
           <div className="profile">
             <div className="profileclass">Profile page</div>
-            <Profile/>
+            <Profile />
           </div>
         );
       case "CoursesLibrary":
         return (
           <div className="courses-library">
             <div>Courses Library page</div>
-            <CoursesLibrary/>
+            <CoursesLibrary />
           </div>
         );
       default:
         return (
           <div className="not-found">
             <div>404 - Page Not Found</div>
-            <NotFound/>
+            <NotFound />
           </div>
         );
     }
@@ -41,9 +43,12 @@ const Dashboard = ({ Content }) => {
 
   return (
     <div className="dashboard-container min-vh-90">
-      <h1 id="title">SPOC LMSC 218</h1>
+      {/* <h1 id="title">SPOC LMSC 218</h1> */}
       <NavigationBar page={Content} />
-      <div className="Dcontent container py-3">{renderContent()}</div>
+      <div className="Dcontent container py-3">{
+        <Logo fillColor="red" /> &&
+        renderContent()
+      }</div>
     </div>
   );
 };
