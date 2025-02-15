@@ -17,6 +17,8 @@
     "docker-clear": "cd docker && docker-compose down --rmi all"
   },
   "author": "SPOC TEAM",
-  "license": "GPL-3.0"
+  "license": "GPL-3.0",
+  "dependencies": {
+    "bcrypt": "^5.1.1"
+  }
 }
-

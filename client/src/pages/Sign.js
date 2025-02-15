@@ -6,7 +6,7 @@ import axios from "axios";
 // import {jwtDecode } from 'jwt-decode';
 // import moment from 'moment-timezone';
 
-const Sign = ({ setAuth }) => {
+const Sign = ({ setAuth, unsetLoggedOut }) => {
   const navigate = useNavigate();
   const [error, setError] = useState("");
   const [isRegistered, setIsRegistered] = useState(true);
@@ -16,6 +16,7 @@ const Sign = ({ setAuth }) => {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [testSamePwd, setTestSamePwd] = useState("");
+
   if (localStorage.getItem("authToken")) {
     navigate("/dashboard");
   }
@@ -25,6 +26,7 @@ const Sign = ({ setAuth }) => {
   };
   const handleRegisterFalse = () => {
     setIsRegistered(false);
+    setError("");
   };
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -39,13 +41,14 @@ const Sign = ({ setAuth }) => {
         if (request.data.token) {
           // console.log(request.data.token);
           setAuth(request.data.token);
+          unsetLoggedOut(false);
           navigate("/dashboard");
         }
       } catch (error) {
         if (error.response) {
           // Check for 400 and 500 error codes
-          if (error.response.status === 401) {
-            setError(error.response.data); // Show the error message from the server for 400 error
+          if (error.response.status === 400) {
+            setError(error.response.data.message); // Show the error message from the server for 400 error
           } else if (error.response.status === 500) {
             setError(
               "An ,internal server error occurred. Please try again later."
@@ -71,10 +74,9 @@ const Sign = ({ setAuth }) => {
             password,
             name,
           });
-          console.log(res.data.token);
           if (res.data.token) {
-            console.log(request.data.token);
-            setAuth(request.data.token);
+            setAuth(res.data.token);
+            unsetLoggedOut(false);
             navigate("/dashboard");
           }
         } catch (error) {

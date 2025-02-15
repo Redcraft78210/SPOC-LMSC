@@ -1,20 +1,23 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import PresentationCard from '../components/PresentationCard';
-import NotificationCard from '../components/NotificationCard';
+// import { useNavigate } from 'react-router-dom';
+
+import PresentationCard from '../../components/PresentationCard';
+import NotificationCard from '../../components/NotificationCard';
 // import TraductionToggle from '../components/TraductionToggle';
-import DarkmodeButton from '../components/DarkmodeButton';
-import OnAir from '../components/OnAir';
+import DarkmodeButton from '../../components/DarkmodeButton';
+import OnAir from '../../components/OnAir';
 
 
 function DashboardHome() {
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
   return (
     <div className="d-flex flex-wrap">
       <div className="row col-10 col-md-8 col-lg-9">
         {/* Dark Mode Button */}
         <div className="col-12 col-md-6 col-lg-3 m-auto mb-4 ModeDark">
-          <DarkmodeButton />
+          <DarkmodeButton 
+            
+          />
         </div>
 
         {/* All Class Card */}
