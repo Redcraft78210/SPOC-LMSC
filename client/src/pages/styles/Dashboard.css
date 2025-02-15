@@ -22,3 +22,13 @@ footer {
   height: 100%;
   width: auto;
 }
+
+.spoc-logo {
+  width: 200px;
+  height: 100px;
+  margin-left: 1rem;
+}
+
+.spoc-logo * path {
+  fill: var(--fill-color) !important;
+}
