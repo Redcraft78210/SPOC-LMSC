@@ -6,14 +6,13 @@ import './style/DarkmodeButton.css'
 
 const DarkmodeButton = () => {
     const { darkMode, toggleDarkMode } = useContext(ThemeContext);
-
     return (
         <>
             <input
                 id="switch"
                 type="checkbox"
                 onChange={toggleDarkMode}
-                checked={!darkMode}
+                checked={darkMode}
             />
 
             <div className="app mb-4">

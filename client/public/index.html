@@ -26,17 +26,37 @@
   <noscript>You need to enable JavaScript to run this app.</noscript>
   <div id="root"></div>
 
-
   <script>
-    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      document.documentElement.setAttribute('data-bs-theme', 'dark');
-    }
+    (function () {
+      // Retrieve saved theme preference
+      const savedTheme = localStorage.getItem('darkMode');
+      const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-      const darkModeOn = e.matches;
+      // Determine initial theme
+      const darkModeOn = savedTheme !== null ? JSON.parse(savedTheme) : systemPrefersDark;
       document.documentElement.setAttribute('data-bs-theme', darkModeOn ? 'dark' : 'light');
-      document.getElementById('switch') && (document.getElementById('switch').checked = darkModeOn);
-    });
+
+      // Function to update theme dynamically
+      const updateTheme = (e) => {
+        const darkModeOn = e.matches;
+        document.documentElement.setAttribute('data-bs-theme', darkModeOn ? 'dark' : 'light');
+        localStorage.setItem('darkMode', darkModeOn);
+
+        // If a switch element exists, update its state
+        const switchElement = document.getElementById('switch');
+        if (switchElement) {
+          switchElement.checked = darkModeOn;
+        }
+      };
+
+      // Add event listener for system theme changes
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      if (mediaQuery.addEventListener) {
+        mediaQuery.addEventListener('change', updateTheme);
+      } else if (mediaQuery.addListener) { // Fallback for older browsers
+        mediaQuery.addListener(updateTheme);
+      }
+    })();
   </script>
 
 </body>
