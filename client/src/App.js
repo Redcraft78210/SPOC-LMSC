@@ -13,12 +13,13 @@ const routeConfig = [
   { path: '/dashboard', content: 'Home' },
   { path: '/profile', content: 'Profile' },
   { path: '/courses-library', content: 'Courses' },
+  { path: '/lives', content: 'Lives' },
 ];
 
 function App() {
   const [auth, setAuth] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isFirstAuth, setFirstAuth] = useState(false);
+  // const [isFirstAuth, setFirstAuth] = useState(false);
   const [isLoggedOut, setIsLoggedOut] = useState(false);
   const [isProf, setIsProf] = useState(false);
 

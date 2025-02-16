@@ -1,15 +1,11 @@
 const { Sequelize, DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
-const User = sequelize.define('User', {
+const Teacher = sequelize.define('Teacher', {
   id: {
     type: DataTypes.UUID,
     defaultValue: Sequelize.UUIDV4,
     primaryKey: true,
-  },
-  name: {
-    type: DataTypes.STRING,
-    allowNull: false,
   },
   username: {
     type: DataTypes.STRING,
@@ -20,18 +16,14 @@ const User = sequelize.define('User', {
     allowNull: false,
     unique: true,
   },
-  'rôle': {
-    type: DataTypes.STRING,
-    allowNull: true,
-    unique: false,
-  },
   password: {
     type: DataTypes.STRING,
     allowNull: false,
   },
 }, {
-  tableName: 'users',
+  tableName: 'teachers',
   timestamps: true,
 });
 
-module.exports = User;
+module.exports = Teacher;
+

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlignJustify, House, LibraryBig, UserRoundCog } from 'lucide-react';
+import { AlignJustify, House, LibraryBig, UserRoundCog, Radio } from 'lucide-react';
 import './style/NavigationBar.css'
 
 const NavigationBar = ({ page }) => {
@@ -11,6 +11,7 @@ const NavigationBar = ({ page }) => {
 
   const renderNavItems = () => {
     const navItems = [
+      { name: 'Lives', path: '/lives', icon: <Radio /> },
       { name: 'Courses', path: '/courses-library', icon: <LibraryBig /> },
       { name: 'Profile', path: '/profile', icon: <UserRoundCog /> },
     ];
