@@ -9,6 +9,7 @@ import EleveDashboardHome from './Eleve/DashboardHome';
 import Profile from './Profile';
 import NotFound from './NotFound';
 import CoursesLibrary from './CoursesLibrary';
+import Lives from './Eleve/Lives';
 
 const Dashboard = ({ Content, isProf }) => {
   const renderContent = () => {
@@ -30,6 +31,15 @@ const Dashboard = ({ Content, isProf }) => {
             <div>Courses Library page</div>
             <CoursesLibrary />
           </div>
+        );
+      case "Lives":
+        return (
+          !isProf ?
+            <div className="lives">
+              <div>Lives page</div>
+              <Lives />
+            </div>
+            : <div>Not available for Professeurs</div>
         );
       default:
         return (

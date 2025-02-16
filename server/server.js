@@ -14,9 +14,10 @@ const certificate = fs.readFileSync('certs/selfsigned.crt', 'utf8');
 const credentials = { key: privateKey, cert: certificate };
 
 // Import routes
-const authRoutes = require('./routes/authRoutes');
-const courseRoutes = require('./routes/courseRoutes');
-const userRoutes = require('./routes/userRoutes');
+const authRoutes = require('./routes/authRoutes').default;
+const courseRoutes = require('./routes/courseRoutes').default;
+const userRoutes = require('./routes/userRoutes').default;
+const liveRoutes = require('./routes/liveRoutes').default;
 
 
 // Initialize environment variables
@@ -48,6 +49,7 @@ app.use(express.urlencoded({ extended: true })); // Parse URL-encoded data
 app.use('/api/auth', authRoutes); // Authentication routes (login, register)
 app.use('/api/courses', courseRoutes); // Courses-related routes
 app.use('/api/user', userRoutes); // Courses-related routes
+app.use('/api/lives', liveRoutes); // Courses-related routes
 
 // Serve React frontend (if applicable)
 if (process.env.NODE_ENV === 'production') {

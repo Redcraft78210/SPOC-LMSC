@@ -14,7 +14,7 @@
     "docker-build": "cd docker && docker-compose build",
     "docker-start": "cd docker && docker-compose up",
     "docker-stop": "cd docker && docker-compose down --volumes",
-    "docker-clear": "cd docker && docker-compose down --rmi all"
+    "docker-clear": "cd docker && docker-compose down --rm all"
   },
   "author": "SPOC TEAM",
   "license": "GPL-3.0",
