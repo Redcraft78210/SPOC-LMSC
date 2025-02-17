@@ -1,6 +1,8 @@
+const { timeEnd } = require('console');
 const { Lives, ClassLives, Class, Teacher } = require('../models');
 const ffmpeg = require('fluent-ffmpeg');
 const fs = require('fs');
+const path = require('path');
 
 // Example controller functions
 const getLive = async (req, res) => {
@@ -45,30 +47,129 @@ const getLiveByClass = async (req, res) => {
                 attributes: ['username']
             }]
         });
+        // Définir le dossier racine de votre site
+        const baseDir = process.cwd(); // ou __dirname selon votre configuration
 
         const promises = lives.map(async live => {
-            const path = live.link + '/';
-            const thumbnail = `${path}/thumbnail.png`;
+            const absoluteLiveLink = path.join(baseDir, 'streaming', live.id, 'stream.mp4');
+            const thumbnail = path.join(baseDir, 'streaming', live.id, 'thumbnail.webp');
 
-            if (!fs.existsSync(dir)) {
-                fs.mkdirSync(dir, { recursive: true });
-            }
+            try {
+                const fileStats = fs.statSync(thumbnail);
+                const timeElapsed = (Date.now() - fileStats.mtimeMs) / 1000 / 60;
+                if (timeElapsed > 0.5) {
+                    console.log('Thumbnail is old, generating a new one');
+                    await new Promise((resolve, reject) => {
+                        ffmpeg.ffprobe(absoluteLiveLink, (err, metadata) => {
+                            if (err) {
+                                console.error('Error retrieving video metadata:', err);
+                                return;
+                            }
 
-            const fileStats = fs.statSync(thumbnail);
-            const timeElapsed = (Date.now() - fileStats.mtimeMs) / 1000 / 60;
-            if (timeElapsed > 5) {
-                ffmpeg(live.link)
-                    .setStartTime('-0.5')
-                    .setDuration('00:00:00.500')
-                    .takeScreenshots({
-                        filename: thumbnail,
-                        timemarks: [0.5],
-                        size: '640x480'
-                    }, (err, screenshots) => {
-                        if (err) {
-                            console.error(err);
-                        }
+                            const duration = metadata.format.duration; // Video duration in seconds
+                            const timestamp = duration - 0.1; // 5 seconds before the end
+
+                            const ffmpegProcess = ffmpeg(absoluteLiveLink)
+                                .setStartTime(timestamp)
+                                .setDuration('0.1')
+                                .output(thumbnail)
+                                .size('160x90')
+                                .outputOptions([
+                                    '-loglevel error',
+                                    '-vsync vfr',
+                                    '-frames:v 1',
+                                    '-update 1'
+                                ])
+                                .on('start', (commandLine) => {
+                                    console.log(`FFmpeg command: ${commandLine}`);
+                                })
+                                .on('end', () => {
+                                    if (fs.existsSync(thumbnail)) {
+                                        console.log(`Thumbnail created: ${thumbnail}`);
+                                        resolve();
+                                    } else {
+                                        reject(new Error('Thumbnail generation failed silently'));
+                                    }
+                                })
+                                .on('error', (err) => {
+                                    if (fs.existsSync(thumbnail)) {
+                                        fs.unlinkSync(thumbnail);
+                                    }
+                                    console.error('FFmpeg error:', {
+                                        message: err.message,
+                                        stack: err.stack,
+                                        code: err.code
+                                    });
+                                    reject(new Error(`Thumbnail generation failed: ${err.message}`));
+                                });
+
+                            const timeout = setTimeout(() => {
+                                ffmpegProcess.kill('SIGTERM');
+                                reject(new Error('FFmpeg timed out after 30 seconds'));
+                            }, 30000);
+
+                            ffmpegProcess.on('end', () => clearTimeout(timeout)).run();
+                        });
                     });
+                }
+            } catch (error) {
+                if (error.code === 'ENOENT') {
+                    console.log('Thumbnail does not exist, generating a new one');
+                    await new Promise((resolve, reject) => {
+                        ffmpeg.ffprobe(absoluteLiveLink, (err, metadata) => {
+                            if (err) {
+                                console.error('Error retrieving video metadata:', err);
+                                return;
+                            }
+
+                            const duration = metadata.format.duration; // Video duration in seconds
+                            const timestamp = duration - 0.1; // 5 seconds before the end
+
+
+                            const ffmpegProcess = ffmpeg(absoluteLiveLink)
+                                .setStartTime(timestamp)
+                                .setDuration('0.1')
+                                .output(thumbnail)
+                                .size('160x90')
+                                .outputOptions([
+                                    '-loglevel error',
+                                    '-vsync vfr',
+                                    '-frames:v 1'
+                                ])
+                                .on('start', (commandLine) => {
+                                    console.log(`FFmpeg command: ${commandLine}`);
+                                })
+                                .on('end', () => {
+                                    if (fs.existsSync(thumbnail)) {
+                                        console.log(`Thumbnail created: ${thumbnail}`);
+                                        resolve();
+                                    } else {
+                                        reject(new Error('Thumbnail generation failed silently'));
+                                    }
+                                })
+                                .on('error', (err) => {
+                                    if (fs.existsSync(thumbnail)) {
+                                        fs.unlinkSync(thumbnail);
+                                    }
+                                    console.error('FFmpeg error:', {
+                                        message: err.message,
+                                        stack: err.stack,
+                                        code: err.code
+                                    });
+                                    reject(new Error(`Thumbnail generation failed: ${err.message}`));
+                                });
+
+                            const timeout = setTimeout(() => {
+                                ffmpegProcess.kill('SIGTERM');
+                                reject(new Error('FFmpeg timed out after 30 seconds'));
+                            }, 30000);
+
+                            ffmpegProcess.on('end', () => clearTimeout(timeout)).run();
+                        });
+                    });
+                } else {
+                    throw error;
+                }
             }
             return live;
         });

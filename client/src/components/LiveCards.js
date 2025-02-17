@@ -9,8 +9,8 @@ const ContentCard = ({ content }) => {
   const [hasImageError, setHasImageError] = useState(false);
 
   // Construct URLs based on the API link
-  const thumbnailUrl = `${content.link}/thumbnail`; // Assume thumbnail endpoint
-  const videoUrl = `${content.link}/preview`;      // Assume video preview endpoint
+  const thumbnailUrl = `/streaming/${content.id}/thumbnail.webp`; // Assume thumbnail endpoint
+  const videoUrl = `/api/stream/${content.id}`;
 
   const handleMouseEnter = () => {
     const timeout = setTimeout(() => {
