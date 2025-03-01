@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import Sign from './pages/Sign';
 import Logout from './components/Logout';
 import NotFound from './pages/NotFound';
+import LiveManagement from './pages/Professeur/LiveManagement';
 
 const routeConfig = [
   { path: '/dashboard', content: 'Home' },
@@ -16,7 +17,7 @@ const routeConfig = [
   { path: '/lives', content: 'Lives' },
 ];
 
-function App() {
+const App = () => {
   const [auth, setAuth] = useState(null);
   const [loading, setLoading] = useState(true);
   // const [isFirstAuth, setFirstAuth] = useState(false);
@@ -73,10 +74,12 @@ function App() {
   return (
     <Router>
       {/* If logged out and not on the sign page, navigate to "/sign" */}
+      
       {isLoggedOut && window.location.pathname !== "/sign" && <Navigate to="/sign" replace />}
       <div className="container mt-4">
-        <div>Current route: {window.location.pathname}</div>
+        {/* <div>Current route: {window.location.pathname}</div> */}
         <Routes>
+          <Route path="/livehandler" element={<LiveManagement/>}/>
           {/* Home route: if authenticated, show Dashboard with "Home" content; otherwise, show Home */}
           <Route path="/" element={auth ? <Dashboard Content="Home" isProf={isProf} /> : <Home />} />
           <Route
