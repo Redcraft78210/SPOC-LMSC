@@ -10,6 +10,7 @@ import Profile from './Profile';
 import NotFound from './NotFound';
 import CoursesLibrary from './CoursesLibrary';
 import Lives from './Eleve/Lives';
+import LiveManagement from './Professeur/LiveManagement';
 
 const Dashboard = ({ Content, isProf }) => {
   const renderContent = () => {
@@ -39,7 +40,7 @@ const Dashboard = ({ Content, isProf }) => {
               <div>Lives page</div>
               <Lives />
             </div>
-            : <div>Not available for Professeurs</div>
+            : <LiveManagement />
         );
       default:
         return (

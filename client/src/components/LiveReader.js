@@ -3,7 +3,7 @@ import Hls from "hls.js";
 
 // Secure HLS video player component
 // This component loads an HLS video stream from the backend and plays it
-// using the hls.js library. It also uses the fetch API to load the m3u8
+// using the hls.jst library. I also uses the fetch API to load the m3u8
 // file securely with the credentials included.
 
 const SecureHLSPlayer = ({ m3u8Url }) => {

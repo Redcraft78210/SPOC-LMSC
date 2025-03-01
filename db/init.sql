@@ -166,6 +166,12 @@ VALUES
         'john.doeprof@example.com',
         '$2b$10$1Tl7ARRSx3HHsS8nehhTF.asiDLQ7IOzCJ1EzCoMGQBFysfFCdQc2'
     );
+    (
+        'a6fa5fc1-1234-4321-0000-0000000000184',
+        'jdoe2',
+        'jane.doeprof@example.com',
+        '$2a$10$.P8QYMzksJLNnQPHBYGGiuEXcqhhXQUv0N2ZeurEoWW8jpJxUjdCK'
+    );
 
 -- Insert initial data into the classes table
 INSERT INTO

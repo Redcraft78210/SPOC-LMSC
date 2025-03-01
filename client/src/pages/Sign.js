@@ -63,8 +63,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
           );
         }
       }
-    }
-    if (!isRegistered) {
+    } else if (!isRegistered) {
       checkSamePwd();
       if (testSamePwd === true) {
         try {
