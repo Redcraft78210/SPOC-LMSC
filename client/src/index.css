@@ -1,10 +1,10 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@import "~bootstrap/dist/css/bootstrap.min.css";  /* Import basic boostrap*/
 
 
-/* Import Bootstrap styles */
-@import "~bootstrap/dist/css/bootstrap.min.css";
+
 
 /* Add your custom global styles below */
 
