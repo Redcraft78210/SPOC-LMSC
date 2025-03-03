@@ -9,7 +9,7 @@ export const StreamStatusBar = () => {
           { icon: <MicOff size={48} />, label: "Mute", color: "bg-zinc-500" },
           { icon: <MonitorStop size={48} />, label: "Stop", color: "bg-red-600" },
           { icon: <MonitorPause size={48} />, label: "Pause", color: "bg-blue-700" },
-          { icon: <MonitorPlay size={48} />, label: "Restart", color: "bg-lime-500" },
+          { icon: <MonitorPlay size={48} />, label: "Play", color: "bg-lime-500" },
         ].map((item, index) => (
           <div key={index} className="flex flex-col items-center">
             <button className={`${item.color} w-full h-auto flex justify-center text-black rounded-[15px] p-3`}>
