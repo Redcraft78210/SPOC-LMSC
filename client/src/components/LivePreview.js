@@ -13,7 +13,7 @@ const LivePreview = () => {
         </h1>
         {/* content */}
         <div className='flex flex-column bg-neutral-800 rounded-3xl w-full h-5/6 mt-4 flex items-center justify-center'>
-          <p className='text-white text-4xl'>PREVIEW CAMERA HERE</p>
+
           <SecureHLSPlayer m3u8Url={url}/>
         </div>
       </div>

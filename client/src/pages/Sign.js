@@ -1,5 +1,4 @@
-import "./styles/Sign.css";
-import React, { useState } from "react";
+import React, {useEffect, useState} from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
@@ -8,7 +7,7 @@ import axios from "axios";
 
 const Sign = ({ setAuth, unsetLoggedOut }) => {
   const navigate = useNavigate();
-  const [error, setError] = useState("");
+  const [error, setError] = useState(null);
   const [isRegistered, setIsRegistered] = useState(true);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -16,7 +15,6 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [testSamePwd, setTestSamePwd] = useState("");
-
   if (localStorage.getItem("authToken")) {
     navigate("/dashboard");
   }
@@ -65,7 +63,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
       }
     } else if (!isRegistered) {
       checkSamePwd();
-      if (testSamePwd === true) {
+      if (testSamePwd) {
         try {
           const res = await axios.post("/api/auth/register", {
             email,
@@ -102,126 +100,151 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
   };
 
   return (
-    <div className="form-container">
+    <div className="flex justify-center items-center w-full">
       {isRegistered ? (
-        <p className="title">Login</p>
-      ) : (
-        <p className="title">Register</p>
-      )}
-      <form onSubmit={handleSubmit} className="form">
-        <div className="input-group">
-          <label htmlFor="email">Email</label>
-          <input
-            onChange={(e) => {
-              setEmail(e.target.value);
-            }}
-            type="email"
-            name="email"
-            id="email"
-            placeholder="example@lmsc.com"
-          />
-        </div>
-        {!isRegistered && (
-          <div className="input-group">
-            <label htmlFor="name">Name</label>
-            <input
-              onChange={(e) => {
-                setName(e.target.value);
-              }}
-              type="text"
-              name="name"
-              id="name"
-              placeholder="John Doe"
-            />
-          </div>
-        )}
-        {!isRegistered && (
-          <div className="input-group">
-            <label htmlFor="username">Username</label>
-            <input
-              onChange={(e) => {
-                setUsername(e.target.value);
-              }}
-              type="text"
-              name="username"
-              id="username"
-              placeholder="johndoe67"
-            />
-          </div>
-        )}
-        <div className="input-group">
-          <label htmlFor="password">Password</label>
-          <input
-            onChange={(e) => {
-              setPassword(e.target.value);
-            }}
-            type="password"
-            name="password"
-            id="password"
-            placeholder="Min 8 characters and 1 number"
-          />
-          {!isRegistered && (
-            <label htmlFor="confirmpassword">Confirm Password</label>
-          )}
-          {!isRegistered && (
-            <input
-              onChange={(e) => {
-                setConfirmPassword(e.target.value);
-              }}
-              type="password"
-              name="confirmpassword"
-              id="confirmpassword"
-              placeholder="Same password plz ..."
-            />
-          )}
-          {/* {isRegistered && (
-            <div className="forgot">
-              <a rel="noopener noreferrer" href="#">
-                Forgot Password ?
-              </a>
-            </div>
-          )} */}
-        </div>
-        {/* Conditionally render the error message if it exists */}
-        {error && <p className="error-message">{error}</p>}
-        <br />
-        {isRegistered ? (
-          <button type="submit" className="sign">
-            Sign in
-          </button>
-        ) : (
-          <button type="submit" className="sign">
-            Sign Up
-          </button>
-        )}
-      </form>
-      <br />
+        <div className="flex-col items-center justify-center p-4 bg-neutral-900 rounded-3xl w-5/12 h-fulll">
+          <h1 className="text-2xl m-auto w-3/6 font-bold text-white bg-neutral-500 rounded-2xl text-center">
+            Sign In
+          </h1>
+          <form action="" onSubmit={handleSubmit} className="flex flex-col gap-2  ">
+            <div className="block">
+              <label htmlFor="email" className="text-xl bg-transparent mb-0 after:ml-0.5 after:text-red-500 after:content-['*']"> Email </label>
+              <input
+                className="bg-neutral-600 peer p-1 w-full text-white text-xl placeholder:text-xl rounded-2xl m-auto
+              invalid:border-red-600 invalid:text-red-600 focus:border-black focus:outline focus:outline-green-600 focus:invalid:border-red-600 focus:invalid:outline-red-600"
+                type="email"
+                id="email"
+                placeholder="Your Email here..."
+                onChange={(e) => setEmail(e.target.value)}
 
-      {isRegistered ? (
-        <p className="signup">
-          Don't have an account?
-          <a
-            rel="noopener noreferrer"
-            href="#"
-            onClick={handleRegisterFalse}
-            className=""
-          >
-            Sign up
-          </a>
-        </p>
+              />
+            </div>
+            <div className="">
+              <label
+                htmlFor="password" className="text-2xl bg-transparent mb-0 requiredp ">Password</label>
+              <input
+                className="bg-neutral-600 focus:border-none p-1 text-white text-xl placeholder:text-xl w-full h-12 rounded-2xl m-auto"
+                type="password"
+                id="password"
+                placeholder="Your password here..."
+                onChange={(e) => setPassword(e.target.value)}
+
+              />
+            </div>
+            <div className="flex justify-center items-center">
+              {error && <h1 className="font-bold text-red-600 text-lg">{error}</h1>}
+            </div>
+            <div className="flex justify-center items-center mt-4">
+              <button
+                className="bg-neutral-600  w-2/6 h-auto text-[--white] rounded-[15px]
+              p-3 hover:">
+                Submit
+              </button>
+            </div>
+            <div className="flex justify-center items-center mt-2">
+                <h1>You don't have an account ? please
+                  <a onClick={handleRegisterFalse} className="text-blue-600 underline decoration-dotted hover:text-blue-400 hover:decoration-wavy">
+                    Sign Up
+                  </a>
+                </h1>
+            </div>
+
+          </form>
+        </div>
       ) : (
-        <p className="signup">
-          Already have an account?
-          <a
-            rel="noopener noreferrer"
-            href="#"
-            onClick={handleRegisterTrue}
-            className=""
-          >
-            Sign in
-          </a>
-        </p>
-      )}
+        <div className="flex-col items-center justify-center p-4 bg-neutral-900 rounded-3xl w-5/12 h-fulll">
+          <h1 className="text-2xl m-auto w-3/6 font-bold text-white bg-neutral-500 rounded-2xl text-center">
+            Sign Up
+          </h1>
+          <form action="" onSubmit={handleSubmit} className="flex flex-col gap-2  ">
+            <div className="block">
+              <label htmlFor="email"
+                     className="text-xl bg-transparent mb-0 after:ml-0.5 after:text-red-500 after:content-['*']">
+                Email
+              </label>
+              <input
+                className="bg-neutral-600 peer p-1 w-full text-white text-xl placeholder:text-xl rounded-2xl m-auto
+              invalid:border-red-600 invalid:text-red-600 focus:border-black focus:outline focus:outline-green-600 focus:invalid:border-red-600 focus:invalid:outline-red-600"
+                type="email"
+                id="email"
+                placeholder="Your Email here..."
+
+                onChange={(e) => setEmail(e.target.value)}
+              />
+
+            </div>
+            <div className="flex flex-row gap-2 mt-4">
+              <div className="mr-4">
+                <label htmlFor="name" className="text-2xl bg-transparent mb-0 requiredp" >Name</label>
+                <input
+                  className="bg-neutral-600 focus:border-none p-1 text-white text-xl placeholder:text-xl w-full h-12 rounded-2xl m-auto"
+                  type="text"
+                  id="name"
+                  placeholder="Your name here..."
+
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </div>
+              <div className="">
+                <label htmlFor="username" className="text-2xl bg-transparent mb-0 requiredp" >Username</label>
+                <input
+                  className="bg-neutral-600 focus:border-none p-1 text-white text-xl placeholder:text-xl w-full h-12 rounded-2xl m-auto"
+                  type="text"
+                  id="username"
+                  placeholder="Your username here..."
+
+                  onChange={(e) => setUsername(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-row gap-2 mt-4">
+              <div className="mr-4">
+                <label htmlFor="password" className="text-2xl bg-transparent mb-0 requiredp" >Password</label>
+                <input
+                  className="bg-neutral-600 focus:border-none p-1 text-white text-xl placeholder:text-xl w-full h-12 rounded-2xl m-auto"
+                  type="password"
+                  id="password"
+                  placeholder="Your password here..."
+
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+              <div className="">
+                <label htmlFor="password" className="text-2xl bg-transparent mb-0 requiredp" >Confirm password</label>
+                <input
+                  className="bg-neutral-600 focus:border-none p-1 text-white text-xl placeholder:text-xl w-full h-12 rounded-2xl m-auto"
+                  type="password"
+                  id="password"
+                  placeholder="The password confirmation here..."
+
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="flex justify-center items-center">
+              {error && <h1 className="font-bold text-red-600 text-lg">{error}</h1>}
+            </div>
+            <div className="flex justify-center items-center mt-4">
+              <button
+                className="bg-neutral-600  w-2/6 h-auto text-[--white] rounded-[15px]
+              p-3 hover:">
+                Submit
+              </button>
+            </div>
+            <div className="flex justify-center items-center mt-2">
+              <h1>You already have an account ? please
+                <a onClick={handleRegisterTrue} className="text-blue-600 underline decoration-dotted hover:text-blue-400 hover:decoration-wavy">
+                  Sign In
+                </a>
+              </h1>
+            </div>
+
+          </form>
+        </div>
+        )
+
+      }
     </div>
   );
 };
