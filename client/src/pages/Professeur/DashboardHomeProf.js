@@ -8,7 +8,7 @@ import DarkmodeButton from '../../components/DarkmodeButton';
 import OnAir from '../../components/OnAir';
 
 
-function DashboardHome() {
+function DashboardHomeProf() {
   // const navigate = useNavigate();
   return (
     <div className="d-flex flex-wrap">
@@ -69,4 +69,4 @@ function DashboardHome() {
   );
 }
 
-export default DashboardHome;
+export default DashboardHomeProf;
