@@ -1,13 +1,18 @@
-import React from 'react'
-import './style/PresentationCard.css'
+import React from "react";
+import clsx from "clsx";
 
-const PresentationCard = (props) => {
+const PresentationCard = ({ className, content, title }) => {
   return (
-    <div className="card">
-      <div className="card-overlay"></div>
-      <div className="card-inner">{props.content}</div>
-    </div>
-  )
-}
+    <article
+      className={clsx(
+        "w-72 bg-gray-700 shadow p-4 space-y-2 rounded-md hover:-translate-y-2 duration-300",
+        className
+      )}
+    >
+      <h1>{title}</h1>
+      {content}
+    </article>
+  );
+};
 
-export default PresentationCard
+export default PresentationCard;
