@@ -1,15 +1,13 @@
-@import "~bootstrap/dist/css/bootstrap.min.css"; /* Import basic boostrap*/
+/* @import "@fontsource/roboto/500.css";
+@import "@fontsource/roboto/400.css";
+@import "@fontsource/roboto/300.css";
+@import "@fontsource/roboto/700.css"; */
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-
-
-
-
 /* Add your custom global styles below */
-
 
 :root[data-bs-theme="dark"] {
   --bs-body-bg: rgb(0% 0% 0%);
@@ -30,7 +28,7 @@
 }
 
 body {
-  font-family: 'Arial', sans-serif;
+  font-family: "Arial", sans-serif;
   background-color: var(--luxury-200);
 }
 
@@ -45,7 +43,12 @@ body {
 .navbar-square-second {
   width: 150px;
   height: 100px;
-  background-color: rgba(0, 0, 250, 1); /* Fixed alpha value to be in the valid range (0 to 1) */
+  background-color: rgba(
+    0,
+    0,
+    250,
+    1
+  ); /* Fixed alpha value to be in the valid range (0 to 1) */
 }
 
 .n_simple {
@@ -65,7 +68,7 @@ body {
   align-items: center;
   gap: 100px; /* Space between buttons */
   position: relative;
-  top: 50px
+  top: 50px;
 }
 
 .n_link-button {
@@ -93,11 +96,21 @@ body {
 .navbar-square-last {
   width: 150px;
   height: 100px;
-  background-color: rgba(0, 0, 250, 1); /* Fixed alpha value to be in the valid range (0 to 1) */
+  background-color: rgba(
+    0,
+    0,
+    250,
+    1
+  ); /* Fixed alpha value to be in the valid range (0 to 1) */
 }
 
 .requiredp::after {
- margin-left: 0.125rem;
+  margin-left: 0.125rem;
   color: #ef4444;
-  content: '*';
+  content: "*";
+}
+
+.labelSign {
+  padding: 4px;
+  margin-left: 0;
 }

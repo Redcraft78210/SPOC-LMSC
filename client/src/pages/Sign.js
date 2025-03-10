@@ -1,6 +1,8 @@
-import React, { useState} from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { Send } from "lucide-react";
+import SubmitButton from "../components/SubmitButton";
 
 // import {jwtDecode } from 'jwt-decode';
 // import moment from 'moment-timezone';
@@ -15,8 +17,10 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [testSamePwd, setTestSamePwd] = useState("");
+  const [classCode, setClassCode] = useState("");
   if (localStorage.getItem("authToken")) {
     navigate("/dashboard");
+    z;
   }
 
   const handleRegisterTrue = () => {
@@ -30,10 +34,10 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
     e.preventDefault();
     if (isRegistered) {
       try {
-        const request = await axios.post(
-          '/api/auth/login',
-          { email, password }
-        );
+        const request = await axios.post("/api/auth/login", {
+          email,
+          password,
+        });
         // console.log(request.data.token);
 
         if (request.data.token) {
@@ -87,7 +91,6 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
         }
       }
     }
-
   };
   const checkSamePwd = () => {
     if (password !== confirmPassword) {
@@ -98,153 +101,190 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
     // console.log("Passwords match"); // for debug
     setTestSamePwd(true);
   };
-
+  const handleIsRegister = (e) => {
+    e.preventDefault();
+    setIsRegistered(!isRegistered);
+  };
   return (
-    <div className="flex justify-center items-center w-full">
-      {isRegistered ? (
-        <div className="flex-col items-center justify-center p-4 bg-neutral-900 rounded-3xl w-5/12 h-fulll">
-          <h1 className="text-2xl m-auto w-3/6 font-bold text-white bg-neutral-500 rounded-2xl text-center">
-            Sign In
+    <div className="flex justify-center items-center w-full h-full">
+      <div className="space-y-4 mt-4 flex flex-col justify-center items-center bg-gradient-to-br from-neutral-600 via-neutral-500 to-neutral-950 p-4 rounded-xl">
+        <div>
+          <h1 className="text-[--white] text-2xl font-bold">
+            {isRegistered ? "Sign In" : "Sign Up"}
           </h1>
-          <form action="" onSubmit={handleSubmit} className="flex flex-col gap-2  ">
-            <div className="block">
-              <label htmlFor="email" className="text-xl bg-transparent mb-0 after:ml-0.5 after:text-red-500 after:content-['*']"> Email </label>
-              <input
-                className="bg-neutral-600 peer p-1 w-full text-white text-xl placeholder:text-xl rounded-2xl m-auto
-              invalid:border-red-600 invalid:text-red-600 focus:border-black focus:outline focus:outline-green-600 focus:invalid:border-red-600 focus:invalid:outline-red-600"
-                type="email"
-                id="email"
-                placeholder="Your Email here..."
-                onChange={(e) => setEmail(e.target.value)}
-
-              />
-            </div>
-            <div className="">
-              <label
-                htmlFor="password" className="text-2xl bg-transparent mb-0 requiredp ">Password</label>
-              <input
-                className="bg-neutral-600 focus:border-none p-1 text-white text-xl placeholder:text-xl w-full h-12 rounded-2xl m-auto"
-                type="password"
-                id="password"
-                placeholder="Your password here..."
-                onChange={(e) => setPassword(e.target.value)}
-
-              />
-            </div>
-            <div className="flex justify-center items-center">
-              {error && <h1 className="font-bold text-red-600 text-lg">{error}</h1>}
-            </div>
-            <div className="flex justify-center items-center mt-4">
-              <button
-                className="bg-neutral-600  w-2/6 h-auto text-[--white] rounded-[15px]
-              p-3 hover:">
-                Submit
-              </button>
-            </div>
-            <div className="flex justify-center items-center mt-2">
-                <h1>You don't have an account ? please
-                  <a onClick={handleRegisterFalse} className="text-blue-600 underline decoration-dotted hover:text-blue-400 hover:decoration-wavy">
-                    Sign Up
-                  </a>
-                </h1>
-            </div>
-
-          </form>
         </div>
-      ) : (
-        <div className="flex-col items-center justify-center p-4 bg-neutral-900 rounded-3xl w-5/12 h-fulll">
-          <h1 className="text-2xl m-auto w-3/6 font-bold text-white bg-neutral-500 rounded-2xl text-center">
-            Sign Up
-          </h1>
-          <form action="" onSubmit={handleSubmit} className="flex flex-col gap-2  ">
-            <div className="block">
-              <label htmlFor="email"
-                     className="text-xl bg-transparent mb-0 after:ml-0.5 after:text-red-500 after:content-['*']">
-                Email
-              </label>
-              <input
-                className="bg-neutral-600 peer p-1 w-full text-white text-xl placeholder:text-xl rounded-2xl m-auto
-              invalid:border-red-600 invalid:text-red-600 focus:border-black focus:outline focus:outline-green-600 focus:invalid:border-red-600 focus:invalid:outline-red-600"
-                type="email"
-                id="email"
-                placeholder="Your Email here..."
-
-                onChange={(e) => setEmail(e.target.value)}
-              />
-
-            </div>
-            <div className="flex flex-row gap-2 mt-4">
-              <div className="mr-4">
-                <label htmlFor="name" className="text-2xl bg-transparent mb-0 requiredp" >Name</label>
+        <form action="" onSubmit={handleSubmit} className="space-y-4 ">
+          {isRegistered ? (
+            <div>
+              <div className="flex flex-col">
+                <label
+                  htmlFor="email"
+                  className="requiredp w-full h-fit m-2 text-lg labelSign flex items-center justify-center font-semibold text-[--white]  "
+                >
+                  Email{" "}
+                </label>
                 <input
-                  className="bg-neutral-600 focus:border-none p-1 text-white text-xl placeholder:text-xl w-full h-12 rounded-2xl m-auto"
-                  type="text"
-                  id="name"
-                  placeholder="Your name here..."
-
-                  onChange={(e) => setName(e.target.value)}
+                  type="email"
+                  id="email"
+                  placeholder={"exemple@gmail.com"}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="placeholder:italic outline-none placeholder:text-gray-400 placeholder: text-lg rounded-lg p-1 valid:border-solid valid:border-lime-500"
                 />
               </div>
-              <div className="">
-                <label htmlFor="username" className="text-2xl bg-transparent mb-0 requiredp" >Username</label>
+              <div className="flex flex-col">
+                <label
+                  htmlFor="password"
+                  className="requiredp w-full labelSign flex items-center justify-center h-fit m-2 text-lg font-semibold text-[--white]  "
+                >
+                  Password{" "}
+                </label>
                 <input
-                  className="bg-neutral-600 focus:border-none p-1 text-white text-xl placeholder:text-xl w-full h-12 rounded-2xl m-auto"
-                  type="text"
-                  id="username"
-                  placeholder="Your username here..."
-
-                  onChange={(e) => setUsername(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-row gap-2 mt-4">
-              <div className="mr-4">
-                <label htmlFor="password" className="text-2xl bg-transparent mb-0 requiredp" >Password</label>
-                <input
-                  className="bg-neutral-600 focus:border-none p-1 text-white text-xl placeholder:text-xl w-full h-12 rounded-2xl m-auto"
                   type="password"
                   id="password"
-                  placeholder="Your password here..."
-
+                  placeholder={"Your password here..."}
                   onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-              <div className="">
-                <label htmlFor="password" className="text-2xl bg-transparent mb-0 requiredp" >Confirm password</label>
-                <input
-                  className="bg-neutral-600 focus:border-none p-1 text-white text-xl placeholder:text-xl w-full h-12 rounded-2xl m-auto"
-                  type="password"
-                  id="password"
-                  placeholder="The password confirmation here..."
-
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="placeholder:italic outline-none placeholder:text-gray-400 placeholder: text-lg rounded-lg p-1 valid:border-solid valid:border-lime-500"
                 />
               </div>
             </div>
-            <div className="flex justify-center items-center">
-              {error && <h1 className="font-bold text-red-600 text-lg">{error}</h1>}
+          ) : (
+            <div className="grid grid-col-2 grid-row-4 gap-4">
+              <div>
+                <div className="flex flex-col ">
+                  <div>
+                    <label
+                      htmlFor="email"
+                      className="requiredp w-full labelSign flex items-center justify-center h-fit m-2 text-lg font-semibold text-[--white]  "
+                    >
+                      Email{" "}
+                    </label>
+                    <input
+                      type="email"
+                      id="email"
+                      placeholder={"exemple@gmail.com"}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="placeholder:italic outline-none placeholder:text-gray-400 placeholder: text-lg rounded-lg p-1 valid:border-solid valid:border-lime-500"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="row-start-2">
+                <div className="flex flex-col">
+                  <label
+                    htmlFor="username"
+                    className="requiredp w-full labelSign flex items-center justify-center h-fit m-2 text-lg font-semibold text-[--white]  "
+                  >
+                    Username
+                  </label>
+                  <input
+                    type="text"
+                    id="username"
+                    placeholder={"Your username"}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="placeholder:italic outline-none placeholder:text-gray-400 placeholder: text-lg rounded-lg p-1 valid:border-solid valid:border-lime-500"
+                  />
+                </div>
+              </div>
+              <div className="row-start-2">
+                <div className="flex flex-col">
+                  <label
+                    htmlFor="name"
+                    className="requiredp w-full labelSign flex items-center justify-center h-fit m-2 text-lg font-semibold text-[--white]  "
+                  >
+                    Name
+                  </label>
+                  <input
+                    type="text"
+                    id="name"
+                    placeholder={"Your name"}
+                    onChange={(e) => setName(e.target.value)}
+                    className="placeholder:italic outline-none placeholder:text-gray-400 placeholder: text-lg rounded-lg p-1 valid:border-solid valid:border-lime-500"
+                  />
+                </div>
+              </div>
+              <div className="row-start-3">
+                <div className="flex flex-col">
+                  <label
+                    htmlFor="password"
+                    className="requiredp w-full labelSign flex items-center justify-center h-fit m-2 text-lg font-semibold text-[--white]  "
+                  >
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    id="password"
+                    placeholder={"Your password here..."}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="placeholder:italic outline-none placeholder:text-gray-400 placeholder: text-lg rounded-lg p-1 valid:border-solid valid:border-lime-500"
+                  />
+                </div>
+              </div>
+              <div className="row-start-3">
+                <div className="flex flex-col">
+                  <label
+                    htmlFor="confirmPassword"
+                    className="requiredp w-full labelSign flex items-center justify-center h-fit m-2 text-lg font-semibold text-[--white]  "
+                  >
+                    Confirm Password
+                  </label>
+                  <input
+                    type="password"
+                    id="confirmPassword"
+                    placeholder={"Confirm your password"}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="placeholder:italic outline-none placeholder:text-gray-400 placeholder: text-lg rounded-lg p-1 valid:border-solid valid:border-lime-500"
+                  />
+                </div>
+              </div>
+              <div className="col-span-2">
+                <div className="flex flex-col">
+                  <label
+                    htmlFor="classCode"
+                    className="requiredp w-full labelSign flex items-center justify-center h-fit m-2 text-lg font-semibold text-[--white]  "
+                  >
+                    Your class Code Gift by your teacher
+                  </label>
+                  <input
+                    type="text"
+                    id="classCode"
+                    placeholder={"Your class code here"}
+                    onChange={(e) => setClassCode(e.target.value)}
+                    className="placeholder:italic outline-none placeholder:text-gray-400 placeholder: text-lg rounded-lg p-1 valid:border-solid valid:border-lime-500"
+                  />
+                </div>
+              </div>
             </div>
-            <div className="flex justify-center items-center mt-4">
-              <button
-                className="bg-neutral-600  w-2/6 h-auto text-[--white] rounded-[15px]
-              p-3 hover:">
-                Submit
-              </button>
-            </div>
-            <div className="flex justify-center items-center mt-2">
-              <h1>You already have an account ? please
-                <a onClick={handleRegisterTrue} className="text-blue-600 underline decoration-dotted hover:text-blue-400 hover:decoration-wavy">
+          )}
+          <div className=" flex flex-col items-center justify-center w-full ">
+            <SubmitButton onclicl={handleSubmit} />
+          </div>
+          <div className=" flex flex-col items-center justify-center w-full text-[--white]  ">
+            {isRegistered ? (
+              <h1>
+                You don't have an account ? Please{" "}
+                <a
+                  className="text-blue-600 hover:underline hover:text-cyan-400"
+                  onClick={handleIsRegister}
+                  href=""
+                >
+                  Sign Up
+                </a>
+              </h1>
+            ) : (
+              <h1>
+                You already have an account ? Please{" "}
+                <a
+                  className="text-blue-600 hover:underline hover:text-cyan-400"
+                  onClick={handleIsRegister}
+                  href=""
+                >
                   Sign In
                 </a>
               </h1>
-            </div>
-
-          </form>
-        </div>
-        )
-
-      }
+            )}
+          </div>
+        </form>
+      </div>
     </div>
   );
 };

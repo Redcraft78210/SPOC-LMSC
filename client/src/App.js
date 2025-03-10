@@ -1,20 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import { Navigate, BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { jwtDecode } from 'jwt-decode';
-import './index.css';
+import React, { useState, useEffect } from "react";
+import {
+  Navigate,
+  BrowserRouter as Router,
+  Routes,
+  Route,
+} from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
+import "./index.css";
 
-import Home from './pages/Home';
-import Dashboard from './pages/Dashboard';
-import Sign from './pages/Sign';
-import Logout from './components/Logout';
-import NotFound from './pages/NotFound';
-import LiveManagement from './pages/Professeur/LiveManagement';
-
+import Home from "./pages/Home";
+import Dashboard from "./pages/Dashboard";
+import Sign from "./pages/Sign";
+import Logout from "./components/Logout";
+import NotFound from "./pages/NotFound";
+import LiveManagement from "./pages/Professeur/LiveManagement";
+import DashboardHome from "./pages/Eleve/DashboardHome";
+import DashboardProf from "./pages/Professeur/DashboardProf.jsx";
 const routeConfig = [
-  { path: '/dashboard', content: 'Home' },
-  { path: '/profile', content: 'Profile' },
-  { path: '/courses-library', content: 'Courses' },
-  { path: '/lives', content: 'Lives' },
+  { path: "/dashboard", content: "Home" },
+  { path: "/profile", content: "Profile" },
+  { path: "/courses-library", content: "Courses" },
+  { path: "/lives", content: "Lives" },
 ];
 
 const App = () => {
@@ -26,7 +32,7 @@ const App = () => {
 
   useEffect(() => {
     const checkAuth = () => {
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem("authToken");
       if (token) {
         try {
           const decodedToken = jwtDecode(token);
@@ -37,7 +43,7 @@ const App = () => {
             setAuth(decodedToken);
           }
         } catch (error) {
-          console.error('Invalid token:', error);
+          console.error("Invalid token:", error);
           handleLogout();
         }
       } else {
@@ -55,15 +61,15 @@ const App = () => {
       decodedToken.isFirstConnexion && setFirstAuth(true);
       decodedToken.isProf && setIsProf(true);
 
-      localStorage.setItem('authToken', token);
+      localStorage.setItem("authToken", token);
     } catch (error) {
-      console.error('Error decoding token:', error);
+      console.error("Error decoding token:", error);
     }
   };
 
   const handleLogout = () => {
     setAuth(null);
-    localStorage.removeItem('authToken');
+    localStorage.removeItem("authToken");
     setIsLoggedOut(true);
   };
 
@@ -74,28 +80,21 @@ const App = () => {
   return (
     <Router>
       {/* If logged out and not on the sign page, navigate to "/sign" */}
-      
-      {isLoggedOut && window.location.pathname !== "/sign" && <Navigate to="/sign" replace />}
+
+      {isLoggedOut && window.location.pathname !== "/sign" && (
+        <Navigate to="/sign" replace />
+      )}
       <div className="container mt-4">
         {/* <div>Current route: {window.location.pathname}</div> */}
         <Routes>
-          <Route path="/livehandler" element={<LiveManagement/>}/>
+          <Route path="/tmp" element={<DashboardProf />} />
+          <Route path="/livehandler" element={<LiveManagement />} />
           {/* Home route: if authenticated, show Dashboard with "Home" content; otherwise, show Home */}
-          <Route path="/" element={auth ? <Dashboard Content="Home" isProf={isProf} /> : <Home />} />
-          <Route
-            path="/sign"
-            element={
-              auth ? (
-                <Navigate to="/" replace />
-              ) : (
-                <Sign setAuth={handleSetAuth} unsetLoggedOut={setIsLoggedOut} />
-              )
-            }
-          />
+          <Route path="/" element={auth ? <Dashboard Content="Home" isProf={isProf} /> : <Home />}/>
+          <Route path="/sign" element={auth ? (<Navigate to="/" replace />) : (<Sign setAuth={handleSetAuth} unsetLoggedOut={setIsLoggedOut} />)}/>
           {/* Additional routes available only when authenticated */}
-          {auth &&
-            routeConfig.map((route, index) => (
-              <Route key={index} path={route.path} element={<Dashboard Content={route.content} isProf={isProf} />} />
+          {auth && routeConfig.map((route, index) => (
+            <Route key={index} path={route.path} element={<Dashboard Content={route.content} isProf={isProf} />}/>
             ))}
           <Route path="/logout" element={<Logout onLogout={handleLogout} />} />
           <Route path="*" element={<NotFound />} />
@@ -103,6 +102,6 @@ const App = () => {
       </div>
     </Router>
   );
-}
+};
 
 export default App;
