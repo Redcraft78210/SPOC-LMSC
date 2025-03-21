@@ -1,11 +1,11 @@
-import React, { useContext, useState } from "react";
+import React, { useContext } from "react";
 import Clock from "react-live-clock";
 import { ThemeContext } from "../../contexts/ThemeContext";
 
 const DarkmodeButton = () => {
   const { darkMode, toggleDarkMode } = useContext(ThemeContext);
   return (
-    <>
+    <div className="w-50 h-32">
       <input
         id="switch"
         type="checkbox"
@@ -14,7 +14,7 @@ const DarkmodeButton = () => {
         className="hidden"
       />
 
-      <div className={`app w-70 h-45 ${darkMode ? "dark" : ""}`}>
+      <div className={`app w-50 ${darkMode ? "dark" : ""}`}>
         <div
           className={`body relative flex items-center justify-center w-full h-full rounded-3xl shadow-lg p-4 transition-colors duration-300 ${
             darkMode
@@ -61,14 +61,14 @@ const DarkmodeButton = () => {
                     darkMode ? "translate-x-full" : ""
                   }`}
                 ></div>
-                
               </label>
             </div>
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
 export default DarkmodeButton;
+    
