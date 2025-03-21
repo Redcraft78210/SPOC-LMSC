@@ -47,11 +47,21 @@
   - rajouté mes parties dans la présentation pour la revue 0,
   - Envoyé la liste du matériel dont j'avais besoin pour l'élève réalisant l'étude de marché.
 
-- Depuis le 4 février j'ai :
+- Jusqu'à la date de la première revue j'ai:
   - Adapter le synoptique à notre besoin,
   - Adresser et configurer tout les appareils présent dans le synoptique sur Cisco packet Tracer,
   - Etabli un document répertoriant chaque ip de chaque interface,
-  - Commencer à configurer le FireWall qui nous a été confié.  
+  - Commencer à configurer le FireWall qui nous a été confié.
+
+- Pendant les vacances j'ai :
+  - Repensé ma partie dans le projet,
+  - Mis en commun nos prévisions pour se mettre d'accord sur les objectifs.
+  
+- Au retour des vacances j'ai :
+  - Réceptionné le matériel concernant ma partie,
+  - Commencé la création du serveur de live ( Mis en Pause ),
+  - Commencé le serveur de streaming pour la distribution des vidéos vers le backend,
+  - Pensé à au pilotage du servomoteur pour le contrôle des différents angles de vue de la caméra.
 
 ### BELAISE
 - Du 16 janvier au 19 février, j'ai :
