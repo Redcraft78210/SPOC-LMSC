@@ -57,12 +57,18 @@
   - Repensé ma partie dans le projet,
   - Mis en commun nos prévisions pour se mettre d'accord sur les objectifs.
   
-- Au retour des vacances j'ai :
+- Du 03 Mars jusqu'au 10 Mars j'ai  :
   - Réceptionné le matériel concernant ma partie,
-  - Commencé la création du serveur de live ( Mis en Pause ),
-  - Commencé le serveur de streaming pour la distribution des vidéos vers le backend,
+  - Commencé la création du serveur de live ( Mis en Pause ).
+    
+- Du 11 Mars jusqu'au 21 mars j'ai :
+  - Commencé le serveur de streaming grâce aux technologies python et Django pour la distribution des vidéos vers le backend,
+  - Pour l'instant je peux fournir une vidéo grâce à son titre,la hiérarchie des vidéos mais je peux aussi uploader des vidéos,
   - Pensé à au pilotage du servomoteur pour le contrôle des différents angles de vue de la caméra.
 
+- Depuis le 21 Mars j'ai :
+  - Commencé une fonction pour fournir au backend toutes les vidéos dites principales c'est à dire celles présentes sur le site,
+  
 ### BELAISE
 - Du 16 janvier au 19 février, j'ai :
   - Je me suis également approprié le sujet (Attribution du rôle de chaque élèves),
