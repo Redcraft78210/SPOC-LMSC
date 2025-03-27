@@ -1,14 +1,15 @@
-import "./styles/Sign.css";
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { Send } from "lucide-react";
+import SubmitButton from "../components/SubmitButton";
 
 // import {jwtDecode } from 'jwt-decode';
 // import moment from 'moment-timezone';
 
 const Sign = ({ setAuth, unsetLoggedOut }) => {
   const navigate = useNavigate();
-  const [error, setError] = useState("");
+  const [error, setError] = useState(null);
   const [isRegistered, setIsRegistered] = useState(true);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -16,9 +17,10 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [testSamePwd, setTestSamePwd] = useState("");
-
+  const [classCode, setClassCode] = useState("");
   if (localStorage.getItem("authToken")) {
     navigate("/dashboard");
+    z;
   }
 
   const handleRegisterTrue = () => {
@@ -32,10 +34,10 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
     e.preventDefault();
     if (isRegistered) {
       try {
-        const request = await axios.post(
-          '/api/auth/login',
-          { email, password }
-        );
+        const request = await axios.post("/api/auth/login", {
+          email,
+          password,
+        });
         // console.log(request.data.token);
 
         if (request.data.token) {
@@ -63,10 +65,9 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
           );
         }
       }
-    }
-    if (!isRegistered) {
+    } else if (!isRegistered) {
       checkSamePwd();
-      if (testSamePwd === true) {
+      if (testSamePwd) {
         try {
           const res = await axios.post("/api/auth/register", {
             email,
@@ -90,7 +91,6 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
         }
       }
     }
-
   };
   const checkSamePwd = () => {
     if (password !== confirmPassword) {
@@ -101,128 +101,190 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
     // console.log("Passwords match"); // for debug
     setTestSamePwd(true);
   };
-
+  const handleIsRegister = (e) => {
+    e.preventDefault();
+    setIsRegistered(!isRegistered);
+  };
   return (
-    <div className="form-container">
-      {isRegistered ? (
-        <p className="title">Login</p>
-      ) : (
-        <p className="title">Register</p>
-      )}
-      <form onSubmit={handleSubmit} className="form">
-        <div className="input-group">
-          <label htmlFor="email">Email</label>
-          <input
-            onChange={(e) => {
-              setEmail(e.target.value);
-            }}
-            type="email"
-            name="email"
-            id="email"
-            placeholder="example@lmsc.com"
-          />
+    <div className="flex justify-center items-center w-full h-full">
+      <div className="space-y-4 mt-4 flex flex-col justify-center items-center bg-gradient-to-br from-neutral-600 via-neutral-500 to-neutral-950 p-4 rounded-xl">
+        <div>
+          <h1 className="text-[--white] text-2xl font-bold">
+            {isRegistered ? "Sign In" : "Sign Up"}
+          </h1>
         </div>
-        {!isRegistered && (
-          <div className="input-group">
-            <label htmlFor="name">Name</label>
-            <input
-              onChange={(e) => {
-                setName(e.target.value);
-              }}
-              type="text"
-              name="name"
-              id="name"
-              placeholder="John Doe"
-            />
-          </div>
-        )}
-        {!isRegistered && (
-          <div className="input-group">
-            <label htmlFor="username">Username</label>
-            <input
-              onChange={(e) => {
-                setUsername(e.target.value);
-              }}
-              type="text"
-              name="username"
-              id="username"
-              placeholder="johndoe67"
-            />
-          </div>
-        )}
-        <div className="input-group">
-          <label htmlFor="password">Password</label>
-          <input
-            onChange={(e) => {
-              setPassword(e.target.value);
-            }}
-            type="password"
-            name="password"
-            id="password"
-            placeholder="Min 8 characters and 1 number"
-          />
-          {!isRegistered && (
-            <label htmlFor="confirmpassword">Confirm Password</label>
-          )}
-          {!isRegistered && (
-            <input
-              onChange={(e) => {
-                setConfirmPassword(e.target.value);
-              }}
-              type="password"
-              name="confirmpassword"
-              id="confirmpassword"
-              placeholder="Same password plz ..."
-            />
-          )}
-          {/* {isRegistered && (
-            <div className="forgot">
-              <a rel="noopener noreferrer" href="#">
-                Forgot Password ?
-              </a>
+        <form action="" onSubmit={handleSubmit} className="space-y-4 ">
+          {isRegistered ? (
+            <div>
+              <div className="flex flex-col">
+                <label
+                  htmlFor="email"
+                  className="requiredp w-full h-fit m-2 text-lg labelSign flex items-center justify-center font-semibold text-[--white]  "
+                >
+                  Email{" "}
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  placeholder={"exemple@gmail.com"}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="placeholder:italic outline-none placeholder:text-gray-400 placeholder: text-lg rounded-lg p-1 valid:border-solid valid:border-lime-500"
+                />
+              </div>
+              <div className="flex flex-col">
+                <label
+                  htmlFor="password"
+                  className="requiredp w-full labelSign flex items-center justify-center h-fit m-2 text-lg font-semibold text-[--white]  "
+                >
+                  Password{" "}
+                </label>
+                <input
+                  type="password"
+                  id="password"
+                  placeholder={"Your password here..."}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="placeholder:italic outline-none placeholder:text-gray-400 placeholder: text-lg rounded-lg p-1 valid:border-solid valid:border-lime-500"
+                />
+              </div>
             </div>
-          )} */}
-        </div>
-        {/* Conditionally render the error message if it exists */}
-        {error && <p className="error-message">{error}</p>}
-        <br />
-        {isRegistered ? (
-          <button type="submit" className="sign">
-            Sign in
-          </button>
-        ) : (
-          <button type="submit" className="sign">
-            Sign Up
-          </button>
-        )}
-      </form>
-      <br />
-
-      {isRegistered ? (
-        <p className="signup">
-          Don't have an account?
-          <a
-            rel="noopener noreferrer"
-            href="#"
-            onClick={handleRegisterFalse}
-            className=""
-          >
-            Sign up
-          </a>
-        </p>
-      ) : (
-        <p className="signup">
-          Already have an account?
-          <a
-            rel="noopener noreferrer"
-            href="#"
-            onClick={handleRegisterTrue}
-            className=""
-          >
-            Sign in
-          </a>
-        </p>
-      )}
+          ) : (
+            <div className="grid grid-col-2 grid-row-4 gap-4">
+              <div>
+                <div className="flex flex-col ">
+                  <div>
+                    <label
+                      htmlFor="email"
+                      className="requiredp w-full labelSign flex items-center justify-center h-fit m-2 text-lg font-semibold text-[--white]  "
+                    >
+                      Email{" "}
+                    </label>
+                    <input
+                      type="email"
+                      id="email"
+                      placeholder={"exemple@gmail.com"}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="placeholder:italic outline-none placeholder:text-gray-400 placeholder: text-lg rounded-lg p-1 valid:border-solid valid:border-lime-500"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="row-start-2">
+                <div className="flex flex-col">
+                  <label
+                    htmlFor="username"
+                    className="requiredp w-full labelSign flex items-center justify-center h-fit m-2 text-lg font-semibold text-[--white]  "
+                  >
+                    Username
+                  </label>
+                  <input
+                    type="text"
+                    id="username"
+                    placeholder={"Your username"}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="placeholder:italic outline-none placeholder:text-gray-400 placeholder: text-lg rounded-lg p-1 valid:border-solid valid:border-lime-500"
+                  />
+                </div>
+              </div>
+              <div className="row-start-2">
+                <div className="flex flex-col">
+                  <label
+                    htmlFor="name"
+                    className="requiredp w-full labelSign flex items-center justify-center h-fit m-2 text-lg font-semibold text-[--white]  "
+                  >
+                    Name
+                  </label>
+                  <input
+                    type="text"
+                    id="name"
+                    placeholder={"Your name"}
+                    onChange={(e) => setName(e.target.value)}
+                    className="placeholder:italic outline-none placeholder:text-gray-400 placeholder: text-lg rounded-lg p-1 valid:border-solid valid:border-lime-500"
+                  />
+                </div>
+              </div>
+              <div className="row-start-3">
+                <div className="flex flex-col">
+                  <label
+                    htmlFor="password"
+                    className="requiredp w-full labelSign flex items-center justify-center h-fit m-2 text-lg font-semibold text-[--white]  "
+                  >
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    id="password"
+                    placeholder={"Your password here..."}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="placeholder:italic outline-none placeholder:text-gray-400 placeholder: text-lg rounded-lg p-1 valid:border-solid valid:border-lime-500"
+                  />
+                </div>
+              </div>
+              <div className="row-start-3">
+                <div className="flex flex-col">
+                  <label
+                    htmlFor="confirmPassword"
+                    className="requiredp w-full labelSign flex items-center justify-center h-fit m-2 text-lg font-semibold text-[--white]  "
+                  >
+                    Confirm Password
+                  </label>
+                  <input
+                    type="password"
+                    id="confirmPassword"
+                    placeholder={"Confirm your password"}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="placeholder:italic outline-none placeholder:text-gray-400 placeholder: text-lg rounded-lg p-1 valid:border-solid valid:border-lime-500"
+                  />
+                </div>
+              </div>
+              <div className="col-span-2">
+                <div className="flex flex-col">
+                  <label
+                    htmlFor="classCode"
+                    className="requiredp w-full labelSign flex items-center justify-center h-fit m-2 text-lg font-semibold text-[--white]  "
+                  >
+                    Your class Code Gift by your teacher
+                  </label>
+                  <input
+                    type="text"
+                    id="classCode"
+                    placeholder={"Your class code here"}
+                    onChange={(e) => setClassCode(e.target.value)}
+                    className="placeholder:italic outline-none placeholder:text-gray-400 placeholder: text-lg rounded-lg p-1 valid:border-solid valid:border-lime-500"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+          <div className=" flex flex-col items-center justify-center w-full ">
+            <SubmitButton onclicl={handleSubmit} />
+          </div>
+          <div className=" flex flex-col items-center justify-center w-full text-[--white]  ">
+            {isRegistered ? (
+              <h1>
+                You don't have an account ? Please{" "}
+                <a
+                  className="text-blue-600 hover:underline hover:text-cyan-400"
+                  onClick={handleIsRegister}
+                  href=""
+                >
+                  Sign Up
+                </a>
+              </h1>
+            ) : (
+              <h1>
+                You already have an account ? Please{" "}
+                <a
+                  className="text-blue-600 hover:underline hover:text-cyan-400"
+                  onClick={handleIsRegister}
+                  href=""
+                >
+                  Sign In
+                </a>
+              </h1>
+            )}
+          </div>
+        </form>
+      </div>
     </div>
   );
 };
