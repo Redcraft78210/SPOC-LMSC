@@ -1,8 +1,8 @@
 import React, { useContext } from 'react'
 import LiveClock from './Clock.jsx';
 
-import { ThemeContext } from '../contexts/ThemeContext.jsx';
-import './style/DarkmodeButton.css'
+import { ThemeContext } from "../contexts/ThemeContext";
+import "./style/DarkmodeButton.css";
 
 const DarkmodeButton = () => {
   const { darkMode, toggleDarkMode } = useContext(ThemeContext);

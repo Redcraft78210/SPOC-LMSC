@@ -7,10 +7,6 @@
 @tailwind components;
 @tailwind utilities;
 
-
-/* Import Bootstrap styles */
-@import "~bootstrap/dist/css/bootstrap.min.css";
-
 /* Add your custom global styles below */
 
 :root[data-bs-theme="dark"] {
