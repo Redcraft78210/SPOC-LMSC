@@ -4,8 +4,8 @@ import {
   LibraryBig,
   UserRoundCog,
   AlignJustify,
-  House,
   Home,
+  FileVideo2,
 } from "lucide-react";
 
 import { useNavigate } from "react-router-dom";
@@ -29,6 +29,11 @@ const NavBar = () => {
       name: "Profile",
       path: "/profile",
       icon: <UserRoundCog size={32} strokeWidth={2} />,
+    },
+    {
+      name: "Video Management",
+      path: "/videomanager",
+      icon: <FileVideo2 size={32} strokeWidth={2} />,
     },
   ];
   useEffect(() => {

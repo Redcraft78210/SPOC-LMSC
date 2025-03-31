@@ -1,0 +1,7 @@
+node_modules/
+package-lock.json
+tmp34.json
+db.sqlite3
+server/Server_Video/media/
+__pycache__/
+migrations/

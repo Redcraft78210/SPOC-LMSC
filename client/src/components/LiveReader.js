@@ -15,9 +15,11 @@ const SecureHLSPlayer = ({ m3u8Url }) => {
       try {
         const response = await fetch(m3u8Url, { credentials: "same-origin" }); // Fetch the file securely
         const m3u8Content = await response.text();
-        
+
         // Create a Blob and a secure Blob URL
-        const blob = new Blob([m3u8Content], { type: "application/vnd.apple.mpegurl" });
+        const blob = new Blob([m3u8Content], {
+          type: "application/vnd.apple.mpegurl",
+        });
         const url = URL.createObjectURL(blob);
         setBlobUrl(url);
       } catch (error) {
@@ -51,12 +53,10 @@ const SecureHLSPlayer = ({ m3u8Url }) => {
   }, [blobUrl]);
 
   return (
-    <div className="video-container">
+    <div className="video-container w-full h-full">
       <video ref={videoRef} controls className="video-player" />
     </div>
   );
 };
 
 export default SecureHLSPlayer;
-
-
