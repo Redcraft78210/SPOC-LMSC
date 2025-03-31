@@ -14,9 +14,10 @@ const certificate = fs.readFileSync('certs/selfsigned.crt', 'utf8');
 const credentials = { key: privateKey, cert: certificate };
 
 // Import routes
-const authRoutes = require('./routes/authRoutes');
-const courseRoutes = require('./routes/courseRoutes');
-const userRoutes = require('./routes/userRoutes');
+const authRoutes = require('./routes/authRoutes').default;
+const courseRoutes = require('./routes/courseRoutes').default;
+const userRoutes = require('./routes/userRoutes').default;
+const liveRoutes = require('./routes/liveRoutes').default;
 
 
 // Initialize environment variables
@@ -44,18 +45,22 @@ app.use(morgan('dev')); // Log HTTP requests in the console
 app.use(express.json()); // Parse incoming JSON requests
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded data
 
+// Serve public static files
+app.use('/videos', express.static(path.join(__dirname, 'public', 'videos')));
+
 // API routes
 app.use('/api/auth', authRoutes); // Authentication routes (login, register)
 app.use('/api/courses', courseRoutes); // Courses-related routes
 app.use('/api/user', userRoutes); // Courses-related routes
+app.use('/api/lives', liveRoutes); // Courses-related routes
 
 // Serve React frontend (if applicable)
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../client/build')));
+  app.use(express.static(path.join(__dirname, '../client/dist')));
 
   // Serve all frontend routes as the index.html page for React Router to handle
   app.get('*', (req, res) => {
-    res.sendFile(path.resolve(__dirname, '../client/build', 'index.html'));
+    res.sendFile(path.resolve(__dirname, '../client/dist', 'index.html'));
   });
 } else {
   // In development mode, fallback to React's development server
@@ -80,5 +85,4 @@ httpsServer.listen(PORT, () => {
 httpServer.listen(HTTP_PORT, () => {
   console.log(`HTTP Server is running on port ${HTTP_PORT} and redirecting to HTTPS`);
 });
-
 

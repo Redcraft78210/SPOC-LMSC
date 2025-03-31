@@ -1,11 +1,8 @@
 // server/routes/authRoutes.js
 
-const express = require('express');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const { User } = require('../models');
-const validateUser = require('../middlewares/userValidation'); // Validation middleware for user registration
-const { register, login } = require('../controllers/authController');
+import express from 'express';
+import validateUser from '../middlewares/userValidation.js'; // Validation middleware for user registration
+import { register, login } from '../controllers/authController.js'; // Import the register and login functions from the controller module
 
 const router = express.Router();
 
@@ -15,4 +12,4 @@ router.post('/register', validateUser, register);
 // Login route with validation
 router.post('/login', login);
 
-module.exports = router;
+export default router;
