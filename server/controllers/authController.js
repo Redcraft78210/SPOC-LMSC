@@ -1,7 +1,6 @@
-const User = require('../models/User');
+const { Student, Class, StudentClass } = require('../models');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-
 
 // Register controller with validation middleware
 const register = async (req, res) => {
@@ -14,12 +13,12 @@ const register = async (req, res) => {
 
   try {
     // Vérification de l'existence d'un utilisateur avec le même email
-    const existingUserEmail = await User.findOne({ where: { email } });
+    const existingUserEmail = await Student.findOne({ where: { email } });
     if (existingUserEmail) {
       return res.status(400).json({ message: 'Un utilisateur avec cet email existe déjà.' });
     }
 
-    const existingUserName = await User.findOne({ where: { username } });
+    const existingUserName = await Student.findOne({ where: { username } });
     if (existingUserName) {
       return res.status(400).json({ message: 'Un utilisateur avec ce nom d\'utilisateur existe déjà.' });
     }
@@ -28,7 +27,7 @@ const register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Création de l'utilisateur dans la base de données
-    const newUser = await User.create({
+    const newUser = await Student.create({
       email,
       username,
       password: hashedPassword,
@@ -45,7 +44,6 @@ const register = async (req, res) => {
   }
 };
 
-
 // Login controller with validation (no additional validation middleware required for login)
 const login = async (req, res) => {
   const { email, password } = req.body;
@@ -54,19 +52,27 @@ const login = async (req, res) => {
     return res.status(400).json({ message: 'Email and password are required' });
   }
 
-
   try {
-    const user = await User.findOne({ where: { email } });
+    const user = await Student.findOne({ where: { email } });
+
     if (!user) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
+
+    const studentClass = await StudentClass.findOne({ where: { student_id: user.id } });
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ id: user.id, isProf: user.role == "Professeur" }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({
+      id: user.id,
+      classId: studentClass ? studentClass.class_id : null,
+      isProf: false,
+    },
+      process.env.JWT_SECRET, { expiresIn: '1h' }
+    );
     return res.status(200).json({ token });
   } catch (error) {
     console.error(error);
@@ -75,3 +81,4 @@ const login = async (req, res) => {
 };
 
 module.exports = { register, login };
+

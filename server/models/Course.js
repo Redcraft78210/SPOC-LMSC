@@ -1,6 +1,5 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
-const User = require('./User');
 
 // Define the Course model
 const Course = sequelize.define('Course', {
@@ -22,9 +21,5 @@ const Course = sequelize.define('Course', {
     allowNull: false,
   },
 });
-
-// Define associations
-Course.belongsToMany(User, { through: 'Enrollments' });
-User.belongsToMany(Course, { through: 'Enrollments' });
 
 module.exports = Course;
