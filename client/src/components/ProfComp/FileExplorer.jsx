@@ -1,37 +1,36 @@
-"use client";
-
 import React, { useContext } from "react";
 import { FilesystemItem } from "./FilesystemItem";
-import videoData from "../../utils/tmp34.json";
 import { ThemeContext } from "../../contexts/ThemeContext";
 
-// Fonction pour transformer le JSON en structure d'arborescence (nodes)
 function transformData(data) {
-  const transform = (obj, keyName) => {
-    // Si l'objet possède une propriété "videos", c'est un dossier de vidéos
-    if (obj && typeof obj === "object" && obj.videos) {
+  if (!data || typeof data !== "object") return [];
+
+  const transform = (obj, keyName, visited = new WeakSet()) => {
+    if (!obj) return { name: keyName, nodes: [] };
+    if (visited.has(obj)) return { name: keyName, nodes: [] };
+    visited.add(obj);
+    if (Array.isArray(obj)) {
       return {
         name: keyName,
-        nodes: obj.videos.map((video) => ({
-          name: video.titre,
+        nodes: obj.map((file) => ({
+          name: file.split("*").pop(), 
         })),
       };
     }
-    // Sinon, traiter récursivement les clés de l'objet
     return {
       name: keyName,
-      nodes: Object.keys(obj).map((key) => transform(obj[key], key)),
+      nodes: Object.keys(obj).map((key) => transform(obj[key], key, visited)),
     };
   };
 
-  return Object.keys(data).map((key) => transform(data[key], key));
+  return Object.keys(data).map((key) =>
+    transform(data[key], key, new WeakSet())
+  );
 }
 
-const nodes = transformData(videoData);
-
-export default function Page({ onDashboard }) {
+export default function Page({ onDashboard, data }) {
   const { darkMode, toggleDarkMode } = useContext(ThemeContext);
-
+  const nodes = data && typeof data === "object" ? transformData(data) : [];
   return (
     <div
       className={`rounded-xl p-4 ${
