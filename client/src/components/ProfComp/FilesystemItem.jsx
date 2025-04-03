@@ -1,7 +1,28 @@
 import React, { useState } from "react";
 import { ChevronRight, File, Folder } from "lucide-react";
 
-export function FilesystemItem({ node }) {
+export function FilesystemItem({ node, setId }) {
+  const handleClickVideo = () => {
+    setId(node.video_id);
+  };
+  // Si c'est une vidéo, on affiche l'icône File avec le titre provenant de node.name
+  if (node.type === "video") {
+    return (
+      <li>
+        <div className="flex items-center gap-1.5 py-1">
+          <File className="ml-[22px] w-6 h-6 text-[--gray]" />
+          <button
+            onClick={handleClickVideo}
+            className="underline hover:text-blue-300"
+          >
+            {node.name || "Vidéo sans titre"} {/* Utilisez node.name ici */}
+          </button>
+        </div>
+      </li>
+    );
+  }
+
+  // Sinon, c'est un dossier
   const [isOpen, setIsOpen] = useState(false);
   const hasChildren = node.nodes && node.nodes.length > 0;
 
@@ -15,23 +36,23 @@ export function FilesystemItem({ node }) {
             />
           </button>
         )}
-        {hasChildren ? (
-          <Folder
-            className={`w-6 h-6 text-sky-500 ${
-              !hasChildren ? "ml-[22px]" : ""
-            }`}
-          />
-        ) : (
-          <File className="ml-[22px] w-6 h-6 text-[--gray]" />
-        )}
+        <Folder
+          className={`w-6 h-6 text-sky-500 ${!hasChildren ? "ml-[22px]" : ""}`}
+        />
         <span>{node.name}</span>
       </div>
 
       {isOpen && hasChildren && (
         <ul className="pl-6">
-          {node.nodes.map((child) => (
-            <FilesystemItem key={child.name} node={child} />
-          ))}
+          {node.nodes
+            .filter((child) => child !== null)
+            .map((child) => (
+              <FilesystemItem
+                key={child.name}
+                node={child}
+                setId={setId}
+              />
+            ))}
         </ul>
       )}
     </li>

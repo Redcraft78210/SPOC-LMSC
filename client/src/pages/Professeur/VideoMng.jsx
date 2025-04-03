@@ -2,11 +2,13 @@ import React, { useEffect, useState } from "react";
 import NavBar from "../../components/ProfComp/NavBar";
 import FileExplorer from "../../components/ProfComp/FileExplorer";
 import Card from "../../components/ProfComp/Card";
-import { GetAll_DataStructure } from "../../API/VideoCaller";
+import { Get_special_Video, GetAll_DataStructure } from "../../API/VideoCaller";
 import FIleUploader from "../../components/ProfComp/FIleUploader";
+import VideoPlayer from "../../components/ProfComp/VideoPlayer";
 const VideoMng = () => {
   const [data, setData] = useState({});
-
+  const [idVideo, setIdVideo] = useState("");
+  const [videoUrl, setVideoUrl] = useState(null);
   useEffect(() => {
     const handleData = async () => {
       const res = await GetAll_DataStructure();
@@ -16,6 +18,13 @@ const VideoMng = () => {
     };
     handleData();
   }, []);
+  useEffect(() => {
+    if (idVideo) {
+      setVideoUrl(`http://localhost:8000/api/video/view/${idVideo}/`);
+      console.log(idVideo);
+      console.log(videoUrl);
+    }
+  }, [idVideo, videoUrl]);
 
   return (
     <div className="grid grid-col-2  grid-rows-1">
@@ -31,11 +40,16 @@ const VideoMng = () => {
         {/* main content */}
         <div className="flex justify-between">
           <div className="flex items-start justify-start mt-4">
-            <Card content={<FileExplorer data={data} />} />
+            <Card
+              content={<FileExplorer data={data} setIdVideo={setIdVideo} />}
+            />
           </div>
           <div className="flex items-start justify-start mt-4">
             <Card content={<FIleUploader />} />
           </div>
+        </div>
+        <div className="flex items-start justify-start mt-4">
+          <Card content={<VideoPlayer url={videoUrl} />} />
         </div>
       </div>
     </div>

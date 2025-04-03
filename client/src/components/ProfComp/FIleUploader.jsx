@@ -4,9 +4,13 @@ import { SendVideo } from "../../API/VideoCaller";
 const FIleUploader = () => {
   const [title, setTitle] = useState("");
   const [file, setFile] = useState(null);
+  const [desc, setDesc] = useState("");
 
   const handleTitle = (event) => {
     setTitle(event.target.value);
+  };
+  const handleDesc = (event) => {
+    setDesc(event.target.value);
   };
   const handleFile = (event) => {
     setFile(event.target.files[0]);
@@ -16,7 +20,7 @@ const FIleUploader = () => {
       console.error("Veuillez fournir un fichier et un titre.");
       return;
     }
-    const request = await SendVideo({ file, title });
+    const request = await SendVideo({ file, title, desc });
     if (request) {
       alert("Video send successfully !");
     }
@@ -33,6 +37,12 @@ const FIleUploader = () => {
         className="text-lg texte-[--white] bg-neutral-500 rounded-lg px-2"
       />
       <input
+        type="text"
+        onChange={handleDesc}
+        placeholder="Your video descriptions's"
+        className="text-lg texte-[--white] bg-neutral-500 rounded-lg px-2"
+      />
+      <input
         className="flex rounded-md bg-neutral-500 text-sm text-[--white] file:border-0 file:bg-neutral-500 file:text-[--white] file:text-sm file:font-medium"
         type="file"
         id="file"
@@ -40,9 +50,12 @@ const FIleUploader = () => {
         onChange={handleFile}
       />
 
-      <button 
-      className=" bg-neutral-500 rounded-lg text-xl text-[--white] "
-      onClick={handleSend}>Send</button>
+      <button
+        className=" bg-neutral-500 rounded-lg text-xl text-[--white] "
+        onClick={handleSend}
+      >
+        Send
+      </button>
     </div>
   );
 };

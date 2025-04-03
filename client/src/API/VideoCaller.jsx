@@ -29,17 +29,16 @@ const GetAll_DataStructure = async () => {
 
 const SendVideo = async ({ file, title }) => {
   const formData = new FormData();
-    formData.append('video', file);
-    formData.append('title', title);
-
+  formData.append("video", file);
+  formData.append("title", title);
 
   try {
     const request = await api.post("/send/", formData, {
-      headers:{
-        'Content-Type': 'multipart/form-data'
-      }
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
     });
-    return {status: 200, message: "video send successfully, you can refresh"}
+    return { status: 200, message: "video send successfully, you can refresh" };
   } catch (error) {
     if (error.response.status === 404) {
       console.error("API server not found.", error.response);
@@ -50,4 +49,19 @@ const SendVideo = async ({ file, title }) => {
   }
   return null;
 };
-export { GetAll_DataStructure, SendVideo };
+
+// const Get_special_Video = async ({ video_id }) => {
+//   try {
+//     const response = await api.get(`/get/${video_id}`);
+//     return { status: 200, data: response.data };
+//   } catch (error) {
+//     if (error.response.status === 404) {
+//       console.error("API server not found.", error.response);
+//     } else if (error.response.status === 400) {
+//       console.error("Erreur API :", error.response?.status, error.message);
+//     }
+//     console.error(error);
+//   }
+//   return null;
+// };
+export { GetAll_DataStructure, SendVideo};
