@@ -9,7 +9,7 @@ FROM base AS dependencies
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential ffmpeg && apt-get clean && rm -rf /var/lib/apt/lists/*
+    build-essential && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Copy package manifests
 COPY package.json package-lock.json ./
@@ -60,13 +60,10 @@ COPY --from=build /usr/src/app/package*.json /usr/src/app/
 COPY --from=build /usr/src/app/db /usr/src/app/
 
 COPY --from=build /usr/src/app/server /usr/src/app/server
-COPY --from=build /usr/src/app/client/dist /usr/src/app/client/dist
+COPY --from=build /usr/src/app/client/build /usr/src/app/client/build
 
 # Install Backend bind dependencies
 RUN npm install 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Set environment to production
 ENV NODE_ENV=production

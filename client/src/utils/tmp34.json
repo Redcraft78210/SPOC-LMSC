@@ -1,0 +1,112 @@
+{
+    "Maths": {
+        "Dupont": {
+            "Algebre": {
+                "description": "",
+                "upload_date": "2025-03-17T18:52:02.826Z",
+                "videos": [
+                    {
+                        "video_id": "3f4b538504facde3c881b73844f52f24-1742237522",
+                        "titre": "Maths*Dupont*Algebre_1.mp4",
+                        "chemin": "Maths/Dupont/Algebre/Maths*Dupont*Algebre_1.mp4"
+                    }
+                ]
+            },
+            "Algebre_1": {
+                "description": "",
+                "upload_date": "2025-03-17T18:53:17.360Z",
+                "videos": [
+                    {
+                        "video_id": "7b7834bd85eb353a7f91353ec8c64d5c-1742237597",
+                        "titre": "Maths*Dupont*Algebre_1_1.mp4",
+                        "chemin": "Maths/Dupont/Algebre_1/Maths*Dupont*Algebre_1_1.mp4"
+                    },
+                    {
+                        "video_id": "d686f707945b84413447d582243ab473-1742237624",
+                        "titre": "Maths*Dupont*Algebre_1_2.mp4",
+                        "chemin": "Maths/Dupont/Algebre_1/Maths*Dupont*Algebre_1_2.mp4"
+                    }
+                ]
+            }
+        },
+        "jean": {
+            "Algebre": {
+                "description": "",
+                "upload_date": "2025-03-17T18:52:48.781Z",
+                "videos": [
+                    {
+                        "video_id": "5d7eb308af7c6f377bc4c145301a1551-1742237568",
+                        "titre": "Maths*jean*Algebre_1.mp4",
+                        "chemin": "Maths/jean/Algebre/Maths*jean*Algebre_1.mp4"
+                    }
+                ]
+            }
+        }
+    },
+    "Francais": {
+        "jean": {
+            "Algebre": {
+                "description": "",
+                "upload_date": "2025-03-17T18:52:59.872Z",
+                "videos": [
+                    {
+                        "video_id": "a697afe67489d13d981e045525b08471-1742237579",
+                        "titre": "Francais*jean*Algebre_1.mp4",
+                        "chemin": "Francais/jean/Algebre/Francais*jean*Algebre_1.mp4"
+                    }
+                ]
+            }
+        }
+    },
+    "anglais": {
+        "luc": {
+            "cour1": {
+                "description": "qsdfghjklmùliuytredsdfghjkop^poikujyhgtfdfghjkoikjuhgfcdxcfghujikjhgvfcxcvghjkolkjhgvc",
+                "upload_date": "2025-03-18T15:34:11.532Z",
+                "videos": [
+                    {
+                        "video_id": "0b543e8f3d38aadde5094e0313010d74-1742312051",
+                        "titre": "anglais*luc*cour1_1.mp4",
+                        "chemin": "anglais/luc/cour1/anglais*luc*cour1_1.mp4"
+                    }
+                ]
+            },
+            "cour1_1": {
+                "description": "gyfuifggyi",
+                "upload_date": "2025-03-19T09:54:41.005Z",
+                "videos": [
+                    {
+                        "video_id": "9c5a3dc0f0af004469cedd3354c5a380-1742378081",
+                        "titre": "anglais*luc*cour1_1_1.mp4",
+                        "chemin": "anglais/luc/cour1_1/anglais*luc*cour1_1_1.mp4"
+                    },
+                    {
+                        "video_id": "23b0e2749e79549ea4457edb4dde4aa7-1742378221",
+                        "titre": "anglais*luc*cour1_1_4.mp4",
+                        "chemin": "anglais/luc/cour1_1/anglais*luc*cour1_1_4.mp4"
+                    },
+                    {
+                        "video_id": "a6e687afa5d986c2469eff8b32c0b3bc-1742378231",
+                        "titre": "anglais*luc*cour1_1_5.mp4",
+                        "chemin": "anglais/luc/cour1_1/anglais*luc*cour1_1_5.mp4"
+                    },
+                    {
+                        "video_id": "a7c1390825bcb3f20711312348e83d26-1742378438",
+                        "titre": "anglais*luc*cour1_1_6.mp4",
+                        "chemin": "anglais/luc/cour1_1/anglais*luc*cour1_1_6.mp4"
+                    },
+                    {
+                        "video_id": "ee373b62176251196bc58a683896b2df-1742378441",
+                        "titre": "anglais*luc*cour1_1_7.mp4",
+                        "chemin": "anglais/luc/cour1_1/anglais*luc*cour1_1_7.mp4"
+                    },
+                    {
+                        "video_id": "ab19723012e17d3f90768383d621b47e-1742378446",
+                        "titre": "anglais*luc*cour1_1_8.mp4",
+                        "chemin": "anglais/luc/cour1_1/anglais*luc*cour1_1_8.mp4"
+                    }
+                ]
+            }
+        }
+    }
+}
