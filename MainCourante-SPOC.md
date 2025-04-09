@@ -66,8 +66,13 @@
   - Pour l'instant je peux fournir une vidéo grâce à son titre,la hiérarchie des vidéos mais je peux aussi uploader des vidéos,
   - Pensé à au pilotage du servomoteur pour le contrôle des différents angles de vue de la caméra.
 
-- Depuis le 21 Mars j'ai :
-  - Commencé une fonction pour fournir au backend toutes les vidéos dites principales c'est à dire celles présentes sur le site,
+- Du 21 Mars jusqu'au 9 avril j'ai :
+  - Fais une fonction pour fournir au backend toutes les vidéos dites principales c'est à dire celles présentes sur le site,
+  - Commencé à créer une rajouter un moyen de fournir les documents associés aux cours et le cours complet,
+  - Adapté la réponse de ma vue get_all pour m'adapter au besoins de Belaise,
+  - Reçu un un schéma de câblage pour le contrôle de la camèra,
+  - Fini le synoptique , prêt à être basculé physiquement,
+    
   
 ### BELAISE
 - Du 16 janvier au 19 février, j'ai :
