@@ -78,35 +78,123 @@
   - Fini le synoptique , prêt à être basculé physiquement.
     
   
-### BELAISE
-- Du 16 janvier au 19 janvier, j'ai :
-  - Je me suis également approprié le sujet (Attribution du rôle de chaque élèves),
-  - Mis en place l'outil de gestion de version (Git),
-  - Mis en place l'outil de travail collaboratif (GitHUB Project).
+### BELAISEVoici une version améliorée et restructurée de votre main courante en markdown, avec des titres, des sous-titres et une mise en forme plus soignée pour mettre en valeur votre travail. Vous pouvez bien entendu l’adapter selon vos besoins :
 
-- Du 19 janvier au 28 janvier, j'ai :
-  - Brainstormé avec L'élève Williart de la direction dans laquelle nous allions,
-  - mis en place la structure complète du projet (Arborescence, modèle MVC),
-  - mis en place une portabilité du projet grâce à docker,
-  - mis en place une solution Backend (Base de données sous PostgreSQL, React).
+---
 
-- Du 29 janvier au 4 février, j'ai :
-  - Préparé la revue 0 en :
-    - Établissant la liste du matériel nécessaire au Projet,
-    - Réalisant un extrait du MCD et du MLD des tables que nous avons déja crées.
+# Journal de Progression du Projet Scolaire
 
-- du 4 février au 15 février, j'ai:
-  - corrigé certaines parties du backend (API, Base de données),
-  - mis en place le contrôle d'accès, pour l'instant générique (PROFS & ÉLÈVES voient la même chose après l'authentification).
- 
-- du 24 février au 14 Mars, j'ai:
-    - ajouté un module permettant la déconnexion de l'utilisateur
-    - corrigé certains éléments concernant la partie docker
-    - implémenté le mode light/dark (pas le bouton, mais la logique derrière celui-ci) afin d'améliorer le confort de l'élève, principal client
-    - intensemment travailler sur la refonte de la base de données, afin de séparer le mld du professeur, de l'élève et de l'admin pour des raisons de sécurité
-    - Créé puis implémenté un nouveau logo pour l'ENF
-    - réalisé la séparation côté programmation entre les tableaux de bord élève et professeur
-    - ajouté une persistence du mode dark/light et trigger le statut du système du client
-    - implémenté la logique du live streaming (désormais suspendu puisque hors Cahier des charges)
-- du 17 Mars au 22 Mars, j'ai:
-  - 
+Ce document retrace de manière détaillée les avancées réalisées tout au long du projet, afin de démontrer la bonne gestion des différentes étapes et la collaboration entre les membres de l’équipe.
+
+---
+
+## Sommaire
+
+- [16 - 19 janvier : Prise en main et mise en place des outils](#16---19-janvier--prise-en-main-et-mise-en-place-des-outils)
+- [19 - 28 janvier : Brainstorming et structuration du projet](#19---28-janvier--brainstorming-et-structuration-du-projet)
+- [29 janvier - 4 février : Préparation de la revue 0](#29-janvier---4-février--préparation-de-la-revue-0)
+- [4 - 15 février : Correction du Backend et contrôle d’accès](#4---15-février--correction-du-backend-et-contrôle-daccès)
+- [24 février - 14 mars : Ajouts fonctionnels et amélioration de l’UX](#24-février---14-mars--ajouts-fonctionnels-et-amélioration-de-lux)
+- [17 - 22 mars : Optimisation des technologies et de la gestion des styles](#17---22-mars--optimisation-des-technologies-et-de-la-gestion-des-styles)
+- [22 mars - Revue : Préparation et finalisation des fonctionnalités](#22-mars---revue--préparation-et-finalisation-des-fonctionnalités)
+- [Revue - 10 avril : Séparation de la charte graphique et intégration des sécurités](#revue---10-avril--séparation-de-la-charte-graphique-et-intégration-des-sécurités)
+
+---
+
+## 16 - 19 janvier : Prise en main et mise en place des outils
+
+- **Appropriation du sujet :** Attribution des rôles pour chaque élève.
+- **Mise en place des outils collaboratifs :**
+  - Installation et configuration de **Git** pour le contrôle de version.
+  - Création et organisation d’un **GitHub Project** dédié à la gestion du travail collaboratif.
+
+---
+
+## 19 - 28 janvier : Brainstorming et structuration du projet
+
+- **Brainstorming et définition de la direction :**
+  - Réunion de brainstorming avec l’élève Williart pour déterminer la direction générale du projet.
+- **Structure du projet :**
+  - Mise en place de l’arborescence du projet.
+  - Implémentation du modèle **MVC** (Modèle-Vue-Contrôleur).
+- **Portabilité et environnement de développement :**
+  - Intégration de **Docker** afin d’assurer une portabilité optimale.
+- **Développement Backend initial :**
+  - Choix des technologies : base de données sous **PostgreSQL** et utilisation de **React** pour le frontend.
+
+---
+
+## 29 janvier - 4 février : Préparation de la revue 0
+
+- **Documentation du projet :**
+  - Rédaction de la liste détaillée du matériel nécessaire pour le projet.
+- **Modélisation de la base de données :**
+  - Réalisation d’un extrait du **MCD** (Modèle Conceptuel des Données) et du **MLD** (Modèle Logique des Données) pour certaines tables déjà créées.
+
+---
+
+## 4 - 15 février : Correction du Backend et contrôle d’accès
+
+- **Amélioration du backend :**
+  - Correction et optimisation de certaines parties de l’API ainsi que de la base de données.
+- **Mise en place du contrôle d’accès :**
+  - Implémentation d’un système d’authentification générique permettant aux professeurs et aux élèves d’accéder au même espace après authentification.
+
+---
+
+## 24 février - 14 mars : Ajouts fonctionnels et amélioration de l’UX
+
+- **Déconnexion et gestion des sessions :**
+  - Ajout d’un module dédié à la déconnexion de l’utilisateur.
+- **Optimisations Docker :**
+  - Correction de divers éléments liés à l’environnement Docker.
+- **Amélioration de l’expérience utilisateur (UX) :**
+  - Implémentation du mode *light/dark* (la logique en arrière-plan, en attendant l’ajout du bouton).
+  - Ajout de la persistance du mode choisi (dark/light).
+- **Refonte de la base de données pour la sécurité :**
+  - Séparation des schémas correspondant aux professeurs, élèves et administrateurs.
+- **Identité visuelle et séparation des tableaux de bord :**
+  - Création et intégration d’un nouveau logo pour l’ENF.
+  - Distinction claire entre les tableaux de bord élèves et professeurs.
+- **Implémentation de fonctionnalités supplémentaires :**
+  - Développement d’une logique de live streaming (actuellement suspendue, hors cahier des charges).
+
+---
+
+## 17 - 22 mars : Optimisation des technologies et de la gestion des styles
+
+- **Mise à jour des technologies frontend :**
+  - Transition de **create-react-app** vers **Vite.js** sur demande de l’élève Williart, pour bénéficier de développements et compilations plus rapides.
+- **Gestion des styles :**
+  - Passage d’un fichier CSS statique (contenant les classes Tailwind) à une intégration automatisée pour optimiser la gestion des styles.
+
+---
+
+## 22 mars - Revue : Préparation et finalisation des fonctionnalités
+
+- **Préparation de la revue :**
+  - Organisation d’une présentation détaillée du projet incluant des extraits de code.
+  - Mise en avant de la gestion de version et de l’environnement de travail collaboratif.
+- **Développement des fonctionnalités de contenu :**
+  - Finalisation de la page présentant les cours disponibles.
+  - Mise en place d’un système d’aperçu des vidéos ainsi qu’un outil de recherche et de filtrage des cours.
+
+---
+
+## Revue - 10 avril : Séparation de la charte graphique et intégration des sécurités
+
+- **Organisation et modularisation du code :**
+  - Séparation de la charte graphique, auparavant commune entre l’application web React Native du professeur et l’Espace Numérique de Formation, afin de réduire les collisions de style et améliorer la flexibilité du développement.
+- **Refonte des interfaces utilisateurs :**
+  - Réalisation de la refonte complète du tableau de bord élève et du formulaire de connexion/inscription.
+  - Développement de la page dédiée à la bibliothèque de cours.
+- **Renforcement de la sécurité de l’application :**
+  - Intégration de l’authentification à double facteur, conforme à la RFC 6238.
+  - Ajout d’un Captcha pour limiter le nombre de requêtes d’authentification au serveur.
+- **Amélioration de l’expérience utilisateur :**
+  - Mise en place d’un menu accessible via la photo de profil, permettant la modification du profil ainsi qu’un bouton de déconnexion.
+  - Finalisation de la page d’accueil **PUBLIQUE** du SPOC pour une meilleure présentation aux utilisateurs externes.
+
+---
+
+Ce document témoigne de l’évolution du projet et de la rigueur appliquée lors de chaque étape de développement. N’hésitez pas à l’enrichir avec des captures d’écran, des extraits de code ou des commentaires supplémentaires pour illustrer encore davantage vos progrès.
