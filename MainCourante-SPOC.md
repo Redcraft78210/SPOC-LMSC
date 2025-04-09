@@ -174,6 +174,3 @@
   - Mise en place d’un menu accessible via la photo de profil, permettant la modification du profil ainsi qu’un bouton de déconnexion.
   - Finalisation de la page d’accueil **PUBLIQUE** du SPOC pour une meilleure présentation aux utilisateurs externes.
 
----
-
-Ce document témoigne de l’évolution du projet et de la rigueur appliquée lors de chaque étape de développement. N’hésitez pas à l’enrichir avec des captures d’écran, des extraits de code ou des commentaires supplémentaires pour illustrer encore davantage vos progrès.
