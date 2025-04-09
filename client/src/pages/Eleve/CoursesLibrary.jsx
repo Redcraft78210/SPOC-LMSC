@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 
+import { FileText, SquarePlay } from "lucide-react";
+
 const Courses = () => {
   const [selectedProfessor, setSelectedProfessor] = useState("Tous");
   const [selectedSubject, setSelectedSubject] = useState("Tous");
@@ -31,6 +33,7 @@ const Courses = () => {
                     "videos/3f4b538504facde3c881b73844f52f24-1742237522.mp4",
                   date_mise_en_ligne: "2024-03-17T18:52:48.781Z",
                 },
+                nombre_de_documents: 4,
               },
             },
           },
@@ -47,6 +50,7 @@ const Courses = () => {
                     "videos/5f4b538504facde3c881b73844f52f24-1742237522.mp4",
                   date_mise_en_ligne: "2024-06-17T18:52:48.781Z",
                 },
+                nombre_de_documents: 2,
               },
             },
           },
@@ -63,7 +67,8 @@ const Courses = () => {
                 professor,
                 subject,
                 topic,
-                video: details.video, // On récupère l'objet vidéo
+                video: details.video, // On récupère l'objet vidéo,
+                nombre_de_documents: details.nombre_de_documents,
               });
             }
           }
@@ -252,7 +257,7 @@ const CourseCard = ({ course }) => {
   };
 
   const handleClick = () => {
-    window.location.href = "/watch/" + course.video.video_id;
+    window.location.href = "/course-reader?courseId=" + course.id_cours;
   };
 
   useEffect(() => {
@@ -296,7 +301,26 @@ const CourseCard = ({ course }) => {
       </div>
 
       {/* Corps de la carte */}
-      <div className="p-4">
+      <div className="p-4 relative">
+        <div className="flex flex-col items-end gap-2 absolute right-2 top-2">
+          {course.video && (
+            <div className="flex items-center">
+              <SquarePlay className="w-4 h-4 mr-2" />
+              <span className="text-xs text-gray-500">
+                {/* {course.video.duree} */}
+                00:27:30
+              </span>
+            </div>
+          )}
+          {course.nombre_de_documents > 0 && (
+            <div className="flex items-center">
+              <FileText className="w-4 h-4 mr-2" />
+              <span className="text-xs text-gray-500">
+                {course.nombre_de_documents}
+              </span>
+            </div>
+          )}
+        </div>
         <h2 className="text-lg font-semibold text-gray-800 mb-2">
           {course.titre}
         </h2>

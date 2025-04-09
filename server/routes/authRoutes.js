@@ -2,7 +2,7 @@
 
 import express from 'express';
 import validateUser from '../middlewares/userValidation.js'; // Validation middleware for user registration
-import { register, login } from '../controllers/authController.js'; // Import the register and login functions from the controller module
+import { register, login, verify2FA, refresh2FASetup } from '../controllers/authController.js'; // Import the register and login functions from the controller module
 
 const router = express.Router();
 
@@ -11,5 +11,14 @@ router.post('/register', validateUser, register);
 
 // Login route with validation
 router.post('/login', login);
+
+// 2FA setup route
+router.post('/activate-2fa', verify2FA);
+
+// 2FA verification route
+router.post('/verify-2fa', verify2FA)
+
+// 2FA refresh setup temp token route
+router.post('/refresh-2fa-setup', refresh2FASetup);
 
 export default router;

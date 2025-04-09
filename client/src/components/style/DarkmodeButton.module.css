@@ -134,13 +134,13 @@
     -webkit-transform 0.6s cubic-bezier(0.645, 0.045, 0.355, 1);
 }
 
-label,
+.label,
 .toggle {
   height: 2.8rem;
   border-radius: 100px;
 }
 
-label {
+.label {
   width: 100%;
   background-color: rgba(0, 0, 0, 0.1);
   border-radius: 100px;
@@ -196,64 +196,64 @@ label {
   color: black;
 }
 /* -------- Switch Styles ------------*/
-[type="checkbox"] {
+.checkbox {
   display: none;
 }
 /* Toggle */
-[type="checkbox"]:checked + .app .toggle {
+.checkbox:checked + .app .toggle {
   -webkit-transform: translateX(100%);
   -ms-transform: translateX(100%);
   transform: translateX(100%);
   background-color: #34323d;
 }
 
-[type="checkbox"]:checked + .app .dark {
+.checkbox:checked + .app .dark {
   opacity: 1;
   color: white;
 }
 
-[type="checkbox"]:checked + .app .light {
+.checkbox:checked + .app .light {
   opacity: 1;
   color: white;
 }
 /* App */
-[type="checkbox"]:checked + .app .body {
+.checkbox:checked + .app .body {
   background-color: #26242e;
   color: white;
 }
 /* Circle */
-[type="checkbox"]:checked + .app .crescent {
+.checkbox:checked + .app .crescent {
   -webkit-transform: scale(1);
   -ms-transform: scale(1);
   transform: scale(1);
   background: #26242e;
 }
 
-[type="checkbox"]:checked + .app .circle {
+.checkbox:checked + .app .circle {
   background: linear-gradient(40deg, #8983f7, #a3dafb 70%);
 }
 
-[type="checkbox"]:checked + .app .main-circle {
+.checkbox:checked + .app .main-circle {
   background: linear-gradient(40deg, #8983f7, #a3dafb 70%);
 }
 
-[type="checkbox"]:checked + .time {
+.checkbox:checked + .time {
   color: white;
 }
 
-[type="checkbox"]:checked + .app .body .phone .menu .time {
+.checkbox:checked + .app .body .phone .menu .time {
   color: white;
 }
 
-[type="checkbox"]:checked + .app .body .phone .menu .icons .network {
+.checkbox:checked + .app .body .phone .menu .icons .network {
   border-color: transparent transparent white transparent;
 }
 
-[type="checkbox"]:checked + .app .body .phone .menu .icons .battery {
+.checkbox:checked + .app .body .phone .menu .icons .battery {
   background-color: white;
 }
 
-[type="checkbox"]:checked + .app .body {
+.checkbox:checked + .app .body {
   border-radius: 40px;
 }
 

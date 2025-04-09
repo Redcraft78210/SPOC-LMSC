@@ -1,5 +1,5 @@
 import React, { useContext } from "react";
-import Clock from "react-live-clock";
+// import Clock from "react-live-clock";
 import { ThemeContext } from "../../contexts/ThemeContext";
 
 const DarkmodeButton = () => {
@@ -25,11 +25,7 @@ const DarkmodeButton = () => {
           <div className="phone relative z-10 flex flex-col items-center justify-center w-full h-full bg-inherit">
             <div className="menu flex justify-between items-center w-full px-4 py-2 mt-4 opacity-40">
               <div className="time text-black dark:text-white">
-                <Clock
-                  format={"HH:mm:ss"}
-                  ticking={true}
-                  timezone={"Europe/Paris"}
-                />
+                13:12:12
               </div>
               <div className="icons flex space-x-2">
                 <div className="network w-0 h-0 border-solid border-l-[6.8px] border-r-[6.8px] border-b-[7.2px] border-l-transparent border-r-transparent border-b-black dark:border-b-white rotate-[135deg]"></div>

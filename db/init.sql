@@ -3,10 +3,16 @@ CREATE TYPE statut_type AS ENUM ('actif', 'inactif');
 -- Create administrateurs table
 CREATE TABLE
     IF NOT EXISTS administrateurs (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         username VARCHAR(255) UNIQUE NOT NULL,
         email VARCHAR(255) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
+        "twoFAEnabled" BOOLEAN DEFAULT FALSE CHECK (
+            ("twoFAEnabled" = TRUE AND "twoFASecret" IS NOT NULL) OR
+            ("twoFAEnabled" = FALSE AND "twoFASecret" IS NOT NULL) OR
+            ("twoFAEnabled" = FALSE AND "twoFASecret" IS NULL)
+        ),
+        "twoFASecret" VARCHAR(255),
         statut statut_type DEFAULT 'actif',
         "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -15,11 +21,19 @@ CREATE TABLE
 -- Create students table
 CREATE TABLE
     IF NOT EXISTS students (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(255) NOT NULL,
+        surname VARCHAR(255) NOT NULL,
         username VARCHAR(255) UNIQUE NOT NULL,
         email VARCHAR(255) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
-        statut statut_type DEFAULT 'actif',
+        "twoFAEnabled" BOOLEAN DEFAULT FALSE CHECK (
+            ("twoFAEnabled" = TRUE AND "twoFASecret" IS NOT NULL) OR
+            ("twoFAEnabled" = FALSE AND "twoFASecret" IS NOT NULL) OR
+            ("twoFAEnabled" = FALSE AND "twoFASecret" IS NULL)
+        ),
+        "twoFASecret" VARCHAR(255),
+        statut "statut_type" DEFAULT 'actif',
         "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
@@ -27,10 +41,19 @@ CREATE TABLE
 -- Create teachers table
 CREATE TABLE
     IF NOT EXISTS teachers (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(255) NOT NULL,
+        surname VARCHAR(255) NOT NULL,
         username VARCHAR(255) UNIQUE NOT NULL,
         email VARCHAR(255) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
+        "twoFAEnabled" BOOLEAN DEFAULT FALSE CHECK (
+            ("twoFAEnabled" = TRUE AND "twoFASecret" IS NOT NULL) OR
+            ("twoFAEnabled" = FALSE AND "twoFASecret" IS NOT NULL) OR
+            ("twoFAEnabled" = FALSE AND "twoFASecret" IS NULL) 
+        ),
+        "twoFASecret" VARCHAR(255),
+        statut "statut_type" DEFAULT 'actif',
         "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
@@ -38,7 +61,7 @@ CREATE TABLE
 -- Create classes table
 CREATE TABLE
     classes (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         name VARCHAR(255) NOT NULL,
         main_teacher_id UUID,
         CONSTRAINT fk_main_teacher_id FOREIGN KEY (main_teacher_id) REFERENCES teachers (id)
@@ -66,7 +89,7 @@ CREATE TABLE
 -- Create courses table
 CREATE TABLE
     IF NOT EXISTS courses (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         title VARCHAR(255) NOT NULL,
         description TEXT,
         "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -78,7 +101,7 @@ CREATE TABLE
 -- Create lives table
 CREATE TABLE
     IF NOT EXISTS lives (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         title VARCHAR(255) NOT NULL,
         description TEXT,
         link VARCHAR(255),
@@ -98,33 +121,33 @@ CREATE TABLE
     );
 
 -- Trigger to auto-update the 'updatedAt' column
-CREATE
-OR REPLACE FUNCTION update_updated_at_column ()
+CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
     NEW."updatedAt" = CURRENT_TIMESTAMP;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+
 -- Attach the trigger to the students table
 CREATE TRIGGER trigger_students_updated_at BEFORE
-UPDATE ON students FOR EACH ROW EXECUTE FUNCTION update_updated_at_column ();
+UPDATE ON students FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Attach the trigger to the teachers table
 CREATE TRIGGER trigger_teachers_updated_at BEFORE
-UPDATE ON teachers FOR EACH ROW EXECUTE FUNCTION update_updated_at_column ();
+UPDATE ON teachers FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Attach the trigger to the administrateurs table
 CREATE TRIGGER trigger_administrateurs_updated_at BEFORE
-UPDATE ON administrateurs FOR EACH ROW EXECUTE FUNCTION update_updated_at_column ();
+UPDATE ON administrateurs FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Attach the trigger to the lives table
 CREATE TRIGGER trigger_lives_updated_at BEFORE
-UPDATE ON lives FOR EACH ROW EXECUTE FUNCTION update_updated_at_column ();
+UPDATE ON lives FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Attach the trigger to the courses table
 CREATE TRIGGER trigger_courses_updated_at BEFORE
-UPDATE ON courses FOR EACH ROW EXECUTE FUNCTION update_updated_at_column ();
+UPDATE ON courses FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Create indexes for faster lookup on username and email
 CREATE INDEX IF NOT EXISTS idx_students_username ON students (username);
@@ -141,16 +164,20 @@ CREATE INDEX IF NOT EXISTS idx_administrateurs_email ON administrateurs (email);
 
 -- Insert initial data into the students table
 INSERT INTO
-    students (id, username, email, password)
+    students (id, name, surname,username, email, password)
 VALUES
     (
         'a6fa5fc1-1234-4321-0000-000000000001',
+        'John',
+        'Doe',
         'jdoe1',
         'john.doe@example.com',
         '$2b$10$1Tl7ARRSx3HHsS8nehhTF.asiDLQ7IOzCJ1EzCoMGQBFysfFCdQc2'
     ),
     (
         'a6fa5fc1-1234-4321-0000-000000000002',
+        'Jane',
+        'Doe',
         'jdoe2',
         'jane.doe@example.com',
         '$2b$10$1Tl7ARRSx3HHsS8nehhTF.asiDLQ7IOzCJ1EzCoMGQBFysfFCdQc2'
@@ -158,16 +185,20 @@ VALUES
 
 -- Insert initial data into the teachers table
 INSERT INTO
-    teachers (id, username, email, password)
+    teachers (id, name, surname, username, email, password)
 VALUES
     (
         'a6fa5fc1-1234-4321-0000-000000000003',
+        'John',
+        'Doe',
         'jdoe1',
         'john.doeprof@example.com',
         '$2b$10$1Tl7ARRSx3HHsS8nehhTF.asiDLQ7IOzCJ1EzCoMGQBFysfFCdQc2'
-    );
+    ),
     (
-        'a6fa5fc1-1234-4321-0000-0000000000184',
+        'a6fa5fc1-1234-4321-0000-000000000009',
+        'Jane',
+        'Doe',
         'jdoe2',
         'jane.doeprof@example.com',
         '$2a$10$.P8QYMzksJLNnQPHBYGGiuEXcqhhXQUv0N2ZeurEoWW8jpJxUjdCK'
@@ -195,7 +226,7 @@ VALUES
 -- Insert initial lives data
 -- Make sure the teacher ID and class ID referenced here exist in the respective tables.
 INSERT INTO
-    lives (id, title, description,link, teacher_id)
+    lives (id, title, description, link, teacher_id)
 VALUES
     (
         'a6fa5fc1-1234-4321-0000-000000000015',
@@ -213,7 +244,6 @@ VALUES
         'a6fa5fc1-1234-4322-0000-000000000001', -- Class ID
         (SELECT id FROM lives WHERE title = 'Understanding JavaScript Closures')
     );
-
 
 -- Insert initial courses data
 -- Make sure the teacher IDs referenced here exist in the teachers table.
