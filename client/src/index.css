@@ -5,6 +5,11 @@
   --luxury-100: rgb(0% 0% 0%);
   --luxury-200: rgb(13.3% 13.3% 13.3%);
   --luxury-300: rgb(20% 20% 20%);
+  --neutral-700: #262626;
+  --neutral-800: oklch(0.269 0 0);
+  --neutral-900: oklch(0.205 0 0);
+  --white: #ffffff;
+  --gray: #636161;
 }
 
 :root[data-bs-theme="light"] {
@@ -12,6 +17,11 @@
   --luxury-100: rgb(255, 255, 255);
   --luxury-200: rgb(255, 240, 219);
   --luxury-300: rgb(255, 222, 176);
+  --neutral-700: #737373;
+  --neutral-800: oklch(0.371 0 0);
+  --neutral-900: oklch(0.269 0 0);
+  --white: #000000;
+  --gray: #1b1b1b;
 }
 
 body {

@@ -11,12 +11,14 @@ import { jwtDecode } from "jwt-decode";
 // Import your components
 import Home from "./pages/Home";
 import DashboardEleve from "./pages/Eleve/Dashboard";
-import DashboardProf from "./pages/Professeur/Dashboard";
+// import DashboardProf from "./pages/Professeur/Dashboard";
 import EleveSign from "./pages/Eleve/Sign";
 import ProfSign from "./pages/Professeur/Sign"; 
 
 import Logout from "./components/Logout";
 import NotFound from "./pages/NotFound";
+import DashboardProf from './pages/Professeur/DashboardProf';
+import VideoMng from './pages/Professeur/VideoMng';
 
 const routeConfig = [
   { path: "/dashboard", content: "Home" },
@@ -107,6 +109,10 @@ function App() {
 
   return (
     <Routes>
+      <Route path="/tmp" element={<DashboardProf /> } />
+      <Route path="/videomanager" element={<VideoMng /> } />
+
+      
       <Route
         path="/"
         element={
