@@ -79,22 +79,34 @@
     
   
 ### BELAISE
-- Du 16 janvier au 19 février, j'ai :
+- Du 16 janvier au 19 janvier, j'ai :
   - Je me suis également approprié le sujet (Attribution du rôle de chaque élèves),
   - Mis en place l'outil de gestion de version (Git),
   - Mis en place l'outil de travail collaboratif (GitHUB Project).
 
-- Du 19 janvier au 28 février, j'ai :
+- Du 19 janvier au 28 janvier, j'ai :
   - Brainstormé avec L'élève Williart de la direction dans laquelle nous allions,
   - mis en place la structure complète du projet (Arborescence, modèle MVC),
   - mis en place une portabilité du projet grâce à docker,
   - mis en place une solution Backend (Base de données sous PostgreSQL, React).
 
-- Du 28 février au 4 février, j'ai :
+- Du 29 janvier au 4 février, j'ai :
   - Préparé la revue 0 en :
     - Établissant la liste du matériel nécessaire au Projet,
     - Réalisant un extrait du MCD et du MLD des tables que nous avons déja crées.
 
-- Depuis le 4 février, j'ai:
+- du 4 février au 15 février, j'ai:
   - corrigé certaines parties du backend (API, Base de données),
   - mis en place le contrôle d'accès, pour l'instant générique (PROFS & ÉLÈVES voient la même chose après l'authentification).
+ 
+- du 24 février au 14 Mars, j'ai:
+    - ajouté un module permettant la déconnexion de l'utilisateur
+    - corrigé certains éléments concernant la partie docker
+    - implémenté le mode light/dark (pas le bouton, mais la logique derrière celui-ci) afin d'améliorer le confort de l'élève, principal client
+    - intensemment travailler sur la refonte de la base de données, afin de séparer le mld du professeur, de l'élève et de l'admin pour des raisons de sécurité
+    - Créé puis implémenté un nouveau logo pour l'ENF
+    - réalisé la séparation côté programmation entre les tableaux de bord élève et professeur
+    - ajouté une persistence du mode dark/light et trigger le statut du système du client
+    - implémenté la logique du live streaming (désormais suspendu puisque hors Cahier des charges)
+- du 17 Mars au 22 Mars, j'ai:
+  - 
