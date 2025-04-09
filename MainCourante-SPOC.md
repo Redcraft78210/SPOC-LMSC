@@ -78,28 +78,7 @@
   - Fini le synoptique , prêt à être basculé physiquement.
     
   
-### BELAISEVoici une version améliorée et restructurée de votre main courante en markdown, avec des titres, des sous-titres et une mise en forme plus soignée pour mettre en valeur votre travail. Vous pouvez bien entendu l’adapter selon vos besoins :
-
----
-
-# Journal de Progression du Projet Scolaire
-
-Ce document retrace de manière détaillée les avancées réalisées tout au long du projet, afin de démontrer la bonne gestion des différentes étapes et la collaboration entre les membres de l’équipe.
-
----
-
-## Sommaire
-
-- [16 - 19 janvier : Prise en main et mise en place des outils](#16---19-janvier--prise-en-main-et-mise-en-place-des-outils)
-- [19 - 28 janvier : Brainstorming et structuration du projet](#19---28-janvier--brainstorming-et-structuration-du-projet)
-- [29 janvier - 4 février : Préparation de la revue 0](#29-janvier---4-février--préparation-de-la-revue-0)
-- [4 - 15 février : Correction du Backend et contrôle d’accès](#4---15-février--correction-du-backend-et-contrôle-daccès)
-- [24 février - 14 mars : Ajouts fonctionnels et amélioration de l’UX](#24-février---14-mars--ajouts-fonctionnels-et-amélioration-de-lux)
-- [17 - 22 mars : Optimisation des technologies et de la gestion des styles](#17---22-mars--optimisation-des-technologies-et-de-la-gestion-des-styles)
-- [22 mars - Revue : Préparation et finalisation des fonctionnalités](#22-mars---revue--préparation-et-finalisation-des-fonctionnalités)
-- [Revue - 10 avril : Séparation de la charte graphique et intégration des sécurités](#revue---10-avril--séparation-de-la-charte-graphique-et-intégration-des-sécurités)
-
----
+### BELAISE
 
 ## 16 - 19 janvier : Prise en main et mise en place des outils
 
