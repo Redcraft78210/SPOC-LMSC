@@ -64,14 +64,18 @@
 - Du 11 Mars jusqu'au 21 mars j'ai :
   - Commencé le serveur de streaming grâce aux technologies python et Django pour la distribution des vidéos vers le backend,
   - Pour l'instant je peux fournir une vidéo grâce à son titre,la hiérarchie des vidéos mais je peux aussi uploader des vidéos,
-  - Pensé à au pilotage du servomoteur pour le contrôle des différents angles de vue de la caméra.
+  - Pensé à au pilotage du servomoteur pour le contrôle des différents angles de vue de la caméra,
+  - Fais la fonction pour uploader une vidéo,
+  - Fais la fonction pour supprimer une vidéo par son ID,
+  - Récuperer toute l'arborescence des vidéos,
+  - Récupérer une vidéo par son ID.
 
 - Du 21 Mars jusqu'au 9 avril j'ai :
   - Fais une fonction pour fournir au backend toutes les vidéos dites principales c'est à dire celles présentes sur le site,
   - Commencé à créer une rajouter un moyen de fournir les documents associés aux cours et le cours complet,
   - Adapté la réponse de ma vue get_all pour m'adapter au besoins de Belaise,
   - Reçu un un schéma de câblage pour le contrôle de la camèra,
-  - Fini le synoptique , prêt à être basculé physiquement,
+  - Fini le synoptique , prêt à être basculé physiquement.
     
   
 ### BELAISE
