@@ -6,6 +6,11 @@ const validateUser = [
     .withMessage('Name is required')
     .isLength({ min: 3 })
     .withMessage('Name must be at least 3 characters long'),
+  body('surname')
+    .notEmpty()
+    .withMessage('Surname is required')
+    .isLength({ min: 3 })
+    .withMessage('Surname must be at least 3 characters long'),
   body('email')
     .isEmail()
     .withMessage('Valid email is required')
@@ -13,8 +18,8 @@ const validateUser = [
   body('password')
     .notEmpty()
     .withMessage('Password is required')
-    .isLength({ min: 6 })
-    .withMessage('Password must be at least 6 characters long')
+    .isLength({ min: 12 })
+    .withMessage('Password must be at least 12 characters long')
     .matches(/[0-9]/)
     .withMessage('Password must contain a number')
     .matches(/[a-zA-Z]/)

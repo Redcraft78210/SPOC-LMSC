@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Send } from "lucide-react";
-import SubmitButton from "../components/SubmitButton";
+import SubmitButton from "../../components/SubmitButton";
 
 // import {jwtDecode } from 'jwt-decode';
 // import moment from 'moment-timezone';
@@ -256,7 +256,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
             </div>
           )}
           <div className=" flex flex-col items-center justify-center w-full ">
-            <SubmitButton onclicl={handleSubmit} />
+            <SubmitButton onSubmission={handleSubmit} />
           </div>
           <div className=" flex flex-col items-center justify-center w-full text-[--white]  ">
             {isRegistered ? (

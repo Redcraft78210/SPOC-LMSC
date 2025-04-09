@@ -1,22 +1,21 @@
 import React from "react";
-import "./styles/Dashboard.css";
-import NavigationBar from "../components/NavigationBar";
-import Logo from "../Logo";
+import NavigationBar from "../../components/NavigationBar";
+import Logo from "../../Logo";
 
-import DashboardProf from "./Professeur/DashboardProf";
-import EleveDashboardHome from "./Eleve/DashboardHome";
+// import DashboardProf from "./Professeur/DashboardProf";
+import DashboardProf from "./DashboardHome";
 
-import Profile from "./Profile";
-import NotFound from "./NotFound";
-import CoursesLibrary from "./CoursesLibrary";
-import Lives from "./Eleve/Lives";
-import LiveManagement from "./Professeur/LiveManagement";
+import Profile from "../Profile";
+import NotFound from "../NotFound";
+import CoursesLibrary from "../Eleve/CoursesLibrary";
+// import Lives from "./Eleve/Lives";
+// import LiveManagement from "./Professeur/LiveManagement";
 
 const Dashboard = ({ Content, isProf }) => {
   const renderContent = () => {
     switch (Content) {
       case "Home":
-        return isProf ? <ProfDashboardHome /> : <EleveDashboardHome />;
+        return <DashboardProf />;
       case "Profile":
         return (
           <div className="profile">

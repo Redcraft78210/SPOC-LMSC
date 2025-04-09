@@ -7,6 +7,14 @@ const Teacher = sequelize.define('Teacher', {
     defaultValue: Sequelize.UUIDV4,
     primaryKey: true,
   },
+  name: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  surname: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
   username: {
     type: DataTypes.STRING,
     allowNull: false,
@@ -19,6 +27,13 @@ const Teacher = sequelize.define('Teacher', {
   password: {
     type: DataTypes.STRING,
     allowNull: false,
+  },
+  "twoFAEnabled": {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  "twoFASecret": {
+    type: DataTypes.STRING,
   },
 }, {
   tableName: 'teachers',

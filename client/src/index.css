@@ -1,21 +1,10 @@
-/* @import "@fontsource/roboto/500.css";
-@import "@fontsource/roboto/400.css";
-@import "@fontsource/roboto/300.css";
-@import "@fontsource/roboto/700.css"; */
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-/* Add your custom global styles below */
+@import "tailwindcss";
 
 :root[data-bs-theme="dark"] {
   --bs-body-bg: rgb(0% 0% 0%);
   --luxury-100: rgb(0% 0% 0%);
   --luxury-200: rgb(13.3% 13.3% 13.3%);
   --luxury-300: rgb(20% 20% 20%);
-  --neutral-700: #262626;
-  --white: #ffffff;
 }
 
 :root[data-bs-theme="light"] {
@@ -23,8 +12,6 @@
   --luxury-100: rgb(255, 255, 255);
   --luxury-200: rgb(255, 240, 219);
   --luxury-300: rgb(255, 222, 176);
-  --neutral-700: #737373;
-  --white: #000000;
 }
 
 body {
@@ -32,85 +19,14 @@ body {
   background-color: var(--luxury-200);
 }
 
-.navbar-square-first {
-  width: 150px;
-  height: 100px;
-  position: absolute;
-  z-index: 10;
-  border-bottom-left-radius: 100%;
+@keyframes progress {
+  0% {
+    width: 0;
+  }
+  100% {
+    width: 100%;
+  }
 }
-
-.navbar-square-second {
-  width: 150px;
-  height: 100px;
-  background-color: rgba(
-    0,
-    0,
-    250,
-    1
-  ); /* Fixed alpha value to be in the valid range (0 to 1) */
-}
-
-.n_simple {
-  width: 300px;
-  height: 1300px;
-  background-color: rgba(0, 0, 250, 1); /* Fixed alpha value */
-  border-top-right-radius: 150px;
-  border-bottom-right-radius: 150px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.n_links-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 100px; /* Space between buttons */
-  position: relative;
-  top: 50px;
-}
-
-.n_link-button {
-  width: 100px;
-  height: 100px;
-  padding: 10px;
-  /* color: rgba(0, 0, 250, 1); */
-  font-size: 16px;
-  transition: background-color 0.3s, color 0.3s;
-}
-
-.n_link-button:hover {
-  background-color: rgba(0, 0, 250, 1);
-  color: white;
-}
-
-.navbar-square-third {
-  width: 150px;
-  height: 100px;
-  position: absolute;
-  z-index: 10;
-  border-top-left-radius: 100%;
-}
-
-.navbar-square-last {
-  width: 150px;
-  height: 100px;
-  background-color: rgba(
-    0,
-    0,
-    250,
-    1
-  ); /* Fixed alpha value to be in the valid range (0 to 1) */
-}
-
-.requiredp::after {
-  margin-left: 0.125rem;
-  color: #ef4444;
-  content: "*";
-}
-
-.labelSign {
-  padding: 4px;
-  margin-left: 0;
+.animate-progress {
+  animation: progress 2s ease-in-out infinite;
 }

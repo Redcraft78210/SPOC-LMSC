@@ -18,6 +18,8 @@ const authRoutes = require('./routes/authRoutes').default;
 const courseRoutes = require('./routes/courseRoutes').default;
 const userRoutes = require('./routes/userRoutes').default;
 const liveRoutes = require('./routes/liveRoutes').default;
+const videoRoutes = require('./routes/videoRoutes').default;
+const documentRoutes = require('./routes/documentRoutes').default;
 
 
 // Initialize environment variables
@@ -53,6 +55,8 @@ app.use('/api/auth', authRoutes); // Authentication routes (login, register)
 app.use('/api/courses', courseRoutes); // Courses-related routes
 app.use('/api/user', userRoutes); // Courses-related routes
 app.use('/api/lives', liveRoutes); // Courses-related routes
+app.use('/api/videos', videoRoutes); // Video-related routes
+app.use('/api/documents', documentRoutes); // Document-related routes
 
 // Serve React frontend (if applicable)
 if (process.env.NODE_ENV === 'production') {

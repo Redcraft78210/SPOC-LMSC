@@ -1,23 +1,26 @@
 # Base image with Node.js
 FROM node:22 AS base
 
+# Update npm globally in the base image to avoid redundancy
+RUN npm install -g npm@latest
+
 # Set the working directory
 WORKDIR /usr/src/app
 
 # Stage 1: Dependencies installation
 FROM base AS dependencies
 
-# Install system dependencies
+# Install build-time system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential ffmpeg && apt-get clean && rm -rf /var/lib/apt/lists/*
+    build-essential && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Copy package manifests
 COPY package.json package-lock.json ./
 
-RUN npm install -g npm@latest
-
 # Install root dependencies (production + dev)
-RUN npm install
+RUN npm install --legacy-peer-deps
 
 # Copy server and client package manifests
 COPY server/package*.json ./server/
@@ -25,13 +28,11 @@ COPY client/package*.json ./client/
 
 # Install server dependencies
 WORKDIR /usr/src/app/server
-RUN npm install -g npm@latest
-RUN npm install
+RUN npm install --legacy-peer-deps
 
 # Install client dependencies
 WORKDIR /usr/src/app/client
-RUN npm install -g npm@latest
-RUN npm install
+RUN npm install --legacy-peer-deps
 
 # Copy source code
 WORKDIR /usr/src/app
@@ -40,7 +41,6 @@ COPY . .
 # Stage 2: Build the application
 FROM base AS build
 
-RUN npm install -g npm@latest
 # Copy dependencies and source code
 COPY --from=dependencies /usr/src/app /usr/src/app
 
@@ -53,20 +53,21 @@ FROM node:22-slim AS final
 
 # Set the working directory
 WORKDIR /usr/src/app
-RUN npm install -g npm@latest
+
+# Install runtime system dependencies first for better caching
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ffmpeg && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Copy necessary artifacts
-COPY --from=build /usr/src/app/package*.json /usr/src/app/
-COPY --from=build /usr/src/app/db /usr/src/app/
+COPY --from=build /usr/src/app/package*.json ./
+COPY --from=build /usr/src/app/db ./db
+COPY --from=build /usr/src/app/server ./server
+COPY --from=build /usr/src/app/client/dist ./client/dist
 
-COPY --from=build /usr/src/app/server /usr/src/app/server
-COPY --from=build /usr/src/app/client/dist /usr/src/app/client/dist
-
-# Install Backend bind dependencies
-RUN npm install 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg && apt-get clean && rm -rf /var/lib/apt/lists/*
+# Install production dependencies (omit devDependencies)
+RUN npm install --production --legacy-peer-deps
 
 # Set environment to production
 ENV NODE_ENV=production

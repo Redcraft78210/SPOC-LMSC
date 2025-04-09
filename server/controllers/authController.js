@@ -1,84 +1,197 @@
-const { Student, Class, StudentClass } = require('../models');
+const { Student, Teacher } = require('../models');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const { authenticator } = require('otplib');
+const qrcode = require('qrcode');
 
-// Register controller with validation middleware
+
+const ERROR_MESSAGES = {
+  INVALID_2FA_CODE: 'auth/invalid-2fa-code',
+  EXPIRED_TOKEN: 'auth/session-expired',
+  MISSING_2FA_CODE: 'auth/2fa-required',
+  MISSING_FIELDS: 'auth/missing-fields',
+  INVALID_ROLE: 'auth/invalid-role',
+  EMAIL_EXISTS: 'auth/email-exists',
+  USERNAME_EXISTS: 'auth/username-exists',
+  INVALID_CREDENTIALS: 'auth/invalid-credentials',
+  SERVER_ERROR: 'default'
+};
+
+const generateTempToken = (userId, isSetup) => {
+  return jwt.sign(
+    { userId, purpose: isSetup ? 'Setup2FA' : '2FA' },
+    process.env.JWT_SECRET,
+    { expiresIn: isSetup ? '2m' : '10m', algorithm: 'HS256' }
+  );
+};
+
 const register = async (req, res) => {
-  const { email, username, password, name } = req.body;
+  const { email, username, password, name, surname, role = 'student' } = req.body;
+  const requiredFields = ['email', 'username', 'password', 'name', 'surname'];
 
-  // Vérification de la présence de tous les champs requis
-  if (!email || !username || !password || !name) {
-    return res.status(400).json({ message: 'Email, username, password et name sont obligatoires pour l\'inscription.' });
+  if (requiredFields.some(field => !req.body[field])) {
+    return res.status(400).json({ message: ERROR_MESSAGES.MISSING_FIELDS });
+  }
+
+  if (!['student', 'teacher'].includes(role)) {
+    return res.status(400).json({ message: ERROR_MESSAGES.INVALID_ROLE });
   }
 
   try {
-    // Vérification de l'existence d'un utilisateur avec le même email
-    const existingUserEmail = await Student.findOne({ where: { email } });
-    if (existingUserEmail) {
-      return res.status(400).json({ message: 'Un utilisateur avec cet email existe déjà.' });
-    }
+    const [existingEmail, existingUsername] = await Promise.all([
+      Student.findOne({ where: { email } }) || Teacher.findOne({ where: { email } }),
+      Student.findOne({ where: { username } }) || Teacher.findOne({ where: { username } })
+    ]);
 
-    const existingUserName = await Student.findOne({ where: { username } });
-    if (existingUserName) {
-      return res.status(400).json({ message: 'Un utilisateur avec ce nom d\'utilisateur existe déjà.' });
-    }
+    if (existingEmail) return res.status(409).json({ message: ERROR_MESSAGES.EMAIL_EXISTS });
+    if (existingUsername) return res.status(409).json({ message: ERROR_MESSAGES.USERNAME_EXISTS });
 
-    // Hashage du mot de passe avec un salt de 10
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 12);
+    const Model = role === 'student' ? Student : Teacher;
 
-    // Création de l'utilisateur dans la base de données
-    const newUser = await Student.create({
+    const secret = authenticator.generateSecret();
+    const twoFASecret = secret;
+
+    const newUser = await Model.create({
       email,
       username,
       password: hashedPassword,
       name,
+      surname,
+      role,
+      twoFASecret,
+      twoFAEnabled: false
     });
 
-    // Génération d'un token JWT valide pendant 1 heure
-    const token = jwt.sign({ id: newUser.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    const qrCode = await qrcode.toDataURL(authenticator.keyuri(email, process.env.APP_NAME, secret));
 
-    return res.status(201).json({ token });
+    const tempToken = generateTempToken(newUser.id, 'setup');
+    return res.status(201).json({
+      tempToken,
+      twoFASetup: {
+        qrCode,
+        manualSecret: twoFASecret
+      }
+    });
+
   } catch (error) {
-    console.error('Erreur lors de l\'inscription :', error);
-    return res.status(500).json({ message: 'Erreur interne du serveur.' });
+    console.error('Erreur d\'inscription:', error);
+    return res.status(500).json({ message: ERROR_MESSAGES.SERVER_ERROR });
   }
 };
 
-// Login controller with validation (no additional validation middleware required for login)
 const login = async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
-    return res.status(400).json({ message: 'Email and password are required' });
+    return res.status(400).json({ message: ERROR_MESSAGES.MISSING_FIELDS });
   }
 
   try {
-    const user = await Student.findOne({ where: { email } });
+    const [student, teacher] = await Promise.all([
+      Student.findOne({ where: { email } }),
+      Teacher.findOne({ where: { email } })
+    ]);
 
-    if (!user) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+    const user = student || teacher;
+    if (!user) return res.status(401).json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS });
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) return res.status(401).json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS });
+
+    if (user.twoFAEnabled) {
+      const tempToken = generateTempToken(user.id);
+      return res.status(202).json({
+        requires2FA: true,
+        tempToken,
+        message: '2FA requis'
+      });
     }
 
-    const studentClass = await StudentClass.findOne({ where: { student_id: user.id } });
+    const tokenPayload = { id: user.id, email: user.email, name: user.name, role: user.role };
+    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid credentials' });
-    }
-
-    const token = jwt.sign({
-      id: user.id,
-      classId: studentClass ? studentClass.class_id : null,
-      isProf: false,
-    },
-      process.env.JWT_SECRET, { expiresIn: '1h' }
-    );
-    return res.status(200).json({ token });
+    return res.json({ token });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Server error' });
+    console.error('Erreur de connexion:', error);
+    return res.status(500).json({ message: ERROR_MESSAGES.SERVER_ERROR });
   }
 };
 
-module.exports = { register, login };
+const verify2FA = async (req, res) => {
+  const { code, tempToken, setup } = req.body;
+
+  if (!code || !tempToken) {
+    return res.status(400).json({ message: ERROR_MESSAGES.MISSING_2FA_CODE });
+  }
+
+  try {
+    const decoded = jwt.verify(tempToken, process.env.JWT_SECRET);
+
+    if (decoded.purpose !== '2FA' && decoded.purpose !== 'Setup2FA') {
+      return res.status(401).json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS });
+    }
+
+    const user = await Student.findByPk(decoded.userId) || await Teacher.findByPk(decoded.userId);
+    if (!user) return res.status(404).json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS });
+
+    const verified = authenticator.check(code, user.twoFASecret);
+
+    if (!verified) {
+      return res.status(401).json({ message: ERROR_MESSAGES.INVALID_2FA_CODE });
+    }
+
+    if (setup) {
+      user.twoFAEnabled = true;
+      await user.save();
+    }
+
+    const tokenPayload = { id: user.id, email: user.email, name: user.name, role: user.role };
+    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+    return res.json({ token });
+  } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ message: ERROR_MESSAGES.EXPIRED_TOKEN });
+    }
+    console.error('Erreur de vérification 2FA:', error);
+    return res.status(500).json({ message: ERROR_MESSAGES.SERVER_ERROR });
+  }
+};
+
+const refresh2FASetup = async (req, res) => {
+  const { tempToken, twoFASetup } = req.body;
+
+  if (!tempToken) {
+    return res.status(400).json({ message: ERROR_MESSAGES.MISSING_FIELDS });
+  }
+
+  try {
+    const decoded = jwt.verify(tempToken, process.env.JWT_SECRET);
+
+    if (decoded.purpose !== 'Setup2FA') {
+      return res.status(401).json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS });
+    }
+
+    const user = await Student.findByPk(decoded.userId) || await Teacher.findByPk(decoded.userId);
+    if (!user) return res.status(404).json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS });
+
+    const newTempToken = generateTempToken(user.id, 'setup');
+
+    return res.json({
+      tempToken: newTempToken,
+      twoFASetup
+    });
+  } catch (error) {
+    console.error('Erreur de réinitialisation 2FA:', error);
+    return res.status(500).json({ message: ERROR_MESSAGES.SERVER_ERROR });
+  }
+};
+
+module.exports = {
+  register,
+  login,
+  verify2FA,
+  refresh2FASetup
+};
 

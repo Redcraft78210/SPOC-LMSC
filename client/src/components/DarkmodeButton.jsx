@@ -2,7 +2,7 @@ import React, { useContext } from 'react'
 import LiveClock from './Clock.jsx';
 
 import { ThemeContext } from "../contexts/ThemeContext";
-import "./style/DarkmodeButton.css";
+import "./style/DarkmodeButton.module.css";
 
 const DarkmodeButton = () => {
   const { darkMode, toggleDarkMode } = useContext(ThemeContext);
@@ -10,6 +10,7 @@ const DarkmodeButton = () => {
     <>
       <input
         id="switch"
+        className='checkbox'
         type="checkbox"
         onChange={toggleDarkMode}
         checked={darkMode}
@@ -30,7 +31,7 @@ const DarkmodeButton = () => {
                             <div className="circle">
                                 <div className="crescent"></div>
                             </div>
-                            <label htmlFor="switch">
+                            <label className="label" htmlFor="switch">
                                 <div className="toggle"></div>
                                 <div className="names">
                                     <p className="light">Light</p>
