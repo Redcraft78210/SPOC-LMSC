@@ -1,5 +1,14 @@
-# Main courante SPOC-LMSC
+# Main courante SPOC-LMSC (Projet 9)
+Mise à Jour du 10 Avril 2025
 
+Élèves :
+  E1: Adrien DE CASTRO
+  E2: Ewen Williart
+  E3: Clément BÉLAISE
+
+# Objet du Document
+  Ce document a pour objet de consigner le quotidien des opérations, remarques et questions techniques relatives au projet 9, SPOC-LMSC
+  
 ## Du 16 janvier 2025 au 06 février 2025
 
 ### WILLIART
