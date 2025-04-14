@@ -9,21 +9,18 @@ Mise à Jour du 10 Avril 2025
 # Objet du Document
   Ce document a pour objet de consigner le quotidien des opérations, remarques et questions techniques relatives au projet 9, SPOC-LMSC
   
-## Du 16 janvier 2025 au 06 février 2025
-
-### WILLIART
+## Main courante SPOC-LMSC WILLIART
 
 - Du 16 janvier au 03 février 2025 :
   - Je me suis approprié le projet,
   - J'ai commencé la présentation pour une revue 0 de compréhension,
   - J'ai réaliser les UI préliminaires afin d'offrir une base de discussion,
   - Mise en place sur le temps personnel (en dehors  des cours) du code de base:
-    -  Écriture de la base JS pour la page de dashboard
-    -  Choix des composants UI sur [le site de UIverse](https://uiverse.io/).
-    -  Développement des solutions élémentaires comme la login/register page
-    -  Mise en place du toogle pour le darkmode
+    - Écriture de la base JS pour la page de dashboard
+    - Choix des composants UI sur [le site de UIverse](https://uiverse.io/).
+    - Développement des solutions élémentaires comme la login/register page
+    - Mise en place du toogle pour le darkmode
   
-
 - Le 04 février 2025 :
   - J'ai fini de développer la page de login, mais elle n'est pas encore liée avec le backend,
   - J'ai également créé le composant du dashboard pour savoir si le live est en cours,
@@ -32,15 +29,60 @@ Mise à Jour du 10 Avril 2025
   - Note : J'ai uniquement réalisé le frontend, pas la liaison avec le serveur de streaming.
   - J'ai commencé la rédaction du compte rendu de la revue 0 sur la base de mes notes de revue.
 
-  
 - Le 05 février 2025 :
   - correction de problèmes liés à la dockerisation du projet (middleware et backend).
   - Mise en place d'un correctif du code de base.
   - Amélioration du style du composant de prévisualisation des lives.
 
 - Le 06 février 2025 :
-    - Début du développement de la page `changement de mots de passe`.
+  - Début du développement de la page `changement de mots de passe`.
   
+- Du 07 février au 13 fevrier 2025 : (semaine de TP employeur donc tous a été réalisé sur le temps personnel)
+  - Réalisation de modificatio sur la logique de la page LOGIN poiur correspondre au backend
+  - Début de modification de certain styles afin d'uniformiser
+
+- Du 15 février au 2 mars : ( temps personnel)
+  - Vacances :
+          - Réalisation de la page Live manager qui servira à gérer l'état du live
+          - Modification de la technologie de styles principale : Passage de vanilla css à tailwindcss
+
+- Du 03 mars  au 9 mars :
+  - contrôle de configuration du projet générale
+  - Mise en place de petite cofiguration nécessaire pour le fonctionnement.
+
+- Du 10 mars au 14 mars : (semaine de TP employeur donc tous a été réalisé sur le temps personnel)
+  - j'ai continué de developper le front-end et modifier des styles. (pas fait de gros changement cette semaine)
+
+- Du 17 mars au 20 mars :
+  - Réalisation du responsive et Refonte totale du dashboard prof afin de garder la main dessus (être maitre du fontend de ma partie car avant contrôler par belaise)
+  - J'ai également aider DE CASTRO à réaliser le serveur backend de gestion des vidéos qui est en django (python) chose que je fais beaucoup sur mon temps personnel.
+
+- Le 21 mars :
+  - Continuité du responsive et ecriture Réécriture de ma propre main courante.
+  - Début du developement de la partie gestion des vidéo avec la refonte du composant LIveManager en VideoManager
+  
+- Du 22 mars au 1 avril :
+  - Mise en ligne et fin du dev de la partie responsive
+
+- Du 2 avril au 5 avril :
+  - Correction de bugs CSS sur certains composants (padding/margin non uniformes en mobile),
+  - Optimisation des composants React pour limiter les rerenders inutiles,
+  - Début de l’intégration de l’upload vidéo côté frontend.
+
+- Du 6 avril au 7 avril :
+  - Tests fonctionnels sur l’upload et vérification des types MIME,
+  - Ajout d’un spinner de chargement et de messages d’erreur en cas d’échec,
+  - Revue rapide avec l’équipe pour valider le workflow côté utilisateur.
+
+- 7 avril au 13 avril :
+  - Semaine d'examen et début des vacances
+
+- Le 14 avril :
+  - Finalisation du composant VideoManager avec pagination et tri,
+  - Revue technique avec DE CASTRO pour validation du backend Django lié à la vidéo,
+  - Sauvegarde du projet sur un dépôt distant secondaire (GITHUB personnel),
+  - Préparation d’une démonstration live de la plateforme pour les enseignants.
+
       
 ### DE CASTRO
 
