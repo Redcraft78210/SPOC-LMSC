@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, forwardRef } from "react";
 import axios from "axios";
 
-import { FileText, SquarePlay } from "lucide-react";
+import { FileText, SquarePlay, Settings2 } from "lucide-react";
 
 const Courses = () => {
   const [selectedProfessor, setSelectedProfessor] = useState("Tous");
@@ -241,9 +241,107 @@ const Courses = () => {
   );
 };
 
+const CourseDeleteModal = ({ setDeleteModalOpen }) => {
+  const onClose = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setDeleteModalOpen(false);
+  };
+
+  const handleDelete = () => {
+    console.log("Deleting course...");
+    setDeleteModalOpen(false);
+    window.location.reload();
+    // Implement course deletion logic here
+  };
+
+  return (
+    <div
+      className={`fixed inset-0 flex items-center justify-center z-50 ${"block"}`}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div
+        className="fixed inset-0 bg-gray-500 opacity-50"
+        onClick={onClose}
+      ></div>
+      <div className="bg-white p-6 rounded-lg shadow-lg z-50">
+        <h2 className="text-lg font-medium mb-4">Supprimer le cours</h2>
+        <p className="text-gray-600 mb-4">
+          Voulez-vous vraiment supprimer ce cours ?
+        </p>
+        <div className="flex justify-end">
+          <button
+            className="px-4 py-2 bg-red-500 text-white rounded-lg mr-2 hover:bg-red-600 hover:text-white"
+            onClick={handleDelete}
+          >
+            Supprimer
+          </button>
+          <button
+            className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg mr-2 hover:bg-gray-400 hover:text-gray-800"
+            onClick={onClose}
+          >
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const CourseSettingsMenu = forwardRef((props, ref) => {
+  const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
+
+  const handleDelete = () => {
+    setDeleteModalOpen(true);
+    // Implement course deletion logic here
+  };
+
+  if (isDeleteModalOpen)
+    return <CourseDeleteModal setDeleteModalOpen={setDeleteModalOpen} />;
+  return (
+    <div ref={ref} className="absolute right-0 mt-2 w-48 bg-white border border-gray-300 rounded-lg shadow-lg z-50">
+      <ul className="py-2">
+        <li className="px-4 py-2 hover:bg-gray-100 cursor-pointer">Modifier</li>
+        <li
+          className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleDelete();
+          }}
+        >
+          Supprimer
+        </li>
+      </ul>
+    </div>
+  );
+});
+
 const CourseCard = ({ course }) => {
   const [isHovered, setIsHovered] = useState(false);
   const hoverTimeout = useRef(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const divRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (divRef && divRef.current && !divRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    // Clean up
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const handleSettingsClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsOpen(!isOpen);
+  };
 
   const handleMouseEnter = () => {
     hoverTimeout.current = setTimeout(() => {
@@ -270,71 +368,75 @@ const CourseCard = ({ course }) => {
 
   return (
     <div
-      className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 cursor-pointer"
+      className="group relative cursor-pointer overflow-hidden rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow duration-300"
       onClick={handleClick}
+      role="button"
+      tabIndex="0"
     >
-      {/* Image/aperçu vidéo */}
+      {/* Aperçu Vidéo */}
       <div
-        className="aspect-video bg-gray-200 relative"
+        className="aspect-video bg-gray-100"
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
         {course.video && (
-          <>
-            {isHovered ? (
-              <img
-                className="w-full h-full object-cover"
-                src={`/videos/${course.video.video_id}/${course.video.video_id}.preview.webp`}
-                alt={course.titre}
-                style={{ display: "block" }}
-              />
-            ) : (
-              <img
-                className="w-full h-full object-cover"
-                src={`/videos/${course.video.video_id}/0.png`}
-                alt={course.titre}
-                style={{ display: "block" }}
-              />
-            )}
-          </>
+          <img
+            className="h-full w-full object-cover transition-opacity duration-300"
+            src={`/videos/${course.video.video_id}/${
+              isHovered ? `${course.video.video_id}.preview.webp` : "0.png"
+            }`}
+            alt={`Preview for ${course.titre}`}
+            loading="lazy"
+          />
         )}
       </div>
 
-      {/* Corps de la carte */}
-      <div className="p-4 relative">
-        <div className="flex flex-col items-end gap-2 absolute right-2 top-2">
+      {/* Contenu de la carte */}
+      <div className="p-4 space-y-2 relative">
+        {/* Paramètres */}
+        <div className="absolute top-2 right-2 z-1000">
+          <Settings2
+            className={`h-6 w-6 text-gray-600 transition-opacity duration-300`}
+            onClick={handleSettingsClick}
+          />
+
+          {isOpen && <CourseSettingsMenu ref={divRef} />}
+        </div>
+
+        {/* Titre et description */}
+        <div>
+          <h2 className="text-base font-semibold text-gray-900">
+            {course.titre}
+          </h2>
+          <p className="text-sm text-gray-600">{course.description}</p>
+        </div>
+
+        {/* Tags video + docs */}
+        <div className="flex items-center gap-2">
           {course.video && (
-            <div className="flex items-center">
-              <SquarePlay className="w-4 h-4 mr-2" />
-              <span className="text-xs text-gray-500">
-                {/* {course.video.duree} */}
-                00:27:30
-              </span>
+            <div className="flex items-center rounded-md bg-gray-100 px-2 py-1 text-xs text-gray-700">
+              <SquarePlay className="mr-1.5 h-4 w-4" />
+              <span>00:27:30</span>
             </div>
           )}
           {course.nombre_de_documents > 0 && (
-            <div className="flex items-center">
-              <FileText className="w-4 h-4 mr-2" />
-              <span className="text-xs text-gray-500">
-                {course.nombre_de_documents}
-              </span>
+            <div className="flex items-center rounded-md bg-gray-100 px-2 py-1 text-xs text-gray-700">
+              <FileText className="mr-1.5 h-4 w-4" />
+              <span>{course.nombre_de_documents} documents</span>
             </div>
           )}
         </div>
-        <h2 className="text-lg font-semibold text-gray-800 mb-2">
-          {course.titre}
-        </h2>
-        <p className="text-sm text-gray-600 line-clamp-2">
-          {course.description}
-        </p>
 
-        <div className="flex items-center justify-between mt-3 text-sm text-gray-500">
-          <span className="font-medium">{course.professor}</span>
-          <span className="italic">
-            {new Date(course.video.date_mise_en_ligne).toLocaleDateString(
-              "fr-FR"
-            )}
-          </span>
+        {/* Prof et date */}
+        <div className="flex items-center justify-between text-sm pt-1">
+          <span className="text-gray-700">{course.professor}</span>
+          <time className="text-gray-500">
+            {course.video?.date_mise_en_ligne
+              ? new Date(course.video.date_mise_en_ligne).toLocaleDateString(
+                  "fr-FR"
+                )
+              : "Date inconnue"}
+          </time>
         </div>
       </div>
     </div>

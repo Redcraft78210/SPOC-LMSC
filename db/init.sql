@@ -1,124 +1,129 @@
 CREATE TYPE statut_type AS ENUM ('actif', 'inactif');
 
 -- Create administrateurs table
-CREATE TABLE
-    IF NOT EXISTS administrateurs (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        username VARCHAR(255) UNIQUE NOT NULL,
-        email VARCHAR(255) UNIQUE NOT NULL,
-        password VARCHAR(255) NOT NULL,
-        "twoFAEnabled" BOOLEAN DEFAULT FALSE CHECK (
-            ("twoFAEnabled" = TRUE AND "twoFASecret" IS NOT NULL) OR
-            ("twoFAEnabled" = FALSE AND "twoFASecret" IS NOT NULL) OR
-            ("twoFAEnabled" = FALSE AND "twoFASecret" IS NULL)
-        ),
-        "twoFASecret" VARCHAR(255),
-        statut statut_type DEFAULT 'actif',
-        "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
+CREATE TABLE IF NOT EXISTS administrateurs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    surname VARCHAR(255) NOT NULL,
+    username VARCHAR(255) UNIQUE NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    "twoFAEnabled" BOOLEAN DEFAULT FALSE CHECK (
+        ("twoFAEnabled" = TRUE AND "twoFASecret" IS NOT NULL) OR
+        ("twoFAEnabled" = FALSE AND "twoFASecret" IS NOT NULL) OR
+        ("twoFAEnabled" = FALSE AND "twoFASecret" IS NULL)
+    ),
+    "twoFASecret" VARCHAR(255),
+    statut statut_type DEFAULT 'actif',
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
 -- Create students table
-CREATE TABLE
-    IF NOT EXISTS students (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        name VARCHAR(255) NOT NULL,
-        surname VARCHAR(255) NOT NULL,
-        username VARCHAR(255) UNIQUE NOT NULL,
-        email VARCHAR(255) UNIQUE NOT NULL,
-        password VARCHAR(255) NOT NULL,
-        "twoFAEnabled" BOOLEAN DEFAULT FALSE CHECK (
-            ("twoFAEnabled" = TRUE AND "twoFASecret" IS NOT NULL) OR
-            ("twoFAEnabled" = FALSE AND "twoFASecret" IS NOT NULL) OR
-            ("twoFAEnabled" = FALSE AND "twoFASecret" IS NULL)
-        ),
-        "twoFASecret" VARCHAR(255),
-        statut "statut_type" DEFAULT 'actif',
-        "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
+CREATE TABLE IF NOT EXISTS students (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    surname VARCHAR(255) NOT NULL,
+    username VARCHAR(255) UNIQUE NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    "twoFAEnabled" BOOLEAN DEFAULT FALSE CHECK (
+        ("twoFAEnabled" = TRUE AND "twoFASecret" IS NOT NULL) OR
+        ("twoFAEnabled" = FALSE AND "twoFASecret" IS NOT NULL) OR
+        ("twoFAEnabled" = FALSE AND "twoFASecret" IS NULL)
+    ),
+    "twoFASecret" VARCHAR(255),
+    statut "statut_type" DEFAULT 'actif',
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
 -- Create teachers table
-CREATE TABLE
-    IF NOT EXISTS teachers (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        name VARCHAR(255) NOT NULL,
-        surname VARCHAR(255) NOT NULL,
-        username VARCHAR(255) UNIQUE NOT NULL,
-        email VARCHAR(255) UNIQUE NOT NULL,
-        password VARCHAR(255) NOT NULL,
-        "twoFAEnabled" BOOLEAN DEFAULT FALSE CHECK (
-            ("twoFAEnabled" = TRUE AND "twoFASecret" IS NOT NULL) OR
-            ("twoFAEnabled" = FALSE AND "twoFASecret" IS NOT NULL) OR
-            ("twoFAEnabled" = FALSE AND "twoFASecret" IS NULL) 
-        ),
-        "twoFASecret" VARCHAR(255),
-        statut "statut_type" DEFAULT 'actif',
-        "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
+CREATE TABLE IF NOT EXISTS teachers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    surname VARCHAR(255) NOT NULL,
+    username VARCHAR(255) UNIQUE NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    "twoFAEnabled" BOOLEAN DEFAULT FALSE CHECK (
+        ("twoFAEnabled" = TRUE AND "twoFASecret" IS NOT NULL) OR
+        ("twoFAEnabled" = FALSE AND "twoFASecret" IS NOT NULL) OR
+        ("twoFAEnabled" = FALSE AND "twoFASecret" IS NULL)
+    ),
+    "twoFASecret" VARCHAR(255),
+    statut "statut_type" DEFAULT 'actif',
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create codes table
+CREATE TABLE IF NOT EXISTS codes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    value VARCHAR(255) NOT NULL,
+    role VARCHAR(255) NOT NULL,
+    "usageLimit" INTEGER NOT NULL,
+    "remainingUses" INTEGER NOT NULL,
+    "expiresAt" TIMESTAMP NOT NULL,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
 -- Create classes table
-CREATE TABLE
-    classes (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        name VARCHAR(255) NOT NULL,
-        main_teacher_id UUID,
-        CONSTRAINT fk_main_teacher_id FOREIGN KEY (main_teacher_id) REFERENCES teachers (id)
-    );
+CREATE TABLE classes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    main_teacher_id UUID,
+    CONSTRAINT fk_main_teacher_id FOREIGN KEY (main_teacher_id) REFERENCES teachers (id)
+);
 
-CREATE TABLE
-    teacher_classes (
-        teacher_id UUID NOT NULL,
-        class_id UUID NOT NULL,
-        PRIMARY KEY (teacher_id, class_id),
-        FOREIGN KEY (teacher_id) REFERENCES teachers (id),
-        FOREIGN KEY (class_id) REFERENCES classes (id)
-    );
+CREATE TABLE teacher_classes (
+    teacher_id UUID NOT NULL,
+    class_id UUID NOT NULL,
+    PRIMARY KEY (teacher_id, class_id),
+    FOREIGN KEY (teacher_id) REFERENCES teachers (id),
+    FOREIGN KEY (class_id) REFERENCES classes (id)
+);
 
 -- Create user_classes table
-CREATE TABLE
-    student_classes (
-        student_id UUID NOT NULL,
-        class_id UUID NOT NULL,
-        PRIMARY KEY (student_id, class_id),
-        CONSTRAINT fk_student_id FOREIGN KEY (student_id) REFERENCES students (id),
-        CONSTRAINT fk_class_id FOREIGN KEY (class_id) REFERENCES classes (id)
-    );
+CREATE TABLE student_classes (
+    student_id UUID NOT NULL,
+    class_id UUID NOT NULL,
+    PRIMARY KEY (student_id, class_id),
+    CONSTRAINT fk_student_id FOREIGN KEY (student_id) REFERENCES students (id),
+    CONSTRAINT fk_class_id FOREIGN KEY (class_id) REFERENCES classes (id)
+);
 
 -- Create courses table
-CREATE TABLE
-    IF NOT EXISTS courses (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        title VARCHAR(255) NOT NULL,
-        description TEXT,
-        "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        teacher_id UUID NOT NULL,
-        FOREIGN KEY (teacher_id) REFERENCES teachers (id) ON DELETE CASCADE
-    );
+CREATE TABLE IF NOT EXISTS courses (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    teacher_id UUID NOT NULL,
+    FOREIGN KEY (teacher_id) REFERENCES teachers (id) ON DELETE CASCADE
+);
 
 -- Create lives table
-CREATE TABLE
-    IF NOT EXISTS lives (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        title VARCHAR(255) NOT NULL,
-        description TEXT,
-        link VARCHAR(255),
-        "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        teacher_id UUID NOT NULL,
-        FOREIGN KEY (teacher_id) REFERENCES teachers (id) ON DELETE CASCADE
-    );
+CREATE TABLE IF NOT EXISTS lives (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    link VARCHAR(255),
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    teacher_id UUID NOT NULL,
+    FOREIGN KEY (teacher_id) REFERENCES teachers (id) ON DELETE CASCADE
+);
 
-CREATE TABLE
-    class_lives (
-        class_id UUID NOT NULL,
-        live_id UUID NOT NULL,
-        PRIMARY KEY (class_id, live_id),
-        FOREIGN KEY (class_id) REFERENCES classes (id),
-        FOREIGN KEY (live_id) REFERENCES lives (id)
-    );
+CREATE TABLE class_lives (
+    class_id UUID NOT NULL,
+    live_id UUID NOT NULL,
+    PRIMARY KEY (class_id, live_id),
+    FOREIGN KEY (class_id) REFERENCES classes (id),
+    FOREIGN KEY (live_id) REFERENCES lives (id)
+);
 
 -- Trigger to auto-update the 'updatedAt' column
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -162,9 +167,51 @@ CREATE INDEX IF NOT EXISTS idx_administrateurs_username ON administrateurs (user
 
 CREATE INDEX IF NOT EXISTS idx_administrateurs_email ON administrateurs (email);
 
+-- Insert initial data into the teachers table
+INSERT INTO
+    administrateurs (id, name, surname, username, email, password)
+VALUES
+    (
+        'a6fa5fc1-1234-4321-0000-000000000003',
+        'John',
+        'Doe',
+        'jdoe1_admin',
+        'john.doeadmin@example.com',
+        '$2b$10$1Tl7ARRSx3HHsS8nehhTF.asiDLQ7IOzCJ1EzCoMGQBFysfFCdQc2'
+    ),
+    (
+        'a6fa5fc1-1234-4321-0000-000000000009',
+        'Jane',
+        'Doe',
+        'jdoe2_admin',
+        'jane.doeadmin@example.com',
+        '$2a$10$.P8QYMzksJLNnQPHBYGGiuEXcqhhXQUv0N2ZeurEoWW8jpJxUjdCK'
+    );
+
+-- Insert initial data into the teachers table
+INSERT INTO
+    teachers (id, name, surname, username, email, password)
+VALUES
+    (
+        'a6fa5fc1-1234-4321-0000-000000000003',
+        'John',
+        'Doe',
+        'jdoe1_prof',
+        'john.doeprof@example.com',
+        '$2b$10$1Tl7ARRSx3HHsS8nehhTF.asiDLQ7IOzCJ1EzCoMGQBFysfFCdQc2'
+    ),
+    (
+        'a6fa5fc1-1234-4321-0000-000000000009',
+        'Jane',
+        'Doe',
+        'jdoe2_prof',
+        'jane.doeprof@example.com',
+        '$2a$10$.P8QYMzksJLNnQPHBYGGiuEXcqhhXQUv0N2ZeurEoWW8jpJxUjdCK'
+    );
+
 -- Insert initial data into the students table
 INSERT INTO
-    students (id, name, surname,username, email, password)
+    students (id, name, surname, username, email, password)
 VALUES
     (
         'a6fa5fc1-1234-4321-0000-000000000001',
@@ -183,26 +230,74 @@ VALUES
         '$2b$10$1Tl7ARRSx3HHsS8nehhTF.asiDLQ7IOzCJ1EzCoMGQBFysfFCdQc2'
     );
 
--- Insert initial data into the teachers table
+-- Insert diversified demo codes into the codes table
 INSERT INTO
-    teachers (id, name, surname, username, email, password)
+    codes (id, value, role, "usageLimit", "remainingUses", "expiresAt")
 VALUES
+    -- Étudiant : code neuf, date lointaine
     (
-        'a6fa5fc1-1234-4321-0000-000000000003',
-        'John',
-        'Doe',
-        'jdoe1',
-        'john.doeprof@example.com',
-        '$2b$10$1Tl7ARRSx3HHsS8nehhTF.asiDLQ7IOzCJ1EzCoMGQBFysfFCdQc2'
+        '11111111-aaaa-bbbb-cccc-000000000001',
+        'STU-FRESH-01',
+        'student',
+        10,
+        10,
+        '2026-01-01 00:00:00'
     ),
+    -- Étudiant : code partiellement utilisé, expiration proche
     (
-        'a6fa5fc1-1234-4321-0000-000000000009',
-        'Jane',
-        'Doe',
-        'jdoe2',
-        'jane.doeprof@example.com',
-        '$2a$10$.P8QYMzksJLNnQPHBYGGiuEXcqhhXQUv0N2ZeurEoWW8jpJxUjdCK'
+        '11111111-aaaa-bbbb-cccc-000000000002',
+        'STU-HALF-USED',
+        'student',
+        10,
+        4,
+        '2025-05-15 00:00:00'
+    ),
+    -- Étudiant : code expiré, plus de remaining
+    (
+        '11111111-aaaa-bbbb-cccc-000000000003',
+        'STU-EXPIRED',
+        'student',
+        10,
+        1,
+        '2024-12-31 00:00:00'
+    ),
+    -- Enseignant : code encore actif avec des utilisations restantes
+    (
+        '11111111-aaaa-bbbb-cccc-000000000004',
+        'TEACH-ACTIVE-01',
+        'teacher',
+        20,
+        15,
+        '2025-11-01 00:00:00'
+    ),
+    -- Enseignant : code bientôt expiré, utilisations faibles
+    (
+        '11111111-aaaa-bbbb-cccc-000000000005',
+        'TEACH-LIMITED',
+        'teacher',
+        20,
+        2,
+        '2025-04-30 00:00:00'
+    ),
+    -- Admin : code full access, date très lointaine
+    (
+        '11111111-aaaa-bbbb-cccc-000000000006',
+        'ADMIN-FULL',
+        'admin',
+        100,
+        100,
+        '2030-01-01 00:00:00'
+    ),
+    -- Admin : code expiré mais utilisations restantes (pour test logique)
+    (
+        '11111111-aaaa-bbbb-cccc-000000000007',
+        'ADMIN-EXPIRED',
+        'admin',
+        50,
+        25,
+        '2024-01-01 00:00:00'
     );
+
 
 -- Insert initial data into the classes table
 INSERT INTO

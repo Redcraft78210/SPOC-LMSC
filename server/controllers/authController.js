@@ -1,12 +1,12 @@
-const { Student, Teacher } = require('../models');
+const { Student, Teacher, Admin, Code } = require('../models');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { authenticator } = require('otplib');
 const qrcode = require('qrcode');
 
-
 const ERROR_MESSAGES = {
   INVALID_2FA_CODE: 'auth/invalid-2fa-code',
+  INVALID_REGISTER_CODE: 'auth/invalid-register-code',
   EXPIRED_TOKEN: 'auth/session-expired',
   MISSING_2FA_CODE: 'auth/2fa-required',
   MISSING_FIELDS: 'auth/missing-fields',
@@ -25,29 +25,70 @@ const generateTempToken = (userId, isSetup) => {
   );
 };
 
+const checkRegisterCode = async (req, res, next = null, internal = false, registerCode = null) => {
+  const code = registerCode?.code || req.body?.code;
+
+  if (!code) {
+    return internal ? { isValid: false } : res.status(400).json({ message: ERROR_MESSAGES.MISSING_FIELDS });
+  }
+
+  try {
+    const codeRecord = await Code.findOne({ where: { value: code } });
+
+    if (!codeRecord) {
+      return internal ? { isValid: false } : res.status(400).json({ message: ERROR_MESSAGES.INVALID_REGISTER_CODE });
+    }
+
+    if (new Date() > codeRecord.expiresAt) {
+      return internal ? { isValid: false } : res.status(400).json({ message: ERROR_MESSAGES.INVALID_REGISTER_CODE });
+    }
+
+    if (codeRecord.remainingUses <= 0) {
+      return internal ? { isValid: false } : res.status(400).json({ message: ERROR_MESSAGES.INVALID_REGISTER_CODE });
+    }
+
+    return internal ? { isValid: true } : res.json({ isValid: true });
+  } catch (error) {
+    console.error('Error checking register code:', error);
+    return internal ? { isValid: false } : res.status(500).json({ message: ERROR_MESSAGES.SERVER_ERROR });
+  }
+}
+
 const register = async (req, res) => {
-  const { email, username, password, name, surname, role = 'student' } = req.body;
-  const requiredFields = ['email', 'username', 'password', 'name', 'surname'];
+  const { email, username, registerCode, password, name, surname } = req.body;
+  const requiredFields = ['email', 'username', 'registerCode', 'password', 'name', 'surname'];
+
 
   if (requiredFields.some(field => !req.body[field])) {
     return res.status(400).json({ message: ERROR_MESSAGES.MISSING_FIELDS });
   }
 
-  if (!['student', 'teacher'].includes(role)) {
-    return res.status(400).json({ message: ERROR_MESSAGES.INVALID_ROLE });
+  const registerCodeCheck = await checkRegisterCode(req, res, null, true, { code: registerCode });
+
+  if (!registerCodeCheck.isValid) {
+    return res.status(400).json({ message: ERROR_MESSAGES.INVALID_REGISTER_CODE });
   }
+
+  const codeRecord = await Code.findOne({ where: { value: registerCode } });
+
+  if (codeRecord) {
+    codeRecord.remainingUses -= 1;
+    await codeRecord.save();
+  }
+
+  const role = codeRecord.role;
 
   try {
     const [existingEmail, existingUsername] = await Promise.all([
-      Student.findOne({ where: { email } }) || Teacher.findOne({ where: { email } }),
-      Student.findOne({ where: { username } }) || Teacher.findOne({ where: { username } })
+      Student.findOne({ where: { email } }) || Teacher.findOne({ where: { email } }) || Admin.findOne({ where: { email } }),
+      Student.findOne({ where: { username } }) || Teacher.findOne({ where: { username } }) || Admin.findOne({ where: { username } })
     ]);
 
     if (existingEmail) return res.status(409).json({ message: ERROR_MESSAGES.EMAIL_EXISTS });
     if (existingUsername) return res.status(409).json({ message: ERROR_MESSAGES.USERNAME_EXISTS });
 
     const hashedPassword = await bcrypt.hash(password, 12);
-    const Model = role === 'student' ? Student : Teacher;
+    const Model = role === 'student' ? Student : role === 'teacher' ? Teacher : Admin;
 
     const secret = authenticator.generateSecret();
     const twoFASecret = secret;
@@ -58,10 +99,10 @@ const register = async (req, res) => {
       password: hashedPassword,
       name,
       surname,
-      role,
       twoFASecret,
       twoFAEnabled: false
     });
+
 
     const qrCode = await qrcode.toDataURL(authenticator.keyuri(email, process.env.APP_NAME, secret));
 
@@ -88,12 +129,15 @@ const login = async (req, res) => {
   }
 
   try {
-    const [student, teacher] = await Promise.all([
+    const [student, teacher, admin] = await Promise.all([
       Student.findOne({ where: { email } }),
-      Teacher.findOne({ where: { email } })
+      Teacher.findOne({ where: { email } }),
+      Admin.findOne({ where: { email } })
     ]);
 
-    const user = student || teacher;
+    const role = student ? 'student' : teacher ? 'teacher' : 'admin';
+
+    const user = student || teacher || admin;
     if (!user) return res.status(401).json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS });
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -108,7 +152,14 @@ const login = async (req, res) => {
       });
     }
 
-    const tokenPayload = { id: user.id, email: user.email, name: user.name, role: user.role };
+    const tokenPayload = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: role === 'admin' ? 'Administrateur' :
+        role === 'teacher' ? 'Professeur' :
+          'Etudiant'
+    };
     const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '1h' });
 
     return res.json({ token });
@@ -132,7 +183,14 @@ const verify2FA = async (req, res) => {
       return res.status(401).json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS });
     }
 
-    const user = await Student.findByPk(decoded.userId) || await Teacher.findByPk(decoded.userId);
+    const user = await Student.findByPk(decoded.userId) ||
+      await Teacher.findByPk(decoded.userId) ||
+      await Admin.findByPk(decoded.userId);
+
+    const role = user instanceof Student ? 'student' :
+      user instanceof Teacher ? 'teacher' :
+        'admin';
+
     if (!user) return res.status(404).json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS });
 
     const verified = authenticator.check(code, user.twoFASecret);
@@ -146,7 +204,14 @@ const verify2FA = async (req, res) => {
       await user.save();
     }
 
-    const tokenPayload = { id: user.id, email: user.email, name: user.name, role: user.role };
+    const tokenPayload = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: role === 'admin' ? 'Administrateur' :
+        role === 'student' ? 'Eleve' :
+          'Professeur'
+    };
     const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '1h' });
 
     return res.json({ token });
@@ -173,7 +238,7 @@ const refresh2FASetup = async (req, res) => {
       return res.status(401).json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS });
     }
 
-    const user = await Student.findByPk(decoded.userId) || await Teacher.findByPk(decoded.userId);
+    const user = await Student.findByPk(decoded.userId) || await Teacher.findByPk(decoded.userId) || await Admin.findByPk(decoded.userId);
     if (!user) return res.status(404).json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS });
 
     const newTempToken = generateTempToken(user.id, 'setup');
@@ -192,6 +257,7 @@ module.exports = {
   register,
   login,
   verify2FA,
-  refresh2FASetup
+  refresh2FASetup,
+  checkRegisterCode
 };
 

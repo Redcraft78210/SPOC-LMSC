@@ -10,22 +10,26 @@ import { jwtDecode } from "jwt-decode";
 
 // Import your components
 import Home from "./pages/Home";
-import DashboardEleve from "./pages/Eleve/Dashboard";
+import MaintenanceBanner from "./pages/Maintenance";
+import DashboardAdmin from "./pages/Admin/Dashboard";
 import DashboardProf from "./pages/Professeur/Dashboard";
-import EleveSign from "./pages/Eleve/Sign";
-import ProfSign from "./pages/Professeur/Sign"; 
+import DashboardEleve from "./pages/Eleve/Dashboard";
+import Sign from "./pages/Sign";
 
 import Logout from "./components/Logout";
 import NotFound from "./pages/NotFound";
+
+// Uncomment the following line to enable maintenance mode
+// const APP_STATUS = "MAINTENANCE"; // Set to "MAINTENANCE" for maintenance mode
 
 const routeConfig = [
   { path: "/dashboard", content: "Home" },
   { path: "/profile", content: "Profile" },
   { path: "/courses-library", content: "CoursesLibrary" },
   { path: "/course-reader", content: "CourseReader" },
-  
+  { path: "/users-management", content: "UserManagement" },
 ];
- 
+
 function AppWrapper() {
   return (
     <Router>
@@ -37,8 +41,8 @@ function AppWrapper() {
 function App() {
   const [auth, setAuth] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isProf, setIsProf] = useState(false);
-  const location = useLocation();
+  const [role, setRole] = useState(null);
+  // const location = useLocation(); // Non utilisé actuellement
 
   useEffect(() => {
     if (!auth && !loading && localStorage.getItem("authToken")) {
@@ -57,7 +61,7 @@ function App() {
             handleLogout();
           } else {
             setAuth(decodedToken);
-            setIsProf(decodedToken.role === "professor");
+            setRole(decodedToken.role);
           }
         } catch (error) {
           console.error("Invalid token:", error);
@@ -76,7 +80,7 @@ function App() {
     try {
       const decodedToken = jwtDecode(token);
       setAuth(decodedToken);
-      setIsProf(decodedToken.role === "professor");
+      setRole(decodedToken.role);
       localStorage.setItem("authToken", token);
     } catch (error) {
       console.error("Error decoding token:", error);
@@ -86,12 +90,23 @@ function App() {
 
   const handleLogout = () => {
     setAuth(null);
-    setIsProf(false);
+    setRole(null);
     localStorage.removeItem("authToken");
   };
 
-  const DashboardComponent = isProf ? DashboardProf : DashboardEleve;
+  let DashboardComponent;
+  switch (role) {
+    case "Professeur":
+      DashboardComponent = DashboardProf;
+      break;
+    case "Administrateur":
+      DashboardComponent = DashboardAdmin;
+      break;
+    default:
+      DashboardComponent = DashboardEleve;
+  }
 
+  console.log("role", role);
   const Loader = () => (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-white bg-opacity-50 backdrop-blur-sm">
       <div className="flex flex-col items-center space-y-4">
@@ -100,6 +115,16 @@ function App() {
       </div>
     </div>
   );
+
+  if (typeof APP_STATUS !== "undefined" && APP_STATUS === "MAINTENANCE") {
+    return (
+      <MaintenanceBanner
+        companyName="SPOC LMSC"
+        estimatedDuration="2:00 PM - 4:00 PM UTC"
+        contactEmail="webmaster@spoc.lmsc"
+      />
+    );
+  }
 
   if (loading) {
     return <Loader />;
@@ -120,29 +145,13 @@ function App() {
           )
         }
       />
-
       <Route
         path="/sign"
         element={
-          auth ? (
-            <Navigate to="/" replace />
-          ) : (
-            <EleveSign setAuth={handleSetAuth} />
-          )
+          auth ? <Navigate to="/" replace /> : <Sign setAuth={handleSetAuth} />
         }
       />
-
-      <Route
-        path="/admin/sign"
-        element={
-          auth ? (
-            <Navigate to="/" replace />
-          ) : (
-            <ProfSign setAuth={handleSetAuth} />
-          )
-        }
-      />
-
+      =
       {auth &&
         routeConfig.map((route) => (
           <Route
@@ -156,11 +165,9 @@ function App() {
             }
           />
         ))}
-
       {
         !auth && localStorage.getItem("authToken") && handleLogout() // Ensure the token is removed if auth is false
       }
-
       {!auth &&
         routeConfig.map((route) => (
           <Route
@@ -169,7 +176,6 @@ function App() {
             element={<Navigate to="/sign" replace />}
           />
         ))}
-
       <Route path="/logout" element={<Logout onLogout={handleLogout} />} />
       <Route path="*" element={<NotFound />} />
     </Routes>

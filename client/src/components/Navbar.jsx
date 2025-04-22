@@ -1,8 +1,9 @@
 import React from "react";
-import { Home, LibraryBig, BookOpen, Settings, Sun } from "lucide-react";
+import { Home, LibraryBig, BookOpen, Settings, Sun, User } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
+import PropTypes from "prop-types";
 
-const NavigationBar = () => {
+const NavigationBar = ({ isAdmin = false }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [activeRoute, setActiveRoute] = React.useState(location.pathname);
@@ -13,15 +14,24 @@ const NavigationBar = () => {
 
   const navItems = [
     { icon: Home, path: "/", label: "Home" },
-    { icon: LibraryBig, path: "/courses-library", label: "Courses" },
+    { icon: LibraryBig, path: "/courses-library", label: "Cours" },
     {
       icon: BookOpen,
       path: "/course-reader",
       label: "Reader",
       clickable: false,
     },
-    { icon: Sun, path: "/theme", label: "Theme" },
-    { icon: Settings, path: "/settings", label: "Settings" },
+    ...(isAdmin
+      ? [
+          {
+            icon: User,
+            path: "/Users-Management",
+            label: "Gestion des utilisateurs",
+          },
+        ]
+      : []),
+    { icon: Sun, path: "/theme", label: "Thème" },
+    { icon: Settings, path: "/settings", label: "Paramètres" },
   ];
 
   const handleNavigation = (path) => {
@@ -46,6 +56,10 @@ const NavigationBar = () => {
       ))}
     </aside>
   );
+};
+
+NavigationBar.propTypes = {
+  isAdmin: PropTypes.bool
 };
 
 export default NavigationBar;

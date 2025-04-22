@@ -97,7 +97,13 @@ const deleteProfile = async (req, res) => {
 const getAllUsers = async (req, res) => {
     try {
         const users = await User.findAll();
-        return res.status(200).json(users);
+        return res.status(200).json(users.map(user => ({
+            id: user.id,
+            name: user.name + ' ' + user.surname,
+            email: user.email,
+            active: user.active,
+            role: user.role
+        })));
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Server error' });
