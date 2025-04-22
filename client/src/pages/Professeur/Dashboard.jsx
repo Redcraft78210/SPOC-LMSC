@@ -1,21 +1,22 @@
 import React from "react";
 import NavigationBar from "../../components/NavigationBar";
 import Logo from "../../Logo";
+import PropTypes from "prop-types";
 
 // import DashboardProf from "./Professeur/DashboardProf";
-import DashboardProf from "./DashboardHome";
+import DashboardHome from "./DashboardHome";
 
 import Profile from "../Profile";
 import NotFound from "../NotFound";
-import CoursesLibrary from "../Eleve/CoursesLibrary";
+import CoursesLibrary from "../Admin/CoursesLibrary";
 // import Lives from "./Eleve/Lives";
 // import LiveManagement from "./Professeur/LiveManagement";
 
-const Dashboard = ({ Content, isProf }) => {
+const DashboardProf = ({ Content, token }) => {
   const renderContent = () => {
     switch (Content) {
       case "Home":
-        return <DashboardProf />;
+        return <DashboardHome />;
       case "Profile":
         return (
           <div className="profile">
@@ -31,14 +32,10 @@ const Dashboard = ({ Content, isProf }) => {
           </div>
         );
       case "Lives":
-        return !isProf ? (
-          <div className="lives">
-            <div>Lives page</div>
-            <Lives />
-          </div>
-        ) : (
-          <LiveManagement />
-        );
+        <div className="lives">
+          <div>Lives page</div>
+          <Lives />
+        </div>;
       default:
         return (
           <div className="not-found">
@@ -60,4 +57,15 @@ const Dashboard = ({ Content, isProf }) => {
   );
 };
 
-export default Dashboard;
+DashboardProf.propTypes = {
+  content: PropTypes.oneOf([
+    "Home",
+    "Profile",
+    "CoursesLibrary",
+    "CourseReader",
+    "UserManagement",
+  ]).isRequired,
+  token: PropTypes.string.isRequired,
+};
+
+export default DashboardProf;

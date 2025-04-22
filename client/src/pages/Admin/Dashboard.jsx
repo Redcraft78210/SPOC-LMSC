@@ -4,20 +4,21 @@ import PropTypes from "prop-types";
 import { useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 
-import { X, Pencil } from "lucide-react";
+import { X, Pencil, User } from "lucide-react";
 
 import NavigationBar from "../../components/Navbar";
 // import "../style/NavigationBar.css";
 
-import Profile from "../Eleve/Profile";
-import NotFound from "../NotFound";
-import CoursesLibrary from "../Eleve/CoursesLibrary";
-import CourseReader from "../Eleve/CourseReader";
-import EleveDashboardHome from "./DashboardHome";
+import AdminDashboardHome from "./DashboardHome";
+import CourseReader from "./CourseReader";
+import CoursesLibrary from "./CoursesLibrary";
 import PictureModal from "../../components/PictureModal";
+import Profile from "./Profile";
+import UserManagement from "./UserManagement";
+import NotFound from "../NotFound";
 import Logo from "../../Logo";
 
-const DashboardEleve = ({ content, token }) => {
+const DashboardAdmin = ({ content, token }) => {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showProfilepictureModal, setShowProfilepictureModal] = useState(false);
   const divRef = useRef();
@@ -52,10 +53,11 @@ const DashboardEleve = ({ content, token }) => {
   };
 
   const contentMap = {
-    Home: <EleveDashboardHome />,
+    Home: <AdminDashboardHome />,
     Profile: <Profile authToken={token} />,
     CoursesLibrary: <CoursesLibrary authToken={token} />,
     CourseReader: <CourseReader authToken={token} />,
+    UserManagement: <UserManagement authToken={token} />,
   };
 
   const renderContent = () => {
@@ -70,7 +72,7 @@ const DashboardEleve = ({ content, token }) => {
   ) : (
     <div className="h-screen w-full bg-white flex overflow-hidden">
       <aside className="flex-shrink-0">
-        <NavigationBar page={content} />
+        <NavigationBar page={content} isAdmin={true} />
       </aside>
 
       <main className="flex-1 flex flex-col min-w-0">
@@ -82,7 +84,7 @@ const DashboardEleve = ({ content, token }) => {
           <div className="flex items-center gap-4 text-white">
             <div className="flex flex-col items-end">
               <div className="text-md font-medium">{`${user.name}`}</div>
-              <div className="text-sm font-regular">Student</div>
+              <div className="text-sm font-regular">Administrateur</div>
             </div>
 
             <div className="relative flex">
@@ -189,9 +191,9 @@ const DashboardEleve = ({ content, token }) => {
   );
 };
 
-DashboardEleve.propTypes = {
+DashboardAdmin.propTypes = {
   content: PropTypes.oneOf(["Home", "Profile", "CoursesLibrary", "CourseReader", "UserManagement"]).isRequired,
   token: PropTypes.string.isRequired,
 };
 
-export default DashboardEleve;
+export default DashboardAdmin;

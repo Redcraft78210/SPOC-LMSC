@@ -17,6 +17,7 @@ const credentials = { key: privateKey, cert: certificate };
 const authRoutes = require('./routes/authRoutes').default;
 const courseRoutes = require('./routes/courseRoutes').default;
 const userRoutes = require('./routes/userRoutes').default;
+const codeRoutes = require('./routes/codeRoutes').default;
 const liveRoutes = require('./routes/liveRoutes').default;
 const videoRoutes = require('./routes/videoRoutes').default;
 const documentRoutes = require('./routes/documentRoutes').default;
@@ -35,25 +36,49 @@ app.use((request, response, next) => {
   if (request.secure) {
     next();
   } else {
-    var secure_host = req.headers.host.replace(/:\d+/, ":" + PORT);
+    var secure_host = request.headers.host.replace(/:\d+/, ":" + PORT);
     response.redirect('https://' + secure_host + request.url);
   }
 });
 
+const allowedOrigins = ['https://localhost:5173', 'https://localhost:8443'];
 
 // Middleware
-app.use(cors()); // Enable CORS for all routes
+app.use(cors({
+  exposedHeaders: [
+    'Content-Range',
+    'Accept-Ranges',
+    'Content-Length',
+    'Content-Type'
+  ],
+  origin: function (origin, callback) {
+    console.log(`Checking origin: ${origin}`);
+    if (!origin || allowedOrigins.includes(origin)) {
+      console.log(`Origin allowed: ${origin}`);
+      callback(null, true);
+    } else {
+      console.warn(`Blocked origin: ${origin}`);
+      callback(null, false); // 👈 retourne "false" au lieu de lancer une erreur
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Accept-Language', 'X-Requested-With'],
+  maxAge: 1728000
+}));
+
 app.use(morgan('dev')); // Log HTTP requests in the console
 app.use(express.json()); // Parse incoming JSON requests
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded data
 
 // Serve public static files
-app.use('/videos', express.static(path.join(__dirname, 'public', 'videos')));
+app.use('/videos', express.static(path.join(__dirname, 'public', 'videos'))); // retirer dès que possible
 
 // API routes
 app.use('/api/auth', authRoutes); // Authentication routes (login, register)
 app.use('/api/courses', courseRoutes); // Courses-related routes
 app.use('/api/user', userRoutes); // Courses-related routes
+app.use('/api/codes', codeRoutes); // Codes-related routes
 app.use('/api/lives', liveRoutes); // Courses-related routes
 app.use('/api/videos', videoRoutes); // Video-related routes
 app.use('/api/documents', documentRoutes); // Document-related routes

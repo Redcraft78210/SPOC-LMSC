@@ -1,6 +1,6 @@
 import React from "react";
 import { X, Earth, Pencil, Trash2 } from "lucide-react";
-import Logo from "../../Logo";
+import Logo from "../Logo";
 
 const PictureModal = ({ setShowProfilepictureModal, user }) => {
   return (

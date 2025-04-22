@@ -7,6 +7,14 @@ const Admin = sequelize.define('Admin', {
     defaultValue: Sequelize.UUIDV4,
     primaryKey: true,
   },
+  name: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  surname: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
   username: {
     type: DataTypes.STRING,
     allowNull: false,
@@ -20,8 +28,15 @@ const Admin = sequelize.define('Admin', {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  "twoFAEnabled": {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  "twoFASecret": {
+    type: DataTypes.STRING,
+  },
 }, {
-  tableName: 'admins',
+  tableName: 'administrateurs',
   timestamps: true,
 });
 

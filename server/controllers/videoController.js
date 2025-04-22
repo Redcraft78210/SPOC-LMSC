@@ -1,73 +1,99 @@
-import fs from 'fs/promises';
-import path from 'path';
-import { createReadStream } from 'fs';
-import { constants } from 'fs';
+const fs = require('fs/promises');
+const path = require('path');
+const { createReadStream } = require('fs');
+const { constants } = require('fs');
+const { spawn } = require('child_process'); // pour ffprobe si besoin
 
-const videosDirectory = path.resolve(__dirname, '../');
-console.log(`videosDirectory: ${videosDirectory}`);
+const videosDirectory = path.resolve(__dirname, '..', 'videos');
 
-/**
- * @description Stream a video file by its ID
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
+// Middleware CORS (manuel ou utiliser 'cors' dans Express)
+const setCORSHeaders = (res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*'); // ajuster selon la politique de sécurité
+    res.setHeader('Access-Control-Allow-Methods', 'GET');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
+};
+
+const isInsideDirectory = (filePath, baseDirectory) => {
+    const relative = path.relative(baseDirectory, filePath);
+    return !relative.startsWith('..') && !path.isAbsolute(relative);
+};
+
+const parseRange = (rangeHeader, fileSize) => {
+    if (!rangeHeader) return null;
+
+    const parts = rangeHeader.replace(/bytes=/, "").split("-");
+    const start = parseInt(parts[0], 10);
+    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+
+    if (isNaN(start) || isNaN(end) || start >= fileSize || end >= fileSize) {
+        return null;
+    }
+
+    return { start, end };
+};
+
 const getVideo = async (req, res) => {
     try {
+        setCORSHeaders(res);
+
+        // Auth
+        if (!req.user) {
+            return res.status(403).json({ message: 'Accès non autorisé' });
+        }
+
         const { id } = req.params;
-        
-        // Validation de l'ID
         if (!id || !/^[a-zA-Z0-9_-]+$/.test(id)) {
-            return res.status(400).json({ message: 'Invalid video ID' });
+            return res.status(400).json({ message: 'ID invalide' });
         }
 
-        const videoPath = path.resolve(videosDirectory, `${id}.mp4`);
-        
-        // Vérification de sécurité du chemin
-        if (!videoPath.startsWith(videosDirectory)) {
-            return res.status(400).json({ message: 'Invalid path' });
+        const videoPath = path.resolve(videosDirectory, `${id}/${id}.mp4`);
+        if (!isInsideDirectory(videoPath, videosDirectory)) {
+            return res.status(400).json({ message: 'Chemin invalide' });
         }
 
-        // Vérification asynchrone de l'existence du fichier
-        try {
-            await fs.access(videoPath, constants.F_OK | constants.R_OK);
-        } catch (err) {
-            if (err.code === 'ENOENT') {
-                return res.status(404).json({ message: 'Video not found' });
-            }
-            throw err;
-        }
-
-        // Récupération des métadonnées pour Content-Length
+        await fs.access(videoPath, constants.F_OK | constants.R_OK);
         const stats = await fs.stat(videoPath);
-        
-        // Configuration des headers
-        res.writeHead(200, {
-            'Content-Length': stats.size,
+
+
+        const range = parseRange(req.headers.range, stats.size);
+
+        const headers = {
             'Content-Type': 'video/mp4',
-            'Cache-Control': 'public, max-age=3600',
-            'ETag': `"${stats.mtimeMs}"`
+            'Accept-Ranges': 'bytes',
+            'Cache-Control': 'private, max-age=3600',
+            'Content-Length': range ? range.end - range.start + 1 : stats.size,
+            'Connection': 'keep-alive'
+        };
+
+        if (range) {
+            headers['Content-Range'] = `bytes ${range.start}-${range.end}/${stats.size}`;
+            res.writeHead(206, headers);
+        } else {
+            res.status(404).end();
+        }
+
+        const stream = createReadStream(videoPath, range ? {
+            start: range.start,
+            end: range.end
+        } : {});
+
+        stream.on('error', (err) => {
+            console.error('Erreur stream :', err);
+            if (!res.headersSent) res.status(500).end();
         });
 
-        // Stream du fichier
-        const videoStream = createReadStream(videoPath);
-        
-        videoStream.on('error', (error) => {
-            console.error('Stream error:', error);
-            if (!res.headersSent) {
-                res.status(500).json({ message: 'Streaming error' });
-            }
-        });
-
-        videoStream.pipe(res);
+        stream.pipe(res);
 
     } catch (error) {
-        console.error('Server error:', error);
+        console.error('Erreur serveur:', error);
         if (!res.headersSent) {
-            res.status(500).json({ message: 'Internal server error' });
+            res.status(error.code === 'ENOENT' ? 404 : 500).json({
+                message: error.message || 'Erreur interne'
+            });
         }
     }
 };
 
-export default {
+module.exports = {
     getVideo
 };

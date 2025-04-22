@@ -6,6 +6,8 @@ const Lives = require('./Lives');
 const Teacher = require('./Teacher');
 const ClassLives = require('./ClassLives');
 const Course = require('./Course');
+const Admin = require('./Admin');
+const Code = require('./Code');
 
 
 // Define associations
@@ -42,12 +44,13 @@ Lives.belongsTo(Teacher, { foreignKey: 'teacher_id' });
 
 // Export models and sequelize instance
 module.exports = {
-  sequelize,
+  Admin,
   Student,
   StudentClass,
   Class,
   Lives,
   Teacher,
   ClassLives,
-  Course
+  Course,
+  Code
 };
