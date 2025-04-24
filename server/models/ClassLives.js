@@ -1,6 +1,6 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
-const Class = require('./Class');
+const Classe = require('./Classe');
 const Lives = require('./Lives');
 
 const ClassLives = sequelize.define('ClassLives', {
@@ -8,7 +8,7 @@ const ClassLives = sequelize.define('ClassLives', {
     type: DataTypes.UUID,
     allowNull: false,
     references: {
-      model: Class,
+      model: Classe,
       key: 'id',
     },
   },

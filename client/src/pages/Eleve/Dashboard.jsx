@@ -15,6 +15,7 @@ import CoursesLibrary from "../Eleve/CoursesLibrary";
 import CourseReader from "../Eleve/CourseReader";
 import EleveDashboardHome from "./DashboardHome";
 import PictureModal from "../../components/PictureModal";
+import ThemeSettings from "../Theme";
 import Logo from "../../Logo";
 
 const DashboardEleve = ({ content, token }) => {
@@ -56,6 +57,7 @@ const DashboardEleve = ({ content, token }) => {
     Profile: <Profile authToken={token} />,
     CoursesLibrary: <CoursesLibrary authToken={token} />,
     CourseReader: <CourseReader authToken={token} />,
+    ThemeSettings: <ThemeSettings />,
   };
 
   const renderContent = () => {
@@ -190,7 +192,7 @@ const DashboardEleve = ({ content, token }) => {
 };
 
 DashboardEleve.propTypes = {
-  content: PropTypes.oneOf(["Home", "Profile", "CoursesLibrary", "CourseReader", "UserManagement"]).isRequired,
+  content: PropTypes.oneOf(["Home", "Profile", "CoursesLibrary", "CourseReader", "UserManagement", "ClassManagement", "ThemeSettings"]).isRequired,
   token: PropTypes.string.isRequired,
 };
 

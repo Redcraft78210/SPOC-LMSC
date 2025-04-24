@@ -1,11 +1,25 @@
 const { Sequelize, DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 
-const Teacher = sequelize.define('Teacher', {
+const User = sequelize.define('User', {
   id: {
     type: DataTypes.UUID,
     defaultValue: Sequelize.UUIDV4,
     primaryKey: true,
+  },
+  email: {
+    type: DataTypes.STRING,
+    unique: true,
+    allowNull: false,
+  },
+  username: {
+    type: DataTypes.STRING,
+    unique: true,
+    allowNull: false,
+  },
+  password: {
+    type: DataTypes.STRING,
+    allowNull: false,
   },
   name: {
     type: DataTypes.STRING,
@@ -14,15 +28,6 @@ const Teacher = sequelize.define('Teacher', {
   surname: {
     type: DataTypes.STRING,
     allowNull: false,
-  },
-  username: {
-    type: DataTypes.STRING,
-    allowNull: false,
-  },
-  email: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    unique: true,
   },
   statut: {
     type: DataTypes.STRING,
@@ -33,21 +38,21 @@ const Teacher = sequelize.define('Teacher', {
     type: DataTypes.BOOLEAN,
     defaultValue: true,
   },
-  password: {
-    type: DataTypes.STRING,
-    allowNull: false,
-  },
-  "twoFAEnabled": {
+  twoFAEnabled: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
-  "twoFASecret": {
+  twoFASecret: {
     type: DataTypes.STRING,
+  },
+  role: {
+    type: DataTypes.ENUM('student', 'teacher', 'admin'),
+    defaultValue: 'student',
+    allowNull: false,
   },
 }, {
   tableName: 'users',
   timestamps: true,
 });
 
-module.exports = Teacher;
-
+module.exports = User;

@@ -24,6 +24,15 @@ const Admin = sequelize.define('Admin', {
     allowNull: false,
     unique: true,
   },
+  statut: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    defaultValue: 'actif',
+  },
+  firstLogin: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: true,
+  },
   password: {
     type: DataTypes.STRING,
     allowNull: false,
@@ -36,7 +45,7 @@ const Admin = sequelize.define('Admin', {
     type: DataTypes.STRING,
   },
 }, {
-  tableName: 'administrateurs',
+  tableName: 'users',
   timestamps: true,
 });
 

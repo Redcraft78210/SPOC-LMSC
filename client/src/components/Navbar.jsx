@@ -1,5 +1,5 @@
 import React from "react";
-import { Home, LibraryBig, BookOpen, Settings, Sun, User } from "lucide-react";
+import { Home, LibraryBig, BookOpen, Settings, Sun, User, Users } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import PropTypes from "prop-types";
 
@@ -28,9 +28,14 @@ const NavigationBar = ({ isAdmin = false }) => {
             path: "/Users-Management",
             label: "Gestion des utilisateurs",
           },
+          {
+            icon: Users,
+            path: "/Classes-Management",
+            label: "Gestion des classes",
+          },
         ]
       : []),
-    { icon: Sun, path: "/theme", label: "Thème" },
+    { icon: Sun, path: "/theme-settings", label: "Thème" },
     { icon: Settings, path: "/settings", label: "Paramètres" },
   ];
 
@@ -39,7 +44,7 @@ const NavigationBar = ({ isAdmin = false }) => {
   };
 
   return (
-    <aside className="h-full w-16 flex flex-col items-center justify-center bg-gray-800 text-white py-4 space-y-4">
+    <aside className="h-full w-16 flex flex-col items-center justify-center bg-gray-800 text-white py-4 space-y-7">
       {navItems.map((item, index) => (
         <button
           key={index}

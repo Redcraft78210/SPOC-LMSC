@@ -21,7 +21,7 @@ const getProfile = async (req, res) => {
 
 // Update user's profile
 const updateProfile = async (req, res) => {
-    const { name, email, password } = req.body;
+    const { name, surname, email, password } = req.body;
 
     try {
         const user = await User.findByPk(req.user.id);
@@ -46,6 +46,24 @@ const updateProfile = async (req, res) => {
                 email: user.email,
             }
         });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+const changeStatus = async (req, res) => {
+    try {
+        const user = await User.findByPk(req.params.id);
+        const newStatus = req.body.statut ? 'actif' : 'inactif';
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        user.statut = newStatus;
+        await user.save();
+
+        return res.status(200).json({ message: 'Status changed successfully' });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Server error' });
@@ -99,10 +117,13 @@ const getAllUsers = async (req, res) => {
         const users = await User.findAll();
         return res.status(200).json(users.map(user => ({
             id: user.id,
-            name: user.name + ' ' + user.surname,
+            name: user.name,
+            surname: user.surname,
             email: user.email,
-            active: user.active,
-            role: user.role
+            active: user.statut,
+            role: user.role === 'admin' ? 'Administrateur' :
+                user.role === 'teacher' ? 'Professeur' :
+                    'Etudiant'
         })));
     } catch (error) {
         console.error(error);
@@ -126,7 +147,7 @@ const getUserById = async (req, res) => {
 
 // Update user by ID
 const updateUserById = async (req, res) => {
-    const { name, email, password } = req.body;
+    const { name, surname, email, password, role, isPasswordGeneratedByAdmin } = req.body;
 
     try {
         const user = await User.findByPk(req.params.id);
@@ -135,10 +156,16 @@ const updateUserById = async (req, res) => {
         }
 
         user.name = name || user.name;
+        user.surname = surname || user.surname;
         user.email = email || user.email;
+        user.role = role || user.role;
 
         if (password) {
             user.password = await bcrypt.hash(password, 10);
+        }
+
+        if (isPasswordGeneratedByAdmin) {
+            user.firstLogin = true;
         }
 
         await user.save();
@@ -173,13 +200,62 @@ const deleteUserById = async (req, res) => {
     }
 };
 
+const retrogradeUser = async (req, res) => {
+    try {
+        const user = await User.findByPk(req.params.id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        switch (user.role) {
+            case 'admin':
+                user.role = 'teacher';
+                break;
+            case 'teacher':
+                user.role = 'student';
+                break;
+        }
+        await user.save();
+        return res.status(200).json({ message: 'User retrograded successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+const upgradeUser = async (req, res) => {
+    try {
+        const user = await User.findByPk(req.params.id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        switch (user.role) {
+            case 'student':
+                user.role = 'teacher';
+                break;
+            case 'teacher':
+                user.role = 'admin';
+                break;
+        }
+        await user.save();
+        return res.status(200).json({ message: 'User upgraded successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
 module.exports = {
     getProfile,
     updateProfile,
     changePassword,
+    changeStatus,
     deleteProfile,
     getAllUsers,
     getUserById,
     updateUserById,
     deleteUserById,
+    retrogradeUser,
+    upgradeUser
 };

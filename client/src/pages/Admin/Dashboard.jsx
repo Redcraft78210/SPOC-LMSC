@@ -15,6 +15,8 @@ import CoursesLibrary from "./CoursesLibrary";
 import PictureModal from "../../components/PictureModal";
 import Profile from "./Profile";
 import UserManagement from "./UserManagement";
+import ClasseManagement from "./ClassManagement";
+import ThemeSettings from "../Theme";
 import NotFound from "../NotFound";
 import Logo from "../../Logo";
 
@@ -58,6 +60,8 @@ const DashboardAdmin = ({ content, token }) => {
     CoursesLibrary: <CoursesLibrary authToken={token} />,
     CourseReader: <CourseReader authToken={token} />,
     UserManagement: <UserManagement authToken={token} />,
+    ClassManagement: <ClasseManagement authToken={token} />,
+    ThemeSettings: <ThemeSettings authToken={token} />,
   };
 
   const renderContent = () => {
@@ -192,7 +196,7 @@ const DashboardAdmin = ({ content, token }) => {
 };
 
 DashboardAdmin.propTypes = {
-  content: PropTypes.oneOf(["Home", "Profile", "CoursesLibrary", "CourseReader", "UserManagement"]).isRequired,
+  content: PropTypes.oneOf(["Home", "Profile", "CoursesLibrary", "CourseReader", "UserManagement", "ClassManagement", "ThemeSettings"]).isRequired,
   token: PropTypes.string.isRequired,
 };
 

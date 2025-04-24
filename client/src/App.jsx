@@ -28,6 +28,8 @@ const routeConfig = [
   { path: "/courses-library", content: "CoursesLibrary" },
   { path: "/course-reader", content: "CourseReader" },
   { path: "/users-management", content: "UserManagement" },
+  { path: "/classes-management", content: "ClassManagement" },
+  { path: "/theme-settings", content: "ThemeSettings" },
 ];
 
 function AppWrapper() {
@@ -106,7 +108,6 @@ function App() {
       DashboardComponent = DashboardEleve;
   }
 
-  console.log("role", role);
   const Loader = () => (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-white bg-opacity-50 backdrop-blur-sm">
       <div className="flex flex-col items-center space-y-4">

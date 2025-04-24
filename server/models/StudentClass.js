@@ -1,7 +1,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 const Student = require('../models/Student');
-const Class = require('../models/Class');
+const Classe = require('../models/Classe');
 
 const StudentClass = sequelize.define('StudentClass', {
     'student_id': {
@@ -16,7 +16,7 @@ const StudentClass = sequelize.define('StudentClass', {
         type: DataTypes.UUID,
         allowNull: false,
         references: {
-            model: Class,
+            model: Classe,
             key: 'id'
         }
     }

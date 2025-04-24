@@ -50,7 +50,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
 
   useEffect(() => {
     const timeout = setTimeout(() => {
-      loadCaptchaEngine(6);
+      loadCaptchaEngine(6, "#f9fafb");
     }, 100);
 
     return () => clearTimeout(timeout);
@@ -59,7 +59,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
   useEffect(() => {
     if (countEchec2FACode === 2 || authStep === "initial") {
       const timeout = setTimeout(() => {
-        loadCaptchaEngine(6);
+        loadCaptchaEngine(6, "#f9fafb");
       }, 100);
 
       return () => clearTimeout(timeout);
@@ -100,7 +100,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
         setManualSecret(data.twoFASetup.manualSecret);
         setError(null);
       } catch (error) {
-        setError("La configuration 2FA a expiré. Veuillez réessayer.");
+        setError(error.response.data.message || errorMessages.default);
         setAuthStep("initial");
         setTempToken(null);
       }
@@ -331,7 +331,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
       {countEchec2FACode >= 2 && (
         <>
           <div className="captcha-container">
-            <LoadCanvasTemplate />
+            <LoadCanvasTemplate reloadColor="red" />
           </div>
           <div className="relative">
             <input
@@ -379,7 +379,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
               setAuthStep("initial");
               setTempToken(null);
               setTimeout(() => {
-                loadCaptchaEngine(6);
+                loadCaptchaEngine(6, "#f9fafb");
               }, 100); // ensure canvas is mounted
             }}
             className="font-bold underline hover:text-[#00474F]"

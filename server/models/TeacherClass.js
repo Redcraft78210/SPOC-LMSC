@@ -1,14 +1,14 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
-const Teacher = require('./Teacher');
-const Class = require('./Class');
+const User = require('./User');
+const Classe = require('./Classe');
 
 const TeacherClass = sequelize.define('TeacherClass', {
   teacher_id: {
     type: DataTypes.UUID,
     allowNull: false,
     references: {
-      model: Teacher,
+      model: User,
       key: 'id',
     },
   },
@@ -16,7 +16,7 @@ const TeacherClass = sequelize.define('TeacherClass', {
     type: DataTypes.UUID,
     allowNull: false,
     references: {
-      model: Class,
+      model: Classe,
       key: 'id',
     },
   },
@@ -25,13 +25,13 @@ const TeacherClass = sequelize.define('TeacherClass', {
   timestamps: false,
 });
 
-Teacher.belongsToMany(Class, {
+Teacher.belongsToMany(Classe, {
   through: TeacherClass,
   foreignKey: 'teacher_id',
   otherKey: 'class_id',
 });
 
-Class.belongsToMany(Teacher, {
+Classe.belongsToMany(Teacher, {
   through: TeacherClass,
   foreignKey: 'class_id',
   otherKey: 'teacher_id',
