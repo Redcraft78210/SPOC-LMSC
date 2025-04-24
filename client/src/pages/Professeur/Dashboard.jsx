@@ -64,6 +64,7 @@ DashboardProf.propTypes = {
     "CoursesLibrary",
     "CourseReader",
     "UserManagement",
+    "GroupManagement",
   ]).isRequired,
   token: PropTypes.string.isRequired,
 };

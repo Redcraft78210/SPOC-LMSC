@@ -16,6 +16,7 @@ const credentials = { key: privateKey, cert: certificate };
 // Import routes
 const authRoutes = require('./routes/authRoutes').default;
 const courseRoutes = require('./routes/courseRoutes').default;
+const classRoutes = require('./routes/classRoutes').default;
 const userRoutes = require('./routes/userRoutes').default;
 const codeRoutes = require('./routes/codeRoutes').default;
 const liveRoutes = require('./routes/liveRoutes').default;
@@ -62,7 +63,7 @@ app.use(cors({
     }
   },
   credentials: true,
-  methods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS', 'PATCH', 'HEAD'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Accept-Language', 'X-Requested-With'],
   maxAge: 1728000
 }));
@@ -77,7 +78,8 @@ app.use('/videos', express.static(path.join(__dirname, 'public', 'videos'))); //
 // API routes
 app.use('/api/auth', authRoutes); // Authentication routes (login, register)
 app.use('/api/courses', courseRoutes); // Courses-related routes
-app.use('/api/user', userRoutes); // Courses-related routes
+app.use('/api/classes', classRoutes); // Courses-related routes
+app.use('/api/users', userRoutes); // Courses-related routes
 app.use('/api/codes', codeRoutes); // Codes-related routes
 app.use('/api/lives', liveRoutes); // Courses-related routes
 app.use('/api/videos', videoRoutes); // Video-related routes

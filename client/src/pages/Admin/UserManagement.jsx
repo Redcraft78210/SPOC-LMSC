@@ -12,12 +12,13 @@ import {
   Ban,
   Book,
   User,
+  UserMinus,
   Shield,
   Clock,
+  CircleX,
 } from "lucide-react";
 
 import { Toaster, toast } from "react-hot-toast";
-import { use } from "react";
 
 const API_URL = "https://localhost:8443/api";
 
@@ -26,47 +27,33 @@ const UserManagement = ({ authToken }) => {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch(`${API_URL}/user`, {
+      const response = await fetch(`${API_URL}/users`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
       const data = await response.json();
-      setUsers(data);
+      setUsers(
+        data.sort((a, b) => {
+          const nameA = a.name.toLowerCase();
+          const nameB = b.name.toLowerCase();
+          return nameA.localeCompare(nameB, undefined, {
+            numeric: true,
+          });
+        })
+      );
     } catch (error) {
       toast.error("Erreur de chargement des utilisateurs");
     }
   };
 
-  const [users, setUsers] = useState([
-    {
-      id: 1,
-      name: "Admin User",
-      email: "admin@ecole.com",
-      active: true,
-      role: "admin",
-    },
-    {
-      id: 2,
-      name: "Prof. Dupont",
-      email: "dupont@ecole.com",
-      active: true,
-      role: "professeur",
-    },
-    {
-      id: 3,
-      name: "Élève Martin",
-      email: "martin@ecole.com",
-      active: false,
-      role: "élève",
-    },
-  ]);
+  const [users, setUsers] = useState([]);
 
   useEffect(() => {
     fetchUsers();
-  }, [fetchUsers]);
+  }, []);
 
-  const [groups, setGroups] = useState([
+  const [classes, setClasses] = useState([
     { id: 3, name: "BTS1A" },
     { id: 1, name: "BTS2A" },
     { id: 2, name: "BTS2B" },
@@ -80,7 +67,7 @@ const UserManagement = ({ authToken }) => {
   const [inviteCode, setInviteCode] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
   const [role, setRole] = useState("Élève");
-  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [selectedClass, setSelectedClass] = useState(null);
 
   // Filtrage des utilisateurs
   const filteredUsers = users.filter((user) =>
@@ -107,23 +94,75 @@ const UserManagement = ({ authToken }) => {
   };
 
   // Actions groupées
-  const bulkDelete = () => {
+  const bulkDelete = async () => {
     if (window.confirm(`Supprimer ${selectedUsers.length} utilisateur(s) ?`)) {
-      setUsers(users.filter((user) => !selectedUsers.includes(user.id)));
-      setSelectedUsers([]);
+      try {
+        const promises = selectedUsers.map((userId) => {
+          return fetch(`${API_URL}/users/${userId}`, {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+        });
+
+        await Promise.all(promises);
+        toast.success(
+          `${selectedUsers.length} utilisateur(s) supprimés avec succès`
+        );
+        fetchUsers();
+        setSelectedUsers([]);
+      } catch (error) {
+        toast.error("Erreur lors de la suppression des utilisateurs");
+      }
     }
   };
 
-  const bulkToggleStatus = (status) => {
-    setUsers(
-      users.map((user) =>
-        selectedUsers.includes(user.id) ? { ...user, active: status } : user
-      )
-    );
+  const bulkToggleStatus = async (status) => {
+    try {
+      const selectedIds = new Set(selectedUsers);
+      const promises = filteredUsers
+        .filter((user) => selectedIds.has(user.id))
+        .map((user) => {
+          return fetch(`${API_URL}/users/${user.id}`, {
+            method: "PATCH",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ statut: status }),
+          });
+        });
+
+      await Promise.all(promises);
+      toast.success(
+        `Statut de ${selectedUsers.length} utilisateur(s) mis à jour avec succès`
+      );
+      fetchUsers();
+    } catch (error) {
+      toast.error("Erreur lors de la mise à jour des statuts");
+    }
+  };
+
+  const toggleStatus = async (userId, status) => {
+    try {
+      await fetch(`${API_URL}/users/${userId}`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ statut: status }),
+      });
+      toast.success("Statut utilisateur mis à jour");
+      fetchUsers();
+    } catch (error) {
+      toast.error("Erreur de modification du statut");
+    }
   };
 
   const manageInvitationCodes = () => {
-    const code = Math.random().toString(36).substr(2, 8).toUpperCase();
+    const code = Math.random().toString(36).slice(-8).toUpperCase();
     setInviteCode(code);
     setShowInviteCodeModal(true);
   };
@@ -132,33 +171,78 @@ const UserManagement = ({ authToken }) => {
     navigator.clipboard.writeText(inviteCode);
   };
 
-  const deleteUser = (userId) => {
+  const deleteUser = async (userId) => {
     if (
       window.confirm("Êtes-vous sûr de vouloir supprimer cet utilisateur ?")
     ) {
-      setUsers(users.filter((user) => user.id !== userId));
+      try {
+        await fetch(`${API_URL}/users/${userId}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        toast.success("Utilisateur supprimé avec succès");
+        fetchUsers();
+      } catch (error) {
+        toast.error("Erreur de suppression de l'utilisateur");
+      }
     }
   };
 
-  const handleSubmitUser = (e) => {
-    e.preventDefault();
+  const handleSubmitUser = async (e) => {
     const formData = new FormData(e.target);
-    const newUser = {
-      id: users.length + 1,
+    const userData = {
       name: formData.get("name"),
+      surname: formData.get("surname"),
       email: formData.get("email"),
       role: formData.get("role"),
+      password: formData.get("password"),
     };
 
-    if (selectedUser) {
-      setUsers(
-        users.map((user) => (user.id === selectedUser.id ? newUser : user))
+    try {
+      let response;
+      if (selectedUser) {
+        // Update user
+        response = await fetch(`${API_URL}/users/${selectedUser.id}`, {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            ...userData,
+            isPasswordGeneratedByAdmin: userData.password ? true : undefined,
+          }),
+        });
+      } else {
+        // Create new user
+        userData.password = formData.get("password");
+        response = await fetch(`${API_URL}/users`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(userData),
+        });
+      }
+
+      if (!response.ok) throw new Error("Erreur lors de la requête");
+
+      toast.success(
+        selectedUser ? "Utilisateur mis à jour" : "Utilisateur créé avec succès"
       );
-    } else {
-      setUsers([...users, newUser]);
+      fetchUsers();
+      setShowCreateModal(false);
+      setSelectedUser(null);
+    } catch (error) {
+      toast.error(
+        error.message || "Erreur lors de la sauvegarde de l'utilisateur"
+      );
+
+      throw error;
     }
-    setShowCreateModal(false);
-    setSelectedUser(null);
   };
 
   const SearchUser = () => {
@@ -207,20 +291,23 @@ const UserManagement = ({ authToken }) => {
             <span className="font-medium">
               {selectedUsers.length} sélectionné(s)
             </span>
-            <button onClick={bulkDelete} className="btn-danger">
+            <button
+              onClick={bulkDelete}
+              className=" px-4 py-2 rounded-lg btn-danger flex items-center hover:bg-red-600"
+            >
               <Trash2 className="w-5 h-5 mr-2" />
               Supprimer
             </button>
             <button
               onClick={() => bulkToggleStatus(true)}
-              className="btn-success"
+              className=" px-4 py-2 rounded-lg btn-success flex items-center hover:bg-green-600"
             >
               <Check className="w-5 h-5 mr-2" />
               Activer
             </button>
             <button
               onClick={() => bulkToggleStatus(false)}
-              className="btn-warning"
+              className="px-4 py-2 rounded-lg btn-warning flex items-center hover:bg-yellow-600"
             >
               <Ban className="w-5 h-5 mr-2" />
               Désactiver
@@ -229,6 +316,46 @@ const UserManagement = ({ authToken }) => {
         </div>
       )
     );
+  };
+
+  const retrogradeUser = async (userId) => {
+    try {
+      const response = await fetch(`${API_URL}/users/retrograde/${userId}`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message);
+      toast.success(data.message);
+      return data;
+    } catch (error) {
+      toast.error(error.message);
+      return null;
+    } finally {
+      fetchUsers();
+    }
+  };
+
+  const upgradeUser = async (userId) => {
+    try {
+      const response = await fetch(`${API_URL}/users/upgrade/${userId}`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message);
+      toast.success(data.message);
+      return data;
+    } catch (error) {
+      toast.error(error.message);
+      return null;
+    } finally {
+      fetchUsers();
+    }
   };
 
   const UserTable = () => {
@@ -266,7 +393,9 @@ const UserManagement = ({ authToken }) => {
             {filteredUsers.map((user) => (
               <tr
                 key={user.id}
-                className={!user.active ? "bg-gray-50 opacity-75" : ""}
+                className={
+                  !user.active === "actif" ? "bg-gray-50 opacity-75" : ""
+                }
               >
                 <td className="px-6 py-4">
                   <input
@@ -280,23 +409,21 @@ const UserManagement = ({ authToken }) => {
                 <td className="px-6 py-4 whitespace-nowrap">{user.email}</td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span
-                    className={`px-2 py-1 rounded-full text-xs ${
-                      user.active
-                        ? "bg-green-100 text-green-800"
-                        : "bg-red-100 text-red-800"
+                    className={`px-2 py-1 rounded-full text-xs text-white font-bold ${
+                      user.active === "actif" ? "bg-green-800" : "bg-red-700"
                     }`}
                   >
-                    {user.active ? "Actif" : "Inactif"}
+                    {user.active.charAt(0).toUpperCase() + user.active.slice(1)}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span
-                    className={`px-2 py-1 rounded-full text-xs ${
-                      user.role === "admin"
-                        ? "bg-red-100 text-red-800"
-                        : user.role === "professeur"
-                        ? "bg-blue-100 text-blue-800"
-                        : "bg-green-100 text-green-800"
+                    className={`px-2 py-1 rounded-full text-xs text-white font-bold ${
+                      user.role === "Administrateur"
+                        ? "bg-amber-500"
+                        : user.role === "Professeur"
+                        ? "bg-sky-800"
+                        : "bg-green-800"
                     }`}
                   >
                     {user.role}
@@ -312,12 +439,50 @@ const UserManagement = ({ authToken }) => {
                   >
                     <Edit className="w-5 h-5" />
                   </button>
+                  {user.active === "actif" ? (
+                    <button
+                      className="text-red-600 hover:text-red-900"
+                      onClick={() => toggleStatus(user.id, false)}
+                    >
+                      <Ban className="w-5 h-5" />
+                    </button>
+                  ) : (
+                    <button
+                      className="text-green-600 hover:text-green-900"
+                      onClick={() => toggleStatus(user.id, true)}
+                    >
+                      <Check className="w-5 h-5" />
+                    </button>
+                  )}
                   <button
                     onClick={() => deleteUser(user.id)}
                     className="text-red-600 hover:text-red-900"
                   >
                     <Trash2 className="w-5 h-5" />
                   </button>
+                  {user.role === "Etudiant" || user.role === "Professeur" ? (
+                    <button
+                      className="text-blue-600 hover:text-blue-900"
+                      onClick={() => upgradeUser(user.id)}
+                    >
+                      <UserPlus className="w-5 h-5" />
+                    </button>
+                  ) : (
+                    <button
+                      className="text-green-600 hover:text-green-900"
+                      onClick={() => retrogradeUser(user.id)}
+                    >
+                      <UserMinus className="w-5 h-5" />
+                    </button>
+                  )}
+                  {user.role === "Professeur" && (
+                    <button
+                      className="text-green-600 hover:text-green-900"
+                      onClick={() => retrogradeUser(user.id)}
+                    >
+                      <UserMinus className="w-5 h-5" />
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
@@ -334,7 +499,7 @@ const UserManagement = ({ authToken }) => {
           <div
             key={user.id}
             className={`bg-white p-4 rounded-lg shadow ${
-              !user.active ? "opacity-75" : ""
+              !user.active === "actif" ? "opacity-75" : ""
             }`}
           >
             <div className="flex justify-between items-start">
@@ -368,18 +533,18 @@ const UserManagement = ({ authToken }) => {
               <div className="flex gap-2 mt-4">
                 <span
                   className={`px-2 py-1 rounded-full text-xs ${
-                    user.active
+                    user.active === "actif"
                       ? "bg-green-100 text-green-800"
                       : "bg-red-100 text-red-800"
                   }`}
                 >
-                  {user.active ? "Actif" : "Inactif"}
+                  {user.active.charAt(0).toUpperCase() + user.active.slice(1)}
                 </span>
                 <span
                   className={`px-2 py-1 rounded-full text-xs ${
-                    user.role === "admin"
+                    user.role === "Administrateur"
                       ? "bg-red-100 text-red-800"
-                      : user.role === "professeur"
+                      : user.role === "Professeur"
                       ? "bg-blue-100 text-blue-800"
                       : "bg-green-100 text-green-800"
                   }`}
@@ -395,84 +560,441 @@ const UserManagement = ({ authToken }) => {
   };
 
   const UserCreationModal = () => {
+    const [formData, setFormData] = useState({
+      name: "",
+      surname: "",
+      email: "",
+      role: "élève",
+      password: "",
+    });
+    const [initialUser, setInitialUser] = useState(null);
+
+    const [errors, setErrors] = useState({});
+    const [isLoading, setIsLoading] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false);
+    const [isMounted, setIsMounted] = useState(false);
+    const [newPassword, setNewPassword] = useState(null);
+
+    useEffect(() => {
+      setIsMounted(true);
+      if (selectedUser) {
+        setFormData({
+          name: selectedUser.name,
+          surname: selectedUser.surname,
+          email: selectedUser.email,
+          role: selectedUser.role,
+          password: "",
+        });
+        setInitialUser({
+          name: selectedUser.name,
+          surname: selectedUser.surname,
+          email: selectedUser.email,
+          role: selectedUser.role,
+          password: "",
+        });
+      }
+      return () => setIsMounted(false);
+    }, [selectedUser]);
+
+    const hasUnsavedChanges = () => {
+      if (
+        !selectedUser &&
+        (formData.name ||
+          formData.surname ||
+          formData.email ||
+          formData.password)
+      )
+        return true;
+      if (selectedUser && initialUser) {
+        const { name, surname, email, role } = formData;
+        return (
+          name !== initialUser.name ||
+          surname !== initialUser.surname ||
+          email !== initialUser.email ||
+          role !== initialUser.role ||
+          (newPassword && newPassword !== "")
+        );
+      }
+      return false;
+    };
+
+    useEffect(() => {
+      const handleBeforeUnload = (e) => {
+        if (hasUnsavedChanges()) {
+          const message = "Vous avez des modifications non enregistrées.";
+          e.preventDefault();
+          e.returnValue = message;
+          return message;
+        }
+      };
+
+      window.addEventListener("beforeunload", handleBeforeUnload);
+      return () => {
+        window.removeEventListener("beforeunload", handleBeforeUnload);
+      };
+    }, [
+      // listez ici toutes les dépendances utilisées par hasUnsavedChanges :
+      formData,
+      newPassword,
+      selectedUser,
+      initialUser,
+    ]);
+
+    const validateForm = () => {
+      const newErrors = {};
+      if (!formData.name.trim()) {
+        newErrors.name = "Le prénom est requis";
+      } else if (formData.name.length > 50) {
+        newErrors.name = "Le prénom ne doit pas dépasser 50 caractères";
+      }
+
+      if (!formData.surname.trim()) {
+        newErrors.surname = "Le nom est requis";
+      } else if (formData.surname.length > 50) {
+        newErrors.surname = "Le nom ne doit pas dépasser 50 caractères";
+      }
+
+      if (!formData.email.trim()) {
+        newErrors.email = "L'email est requis";
+      } else if (!/^\S+@\S+\.\S+$/.test(formData.email)) {
+        newErrors.email = "Format d'email invalide";
+      }
+
+      if (!selectedUser && !formData.password) {
+        newErrors.password = "Le mot de passe est requis";
+      } else if (formData.password.length > 0 && formData.password.length < 8) {
+        newErrors.password = "Le mot de passe doit faire au moins 8 caractères";
+      }
+
+      setErrors(newErrors);
+      return Object.keys(newErrors).length === 0;
+    };
+
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      if (!validateForm()) return;
+
+      setIsLoading(true);
+      try {
+        await handleSubmitUser(e);
+        if (isMounted) {
+          setIsSuccess(true);
+          setTimeout(() => {
+            setShowCreateModal(false);
+            setSelectedUser(null);
+            setIsSuccess(false);
+          }, 1500);
+        }
+      } catch (error) {
+        console.error("Submission error:", error);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+
+    const handleClose = () => {
+      if (
+        hasUnsavedChanges() &&
+        !confirm("Etes-vous certain de vouloir annuler les modifications ?")
+      )
+        return;
+      setShowCreateModal(false);
+      setSelectedUser(null);
+    };
+
+    const handleBackdropClick = (e) => {
+      if (e.target === e.currentTarget) handleClose();
+    };
+
+    useEffect(() => {
+      const handleKeyDown = (e) => {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          e.stopPropagation();
+          handleClose();
+        }
+      };
+
+      document.addEventListener("keydown", handleKeyDown);
+      return () => {
+        document.removeEventListener("keydown", handleKeyDown);
+      };
+    }, [handleClose]);
+
+    const handleGeneratePassword = () => {
+      const characters =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=";
+      let password = "";
+      for (let i = 0; i < 12; i++) {
+        password += characters.charAt(
+          Math.floor(Math.random() * characters.length)
+        );
+      }
+      setFormData((prev) => ({ ...prev, password }));
+      setNewPassword(password);
+      return password;
+    };
+
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-        <div className="bg-white rounded-lg p-6 w-96">
-          <h2 className="text-xl font-bold mb-4">
-            {selectedUser ? "Modifier Utilisateur" : "Nouvel Utilisateur"}
+      <div
+        className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center transition-all duration-300 ease-out"
+        onClick={handleBackdropClick}
+        role="dialog"
+        aria-labelledby="userModalTitle"
+      >
+        <div
+          className={`bg-white rounded-xl shadow-2xl p-8 w-full max-w-md transform transition-all duration-300 ease-in-out ${
+            isMounted ? "scale-100 opacity-100" : "scale-95 opacity-0"
+          }`}
+        >
+          <h2
+            id="userModalTitle"
+            className="text-2xl font-bold text-gray-900 mb-6"
+          >
+            {selectedUser ? "Modifier l'Utilisateur" : "Nouvel Utilisateur"}
           </h2>
-          <form onSubmit={handleSubmitUser}>
-            <div className="space-y-4">
+
+          <form onSubmit={handleSubmit}>
+            <div className="space-y-6">
+              {/* Nom */}
               <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Nom
+                <label className="block text-sm font-semibold text-gray-800 mb-2">
+                  Nom *
                 </label>
-                <input
-                  name="name"
-                  defaultValue={selectedUser?.name}
-                  required
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                />
+                <div className="relative">
+                  <input
+                    name="name"
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
+                    className={`w-full px-4 py-2.5 rounded-lg border ${
+                      errors.name
+                        ? "border-red-500 focus:ring-red-500"
+                        : "border-gray-200 focus:border-blue-500"
+                    } focus:ring-2 focus:ring-blue-200 outline-none transition-all`}
+                    aria-invalid={!!errors.name}
+                    aria-describedby="nameError"
+                    disabled={isLoading}
+                  />
+                  <div className="absolute right-3 top-3.5 text-sm text-gray-400">
+                    {formData.name.length}/50
+                  </div>
+                </div>
+                {errors.name && (
+                  <p id="nameError" className="text-red-600 text-sm mt-2 ml-1">
+                    {errors.name}
+                  </p>
+                )}
               </div>
+
+              {/* Prénom */}
               <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Email
+                <label className="block text-sm font-semibold text-gray-800 mb-2">
+                  Prénom *
+                </label>
+                <div className="relative">
+                  <input
+                    name="surname"
+                    value={formData.surname}
+                    onChange={(e) =>
+                      setFormData({ ...formData, surname: e.target.value })
+                    }
+                    className={`w-full px-4 py-2.5 rounded-lg border ${
+                      errors.surname
+                        ? "border-red-500 focus:ring-red-500"
+                        : "border-gray-200 focus:border-blue-500"
+                    } focus:ring-2 focus:ring-blue-200 outline-none transition-all`}
+                    aria-invalid={!!errors.surname}
+                    aria-describedby="surnameError"
+                    disabled={isLoading}
+                  />
+                  <div className="absolute right-3 top-3.5 text-sm text-gray-400">
+                    {formData.surname.length}/50
+                  </div>
+                </div>
+                {errors.surname && (
+                  <p
+                    id="surnameError"
+                    className="text-red-600 text-sm mt-2 ml-1"
+                  >
+                    {errors.surname}
+                  </p>
+                )}
+              </div>
+
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-800 mb-2">
+                  Email *
                 </label>
                 <input
                   type="email"
                   name="email"
-                  defaultValue={selectedUser?.email}
-                  required
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  value={formData.email}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
+                  className={`w-full px-4 py-2.5 rounded-lg border ${
+                    errors.email
+                      ? "border-red-500 focus:ring-red-500"
+                      : "border-gray-200 focus:border-blue-500"
+                  } focus:ring-2 focus:ring-blue-200 outline-none transition-all`}
+                  aria-invalid={!!errors.email}
+                  aria-describedby="emailError"
+                  disabled={isLoading}
                 />
+                {errors.email && (
+                  <p id="emailError" className="text-red-600 text-sm mt-2 ml-1">
+                    {errors.email}
+                  </p>
+                )}
               </div>
+
+              {/* Rôle */}
               <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Rôle
+                <label className="block text-sm font-semibold text-gray-800 mb-2">
+                  Rôle *
                 </label>
                 <select
                   name="role"
-                  defaultValue={selectedUser?.role || "élève"}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  value={formData.role}
+                  onChange={(e) =>
+                    setFormData({ ...formData, role: e.target.value })
+                  }
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                  disabled={isLoading}
                 >
                   <option value="admin">Administrateur</option>
                   <option value="professeur">Professeur</option>
                   <option value="élève">Élève</option>
                 </select>
               </div>
+
+              {/* Mot de passe (uniquement pour création) */}
               {!selectedUser && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Mot de passe
+                  <label className="block text-sm font-semibold text-gray-800 mb-2">
+                    Mot de passe *
                   </label>
                   <input
                     type="password"
                     name="password"
-                    required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    value={formData.password}
+                    onChange={(e) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
+                    className={`w-full px-4 py-2.5 rounded-lg border ${
+                      errors.password
+                        ? "border-red-500 focus:ring-red-500"
+                        : "border-gray-200 focus:border-blue-500"
+                    } focus:ring-2 focus:ring-blue-200 outline-none transition-all`}
+                    aria-invalid={!!errors.password}
+                    aria-describedby="passwordError"
+                    disabled={isLoading}
                   />
+                  {errors.password && (
+                    <p
+                      id="passwordError"
+                      className="text-red-600 text-sm mt-2 ml-1"
+                    >
+                      {errors.password}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Bouton pour générer un nouveau mot de passe */}
+              {selectedUser && (
+                <button
+                  type="button"
+                  onClick={handleGeneratePassword}
+                  className="px-5 py-2.5 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors duration-200 disabled:opacity-50"
+                  disabled={isLoading}
+                >
+                  Générer un nouveau mot de passe
+                </button>
+              )}
+
+              {/* Afficher le mot de passe */}
+              {newPassword && (
+                <div className="mt-4">
+                  <p className="text-gray-700 text-sm mb-2">
+                    Nouveau mot de passe :{" "}
+                    <span className="bg-gray-100 px-2 py-1 rounded-lg">
+                      {newPassword}
+                    </span>
+                  </p>
+                  <p className="text-gray-500 text-xs">
+                    Ce mot de passe est généré aléatoirement et n'est pas stocké
+                    sur nos serveurs. Il est recommandé de le stocker en lieu
+                    sûr (par exemple, dans un gestionnaire de mots de passe).
+                  </p>
                 </div>
               )}
             </div>
-            <div className="mt-6 flex justify-end space-x-3">
+
+            {/* Actions */}
+            <div className="mt-8 flex justify-end gap-3">
               <button
                 type="button"
-                onClick={() => {
-                  setShowCreateModal(false);
-                  setSelectedUser(null);
-                }}
-                className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                onClick={handleClose}
+                className="px-5 py-2.5 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors duration-200 disabled:opacity-50"
+                disabled={isLoading}
               >
                 Annuler
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 transition-colors duration-200"
+                disabled={isLoading}
               >
+                {isLoading && (
+                  <svg
+                    className="animate-spin h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                )}
                 {selectedUser ? "Mettre à jour" : "Créer"}
               </button>
             </div>
           </form>
+
+          {/* Success Overlay */}
+          {isSuccess && (
+            <div className="absolute inset-0 bg-white/95 flex items-center justify-center rounded-xl animate-pulse">
+              <div className="flex items-center gap-2 text-green-600">
+                <svg
+                  className="w-6 h-6"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <span className="font-semibold">Succès!</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -524,20 +1046,16 @@ const UserManagement = ({ authToken }) => {
     }, []);
 
     const roleDetails = {
-      student: {
-        color: "bg-blue-100",
-        text: "text-blue-800",
-        icon: <Book className="w-4 h-4" />,
-      },
+      student: { color: "bg-blue-100", text: "text-blue-800", icon: <Book /> },
       teacher: {
         color: "bg-green-100",
         text: "text-green-800",
-        icon: <User className="w-4 h-4" />,
+        icon: <User />,
       },
       admin: {
         color: "bg-red-100",
         text: "text-red-800",
-        icon: <Shield className="w-4 h-4" />,
+        icon: <Shield />,
       },
     };
 
@@ -654,7 +1172,7 @@ const UserManagement = ({ authToken }) => {
               onClick={onClose}
               className="text-gray-500 hover:text-gray-700"
             >
-              &times;
+              <CircleX className="w-9 h-9" />
             </button>
           </div>
 
@@ -780,7 +1298,7 @@ const UserManagement = ({ authToken }) => {
                           <div className="flex items-center space-x-2">
                             <span className="font-mono">{code.value}</span>
                             <span
-                              className={`flex justify-space-between text-xs px-2 py-1 rounded ${color} ${text}`}
+                              className={`flex justify-space-around items-center align-middle text-xs px-2 py-1 rounded ${color} ${text}`}
                             >
                               {icon} {code.role}
                             </span>
@@ -884,6 +1402,7 @@ const UserManagement = ({ authToken }) => {
 
   return (
     <div className="container mx-auto p-6">
+      <Toaster position="bottom-right" reverseOrder={false} />
       <div className="flex flex-col gap-4 mb-8">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-800">

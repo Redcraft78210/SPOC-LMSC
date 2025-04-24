@@ -8,7 +8,7 @@ const liveMiddleware = async (req, res, next) => {
   const { liveid } = req.params; // get the liveid from the request
 
   if (!classid) {
-    return res.status(400).send({ error: 'Class ID is missing in the token payload.' });
+    return res.status(400).send({ error: 'Classe ID is missing in the token payload.' });
   }
 
   try {

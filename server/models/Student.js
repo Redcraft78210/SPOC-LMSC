@@ -26,6 +26,15 @@ const Student = sequelize.define(
       allowNull: false,
       unique: true,
     },
+    statut: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'actif',
+    },
+    firstLogin: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+    },
     password: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -39,7 +48,7 @@ const Student = sequelize.define(
     },
   },
   {
-    tableName: 'students',
+    tableName: 'users',
     timestamps: true,
   },
 );

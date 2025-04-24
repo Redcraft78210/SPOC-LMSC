@@ -1,5 +1,5 @@
 const { timeEnd } = require('console');
-const { Lives, ClassLives, Class, Teacher } = require('../models');
+const { Lives, ClassLives, Classe, Teacher } = require('../models');
 const ffmpeg = require('fluent-ffmpeg');
 const fs = require('fs');
 const path = require('path');
@@ -34,7 +34,7 @@ const getLiveByClass = async (req, res) => {
         const lives = await Lives.findAll({
             attributes: ['id', 'title', 'description', 'link'],
             include: [{
-                model: Class,
+                model: Classe,
                 where: { id: classId },
                 through: {
                     model: ClassLives,
