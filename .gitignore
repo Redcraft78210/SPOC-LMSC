@@ -1,5 +1,0 @@
-.env
-.venv
-.py3
-node_modules
-package-lock.json
