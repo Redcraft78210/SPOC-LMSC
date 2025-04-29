@@ -1,3 +1,10 @@
+import PropTypes from "prop-types";
+
+Logo.propTypes = {
+  fillColor: PropTypes.string,
+  className: PropTypes.string,
+};
+
 export default function Logo({ fillColor, className }) {
   return (
     <>

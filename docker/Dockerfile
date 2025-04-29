@@ -1,5 +1,13 @@
-# Base image with Node.js
-FROM node:22 AS base
+# syntax=docker/dockerfile:1.4
+
+# Build arguments for registry prefix and namespace
+ARG REGISTRY=docker.io/library
+ARG NAMESPACE="library"
+
+####################################
+# Stage “base”
+####################################
+FROM ${REGISTRY:+${REGISTRY}/}${NAMESPACE:+${NAMESPACE}/}node:22 AS base
 
 # Update npm globally in the base image to avoid redundancy
 RUN npm install -g npm@latest
@@ -7,12 +15,14 @@ RUN npm install -g npm@latest
 # Set the working directory
 WORKDIR /usr/src/app
 
-# Stage 1: Dependencies installation
+####################################
+# Stage “dependencies”
+####################################
 FROM base AS dependencies
 
 # Install build-time system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential && \
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends build-essential && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -38,7 +48,9 @@ RUN npm install --legacy-peer-deps
 WORKDIR /usr/src/app
 COPY . .
 
-# Stage 2: Build the application
+####################################
+# Stage “build”
+####################################
 FROM base AS build
 
 # Copy dependencies and source code
@@ -48,8 +60,10 @@ COPY --from=dependencies /usr/src/app /usr/src/app
 WORKDIR /usr/src/app/client
 RUN npm run build
 
-# Stage 3: Production-ready image
-FROM node:22-slim AS final
+####################################
+# Stage “final”
+####################################
+FROM ${REGISTRY:+${REGISTRY}/}${NAMESPACE:+${NAMESPACE}/}node:22-slim AS final
 
 # Set the working directory
 WORKDIR /usr/src/app

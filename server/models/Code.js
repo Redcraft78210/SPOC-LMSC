@@ -10,6 +10,10 @@ const Code = sequelize.define('Code', {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  classId: {
+    type: DataTypes.UUID,
+    allowNull: true,
+  },
   usageLimit: {
     type: DataTypes.INTEGER,
     allowNull: false,

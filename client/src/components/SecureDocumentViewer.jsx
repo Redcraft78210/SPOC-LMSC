@@ -1,3 +1,5 @@
+import PropTypes from 'prop-types';
+import { useState, useEffect } from 'react';
 
 const SecureDocumentViewer = ({ documentId, authToken }) => {
   const [docUrl, setDocUrl] = useState(null);
@@ -13,7 +15,7 @@ const SecureDocumentViewer = ({ documentId, authToken }) => {
           },
         });
 
-        if (!response.ok) throw new Error("Document non trouvé");
+        if (!response.ok) throw new Error('Document non trouvé');
         const { url } = await response.json();
         setDocUrl(url);
       } catch (err) {
@@ -38,12 +40,17 @@ const SecureDocumentViewer = ({ documentId, authToken }) => {
       <iframe
         src={docUrl}
         className="w-full h-96 border-0" // Style via Tailwind
-        style={{ border: "none" }} // Double protection CSS
+        style={{ border: 'none' }} // Double protection CSS
         title="Aperçu du document"
-        onContextMenu={(e) => e.preventDefault()}
+        onContextMenu={e => e.preventDefault()}
       />
     </div>
   );
+};
+
+SecureDocumentViewer.propTypes = {
+  documentId: PropTypes.string.isRequired,
+  authToken: PropTypes.string.isRequired,
 };
 
 export default SecureDocumentViewer;

@@ -33,7 +33,7 @@ const MaintenanceBanner = ({ companyName, estimatedDuration, contactEmail }) => 
           {/* Content */}
           <div className="space-y-4">
             <h1 className="text-3xl font-bold text-gray-900">
-              Maintenance Programmé
+              Maintenance Programmée
             </h1>
             <p 
               id="maintenance-message"
@@ -48,7 +48,7 @@ const MaintenanceBanner = ({ companyName, estimatedDuration, contactEmail }) => 
                 </p>
               )}
               <p>
-                Besoin d'aide ? Contactez{' '}
+                Besoin d&apos;aide ? Contactez {' '}
                 <a
                   href={`mailto:${contactEmail}`}
                   className="font-medium text-blue-600 hover:underline"
