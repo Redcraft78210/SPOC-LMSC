@@ -64,4 +64,33 @@ const Get_special_Video = async ({ video_id }) => {
   }
   return null;
 };
-export { GetAll_DataStructure, SendVideo };
+
+const Get_Video_Information = async (video_id) => {
+  try {
+    const response = await api.get(`/video-info/${video_id}`);
+    return { status: 200, data: response.data };
+  } catch (error) {
+    if (error.response.status === 404) {
+      console.error("API server not found.", error.response);
+    } else if (error.response.status === 400) {
+      console.error("Erreur API :", error.response?.status, error.message);
+    }
+    console.error(error);
+  }
+};
+
+const UpdateVideo = async ({ video_id, updatedData }) => {
+  try {
+    const response = await api.put(`/update/${video_id}/`, updatedData);
+    return response.data;
+  } catch (error) {
+    if (error.response.status === 404) {
+      console.error("API server not found.", error.response);
+    } else if (error.response.status === 400) {
+      console.error("Erreur API :", error.response?.status, error.message);
+    }
+    console.error(error);
+  }
+};
+
+export { GetAll_DataStructure, SendVideo, Get_Video_Information, UpdateVideo };

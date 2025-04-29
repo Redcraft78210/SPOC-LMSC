@@ -2,7 +2,10 @@ import React, { useEffect, useState } from "react";
 import NavBar from "../../components/ProfComp/NavBar";
 import FileExplorer from "../../components/ProfComp/FileExplorer";
 import Card from "../../components/ProfComp/Card";
-import { GetAll_DataStructure } from "../../API/VideoCaller";
+import {
+  GetAll_DataStructure,
+  Get_Video_Information,
+} from "../../API/VideoCaller";
 import FIleUploader from "../../components/ProfComp/FIleUploader";
 import VideoPlayer from "../../components/ProfComp/VideoPlayer";
 import VideoUpdater from "../../components/ProfComp/VideoUpdater";
@@ -10,7 +13,8 @@ const VideoMng = () => {
   const [data, setData] = useState({});
   const [idVideo, setIdVideo] = useState("");
   const [videoUrl, setVideoUrl] = useState(null);
-  const video_info = "coucou";
+  const [videoData, setVideoData] = useState({});
+
   useEffect(() => {
     const handleData = async () => {
       const res = await GetAll_DataStructure();
@@ -21,10 +25,20 @@ const VideoMng = () => {
     handleData();
   }, []);
   useEffect(() => {
+    const handleData = async () => {
+      console.log("his the id video : " + idVideo);
+      const res = await Get_Video_Information(idVideo);
+      if (res) {
+        setVideoData(res.data);
+        console.log(res.data);
+      }
+    };
+
     if (idVideo) {
       setVideoUrl(`http://localhost:8000/api/video/view/${idVideo}/`);
       console.log(idVideo);
       console.log(videoUrl);
+      handleData();
     }
     // const handleInfo = async ()=>{
     //   const res = await
@@ -54,7 +68,7 @@ const VideoMng = () => {
         {/* Deuxième rangée de contenu */}
         <div className="flex justify-between">
           <Card content={<VideoPlayer url={videoUrl} />} />
-          <Card content={<VideoUpdater video_info={video_info} />} />
+          <Card content={<VideoUpdater videoData={videoData} />} />
         </div>
       </main>
     </div>
