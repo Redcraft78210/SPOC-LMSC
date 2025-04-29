@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import {
   Edit,
   Trash2,
@@ -7,17 +8,18 @@ import {
   List,
   Grid,
   Search,
-  Book,
-} from "lucide-react";
-import { Toaster, toast } from "react-hot-toast";
+} from 'lucide-react';
+import { Toaster, toast } from 'react-hot-toast';
 
-const API_URL = "https://localhost:8443/api";
+const API_URL = 'https://localhost:8443/api';
 
 const ClasseManagement = ({ authToken }) => {
   const token = authToken;
 
   const fetchClasses = async () => {
     try {
+      ClasseManagement.PropTypes;
+
       const response = await fetch(`${API_URL}/classes`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -26,7 +28,8 @@ const ClasseManagement = ({ authToken }) => {
       const data = await response.json();
       setClasses(data.sort((a, b) => a.name.localeCompare(b.name)));
     } catch (error) {
-      toast.error("Erreur de chargement des Classes");
+      toast.error('Erreur de chargement des Classes');
+      console.error(error);
     }
   };
 
@@ -40,7 +43,7 @@ const ClasseManagement = ({ authToken }) => {
       const data = await response.json();
       setStudentUsers(
         data
-          .filter((user) => user.role === "Etudiant")
+          .filter(user => user.role === 'Etudiant')
           .sort((a, b) => {
             const nameA = a.name.toLowerCase();
             const nameB = b.name.toLowerCase();
@@ -52,7 +55,7 @@ const ClasseManagement = ({ authToken }) => {
 
       setTeachersUsers(
         data
-          .filter((user) => user.role === "Professeur")
+          .filter(user => user.role === 'Professeur')
           .sort((a, b) => {
             const nameA = a.name.toLowerCase();
             const nameB = b.name.toLowerCase();
@@ -62,15 +65,16 @@ const ClasseManagement = ({ authToken }) => {
           })
       );
     } catch (error) {
-      toast.error("Erreur de chargement des utilisateurs");
+      toast.error('Erreur de chargement des utilisateurs');
+      console.error(error);
     }
   };
 
   const [classes, setClasses] = useState([]);
   const [studentsUsers, setStudentUsers] = useState([]);
   const [teachersUsers, setTeachersUsers] = useState([]);
-  const [viewMode, setViewMode] = useState("list");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState('list');
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedClasses, setSelectedClasses] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedClasse, setSelectedClasse] = useState(null);
@@ -80,26 +84,31 @@ const ClasseManagement = ({ authToken }) => {
     fetchUsers();
   }, []);
 
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    setShowCreateModal(searchParams.get('create-class') === 'true');
+  }, []);
+
   // Filtrage des Classes
   const filteredClasses = classes.filter(
-    (Classe) =>
+    Classe =>
       Classe.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       Classe.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Gestion de la sélection
   const toggleAll = () => {
-    setSelectedClasses((prev) =>
+    setSelectedClasses(prev =>
       prev.length === filteredClasses.length
         ? []
-        : filteredClasses.map((g) => g.id)
+        : filteredClasses.map(g => g.id)
     );
   };
 
-  const toggleClasse = (ClasseId) => {
-    setSelectedClasses((prev) =>
+  const toggleClasse = ClasseId => {
+    setSelectedClasses(prev =>
       prev.includes(ClasseId)
-        ? prev.filter((id) => id !== ClasseId)
+        ? prev.filter(id => id !== ClasseId)
         : [...prev, ClasseId]
     );
   };
@@ -109,9 +118,9 @@ const ClasseManagement = ({ authToken }) => {
     if (window.confirm(`Supprimer ${selectedClasses.length} Classe(s) ?`)) {
       try {
         await Promise.all(
-          selectedClasses.map((id) =>
+          selectedClasses.map(id =>
             fetch(`${API_URL}/classes/${id}`, {
-              method: "DELETE",
+              method: 'DELETE',
               headers: { Authorization: `Bearer ${token}` },
             })
           )
@@ -119,33 +128,35 @@ const ClasseManagement = ({ authToken }) => {
         fetchClasses();
         setSelectedClasses([]);
       } catch (error) {
-        toast.error("Erreur de suppression");
+        toast.error('Erreur de suppression');
+        console.error(error);
       }
     }
   };
 
   // Suppression individuelle
-  const deleteClasse = async (ClasseId) => {
-    if (window.confirm("Supprimer cette Classe ?")) {
+  const deleteClasse = async ClasseId => {
+    if (window.confirm('Supprimer cette Classe ?')) {
       try {
         await fetch(`${API_URL}/classes/${ClasseId}`, {
-          method: "DELETE",
+          method: 'DELETE',
           headers: { Authorization: `Bearer ${token}` },
         });
         fetchClasses();
       } catch (error) {
-        toast.error("Erreur de suppression");
+        toast.error('Erreur de suppression');
+        console.error(error);
       }
     }
   };
 
   // Gestion formulaire
-  const handleSubmitClasse = async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
+  const handleSubmitClasse = async formData => {
     const ClasseData = {
-      name: formData.get("name"),
-      description: formData.get("description"),
+      name: formData.name,
+      description: formData.description,
+      main_teacher_id: formData.main_teacher_id,
+      students: formData.students,
     };
 
     try {
@@ -154,15 +165,15 @@ const ClasseManagement = ({ authToken }) => {
         : `${API_URL}/classes`;
 
       const response = await fetch(url, {
-        method: selectedClasse ? "PUT" : "POST",
+        method: selectedClasse ? 'PUT' : 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(ClasseData),
       });
 
-      if (!response.ok) throw new Error("Erreur de sauvegarde");
+      if (!response.ok) throw new Error('Erreur de sauvegarde');
 
       fetchClasses();
       setShowCreateModal(false);
@@ -181,7 +192,7 @@ const ClasseManagement = ({ authToken }) => {
         placeholder="Rechercher une classe..."
         className="w-full pl-10 pr-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500"
         value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
+        onChange={e => setSearchQuery(e.target.value)}
       />
     </div>
   );
@@ -189,17 +200,17 @@ const ClasseManagement = ({ authToken }) => {
   const ToggleView = () => (
     <div className="flex gap-2">
       <button
-        onClick={() => setViewMode("list")}
+        onClick={() => setViewMode('list')}
         className={`p-2 rounded-lg ${
-          viewMode === "list" ? "bg-blue-100 text-blue-600" : "text-gray-600"
+          viewMode === 'list' ? 'bg-blue-100 text-blue-600' : 'text-gray-600'
         }`}
       >
         <List className="w-5 h-5" />
       </button>
       <button
-        onClick={() => setViewMode("grid")}
+        onClick={() => setViewMode('grid')}
         className={`p-2 rounded-lg ${
-          viewMode === "grid" ? "bg-blue-100 text-blue-600" : "text-gray-600"
+          viewMode === 'grid' ? 'bg-blue-100 text-blue-600' : 'text-gray-600'
         }`}
       >
         <Grid className="w-5 h-5" />
@@ -240,6 +251,9 @@ const ClasseManagement = ({ authToken }) => {
               Nom
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              Enseignant principal
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
               Description
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -251,7 +265,7 @@ const ClasseManagement = ({ authToken }) => {
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
-          {filteredClasses.map((Classe) => (
+          {filteredClasses.map(Classe => (
             <tr key={Classe.id}>
               <td className="px-6 py-4">
                 <input
@@ -262,7 +276,30 @@ const ClasseManagement = ({ authToken }) => {
                 />
               </td>
               <td className="px-6 py-4 font-medium">{Classe.name}</td>
-              <td className="px-6 py-4 text-gray-600">{Classe.description}</td>
+              <td className="px-6 py-4">
+                {Classe.main_teacher_id ? (
+                  <div className="flex items-center">
+                    <Users className="w-5 h-5 mr-2 text-gray-400" />
+                    {
+                      teachersUsers.find(
+                        user => user.id === Classe.main_teacher_id
+                      )?.name
+                    }
+                  </div>
+                ) : (
+                  <div className="flex items-center">
+                    <Users className="w-5 h-5 mr-2 text-gray-400" />
+                    Aucun enseignant principal
+                  </div>
+                )}
+              </td>
+              <td className="px-6 py-4 text-gray-600">
+                {Classe.description
+                  ? `${Classe.description
+                      .charAt(0)
+                      .toUpperCase()}${Classe.description.slice(1)}`
+                  : 'Aucune description'}
+              </td>
               <td className="px-6 py-4">
                 <div className="flex items-center">
                   <Users className="w-5 h-5 mr-2 text-gray-400" />
@@ -295,7 +332,7 @@ const ClasseManagement = ({ authToken }) => {
 
   const ClasseCards = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {filteredClasses.map((Classe) => (
+      {filteredClasses.map(Classe => (
         <div key={Classe.id} className="bg-white p-4 rounded-lg shadow">
           <div className="flex justify-between items-start">
             <input
@@ -328,7 +365,7 @@ const ClasseManagement = ({ authToken }) => {
             <div className="flex items-center mt-4 text-gray-500">
               <Users className="w-5 h-5 mr-2" />
               <span>
-                {Classe.memberCount || 0} membre{Classe.memberCount > 1 && "s"}
+                {Classe.memberCount || 0} membre{Classe.memberCount > 1 && 's'}
               </span>
             </div>
           </div>
@@ -339,66 +376,69 @@ const ClasseManagement = ({ authToken }) => {
 
   const ClasseCreationModal = () => {
     const [formData, setFormData] = useState({
-      name: "",
-      description: "",
-      members: [],
+      name: '',
+      description: '',
+      main_teacher_id: 0,
+      students: [],
     });
     const [errors, setErrors] = useState({});
     const [isLoading, setIsLoading] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
-    const [searchQuery, setSearchQuery] = useState("");
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
       setIsMounted(true);
       if (selectedClasse) {
         setFormData({
           name: selectedClasse.name,
-          description: selectedClasse.description || "",
-          members: selectedClasse.members || [],
+          description: selectedClasse.description || '',
+          main_teacher_id: selectedClasse.main_teacher_id || 0,
+          students: selectedClasse.students || [], // Synchroniser les élèves
         });
       }
       return () => setIsMounted(false);
-    }, [selectedClasse]);
+    }, [setIsMounted]);
 
     const validateForm = () => {
       const newErrors = {};
       if (!formData.name.trim()) {
-        newErrors.name = "Le nom de la classe est requis";
+        newErrors.name = 'Le nom de la classe est requis';
       } else if (formData.name.length > 50) {
-        newErrors.name = "Le nom ne doit pas dépasser 50 caractères";
+        newErrors.name = 'Le nom ne doit pas dépasser 50 caractères';
       }
 
       if (formData.description.length > 200) {
         newErrors.description =
-          "La description ne doit pas dépasser 200 caractères";
+          'La description ne doit pas dépasser 200 caractères';
       }
 
       setErrors(newErrors);
       return Object.keys(newErrors).length === 0;
     };
 
-    const toggleMember = (userId) => {
-      setFormData((prev) => ({
+    const toggleMember = userId => {
+      setFormData(prev => ({
         ...prev,
-        members: prev.members.includes(userId)
-          ? prev.members.filter((id) => id !== userId)
-          : [...prev.members, userId],
+        students: prev.students.includes(userId)
+          ? prev.students.filter(id => id !== userId)
+          : [...prev.students, userId],
       }));
     };
 
     const filteredUsers = studentsUsers.filter(
-      (user) =>
+      user =>
         user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         user.email.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async e => {
       e.preventDefault();
       if (!validateForm()) return;
 
       setIsLoading(true);
       try {
+        console.log(formData);
         await handleSubmitClasse(formData);
         if (isMounted) {
           setIsSuccess(true);
@@ -409,7 +449,7 @@ const ClasseManagement = ({ authToken }) => {
           }, 1500);
         }
       } catch (error) {
-        console.error("Submission error:", error);
+        console.error('Submission error:', error);
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -421,18 +461,18 @@ const ClasseManagement = ({ authToken }) => {
     };
 
     // Handle backdrop click
-    const handleBackdropClick = (e) => {
+    const handleBackdropClick = e => {
       if (e.target === e.currentTarget) handleClose();
     };
 
     // Handle Escape key
     useEffect(() => {
-      const handleKeyDown = (e) => {
-        if (e.key === "Escape") handleClose();
+      const handleKeyDown = e => {
+        if (e.key === 'Escape') handleClose();
       };
 
-      document.addEventListener("keydown", handleKeyDown);
-      return () => document.removeEventListener("keydown", handleKeyDown);
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
     }, []);
 
     return (
@@ -444,11 +484,11 @@ const ClasseManagement = ({ authToken }) => {
       >
         <div
           className={`bg-white rounded-xl shadow-2xl p-8 w-full max-w-md transform transition-all duration-300 ease-in-out ${
-            isMounted ? "scale-100 opacity-100" : "scale-95 opacity-0"
+            isMounted ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
           }`}
         >
           <h2 id="modalTitle" className="text-2xl font-bold text-gray-900 mb-6">
-            {selectedClasse ? "Modifier la Classe" : "Nouvelle Classe"}
+            {selectedClasse ? 'Modifier la Classe' : 'Nouvelle Classe'}
           </h2>
 
           <form onSubmit={handleSubmit}>
@@ -466,13 +506,13 @@ const ClasseManagement = ({ authToken }) => {
                     id="name"
                     name="name"
                     value={formData.name}
-                    onChange={(e) =>
+                    onChange={e =>
                       setFormData({ ...formData, name: e.target.value })
                     }
                     className={`w-full px-4 py-2.5 rounded-lg border ${
                       errors.name
-                        ? "border-red-500 focus:ring-red-500"
-                        : "border-gray-200 focus:border-blue-500"
+                        ? 'border-red-500 focus:ring-red-500'
+                        : 'border-gray-200 focus:border-blue-500'
                     } focus:ring-2 focus:ring-blue-200 outline-none transition-all`}
                     aria-invalid={!!errors.name}
                     aria-describedby="nameError"
@@ -502,13 +542,13 @@ const ClasseManagement = ({ authToken }) => {
                     id="description"
                     name="description"
                     value={formData.description}
-                    onChange={(e) =>
+                    onChange={e =>
                       setFormData({ ...formData, description: e.target.value })
                     }
                     className={`w-full px-4 py-2.5 rounded-lg border ${
                       errors.description
-                        ? "border-red-500 focus:ring-red-500"
-                        : "border-gray-200 focus:border-blue-500"
+                        ? 'border-red-500 focus:ring-red-500'
+                        : 'border-gray-200 focus:border-blue-500'
                     } focus:ring-2 focus:ring-blue-200 outline-none transition-all`}
                     rows="3"
                     aria-invalid={!!errors.description}
@@ -526,22 +566,52 @@ const ClasseManagement = ({ authToken }) => {
                 )}
               </div>
 
-              {/* Members Section */}
+              {/* Main Teacher Field */}
+              <div>
+                <label
+                  htmlFor="main_teacher"
+                  className="block text-sm font-semibold text-gray-800 mb-2"
+                >
+                  Enseignant Principal
+                </label>
+                <select
+                  id="main_teacher"
+                  name="main_teacher"
+                  value={formData.main_teacher_id}
+                  onChange={e =>
+                    setFormData({
+                      ...formData,
+                      main_teacher_id: e.target.value,
+                    })
+                  }
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                  disabled={isLoading}
+                >
+                  <option value="0">cliquez pour sélectionner...</option>
+                  {teachersUsers.map(teacher => (
+                    <option key={teacher.id} value={teacher.id}>
+                      {teacher.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Students Section */}
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-gray-800 mb-2">
-                  Membres de la Classe
+                  Élèves de la Classe
                 </label>
 
                 {/* Selected Users Tags */}
                 <div className="flex flex-wrap gap-2 mb-3">
-                  {formData.members.map((userId) => {
-                    const user = studentsUsers.find((u) => u.id === userId);
+                  {formData.students.map(userId => {
+                    const user = studentsUsers.find(u => u.id === userId);
                     return (
                       <span
                         key={userId}
                         className="bg-blue-100 text-blue-800 text-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-colors hover:bg-blue-200"
                       >
-                        {user?.name || "Unknown User"}
+                        {user?.name || 'Unknown User'}
                         <button
                           type="button"
                           onClick={() => toggleMember(userId)}
@@ -560,23 +630,23 @@ const ClasseManagement = ({ authToken }) => {
                   type="text"
                   placeholder="Rechercher des utilisateurs..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={e => setSearchQuery(e.target.value)}
                   className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
                 />
 
                 {/* Users List */}
                 <div className="mt-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg">
-                  {filteredUsers.map((user) => (
+                  {filteredUsers.map(user => (
                     <div
                       key={user.id}
                       className={`flex items-center p-3 hover:bg-gray-50 cursor-pointer transition-colors ${
-                        formData.members.includes(user.id) ? "bg-blue-50" : ""
+                        formData.students.includes(user.id) ? 'bg-blue-50' : ''
                       }`}
                       onClick={() => toggleMember(user.id)}
                     >
                       <input
                         type="checkbox"
-                        checked={formData.members.includes(user.id)}
+                        checked={formData.students.includes(user.id)}
                         readOnly
                         className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                       />
@@ -637,7 +707,7 @@ const ClasseManagement = ({ authToken }) => {
                     ></path>
                   </svg>
                 )}
-                {selectedClasse ? "Sauvegarder" : "Créer"}
+                {selectedClasse ? 'Sauvegarder' : 'Créer'}
               </button>
             </div>
           </form>
@@ -688,12 +758,16 @@ const ClasseManagement = ({ authToken }) => {
         <BulkActions />
       </div>
 
-      {viewMode === "list" ? <ClasseTable /> : <ClasseCards />}
+      {viewMode === 'list' ? <ClasseTable /> : <ClasseCards />}
 
       {showCreateModal && <ClasseCreationModal />}
       <Toaster position="bottom-right" />
     </div>
   );
+};
+
+ClasseManagement.propTypes = {
+  authToken: PropTypes.string.isRequired,
 };
 
 export default ClasseManagement;

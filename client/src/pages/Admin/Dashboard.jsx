@@ -1,10 +1,8 @@
-import React from "react";
 import { useState, useEffect, useRef } from "react";
 import PropTypes from "prop-types";
-import { useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 
-import { X, Pencil, User } from "lucide-react";
+import { X, Pencil } from "lucide-react";
 
 import NavigationBar from "../../components/Navbar";
 // import "../style/NavigationBar.css";
@@ -13,19 +11,17 @@ import AdminDashboardHome from "./DashboardHome";
 import CourseReader from "./CourseReader";
 import CoursesLibrary from "./CoursesLibrary";
 import PictureModal from "../../components/PictureModal";
-import Profile from "./Profile";
 import UserManagement from "./UserManagement";
 import ClasseManagement from "./ClassManagement";
-import ThemeSettings from "../Theme";
-import NotFound from "../NotFound";
+import ThemeSettings from "../Public/Theme";
+import Settings from "./Settings";
+import NotFound from "../Public/NotFound";
 import Logo from "../../Logo";
 
 const DashboardAdmin = ({ content, token }) => {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showProfilepictureModal, setShowProfilepictureModal] = useState(false);
   const divRef = useRef();
-
-  const navigate = useNavigate();
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -56,12 +52,12 @@ const DashboardAdmin = ({ content, token }) => {
 
   const contentMap = {
     Home: <AdminDashboardHome />,
-    Profile: <Profile authToken={token} />,
     CoursesLibrary: <CoursesLibrary authToken={token} />,
     CourseReader: <CourseReader authToken={token} />,
     UserManagement: <UserManagement authToken={token} />,
     ClassManagement: <ClasseManagement authToken={token} />,
-    ThemeSettings: <ThemeSettings authToken={token} />,
+    ThemeSettings: <ThemeSettings />,
+    Settings: <Settings authToken={token} />,
   };
 
   const renderContent = () => {
@@ -171,7 +167,7 @@ const DashboardAdmin = ({ content, token }) => {
                           href="/conditions-utisation"
                           className="text-blue-500"
                         >
-                          Conditions d'utilisation
+                          Conditions d&apos;utilisation
                         </a>
                       </p>
                       <p>
@@ -196,7 +192,7 @@ const DashboardAdmin = ({ content, token }) => {
 };
 
 DashboardAdmin.propTypes = {
-  content: PropTypes.oneOf(["Home", "Profile", "CoursesLibrary", "CourseReader", "UserManagement", "ClassManagement", "ThemeSettings"]).isRequired,
+  content: PropTypes.string.isRequired,
   token: PropTypes.string.isRequired,
 };
 

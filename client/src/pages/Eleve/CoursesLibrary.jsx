@@ -1,13 +1,13 @@
-import { useState, useEffect, useRef } from "react";
-import axios from "axios";
+import { useState, useEffect, useRef } from 'react';
+import PropTypes from 'prop-types';
 
-import { FileText, SquarePlay } from "lucide-react";
+import { FileText, SquarePlay } from 'lucide-react';
 
 const Courses = () => {
-  const [selectedProfessor, setSelectedProfessor] = useState("Tous");
-  const [selectedSubject, setSelectedSubject] = useState("Tous");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState("date_recent");
+  const [selectedProfessor, setSelectedProfessor] = useState('Tous');
+  const [selectedSubject, setSelectedSubject] = useState('Tous');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('date_recent');
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -20,35 +20,35 @@ const Courses = () => {
         // const response = await axios.get('/api/courses');
         // const apiData = response.data;
         const apiData = {
-          "Mr grandingo": {
+          'Mr grandingo': {
             math_info: {
               complexe: {
-                titre: "Nombres imaginaires",
-                description: "Introduction aux nombres imaginaires",
-                date_creation: "2025-03-17T18:52:02.826Z",
-                id_cours: "7f4b538504facde3c881b73844f52f24",
+                titre: 'Nombres imaginaires',
+                description: 'Introduction aux nombres imaginaires',
+                date_creation: '2025-03-17T18:52:02.826Z',
+                id_cours: '7f4b538504facde3c881b73844f52f24',
                 video: {
-                  video_id: "3f4b538504facde3c881b73844f52f24-1742237522", // à retirer dès que possible
+                  video_id: '3f4b538504facde3c881b73844f52f24-1742237522', // à retirer dès que possible
                   chemin_fichier:
-                    "videos/3f4b538504facde3c881b73844f52f24-1742237522.mp4",
-                  date_mise_en_ligne: "2024-03-17T18:52:48.781Z",
+                    'videos/3f4b538504facde3c881b73844f52f24-1742237522.mp4',
+                  date_mise_en_ligne: '2024-03-17T18:52:48.781Z',
                 },
                 nombre_de_documents: 4,
               },
             },
           },
-          "Mme claquette": {
+          'Mme claquette': {
             physique: {
               asservissement: {
-                titre: "Pont diviseur de tension",
-                description: "Cours sur le pont diviseur de tension",
-                date_creation: "2025-03-17T18:52:02.826Z",
-                id_cours: "7f4b538504facde3c881b73844f52f25",
+                titre: 'Pont diviseur de tension',
+                description: 'Cours sur le pont diviseur de tension',
+                date_creation: '2025-03-17T18:52:02.826Z',
+                id_cours: '7f4b538504facde3c881b73844f52f25',
                 video: {
-                  video_id: "5f4b538504facde3c881b73844f52f24-1742237522",
+                  video_id: '5f4b538504facde3c881b73844f52f24-1742237522',
                   chemin_fichier:
-                    "videos/5f4b538504facde3c881b73844f52f24-1742237522.mp4",
-                  date_mise_en_ligne: "2024-06-17T18:52:48.781Z",
+                    'videos/5f4b538504facde3c881b73844f52f24-1742237522.mp4',
+                  date_mise_en_ligne: '2024-06-17T18:52:48.781Z',
                 },
                 nombre_de_documents: 2,
               },
@@ -77,8 +77,8 @@ const Courses = () => {
         setCourses(coursesArray);
         setError(null);
       } catch (err) {
-        console.error("Erreur lors de la récupération des cours:", err);
-        setError("Impossible de charger les cours. Veuillez réessayer.");
+        console.error('Erreur lors de la récupération des cours:', err);
+        setError('Impossible de charger les cours. Veuillez réessayer.');
       } finally {
         setLoading(false);
       }
@@ -90,10 +90,10 @@ const Courses = () => {
   // Filtrage et tri
   const filteredCourses = courses
     .filter(
-      (course) =>
-        (selectedProfessor === "Tous" ||
+      course =>
+        (selectedProfessor === 'Tous' ||
           course.professor === selectedProfessor) &&
-        (selectedSubject === "Tous" || course.subject === selectedSubject) &&
+        (selectedSubject === 'Tous' || course.subject === selectedSubject) &&
         (course.titre.toLowerCase().includes(searchQuery.toLowerCase()) ||
           course.description
             .toLowerCase()
@@ -101,7 +101,7 @@ const Courses = () => {
           course.professor.toLowerCase().includes(searchQuery.toLowerCase()))
     )
     .sort((a, b) => {
-      if (sortBy === "date_recent") {
+      if (sortBy === 'date_recent') {
         return (
           new Date(b.video.date_mise_en_ligne) -
           new Date(a.video.date_mise_en_ligne)
@@ -114,8 +114,8 @@ const Courses = () => {
     });
 
   // Récupère les filtres uniques
-  const professors = [...new Set(courses.map((course) => course.professor))];
-  const subjects = [...new Set(courses.map((course) => course.subject))];
+  const professors = [...new Set(courses.map(course => course.professor))];
+  const subjects = [...new Set(courses.map(course => course.subject))];
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -177,7 +177,7 @@ const Courses = () => {
                 placeholder="Rechercher des cours..."
                 className="w-full p-3 pl-10 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={e => setSearchQuery(e.target.value)}
               />
             </div>
           </div>
@@ -189,7 +189,7 @@ const Courses = () => {
                 Professeur
               </label>
               <FilterDropdown
-                items={["Tous", ...professors]}
+                items={['Tous', ...professors]}
                 selected={selectedProfessor}
                 setSelected={setSelectedProfessor}
               />
@@ -200,7 +200,7 @@ const Courses = () => {
                 Matière
               </label>
               <FilterDropdown
-                items={["Tous", ...subjects]}
+                items={['Tous', ...subjects]}
                 selected={selectedSubject}
                 setSelected={setSelectedSubject}
               />
@@ -213,7 +213,7 @@ const Courses = () => {
               <select
                 className="p-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
+                onChange={e => setSortBy(e.target.value)}
               >
                 <option value="date_recent">Plus récent</option>
                 <option value="date_ancien">Plus ancien</option>
@@ -231,7 +231,7 @@ const Courses = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredCourses.map((course) => (
+            {filteredCourses.map(course => (
               <CourseCard key={course.id_cours} course={course} />
             ))}
           </div>
@@ -242,6 +242,24 @@ const Courses = () => {
 };
 
 const CourseCard = ({ course }) => {
+  CourseCard.propTypes = {
+    course: PropTypes.shape({
+      id_cours: PropTypes.number.isRequired,
+      titre: PropTypes.string.isRequired,
+      matiere: PropTypes.string.isRequired,
+      date_debut: PropTypes.string.isRequired,
+      date_fin: PropTypes.string.isRequired,
+      description: PropTypes.string,
+      video: PropTypes.shape({
+        video_id: PropTypes.string,
+        date_mise_en_ligne: PropTypes.string,
+      }),
+      nombre_de_documents: PropTypes.number,
+      professor: PropTypes.string.isRequired,
+      subject: PropTypes.string,
+    }).isRequired,
+  };
+
   const [isHovered, setIsHovered] = useState(false);
   const hoverTimeout = useRef(null);
 
@@ -257,7 +275,7 @@ const CourseCard = ({ course }) => {
   };
 
   const handleClick = () => {
-    window.location.href = "/course-reader?courseId=" + course.id_cours;
+    window.location.href = '/course-reader?courseId=' + course.id_cours;
   };
 
   useEffect(() => {
@@ -286,14 +304,14 @@ const CourseCard = ({ course }) => {
                 className="w-full h-full object-cover"
                 src={`/videos/${course.video.video_id}/${course.video.video_id}.preview.webp`}
                 alt={course.titre}
-                style={{ display: "block" }}
+                style={{ display: 'block' }}
               />
             ) : (
               <img
                 className="w-full h-full object-cover"
                 src={`/videos/${course.video.video_id}/0.png`}
                 alt={course.titre}
-                style={{ display: "block" }}
+                style={{ display: 'block' }}
               />
             )}
           </>
@@ -332,7 +350,7 @@ const CourseCard = ({ course }) => {
           <span className="font-medium">{course.professor}</span>
           <span className="italic">
             {new Date(course.video.date_mise_en_ligne).toLocaleDateString(
-              "fr-FR"
+              'fr-FR'
             )}
           </span>
         </div>
@@ -346,14 +364,20 @@ const FilterDropdown = ({ items, selected, setSelected }) => (
   <select
     className="p-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
     value={selected}
-    onChange={(e) => setSelected(e.target.value)}
+    onChange={e => setSelected(e.target.value)}
   >
-    {items.map((item) => (
+    {items.map(item => (
       <option key={item} value={item}>
         {item}
       </option>
     ))}
   </select>
 );
+
+FilterDropdown.propTypes = {
+  items: PropTypes.arrayOf(PropTypes.string).isRequired,
+  selected: PropTypes.string.isRequired,
+  setSelected: PropTypes.func.isRequired,
+};
 
 export default Courses;

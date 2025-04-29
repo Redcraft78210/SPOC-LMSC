@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from 'react';
 import {
   Edit,
   Trash2,
@@ -16,16 +16,34 @@ import {
   Shield,
   Clock,
   CircleX,
-} from "lucide-react";
+  XCircle,
+} from 'lucide-react';
 
-import { Toaster, toast } from "react-hot-toast";
+import PropTypes from 'prop-types';
 
-const API_URL = "https://localhost:8443/api";
+import { Toaster, toast } from 'react-hot-toast';
+
+const API_URL = 'https://localhost:8443/api';
 
 const UserManagement = ({ authToken }) => {
   const token = authToken;
 
-  const fetchUsers = async () => {
+  const fetchClasses = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_URL}/classes`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      setClasses(data.sort((a, b) => a.name.localeCompare(b.name)));
+    } catch (error) {
+      console.error(error);
+      toast.error('Erreur de chargement des Classes');
+    }
+  }, [token]);
+
+  const fetchUsers = useCallback(async () => {
     try {
       const response = await fetch(`${API_URL}/users`, {
         headers: {
@@ -43,35 +61,35 @@ const UserManagement = ({ authToken }) => {
         })
       );
     } catch (error) {
-      toast.error("Erreur de chargement des utilisateurs");
+      console.error(error);
+      toast.error('Erreur de chargement des utilisateurs');
     }
-  };
+  }, [token]);
 
   const [users, setUsers] = useState([]);
+  const [classes, setClasses] = useState([]);
 
   useEffect(() => {
     fetchUsers();
+    fetchClasses();
   }, []);
 
-  const [classes, setClasses] = useState([
-    { id: 3, name: "BTS1A" },
-    { id: 1, name: "BTS2A" },
-    { id: 2, name: "BTS2B" },
-  ]);
-
-  const [viewMode, setViewMode] = useState("list");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState('list');
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showInviteCodeModal, setShowInviteCodeModal] = useState(false);
-  const [inviteCode, setInviteCode] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
-  const [role, setRole] = useState("Élève");
-  const [selectedClass, setSelectedClass] = useState(null);
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    setShowCreateModal(searchParams.get('create-user'));
+    setShowInviteCodeModal(searchParams.get('invite-code'));
+  }, []);
 
   // Filtrage des utilisateurs
-  const filteredUsers = users.filter((user) =>
-    Object.values(user).some((value) =>
+  const filteredUsers = users.filter(user =>
+    Object.values(user).some(value =>
       String(value).toLowerCase().includes(searchQuery.toLowerCase())
     )
   );
@@ -81,14 +99,14 @@ const UserManagement = ({ authToken }) => {
     if (selectedUsers.length === filteredUsers.length) {
       setSelectedUsers([]);
     } else {
-      setSelectedUsers(filteredUsers.map((user) => user.id));
+      setSelectedUsers(filteredUsers.map(user => user.id));
     }
   };
 
-  const toggleUser = (userId) => {
-    setSelectedUsers((prev) =>
+  const toggleUser = userId => {
+    setSelectedUsers(prev =>
       prev.includes(userId)
-        ? prev.filter((id) => id !== userId)
+        ? prev.filter(id => id !== userId)
         : [...prev, userId]
     );
   };
@@ -97,9 +115,9 @@ const UserManagement = ({ authToken }) => {
   const bulkDelete = async () => {
     if (window.confirm(`Supprimer ${selectedUsers.length} utilisateur(s) ?`)) {
       try {
-        const promises = selectedUsers.map((userId) => {
+        const promises = selectedUsers.map(userId => {
           return fetch(`${API_URL}/users/${userId}`, {
-            method: "DELETE",
+            method: 'DELETE',
             headers: {
               Authorization: `Bearer ${token}`,
             },
@@ -113,22 +131,23 @@ const UserManagement = ({ authToken }) => {
         fetchUsers();
         setSelectedUsers([]);
       } catch (error) {
-        toast.error("Erreur lors de la suppression des utilisateurs");
+        console.error(error);
+        toast.error('Erreur lors de la suppression des utilisateurs');
       }
     }
   };
 
-  const bulkToggleStatus = async (status) => {
+  const bulkToggleStatus = async status => {
     try {
       const selectedIds = new Set(selectedUsers);
       const promises = filteredUsers
-        .filter((user) => selectedIds.has(user.id))
-        .map((user) => {
+        .filter(user => selectedIds.has(user.id))
+        .map(user => {
           return fetch(`${API_URL}/users/${user.id}`, {
-            method: "PATCH",
+            method: 'PATCH',
             headers: {
               Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
+              'Content-Type': 'application/json',
             },
             body: JSON.stringify({ statut: status }),
           });
@@ -140,64 +159,61 @@ const UserManagement = ({ authToken }) => {
       );
       fetchUsers();
     } catch (error) {
-      toast.error("Erreur lors de la mise à jour des statuts");
+      console.error(error);
+      toast.error('Erreur lors de la mise à jour des statuts');
     }
   };
 
   const toggleStatus = async (userId, status) => {
     try {
       await fetch(`${API_URL}/users/${userId}`, {
-        method: "PATCH",
+        method: 'PATCH',
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({ statut: status }),
       });
-      toast.success("Statut utilisateur mis à jour");
+      toast.success('Statut utilisateur mis à jour');
       fetchUsers();
     } catch (error) {
-      toast.error("Erreur de modification du statut");
+      console.error(error);
+      toast.error('Erreur de modification du statut');
     }
   };
 
   const manageInvitationCodes = () => {
-    const code = Math.random().toString(36).slice(-8).toUpperCase();
-    setInviteCode(code);
     setShowInviteCodeModal(true);
   };
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(inviteCode);
-  };
-
-  const deleteUser = async (userId) => {
+  const deleteUser = async userId => {
     if (
-      window.confirm("Êtes-vous sûr de vouloir supprimer cet utilisateur ?")
+      window.confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')
     ) {
       try {
         await fetch(`${API_URL}/users/${userId}`, {
-          method: "DELETE",
+          method: 'DELETE',
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
-        toast.success("Utilisateur supprimé avec succès");
+        toast.success('Utilisateur supprimé avec succès');
         fetchUsers();
       } catch (error) {
+        console.error(error);
         toast.error("Erreur de suppression de l'utilisateur");
       }
     }
   };
 
-  const handleSubmitUser = async (e) => {
+  const handleSubmitUser = async e => {
     const formData = new FormData(e.target);
     const userData = {
-      name: formData.get("name"),
-      surname: formData.get("surname"),
-      email: formData.get("email"),
-      role: formData.get("role"),
-      password: formData.get("password"),
+      name: formData.get('name'),
+      surname: formData.get('surname'),
+      email: formData.get('email'),
+      role: formData.get('role'),
+      password: formData.get('password'),
     };
 
     try {
@@ -205,10 +221,10 @@ const UserManagement = ({ authToken }) => {
       if (selectedUser) {
         // Update user
         response = await fetch(`${API_URL}/users/${selectedUser.id}`, {
-          method: "PUT",
+          method: 'PUT',
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             ...userData,
@@ -217,21 +233,21 @@ const UserManagement = ({ authToken }) => {
         });
       } else {
         // Create new user
-        userData.password = formData.get("password");
+        userData.password = formData.get('password');
         response = await fetch(`${API_URL}/users`, {
-          method: "POST",
+          method: 'POST',
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
           },
           body: JSON.stringify(userData),
         });
       }
 
-      if (!response.ok) throw new Error("Erreur lors de la requête");
+      if (!response.ok) throw new Error('Erreur lors de la requête');
 
       toast.success(
-        selectedUser ? "Utilisateur mis à jour" : "Utilisateur créé avec succès"
+        selectedUser ? 'Utilisateur mis à jour' : 'Utilisateur créé avec succès'
       );
       fetchUsers();
       setShowCreateModal(false);
@@ -254,7 +270,7 @@ const UserManagement = ({ authToken }) => {
           placeholder="Rechercher un utilisateur..."
           className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={e => setSearchQuery(e.target.value)}
         />
       </div>
     );
@@ -264,17 +280,17 @@ const UserManagement = ({ authToken }) => {
     return (
       <div className="flex gap-2">
         <button
-          onClick={() => setViewMode("list")}
+          onClick={() => setViewMode('list')}
           className={`p-2 rounded-lg ${
-            viewMode === "list" ? "bg-blue-100 text-blue-600" : "text-gray-600"
+            viewMode === 'list' ? 'bg-blue-100 text-blue-600' : 'text-gray-600'
           }`}
         >
           <List className="w-5 h-5" />
         </button>
         <button
-          onClick={() => setViewMode("grid")}
+          onClick={() => setViewMode('grid')}
           className={`p-2 rounded-lg ${
-            viewMode === "grid" ? "bg-blue-100 text-blue-600" : "text-gray-600"
+            viewMode === 'grid' ? 'bg-blue-100 text-blue-600' : 'text-gray-600'
           }`}
         >
           <Grid className="w-5 h-5" />
@@ -318,10 +334,10 @@ const UserManagement = ({ authToken }) => {
     );
   };
 
-  const retrogradeUser = async (userId) => {
+  const retrogradeUser = async userId => {
     try {
       const response = await fetch(`${API_URL}/users/retrograde/${userId}`, {
-        method: "PATCH",
+        method: 'PATCH',
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -338,10 +354,10 @@ const UserManagement = ({ authToken }) => {
     }
   };
 
-  const upgradeUser = async (userId) => {
+  const upgradeUser = async userId => {
     try {
       const response = await fetch(`${API_URL}/users/upgrade/${userId}`, {
-        method: "PATCH",
+        method: 'PATCH',
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -390,11 +406,11 @@ const UserManagement = ({ authToken }) => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {filteredUsers.map((user) => (
+            {filteredUsers.map(user => (
               <tr
                 key={user.id}
                 className={
-                  !user.active === "actif" ? "bg-gray-50 opacity-75" : ""
+                  !user.active === 'actif' ? 'bg-gray-50 opacity-75' : ''
                 }
               >
                 <td className="px-6 py-4">
@@ -410,7 +426,7 @@ const UserManagement = ({ authToken }) => {
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span
                     className={`px-2 py-1 rounded-full text-xs text-white font-bold ${
-                      user.active === "actif" ? "bg-green-800" : "bg-red-700"
+                      user.active === 'actif' ? 'bg-green-800' : 'bg-red-700'
                     }`}
                   >
                     {user.active.charAt(0).toUpperCase() + user.active.slice(1)}
@@ -419,11 +435,11 @@ const UserManagement = ({ authToken }) => {
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span
                     className={`px-2 py-1 rounded-full text-xs text-white font-bold ${
-                      user.role === "Administrateur"
-                        ? "bg-amber-500"
-                        : user.role === "Professeur"
-                        ? "bg-sky-800"
-                        : "bg-green-800"
+                      user.role === 'Administrateur'
+                        ? 'bg-amber-500'
+                        : user.role === 'Professeur'
+                          ? 'bg-sky-800'
+                          : 'bg-green-800'
                     }`}
                   >
                     {user.role}
@@ -439,7 +455,7 @@ const UserManagement = ({ authToken }) => {
                   >
                     <Edit className="w-5 h-5" />
                   </button>
-                  {user.active === "actif" ? (
+                  {user.active === 'actif' ? (
                     <button
                       className="text-red-600 hover:text-red-900"
                       onClick={() => toggleStatus(user.id, false)}
@@ -460,7 +476,7 @@ const UserManagement = ({ authToken }) => {
                   >
                     <Trash2 className="w-5 h-5" />
                   </button>
-                  {user.role === "Etudiant" || user.role === "Professeur" ? (
+                  {user.role === 'Etudiant' || user.role === 'Professeur' ? (
                     <button
                       className="text-blue-600 hover:text-blue-900"
                       onClick={() => upgradeUser(user.id)}
@@ -475,7 +491,7 @@ const UserManagement = ({ authToken }) => {
                       <UserMinus className="w-5 h-5" />
                     </button>
                   )}
-                  {user.role === "Professeur" && (
+                  {user.role === 'Professeur' && (
                     <button
                       className="text-green-600 hover:text-green-900"
                       onClick={() => retrogradeUser(user.id)}
@@ -495,11 +511,11 @@ const UserManagement = ({ authToken }) => {
   const UserCards = () => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredUsers.map((user) => (
+        {filteredUsers.map(user => (
           <div
             key={user.id}
             className={`bg-white p-4 rounded-lg shadow ${
-              !user.active === "actif" ? "opacity-75" : ""
+              !user.active === 'actif' ? 'opacity-75' : ''
             }`}
           >
             <div className="flex justify-between items-start">
@@ -533,20 +549,20 @@ const UserManagement = ({ authToken }) => {
               <div className="flex gap-2 mt-4">
                 <span
                   className={`px-2 py-1 rounded-full text-xs ${
-                    user.active === "actif"
-                      ? "bg-green-100 text-green-800"
-                      : "bg-red-100 text-red-800"
+                    user.active === 'actif'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-red-100 text-red-800'
                   }`}
                 >
                   {user.active.charAt(0).toUpperCase() + user.active.slice(1)}
                 </span>
                 <span
                   className={`px-2 py-1 rounded-full text-xs ${
-                    user.role === "Administrateur"
-                      ? "bg-red-100 text-red-800"
-                      : user.role === "Professeur"
-                      ? "bg-blue-100 text-blue-800"
-                      : "bg-green-100 text-green-800"
+                    user.role === 'Administrateur'
+                      ? 'bg-red-100 text-red-800'
+                      : user.role === 'Professeur'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-green-100 text-green-800'
                   }`}
                 >
                   {user.role}
@@ -561,11 +577,11 @@ const UserManagement = ({ authToken }) => {
 
   const UserCreationModal = () => {
     const [formData, setFormData] = useState({
-      name: "",
-      surname: "",
-      email: "",
-      role: "élève",
-      password: "",
+      name: '',
+      surname: '',
+      email: '',
+      role: 'élève',
+      password: '',
     });
     const [initialUser, setInitialUser] = useState(null);
 
@@ -583,20 +599,20 @@ const UserManagement = ({ authToken }) => {
           surname: selectedUser.surname,
           email: selectedUser.email,
           role: selectedUser.role,
-          password: "",
+          password: '',
         });
         setInitialUser({
           name: selectedUser.name,
           surname: selectedUser.surname,
           email: selectedUser.email,
           role: selectedUser.role,
-          password: "",
+          password: '',
         });
       }
       return () => setIsMounted(false);
-    }, [selectedUser]);
+    }, [setIsMounted]);
 
-    const hasUnsavedChanges = () => {
+    const hasUnsavedChanges = useCallback(() => {
       if (
         !selectedUser &&
         (formData.name ||
@@ -612,46 +628,40 @@ const UserManagement = ({ authToken }) => {
           surname !== initialUser.surname ||
           email !== initialUser.email ||
           role !== initialUser.role ||
-          (newPassword && newPassword !== "")
+          (newPassword && newPassword !== initialUser.password)
         );
       }
       return false;
-    };
+    }, [formData, initialUser, newPassword, selectedUser]);
 
     useEffect(() => {
-      const handleBeforeUnload = (e) => {
+      const handleBeforeUnload = e => {
         if (hasUnsavedChanges()) {
-          const message = "Vous avez des modifications non enregistrées.";
+          const message = 'Vous avez des modifications non enregistrées.';
           e.preventDefault();
           e.returnValue = message;
           return message;
         }
       };
 
-      window.addEventListener("beforeunload", handleBeforeUnload);
+      window.addEventListener('beforeunload', handleBeforeUnload);
       return () => {
-        window.removeEventListener("beforeunload", handleBeforeUnload);
+        window.removeEventListener('beforeunload', handleBeforeUnload);
       };
-    }, [
-      // listez ici toutes les dépendances utilisées par hasUnsavedChanges :
-      formData,
-      newPassword,
-      selectedUser,
-      initialUser,
-    ]);
+    }, [hasUnsavedChanges, formData, newPassword, initialUser]);
 
     const validateForm = () => {
       const newErrors = {};
       if (!formData.name.trim()) {
-        newErrors.name = "Le prénom est requis";
+        newErrors.name = 'Le prénom est requis';
       } else if (formData.name.length > 50) {
-        newErrors.name = "Le prénom ne doit pas dépasser 50 caractères";
+        newErrors.name = 'Le prénom ne doit pas dépasser 50 caractères';
       }
 
       if (!formData.surname.trim()) {
-        newErrors.surname = "Le nom est requis";
+        newErrors.surname = 'Le nom est requis';
       } else if (formData.surname.length > 50) {
-        newErrors.surname = "Le nom ne doit pas dépasser 50 caractères";
+        newErrors.surname = 'Le nom ne doit pas dépasser 50 caractères';
       }
 
       if (!formData.email.trim()) {
@@ -661,16 +671,16 @@ const UserManagement = ({ authToken }) => {
       }
 
       if (!selectedUser && !formData.password) {
-        newErrors.password = "Le mot de passe est requis";
+        newErrors.password = 'Le mot de passe est requis';
       } else if (formData.password.length > 0 && formData.password.length < 8) {
-        newErrors.password = "Le mot de passe doit faire au moins 8 caractères";
+        newErrors.password = 'Le mot de passe doit faire au moins 8 caractères';
       }
 
       setErrors(newErrors);
       return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async e => {
       e.preventDefault();
       if (!validateForm()) return;
 
@@ -686,7 +696,7 @@ const UserManagement = ({ authToken }) => {
           }, 1500);
         }
       } catch (error) {
-        console.error("Submission error:", error);
+        console.error('Submission error:', error);
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -695,42 +705,42 @@ const UserManagement = ({ authToken }) => {
     const handleClose = () => {
       if (
         hasUnsavedChanges() &&
-        !confirm("Etes-vous certain de vouloir annuler les modifications ?")
+        !confirm('Etes-vous certain de vouloir annuler les modifications ?')
       )
         return;
       setShowCreateModal(false);
       setSelectedUser(null);
     };
 
-    const handleBackdropClick = (e) => {
+    const handleBackdropClick = e => {
       if (e.target === e.currentTarget) handleClose();
     };
 
     useEffect(() => {
-      const handleKeyDown = (e) => {
-        if (e.key === "Escape") {
+      const handleKeyDown = e => {
+        if (e.key === 'Escape') {
           e.preventDefault();
           e.stopPropagation();
           handleClose();
         }
       };
 
-      document.addEventListener("keydown", handleKeyDown);
+      document.addEventListener('keydown', handleKeyDown);
       return () => {
-        document.removeEventListener("keydown", handleKeyDown);
+        document.removeEventListener('keydown', handleKeyDown);
       };
     }, [handleClose]);
 
     const handleGeneratePassword = () => {
       const characters =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=";
-      let password = "";
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=';
+      let password = '';
       for (let i = 0; i < 12; i++) {
         password += characters.charAt(
           Math.floor(Math.random() * characters.length)
         );
       }
-      setFormData((prev) => ({ ...prev, password }));
+      setFormData(prev => ({ ...prev, password }));
       setNewPassword(password);
       return password;
     };
@@ -744,14 +754,14 @@ const UserManagement = ({ authToken }) => {
       >
         <div
           className={`bg-white rounded-xl shadow-2xl p-8 w-full max-w-md transform transition-all duration-300 ease-in-out ${
-            isMounted ? "scale-100 opacity-100" : "scale-95 opacity-0"
+            isMounted ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
           }`}
         >
           <h2
             id="userModalTitle"
             className="text-2xl font-bold text-gray-900 mb-6"
           >
-            {selectedUser ? "Modifier l'Utilisateur" : "Nouvel Utilisateur"}
+            {selectedUser ? "Modifier l'Utilisateur" : 'Nouvel Utilisateur'}
           </h2>
 
           <form onSubmit={handleSubmit}>
@@ -765,13 +775,13 @@ const UserManagement = ({ authToken }) => {
                   <input
                     name="name"
                     value={formData.name}
-                    onChange={(e) =>
+                    onChange={e =>
                       setFormData({ ...formData, name: e.target.value })
                     }
                     className={`w-full px-4 py-2.5 rounded-lg border ${
                       errors.name
-                        ? "border-red-500 focus:ring-red-500"
-                        : "border-gray-200 focus:border-blue-500"
+                        ? 'border-red-500 focus:ring-red-500'
+                        : 'border-gray-200 focus:border-blue-500'
                     } focus:ring-2 focus:ring-blue-200 outline-none transition-all`}
                     aria-invalid={!!errors.name}
                     aria-describedby="nameError"
@@ -797,13 +807,13 @@ const UserManagement = ({ authToken }) => {
                   <input
                     name="surname"
                     value={formData.surname}
-                    onChange={(e) =>
+                    onChange={e =>
                       setFormData({ ...formData, surname: e.target.value })
                     }
                     className={`w-full px-4 py-2.5 rounded-lg border ${
                       errors.surname
-                        ? "border-red-500 focus:ring-red-500"
-                        : "border-gray-200 focus:border-blue-500"
+                        ? 'border-red-500 focus:ring-red-500'
+                        : 'border-gray-200 focus:border-blue-500'
                     } focus:ring-2 focus:ring-blue-200 outline-none transition-all`}
                     aria-invalid={!!errors.surname}
                     aria-describedby="surnameError"
@@ -832,13 +842,13 @@ const UserManagement = ({ authToken }) => {
                   type="email"
                   name="email"
                   value={formData.email}
-                  onChange={(e) =>
+                  onChange={e =>
                     setFormData({ ...formData, email: e.target.value })
                   }
                   className={`w-full px-4 py-2.5 rounded-lg border ${
                     errors.email
-                      ? "border-red-500 focus:ring-red-500"
-                      : "border-gray-200 focus:border-blue-500"
+                      ? 'border-red-500 focus:ring-red-500'
+                      : 'border-gray-200 focus:border-blue-500'
                   } focus:ring-2 focus:ring-blue-200 outline-none transition-all`}
                   aria-invalid={!!errors.email}
                   aria-describedby="emailError"
@@ -859,7 +869,7 @@ const UserManagement = ({ authToken }) => {
                 <select
                   name="role"
                   value={formData.role}
-                  onChange={(e) =>
+                  onChange={e =>
                     setFormData({ ...formData, role: e.target.value })
                   }
                   className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
@@ -881,13 +891,13 @@ const UserManagement = ({ authToken }) => {
                     type="password"
                     name="password"
                     value={formData.password}
-                    onChange={(e) =>
+                    onChange={e =>
                       setFormData({ ...formData, password: e.target.value })
                     }
                     className={`w-full px-4 py-2.5 rounded-lg border ${
                       errors.password
-                        ? "border-red-500 focus:ring-red-500"
-                        : "border-gray-200 focus:border-blue-500"
+                        ? 'border-red-500 focus:ring-red-500'
+                        : 'border-gray-200 focus:border-blue-500'
                     } focus:ring-2 focus:ring-blue-200 outline-none transition-all`}
                     aria-invalid={!!errors.password}
                     aria-describedby="passwordError"
@@ -920,15 +930,16 @@ const UserManagement = ({ authToken }) => {
               {newPassword && (
                 <div className="mt-4">
                   <p className="text-gray-700 text-sm mb-2">
-                    Nouveau mot de passe :{" "}
+                    Nouveau mot de passe :{' '}
                     <span className="bg-gray-100 px-2 py-1 rounded-lg">
                       {newPassword}
                     </span>
                   </p>
                   <p className="text-gray-500 text-xs">
-                    Ce mot de passe est généré aléatoirement et n'est pas stocké
-                    sur nos serveurs. Il est recommandé de le stocker en lieu
-                    sûr (par exemple, dans un gestionnaire de mots de passe).
+                    Ce mot de passe est généré aléatoirement et n&apos;est pas
+                    stocké sur nos serveurs. Il est recommandé de le stocker en
+                    lieu sûr (par exemple, dans un gestionnaire de mots de
+                    passe).
                   </p>
                 </div>
               )}
@@ -971,7 +982,7 @@ const UserManagement = ({ authToken }) => {
                     ></path>
                   </svg>
                 )}
-                {selectedUser ? "Mettre à jour" : "Créer"}
+                {selectedUser ? 'Mettre à jour' : 'Créer'}
               </button>
             </div>
           </form>
@@ -1003,14 +1014,15 @@ const UserManagement = ({ authToken }) => {
   const InvitationCodeModal = ({ onClose }) => {
     const [copiedCode, setCopiedCode] = useState(null);
     const [showConfirm, setShowConfirm] = useState(false);
-    const [selectedCode, setSelectedCode] = useState(null);
-    const [filter, setFilter] = useState("all");
+    const [filter, setFilter] = useState('all');
     const [page, setPage] = useState(1);
     const [formData, setFormData] = useState({
-      role: "student",
+      role: 'student',
       usageLimit: 1,
       validityPeriod: 24,
+      classId: null, // New field for class assignment
     });
+    const [assignClass, setAssignClass] = useState(false); // Checkbox state
     const [existingCodes, setExistingCodes] = useState([]);
     const [loading, setLoading] = useState(false);
 
@@ -1021,7 +1033,7 @@ const UserManagement = ({ authToken }) => {
       const fetchCodes = async () => {
         try {
           setLoading(true);
-          console.log("token", token);
+          console.log('token', token);
           const response = await fetch(`${API_URL}/codes`, {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -1030,14 +1042,15 @@ const UserManagement = ({ authToken }) => {
           const data = await response.json();
 
           setExistingCodes(
-            data.map((code) => ({
+            data.map(code => ({
               ...code,
               createdAt: new Date(code.createdAt),
               expiresAt: new Date(code.expiresAt),
             }))
           );
         } catch (error) {
-          toast.error("Erreur de chargement des codes");
+          console.error(error);
+          toast.error('Erreur de chargement des codes');
         } finally {
           setLoading(false);
         }
@@ -1046,31 +1059,38 @@ const UserManagement = ({ authToken }) => {
     }, []);
 
     const roleDetails = {
-      student: { color: "bg-blue-100", text: "text-blue-800", icon: <Book /> },
+      student: { color: 'bg-blue-100', text: 'text-blue-800', icon: <Book /> },
       teacher: {
-        color: "bg-green-100",
-        text: "text-green-800",
+        color: 'bg-green-100',
+        text: 'text-green-800',
         icon: <User />,
       },
       admin: {
-        color: "bg-red-100",
-        text: "text-red-800",
+        color: 'bg-red-100',
+        text: 'text-red-800',
         icon: <Shield />,
       },
     };
 
     const handleGenerate = async () => {
       try {
+        const payload = { ...formData };
+        console.log(assignClass);
+        if (!assignClass) {
+          delete payload.classId; // Remove classId if checkbox is not checked
+        }
+        console.log(payload);
+
         const response = await fetch(`${API_URL}/codes`, {
-          method: "POST",
+          method: 'POST',
           headers: {
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify(formData),
+          body: JSON.stringify(payload),
         });
 
-        if (!response.ok) throw new Error("Erreur de génération");
+        if (!response.ok) throw new Error('Erreur de génération');
 
         const newCode = await response.json();
         setExistingCodes([
@@ -1082,10 +1102,16 @@ const UserManagement = ({ authToken }) => {
           },
         ]);
 
-        toast.success("Code généré avec succès");
-        setFormData({ role: "student", usageLimit: 1, validityPeriod: 24 });
+        toast.success('Code généré avec succès');
+        setFormData({
+          role: 'student',
+          usageLimit: 1,
+          validityPeriod: 24,
+          classId: null,
+        });
+        setAssignClass(false); // Reset checkbox
       } catch (error) {
-        toast.error(error.message || "Erreur de génération");
+        toast.error(error.message || 'Erreur de génération');
       }
     };
 
@@ -1095,36 +1121,37 @@ const UserManagement = ({ authToken }) => {
           Authorization: `Bearer ${token}`,
         };
         const response = await fetch(`${API_URL}/codes/${selectedCode}`, {
-          method: "DELETE",
+          method: 'DELETE',
           headers,
         });
 
-        if (!response.ok) throw new Error("Erreur de suppression");
+        if (!response.ok) throw new Error('Erreur de suppression');
 
         setExistingCodes(
-          existingCodes.filter((code) => code.value !== selectedCode)
+          existingCodes.filter(code => code.value !== selectedCode)
         );
-        toast.success("Code supprimé");
+        toast.success('Code supprimé');
         setShowConfirm(false);
       } catch (error) {
-        toast.error(error.message || "Erreur de suppression");
+        toast.error(error.message || 'Erreur de suppression');
       }
     };
 
-    const getValidityStatus = (code) => {
-      if (code.remainingUses === 0) return "Épuisé";
-      if (new Date() > code.expiresAt) return "Expiré";
-      return "Actif";
+    const getValidityStatus = code => {
+      if (code.remainingUses === 0) return 'Épuisé';
+      if (new Date() > code.expiresAt) return 'Expiré';
+      return 'Actif';
     };
 
-    const copyToClipboard = async (code) => {
+    const copyToClipboard = async code => {
       try {
         await navigator.clipboard.writeText(code);
         setCopiedCode(code);
         setTimeout(() => setCopiedCode(null), 2000);
-        toast.success("Code copié!");
+        toast.success('Code copié!');
       } catch (err) {
-        toast.error("Échec de la copie");
+        console.error(err);
+        toast.error('Échec de la copie');
       }
     };
 
@@ -1132,10 +1159,10 @@ const UserManagement = ({ authToken }) => {
       setPage(1);
     }, [filter]);
 
-    const filteredCodes = existingCodes.filter((code) => {
-      if (filter === "active") return getValidityStatus(code) === "Actif";
-      if (filter === "expired") {
-        return ["Expiré", "Épuisé"].includes(getValidityStatus(code));
+    const filteredCodes = existingCodes.filter(code => {
+      if (filter === 'active') return getValidityStatus(code) === 'Actif';
+      if (filter === 'expired') {
+        return ['Expiré', 'Épuisé'].includes(getValidityStatus(code));
       }
       return true;
     });
@@ -1148,7 +1175,7 @@ const UserManagement = ({ authToken }) => {
     useEffect(() => {
       const intervalId = setInterval(() => {
         const now = new Date();
-        const remainingCodes = existingCodes.filter((code) => {
+        const remainingCodes = existingCodes.filter(code => {
           const isExpired = now > code.expiresAt;
           const isDepleted = code.remainingUses === 0;
           return !(isExpired || isDepleted);
@@ -1156,7 +1183,7 @@ const UserManagement = ({ authToken }) => {
 
         if (remainingCodes.length !== existingCodes.length) {
           setExistingCodes(remainingCodes);
-          toast.info("Codes inutiles supprimés");
+          toast.info('Codes inutiles supprimés');
         }
       }, 3600000); // Check every hour
 
@@ -1194,7 +1221,7 @@ const UserManagement = ({ authToken }) => {
                 <label className="block text-sm font-medium mb-2">Rôle</label>
                 <select
                   value={formData.role}
-                  onChange={(e) =>
+                  onChange={e =>
                     setFormData({ ...formData, role: e.target.value })
                   }
                   className="w-full p-2 border rounded"
@@ -1207,13 +1234,13 @@ const UserManagement = ({ authToken }) => {
 
               <div>
                 <label className="block text-sm font-medium mb-2">
-                  Nombre d'utilisations
+                  Nombre d&apos;utilisations
                 </label>
                 <input
                   type="number"
                   min="1"
                   value={formData.usageLimit}
-                  onChange={(e) =>
+                  onChange={e =>
                     setFormData({
                       ...formData,
                       usageLimit: parseInt(e.target.value) || 1,
@@ -1231,7 +1258,7 @@ const UserManagement = ({ authToken }) => {
                   type="number"
                   min="1"
                   value={formData.validityPeriod}
-                  onChange={(e) =>
+                  onChange={e =>
                     setFormData({
                       ...formData,
                       validityPeriod: parseInt(e.target.value) || 24,
@@ -1242,12 +1269,48 @@ const UserManagement = ({ authToken }) => {
               </div>
             </div>
 
+            {/* Checkbox and class selection */}
+            <div className="mt-4">
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={assignClass}
+                  onChange={e => setAssignClass(e.target.checked)}
+                  className="rounded text-blue-600 focus:ring-blue-500"
+                />
+                <span>Assigner une classe</span>
+              </label>
+              {assignClass && (
+                <div className="mt-2">
+                  <label className="block text-sm font-medium mb-2">
+                    Classe
+                  </label>
+                  <select
+                    value={formData.classId || ''}
+                    onChange={e =>
+                      setFormData({ ...formData, classId: e.target.value })
+                    }
+                    className="w-full p-2 border rounded"
+                  >
+                    <option value="" disabled>
+                      Sélectionnez une classe
+                    </option>
+                    {classes.map(cls => (
+                      <option key={cls.id} value={cls.id}>
+                        {cls.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
             <button
               onClick={handleGenerate}
               disabled={loading}
               className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
             >
-              {loading ? "Génération..." : "Générer le code"}
+              {loading ? 'Génération...' : 'Générer le code'}
             </button>
           </div>
 
@@ -1260,7 +1323,7 @@ const UserManagement = ({ authToken }) => {
             ) : paginatedCodes.length === 0 ? (
               <div className="p-4">
                 <h3 className="text-lg font-semibold mb-4">
-                  Codes d'invitation existants
+                  Codes d&apos;invitation existants
                 </h3>
                 <div className="text-center py-4 text-gray-500">
                   <p>Aucun code trouvé</p>
@@ -1275,7 +1338,7 @@ const UserManagement = ({ authToken }) => {
                   <h3 className="text-lg font-semibold">Codes générés</h3>
                   <select
                     value={filter}
-                    onChange={(e) => setFilter(e.target.value)}
+                    onChange={e => setFilter(e.target.value)}
                     className="px-3 py-1 border rounded"
                   >
                     <option value="all">Tous</option>
@@ -1285,7 +1348,7 @@ const UserManagement = ({ authToken }) => {
                 </div>
 
                 <div className="space-y-3">
-                  {paginatedCodes.map((code) => {
+                  {paginatedCodes.map(code => {
                     const status = getValidityStatus(code);
                     const { color, text, icon } = roleDetails[code.role];
 
@@ -1304,11 +1367,11 @@ const UserManagement = ({ authToken }) => {
                             </span>
                             <span
                               className={`text-xs px-2 py-1 rounded ${
-                                status === "Actif"
-                                  ? "bg-green-100 text-green-800"
-                                  : status === "Expiré"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-yellow-100 text-yellow-800"
+                                status === 'Actif'
+                                  ? 'bg-green-100 text-green-800'
+                                  : status === 'Expiré'
+                                    ? 'bg-red-100 text-red-800'
+                                    : 'bg-yellow-100 text-yellow-800'
                               }`}
                             >
                               {status}
@@ -1369,7 +1432,7 @@ const UserManagement = ({ authToken }) => {
                     onClick={handleDelete}
                     className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
                   >
-                    {loading ? "Suppression..." : "Confirmer"}
+                    {loading ? 'Suppression...' : 'Confirmer'}
                   </button>
                 </div>
               </div>
@@ -1377,18 +1440,18 @@ const UserManagement = ({ authToken }) => {
             <div className="mt-4 flex justify-between items-center">
               <button
                 disabled={page === 1}
-                onClick={() => setPage((prev) => prev - 1)}
+                onClick={() => setPage(prev => prev - 1)}
                 className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
               >
                 Précédent
               </button>
               <span>
-                Page {page} sur{" "}
+                Page {page} sur{' '}
                 {Math.ceil(filteredCodes.length / codesPerPage) || 1}
               </span>
               <button
                 disabled={page * codesPerPage >= filteredCodes.length}
-                onClick={() => setPage((prev) => prev + 1)}
+                onClick={() => setPage(prev => prev + 1)}
                 className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
               >
                 Suivant
@@ -1400,6 +1463,9 @@ const UserManagement = ({ authToken }) => {
     );
   };
 
+  InvitationCodeModal.propTypes = {
+    onClose: PropTypes.func.isRequired,
+  };
   return (
     <div className="container mx-auto p-6">
       <Toaster position="bottom-right" reverseOrder={false} />
@@ -1422,7 +1488,7 @@ const UserManagement = ({ authToken }) => {
               className="inline-flex items-center px-4 py-2 bg-green-600 text-white font-medium rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition duration-200"
             >
               <KeyRound className="w-5 h-5 mr-2" />
-              Gérer les codes d'invitation
+              Gérer les codes d&apos;invitation
             </button>
           </div>
         </div>
@@ -1433,7 +1499,7 @@ const UserManagement = ({ authToken }) => {
         <BulkActions />
       </div>
 
-      {viewMode === "list" ? <UserTable /> : <UserCards />}
+      {viewMode === 'list' ? <UserTable /> : <UserCards />}
 
       {/* Modale de création/utilisateur */}
       {showCreateModal && <UserCreationModal />}
@@ -1447,10 +1513,17 @@ const UserManagement = ({ authToken }) => {
 };
 
 // Ajouter les styles réutilisables dans Tailwind
-const buttonStyles = "px-4 py-2 rounded-lg flex items-center transition-colors";
-const btnPrimary = `${buttonStyles} bg-blue-600 text-white hover:bg-blue-700`;
-const btnSuccess = `${buttonStyles} bg-green-600 text-white hover:bg-green-700`;
-const btnWarning = `${buttonStyles} bg-yellow-600 text-white hover:bg-yellow-700`;
-const btnDanger = `${buttonStyles} bg-red-600 text-white hover:bg-red-700`;
+// const buttonStyles = 'px-4 py-2 rounded-lg flex items-center transition-colors';
+// const btnPrimary = `${buttonStyles} bg-blue-600 text-white hover:bg-blue-700`;
+// const btnSuccess = `${buttonStyles} bg-green-600 text-white hover:bg-green-700`;
+// const btnWarning = `${buttonStyles} bg-yellow-600 text-white hover:bg-yellow-700`;
+// const btnDanger = `${buttonStyles} bg-red-600 text-white hover:bg-red-700`;
+
+UserManagement.propTypes = {
+  authToken: PropTypes.string.isRequired, // Required string
+  viewMode: PropTypes.oneOf(['list', 'grid']), // Optional, must be "list" or "grid"
+  showCreateModal: PropTypes.bool, // Optional boolean
+  fetchUsers: PropTypes.func, // Optional function
+};
 
 export default UserManagement;

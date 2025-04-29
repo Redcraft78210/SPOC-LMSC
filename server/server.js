@@ -54,7 +54,9 @@ app.use(cors({
   ],
   origin: function (origin, callback) {
     console.log(`Checking origin: ${origin}`);
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Dé-commenter la ligne suivante pour autoriser les requêtes sans origin
+    // if (!origin || allowedOrigins.includes(origin)) {
+    if (allowedOrigins.includes(origin)) {
       console.log(`Origin allowed: ${origin}`);
       callback(null, true);
     } else {

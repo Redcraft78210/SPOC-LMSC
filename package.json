@@ -11,7 +11,7 @@
     "install-client": "cd client && npm install",
     "install-server": "cp server && npm install",
     "setup": "npm run install-client && npm run install-server",
-    "docker-build": "clear && npm run docker-clear && cd docker && docker-compose build",
+    "docker-build": "clear && npm run docker-clear && REGISTRY=${REGISTRY:-10.42.12.1:5000} NAMESPACE=${NAMESPACE:-} docker-compose -f docker/docker-compose.yml build --build-arg REGISTRY=$REGISTRY --build-arg NAMESPACE=$NAMESPACE",
     "docker-start": "cd docker && docker-compose up",
     "docker-stop": "cd docker && docker-compose down --volumes",
     "docker-clear": "cd docker && docker-compose down --rm all"

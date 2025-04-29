@@ -1,9 +1,18 @@
-import React from "react";
-import { Home, LibraryBig, BookOpen, Settings, Sun, User, Users } from "lucide-react";
-import { useNavigate, useLocation } from "react-router-dom";
-import PropTypes from "prop-types";
+import React from 'react';
+import {
+  Home,
+  LibraryBig,
+  BookOpen,
+  Settings,
+  Sun,
+  User,
+  Users,
+  FileVideo2,
+} from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import PropTypes from 'prop-types';
 
-const NavigationBar = ({ isAdmin = false }) => {
+const NavigationBar = ({ isAdmin = false, isProf = false }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [activeRoute, setActiveRoute] = React.useState(location.pathname);
@@ -11,35 +20,45 @@ const NavigationBar = ({ isAdmin = false }) => {
   React.useEffect(() => {
     setActiveRoute(location.pathname);
   }, [location.pathname]);
-
+  // alert(isProf);
+  alert(isAdmin);
   const navItems = [
-    { icon: Home, path: "/", label: "Home" },
-    { icon: LibraryBig, path: "/courses-library", label: "Cours" },
+    { icon: Home, path: '/dashboard', label: 'Home' },
+    { icon: LibraryBig, path: '/courses-library', label: 'Cours' },
     {
       icon: BookOpen,
-      path: "/course-reader",
-      label: "Reader",
+      path: '/course-reader',
+      label: 'Reader',
       clickable: false,
     },
     ...(isAdmin
       ? [
           {
             icon: User,
-            path: "/Users-Management",
-            label: "Gestion des utilisateurs",
+            path: '/Users-Management',
+            label: 'Gestion des utilisateurs',
           },
           {
             icon: Users,
-            path: "/Classes-Management",
-            label: "Gestion des classes",
+            path: '/Classes-Management',
+            label: 'Gestion des classes',
           },
         ]
       : []),
-    { icon: Sun, path: "/theme-settings", label: "Thème" },
-    { icon: Settings, path: "/settings", label: "Paramètres" },
+    ...(isProf
+      ? [
+          {
+            icon: FileVideo2,
+            path: 'Video-Manager',
+            label: 'Gestion des vidéos',
+          },
+        ]
+      : []),
+    { icon: Sun, path: '/theme-settings', label: 'Thème' },
+    { icon: Settings, path: '/settings', label: 'Paramètres' },
   ];
 
-  const handleNavigation = (path) => {
+  const handleNavigation = path => {
     navigate(path);
   };
 
@@ -52,7 +71,7 @@ const NavigationBar = ({ isAdmin = false }) => {
             onClick: () => handleNavigation(item.path),
           })}
           className={`p-2 rounded-lg hover:bg-white hover:text-gray-800 transition-all duration-300 ${
-            activeRoute === item.path ? "bg-white text-gray-800" : ""
+            activeRoute === item.path ? 'bg-white text-gray-800' : ''
           }`}
           aria-label={item.label}
         >
@@ -64,7 +83,8 @@ const NavigationBar = ({ isAdmin = false }) => {
 };
 
 NavigationBar.propTypes = {
-  isAdmin: PropTypes.bool
+  isAdmin: PropTypes.bool,
+  isProf: PropTypes.bool,
 };
 
 export default NavigationBar;

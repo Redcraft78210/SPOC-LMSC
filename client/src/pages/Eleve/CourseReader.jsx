@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import SecureVideoPlayer from "../../components/SecureVideoPlayer";
 import SecureDocumentViewer from "../../components/SecureDocumentViewer";
@@ -149,7 +149,7 @@ const CourseReader = ({ authToken }) => {
             <p className="text-red-600 mb-4">{documentError}</p>
           )}
           <div className="grid gap-4">
-            {courseData.documents.map((doc, index) => (
+            {courseData.documents.map((doc) => (
               <div key={doc.document_id} className="border rounded-lg p-4">
                 {!courseData.video && (
                   <SecureDocumentViewer

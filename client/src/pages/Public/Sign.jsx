@@ -1,65 +1,68 @@
-import React, { useState, useEffect } from "react";
 import {
-  loadCaptchaEnginge as loadCaptchaEngine,
-  LoadCanvasTemplate,
-  validateCaptcha,
-} from "react-simple-captcha";
-import { useNavigate } from "react-router-dom";
-import { jwtDecode } from "jwt-decode";
-import axios from "axios";
-import SubmitButton from "../components/SubmitButton";
-import Logo from "../Logo";
-import { Eye, EyeOff } from "lucide-react";
+  Eye,
+  EyeOff,
+} from 'lucide-react';
+import axios from 'axios';
+import { jwtDecode } from 'jwt-decode';
+import { LoadCanvasTemplate, loadCaptchaEnginge as loadCaptchaEngine, validateCaptcha } from 'react-simple-captcha';
+import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import Logo from '../../Logo';
+import SubmitButton from '../../components/SubmitButton';
+import PropTypes from 'prop-types';
 
 const errorMessages = {
-  "auth/invalid-credentials": "Identifiants incorrects",
-  "auth/invalid-register-code": "Code d'inscription invalide/expiré",
-  "auth/email-exists": "Cet email est déjà utilisé",
-  "auth/user-not-found": "Utilisateur introuvable",
-  "auth/username-exists": "Ce nom d'utilisateur est déjà utilisé",
-  "auth/2fa-required": "Vérification 2FA requise",
-  "auth/invalid-2fa-code": "Code de double authentification incorrect",
-  "auth/weak-password":
-    "Le mot de passe doit contenir au moins 12 caractères, une majuscule et un caractère spécial",
-  default: "Une erreur est survenue. Veuillez réessayer.",
+  'auth/invalid-credentials': 'Identifiants incorrects',
+  'auth/invalid-register-code': "Code d'inscription invalide/expiré",
+  'auth/email-exists': 'Cet email est déjà utilisé',
+  'auth/user-not-found': 'Utilisateur introuvable',
+  'auth/username-exists': "Ce nom d'utilisateur est déjà utilisé",
+  'auth/2fa-required': 'Vérification 2FA requise',
+  'auth/invalid-2fa-code': 'Code de double authentification incorrect',
+  'auth/weak-password':
+    'Le mot de passe doit contenir au moins 12 caractères, une majuscule et un caractère spécial',
+  default: 'Une erreur est survenue. Veuillez réessayer.',
 };
 
 const Sign = ({ setAuth, unsetLoggedOut }) => {
   const navigate = useNavigate();
   const [error, setError] = useState(null);
-  const [isSignUpForm, setIsSignUpForm] = useState(
-    new URLSearchParams(window.location.search).get("mode") === "signup"
-  );
-  const [authStep, setAuthStep] = useState("initial");
+  const [isSignUpForm, setIsSignUpForm] = useState(false);
+  const [authStep, setAuthStep] = useState('initial');
   const [tempToken, setTempToken] = useState(null);
-  const [twoFACode, setTwoFACode] = useState("");
+  const [twoFACode, setTwoFACode] = useState('');
   const [countEchec2FACode, setCountEchec2FACode] = useState(0);
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
-  const [surname, setSurname] = useState("");
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
+  const [surname, setSurname] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
-  const [qrCodeData, setQrCodeData] = useState("");
-  const [manualSecret, setManualSecret] = useState("");
-  const [captchaValue, setCaptchaValue] = useState("");
+  const [qrCodeData, setQrCodeData] = useState('');
+  const [manualSecret, setManualSecret] = useState('');
+  const [captchaValue, setCaptchaValue] = useState('');
   const [lastSubmit, setLastSubmit] = useState(0);
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState('');
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    setIsSignUpForm(searchParams.get('reister'));
+  }, []);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
-      loadCaptchaEngine(6, "#f9fafb");
+      loadCaptchaEngine(6, '#f9fafb');
     }, 100);
 
     return () => clearTimeout(timeout);
   }, []);
 
   useEffect(() => {
-    if (countEchec2FACode === 2 || authStep === "initial") {
+    if (countEchec2FACode === 2 || authStep === 'initial') {
       const timeout = setTimeout(() => {
-        loadCaptchaEngine(6, "#f9fafb");
+        loadCaptchaEngine(6, '#f9fafb');
       }, 100);
 
       return () => clearTimeout(timeout);
@@ -68,9 +71,9 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
 
   useEffect(() => {
     const token =
-      localStorage.getItem("authToken") || sessionStorage.getItem("authToken");
+      localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
     if (token) {
-      navigate("/dashboard");
+      navigate('/dashboard');
     }
   }, [navigate]);
 
@@ -85,7 +88,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
     const refresh2FASetup = async () => {
       try {
         const { data } = await axios.post(
-          "https://localhost:8443/api/auth/refresh-2fa-setup",
+          'https://localhost:8443/api/auth/refresh-2fa-setup',
           {
             tempToken: tempToken?.value,
             twoFASetup: { qrCode: qrCodeData, manualSecret },
@@ -101,7 +104,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
         setError(null);
       } catch (error) {
         setError(error.response.data.message || errorMessages.default);
-        setAuthStep("initial");
+        setAuthStep('initial');
         setTempToken(null);
       }
     };
@@ -120,9 +123,9 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
           intervalId = setInterval(refresh2FASetup, timeUntilRefresh);
         }
       } catch (error) {
-        console.error("Erreur de décodage JWT:", error);
-        setError("Token invalide. Veuillez réessayer.");
-        setAuthStep("initial");
+        console.error('Erreur de décodage JWT:', error);
+        setError('Token invalide. Veuillez réessayer.');
+        setAuthStep('initial');
         setTempToken(null);
       }
     }
@@ -131,48 +134,48 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
       clearInterval(intervalId);
       clearTimeout(timeoutId);
     };
-  }, [tempToken?.value]);
+  }, [tempToken?.value, qrCodeData, manualSecret]);
 
-  const validatePassword = (pw) => {
+  const validatePassword = pw => {
     return /^(?=.*[A-Z])(?=.*[!@#$%^&*])(?=.{12,})/.test(pw);
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async e => {
     e.preventDefault();
     if (Date.now() - lastSubmit < 2000) return;
     setLastSubmit(Date.now());
     setError(null);
 
     if (!email.trim() || !password.trim()) {
-      return setError("Veuillez remplir tous les champs requis");
+      return setError('Veuillez remplir tous les champs requis');
     }
 
     if (isSignUpForm) {
       if (password !== confirmPassword) {
-        return setError("Les mots de passe ne correspondent pas");
+        return setError('Les mots de passe ne correspondent pas');
       }
-      if (code.trim() === "") {
+      if (code.trim() === '') {
         return setError("Veuillez entrer le code d'inscription");
       }
       if (!validatePassword(password)) {
-        return setError(errorMessages["auth/weak-password"]);
+        return setError(errorMessages['auth/weak-password']);
       }
     }
 
     // Validation CAPTCHA
     // Décommentez la ligne suivante pour activer la validation CAPTCHA
-    if (captchaValue.trim() === "") {
-      return setError("Veuillez entrer le code de vérification (CAPTCHA)");
+    if (captchaValue.trim() === '') {
+      return setError('Veuillez entrer le code de vérification (CAPTCHA)');
     }
 
-    if (captchaValue !== "" && !validateCaptcha(captchaValue)) {
-      return setError("Le code de vérification (CAPTCHA) est incorrect");
+    if (captchaValue !== '' && !validateCaptcha(captchaValue)) {
+      return setError('Le code de vérification (CAPTCHA) est incorrect');
     }
 
     try {
       const endpoint = isSignUpForm
-        ? "https://localhost:8443/api/auth/register"
-        : "https://localhost:8443/api/auth/login";
+        ? 'https://localhost:8443/api/auth/register'
+        : 'https://localhost:8443/api/auth/login';
 
       const body = isSignUpForm
         ? { email, username, password, name, surname, registerCode: code }
@@ -182,7 +185,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
         let validRegisterCode = false;
         try {
           const res = await axios.post(
-            "https://localhost:8443/api/auth/check-register-code",
+            'https://localhost:8443/api/auth/check-register-code',
             { code }
           );
 
@@ -199,7 +202,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
           const { data } = await axios.post(endpoint, body);
 
           if (data.requires2FA || data.twoFASetup) {
-            setAuthStep(data.twoFASetup ? "2fa-setup" : "2fa-verification");
+            setAuthStep(data.twoFASetup ? '2fa-setup' : '2fa-verification');
             const decodedToken = jwtDecode(data.tempToken);
             setTempToken({
               value: data.tempToken,
@@ -217,7 +220,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
       } else {
         const { data } = await axios.post(endpoint, body);
         if (data.requires2FA || data.twoFASetup) {
-          setAuthStep(data.twoFASetup ? "2fa-setup" : "2fa-verification");
+          setAuthStep(data.twoFASetup ? '2fa-setup' : '2fa-verification');
           const decodedToken = jwtDecode(data.tempToken);
           setTempToken({
             value: data.tempToken,
@@ -234,13 +237,13 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
       }
       return true;
     } catch (error) {
-      const errorCode = error.response?.data?.message || "default";
+      const errorCode = error.response?.data?.message || 'default';
       setError(errorMessages[errorCode] || errorMessages.default);
       return false;
     }
   };
 
-  const handle2FASubmit = async (e) => {
+  const handle2FASubmit = async e => {
     e.preventDefault();
     if (Date.now() - lastSubmit < 2000) return;
     setLastSubmit(Date.now());
@@ -249,28 +252,28 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
     if (countEchec2FACode >= 2) {
       // Validation CAPTCHA
       // Décommentez la ligne suivante pour activer la validation CAPTCHA
-      if (captchaValue.trim() === "") {
-        return setError("Veuillez entrer le code de vérification (CAPTCHA)");
+      if (captchaValue.trim() === '') {
+        return setError('Veuillez entrer le code de vérification (CAPTCHA)');
       }
-      if (captchaValue !== "" && !validateCaptcha(captchaValue)) {
-        return setError("Le code de vérification (CAPTCHA) est incorrect");
+      if (captchaValue !== '' && !validateCaptcha(captchaValue)) {
+        return setError('Le code de vérification (CAPTCHA) est incorrect');
       }
     }
 
     if (!twoFACode.trim()) {
-      return setError("Veuillez entrer le code de vérification 2FA");
+      return setError('Veuillez entrer le code de vérification 2FA');
     }
 
     try {
       const endpoint =
-        authStep === "2fa-verification"
-          ? "https://localhost:8443/api/auth/verify-2fa"
-          : "https://localhost:8443/api/auth/activate-2fa";
+        authStep === '2fa-verification'
+          ? 'https://localhost:8443/api/auth/verify-2fa'
+          : 'https://localhost:8443/api/auth/activate-2fa';
 
       const { data } = await axios.post(endpoint, {
         tempToken: tempToken?.value,
         code: twoFACode,
-        setup: authStep === "2fa-setup",
+        setup: authStep === '2fa-setup',
       });
 
       if (data.token) {
@@ -279,37 +282,37 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
       }
       return true;
     } catch (error) {
-      setCountEchec2FACode((prev) => prev + 1);
-      const errorCode = error.response?.data?.message || "default";
+      setCountEchec2FACode(prev => prev + 1);
+      const errorCode = error.response?.data?.message || 'default';
       setError(errorMessages[errorCode] || errorMessages.default);
       return false;
     }
   };
 
-  const handleAuthSuccess = (token) => {
+  const handleAuthSuccess = token => {
     setAuth(token);
     unsetLoggedOut(false);
     if (rememberMe) {
-      localStorage.setItem("authToken", token);
+      localStorage.setItem('authToken', token);
     } else {
-      sessionStorage.setItem("authToken", token);
+      sessionStorage.setItem('authToken', token);
     }
-    navigate("/dashboard");
+    navigate('/dashboard');
   };
 
   const toggleAuthMode = () => {
     setIsSignUpForm(!isSignUpForm);
     setError(null);
     if (isSignUpForm) {
-      setUsername("");
-      setName("");
-      setConfirmPassword("");
+      setUsername('');
+      setName('');
+      setConfirmPassword('');
     }
   };
 
   const render2FAContent = () => (
     <form onSubmit={handle2FASubmit} className="w-full space-y-8">
-      {authStep === "2fa-setup" && (
+      {authStep === '2fa-setup' && (
         <div className="text-center space-y-4">
           <h3 className="text-xl font-semibold">Configuration 2FA</h3>
           <img
@@ -319,7 +322,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
             aria-describedby="qrCodeDesc"
           />
           <p id="qrCodeDesc" className="text-sm text-gray-600">
-            Scannez le QR Code avec votre application d'authentification ou
+            Scannez le QR Code avec votre application d&apos;authentification ou
             entrez ce code manuellement :
           </p>
           <div className="font-mono bg-gray-100 p-2 rounded-lg">
@@ -339,7 +342,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
               type="text"
               placeholder="Entrez le texte CAPTCHA"
               value={captchaValue}
-              onChange={(e) => setCaptchaValue(e.target.value)}
+              onChange={e => setCaptchaValue(e.target.value)}
               className="w-full h-14 px-6 py-3 text-base md:text-lg bg-white border-2 rounded-lg focus:ring-2 focus:ring-[#002B2F]"
               required
             />
@@ -353,8 +356,8 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
           type="text"
           placeholder="Code à 6 chiffres"
           value={twoFACode}
-          onChange={(e) =>
-            setTwoFACode(e.target.value.replace(/\D/g, "").slice(0, 6))
+          onChange={e =>
+            setTwoFACode(e.target.value.replace(/\D/g, '').slice(0, 6))
           }
           className="w-full h-14 px-6 py-3 text-base md:text-lg bg-white border-2 rounded-lg focus:ring-2 focus:ring-[#002B2F]"
           required
@@ -371,15 +374,15 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
         className="w-full py-4 text-lg md:text-xl font-semibold text-white bg-[#002B2F] rounded-lg hover:bg-[#00474F]"
       />
 
-      {authStep !== "2fa-setup" && (
+      {authStep !== '2fa-setup' && (
         <p className="text-center text-base md:text-lg">
           <button
             type="button"
             onClick={() => {
-              setAuthStep("initial");
+              setAuthStep('initial');
               setTempToken(null);
               setTimeout(() => {
-                loadCaptchaEngine(6, "#f9fafb");
+                loadCaptchaEngine(6, '#f9fafb');
               }, 100); // ensure canvas is mounted
             }}
             className="font-bold underline hover:text-[#00474F]"
@@ -401,7 +404,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
               type="text"
               placeholder="Nom d'utilisateur"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={e => setUsername(e.target.value)}
               className="w-full h-14 px-6 py-3 text-base md:text-lg bg-white border-2 rounded-lg"
               required
               minLength="3"
@@ -413,7 +416,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
               type="text"
               placeholder="Prénom"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={e => setName(e.target.value)}
               className="w-full h-14 px-6 py-3 text-base md:text-lg bg-white border-2 rounded-lg"
               required
             />
@@ -422,7 +425,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
               type="text"
               placeholder="Nom"
               value={surname}
-              onChange={(e) => setSurname(e.target.value)}
+              onChange={e => setSurname(e.target.value)}
               className="w-full h-14 px-6 py-3 text-base md:text-lg bg-white border-2 rounded-lg"
               required
             />
@@ -436,7 +439,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
           type="email"
           placeholder="Email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={e => setEmail(e.target.value)}
           className="w-full h-14 px-6 py-3 text-base md:text-lg bg-white border-2 rounded-lg"
           required
           autoFocus
@@ -451,7 +454,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
             type="text"
             placeholder="Code d'inscription"
             value={code}
-            onChange={(e) => setCode(e.target.value)}
+            onChange={e => setCode(e.target.value)}
             className="w-full h-14 px-6 py-3 text-base md:text-lg bg-white border-2 rounded-lg"
             required
           />
@@ -461,10 +464,10 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
       <div className="relative">
         <input
           id="password"
-          type={showPassword ? "text" : "password"}
+          type={showPassword ? 'text' : 'password'}
           placeholder="Mot de passe"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={e => setPassword(e.target.value)}
           className="w-full h-14 px-6 py-3 text-base md:text-lg bg-white border-2 rounded-lg pr-12"
           required
         />
@@ -473,7 +476,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
           onClick={() => setShowPassword(!showPassword)}
           className="absolute right-4 top-4 text-[#002B2F]"
           aria-label={
-            showPassword ? "Cacher mot de passe" : "Afficher mot de passe"
+            showPassword ? 'Cacher mot de passe' : 'Afficher mot de passe'
           }
         >
           {showPassword ? (
@@ -491,7 +494,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
             type="password"
             placeholder="Confirmer le mot de passe"
             value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
+            onChange={e => setConfirmPassword(e.target.value)}
             className="w-full h-14 px-6 py-3 text-base md:text-lg bg-white border-2 rounded-lg"
             required
           />
@@ -508,7 +511,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
           type="text"
           placeholder="Entrez le texte CAPTCHA"
           value={captchaValue}
-          onChange={(e) => setCaptchaValue(e.target.value)}
+          onChange={e => setCaptchaValue(e.target.value)}
           className="w-full h-14 px-6 py-3 text-base md:text-lg bg-white border-2 rounded-lg"
           required
         />
@@ -524,7 +527,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
           id="rememberMe"
           type="checkbox"
           checked={rememberMe}
-          onChange={(e) => setRememberMe(e.target.checked)}
+          onChange={e => setRememberMe(e.target.checked)}
           className="w-5 h-5 text-[#002B2F] rounded"
         />
         <label htmlFor="rememberMe" className="text-base md:text-lg">
@@ -533,13 +536,13 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
       </div>
 
       <p className="text-center text-base md:text-lg">
-        {isSignUpForm ? "Déjà un compte ? " : "Pas de compte ? "}
+        {isSignUpForm ? 'Déjà un compte ? ' : 'Pas de compte ? '}
         <button
           type="button"
           onClick={toggleAuthMode}
           className="font-bold underline hover:text-[#00474F]"
         >
-          {isSignUpForm ? "Connectez-vous ici" : "Créez-en ici"}
+          {isSignUpForm ? 'Connectez-vous ici' : 'Créez-en ici'}
         </button>
       </p>
     </form>
@@ -556,10 +559,10 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
           </div>
 
           <h1 className="text-4xl md:text-5xl font-bold text-center my-8">
-            {authStep === "2fa-verification" && "Vérification 2FA"}
-            {authStep === "2fa-setup" && "Activation 2FA"}
-            {authStep === "initial" &&
-              (isSignUpForm ? "Inscription" : "Connexion")}
+            {authStep === '2fa-verification' && 'Vérification 2FA'}
+            {authStep === '2fa-setup' && 'Activation 2FA'}
+            {authStep === 'initial' &&
+              (isSignUpForm ? 'Inscription' : 'Connexion')}
           </h1>
 
           {error && (
@@ -568,7 +571,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
             </div>
           )}
 
-          {authStep.startsWith("2fa")
+          {authStep.startsWith('2fa')
             ? render2FAContent()
             : renderInitialForm()}
         </section>
@@ -577,4 +580,8 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
   );
 };
 
+Sign.propTypes = {
+  unsetLoggedOut: PropTypes.func,
+  setAuth: PropTypes.func,
+};
 export default Sign;

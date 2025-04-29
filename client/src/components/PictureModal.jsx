@@ -1,5 +1,5 @@
-import React from "react";
 import { X, Earth, Pencil, Trash2 } from "lucide-react";
+import PropTypes from "prop-types"; // Import prop-types
 import Logo from "../Logo";
 
 const PictureModal = ({ setShowProfilepictureModal, user }) => {
@@ -33,7 +33,7 @@ const PictureModal = ({ setShowProfilepictureModal, user }) => {
         {/* Zone de la photo de profil */}
         <div className="flex flex-col items-center mb-4">
           {/* Votre logo / lettre / image */}
-          {!user.avater || user.avatar === "" || user.avatar === "default" ? (
+          {!user.avatar || user.avatar === "" || user.avatar === "default" ? (
             <div className="h-65 w-65 rounded-full border-2 bg-yellow-500 mx-auto mb-4 flex items-center justify-center">
               <span className="text-5xl font-bold text-gray-800">
                 {user.name.charAt(0)}
@@ -71,6 +71,14 @@ const PictureModal = ({ setShowProfilepictureModal, user }) => {
       </div>
     </div>
   );
+};
+
+PictureModal.propTypes = {
+  setShowProfilepictureModal: PropTypes.func.isRequired, // Function to toggle modal visibility
+  user: PropTypes.shape({
+    name: PropTypes.string.isRequired, // User's name
+    avatar: PropTypes.string, // User's avatar (optional)
+  }).isRequired,
 };
 
 export default PictureModal;
