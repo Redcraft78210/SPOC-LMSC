@@ -3,6 +3,7 @@ const path = require('path');
 const { createReadStream } = require('fs');
 const { constants } = require('fs');
 const { spawn } = require('child_process'); // pour ffprobe si besoin
+const jwt = require('jsonwebtoken');
 
 const videosDirectory = path.resolve(__dirname, '..', 'videos');
 
@@ -35,6 +36,15 @@ const parseRange = (rangeHeader, fileSize) => {
 const getVideo = async (req, res) => {
     try {
         setCORSHeaders(res);
+        const authToken = req.query.authToken;
+        if (authToken) {
+            try {
+                const decoded = jwt.verify(authToken, process.env.JWT_SECRET);
+                req.user = decoded;
+            } catch (error) {
+                console.error(error);
+            }
+        }
 
         // Auth
         if (!req.user) {
@@ -69,7 +79,7 @@ const getVideo = async (req, res) => {
             headers['Content-Range'] = `bytes ${range.start}-${range.end}/${stats.size}`;
             res.writeHead(206, headers);
         } else {
-            res.status(404).end();
+            res.status(200).set(headers);
         }
 
         const stream = createReadStream(videoPath, range ? {

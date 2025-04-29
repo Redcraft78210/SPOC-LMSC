@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from "react";
-import PropTypes from "prop-types";
-import SecureVideoPlayer from "../../components/SecureVideoPlayer";
-import SecureDocumentViewer from "../../components/SecureDocumentViewer";
+import { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
+import SecureVideoPlayer from '../../components/SecureVideoPlayer';
+import SecureDocumentViewer from '../../components/SecureDocumentViewer';
 
 const CourseReader = ({ authToken }) => {
   const [courseData, setCourseData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [documentError, setDocumentError] = useState(null);
-  const courseId = new URLSearchParams(window.location.search).get("courseId");
+  const courseId = new URLSearchParams(window.location.search).get('courseId');
 
   useEffect(() => {
     const fetchCourseData = async () => {
@@ -22,26 +22,30 @@ const CourseReader = ({ authToken }) => {
         // if (!response.ok) throw new Error("Cours non trouvé");
         // const data = await response.json();
         const data = {
-          Matière: "math_info", // La matière : Mathématiques et Informatique
-          chapitre: "nombres_complexes", // Chapitre sur les nombres complexes
-          titre: "Introduction aux Nombres Imaginaires", // Titre du cours
-          date_creation: "2025-03-15T10:30:00Z", // Date de création en format ISO
+          Matière: 'math_info', // La matière : Mathématiques et Informatique
+          chapitre: 'nombres_complexes', // Chapitre sur les nombres complexes
+          titre: 'Introduction aux Nombres Imaginaires', // Titre du cours
+          date_creation: '2025-03-15T10:30:00Z', // Date de création en format ISO
           description:
             "Ce cours présente les bases des nombres imaginaires et leur utilité dans la résolution d'équations quadratiques.", // Brève description
-          "Date de création": "2025-03-15T10:30:00Z", // Date de création en format ISO
-          ID_cours: "cours_123456", // Identifiant unique du cours
+          'Date de création': '2025-03-15T10:30:00Z', // Date de création en format ISO
+          ID_cours: 'cours_123456', // Identifiant unique du cours
           video: {
-            video_id: "3f4b538504facde3c881b73844f52f24-1742237522", // ID unique de la vidéo
-            date_mise_en_ligne: "2025-03-20T14:00:00Z", // Date de mise en ligne de la vidéo
+            video_id: '3f4b538504facde3c881b73844f52f24-1742237522', // ID unique de la vidéo
+            date_mise_en_ligne: '2025-03-20T14:00:00Z', // Date de mise en ligne de la vidéo
           },
           documents: [
             {
-              document_id: "doc_001", // Premier document associé
-              date_mise_en_ligne: "2025-03-18T08:45:00Z", // Date de mise en ligne
+              id: 'doc_001', // Premier document associé
+              title: 'Introduction aux Nombres Imaginaires',
+              description: 'Description du premier document',
+              date_mise_en_ligne: '2025-03-18T08:45:00Z', // Date de mise en ligne
             },
             {
-              document_id: "doc_002", // Deuxième document associé
-              date_mise_en_ligne: "2025-03-19T09:15:00Z", // Date de mise en ligne
+              document_id: 'doc_002', // Deuxième document associé
+              title: 'Explication des Nombres Imaginaires',
+              description: 'Description du deuxième document',
+              date_mise_en_ligne: '2025-03-19T09:15:00Z', // Date de mise en ligne
             },
           ],
         };
@@ -60,7 +64,7 @@ const CourseReader = ({ authToken }) => {
     fetchCourseData();
   }, [courseId, authToken]);
 
-  const handleDownloadDocument = async (documentId) => {
+  const handleDownloadDocument = async documentId => {
     try {
       const response = await fetch(
         `https://localhost:8443/api/documents/download/${documentId}`,
@@ -73,14 +77,14 @@ const CourseReader = ({ authToken }) => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Erreur lors du téléchargement");
+        throw new Error(errorData.message || 'Erreur lors du téléchargement');
       }
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
+      const link = document.createElement('a');
       link.href = url;
-      link.setAttribute("download", `${documentId}.pdf`);
+      link.setAttribute('download', `${documentId}.pdf`);
       document.body.appendChild(link);
       link.click();
 
@@ -90,8 +94,8 @@ const CourseReader = ({ authToken }) => {
         window.URL.revokeObjectURL(url);
       }, 100);
     } catch (err) {
-      console.error("Download error:", err);
-      setDocumentError(err.message || "Erreur lors du téléchargement");
+      console.error('Download error:', err);
+      setDocumentError(err.message || 'Erreur lors du téléchargement');
     }
   };
 
@@ -129,10 +133,12 @@ const CourseReader = ({ authToken }) => {
           <SecureVideoPlayer
             videoId={courseData.video.video_id}
             authToken={authToken}
+            onError={setError}
+            posterUrl={`/videos/${courseData.video.video_id}/${courseData.video.video_id}.preview.webp`}
           />
           <div className="mt-4">
             <div className="text-sm text-gray-500">
-              Vidéo mise en ligne le :{" "}
+              Vidéo mise en ligne le :{' '}
               {new Date(
                 courseData.video.date_mise_en_ligne
               ).toLocaleDateString()}
@@ -149,21 +155,24 @@ const CourseReader = ({ authToken }) => {
             <p className="text-red-600 mb-4">{documentError}</p>
           )}
           <div className="grid gap-4">
-            {courseData.documents.map((doc, index) => (
-              <div key={doc.document_id} className="border rounded-lg p-4">
+            {courseData.documents.map(doc => (
+              <div
+                key={doc.document_id || doc.id}
+                className="border rounded-lg p-4"
+              >
                 {!courseData.video && (
                   <SecureDocumentViewer
-                    documentId={doc.document_id}
+                    documentId={doc.id}
                     authToken={authToken}
                   />
                 )}
 
                 <div className="mt-4">
-                  <h3 className="font-semibold">{doc.titre}</h3>
+                  <h3 className="font-semibold">{doc.title}</h3>
                   <p className="text-sm text-gray-600">{doc.description}</p>
                   <div className="flex items-center justify-between mt-2">
                     <span className="text-sm text-gray-500">
-                      Mis en ligne le :{" "}
+                      Mis en ligne le :{' '}
                       {new Date(doc.date_mise_en_ligne).toLocaleDateString()}
                     </span>
                     <button

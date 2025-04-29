@@ -13,11 +13,12 @@ async function getAllCodes(req, res) {
 
 // CREATE new code
 async function createCode(req, res) {
-  const { role, usageLimit, validityPeriod } = req.body;
+  const { role, classId, usageLimit, validityPeriod } = req.body;
 
   const newCode = new Code({
     value: generateRandomCode(),
     role,
+    classId,
     usageLimit,
     remainingUses: usageLimit,
     expiresAt: new Date(Date.now() + validityPeriod * 60 * 60 * 1000)

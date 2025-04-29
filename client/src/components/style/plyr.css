@@ -1,0 +1,263 @@
+/* Définition des variables CSS */
+:root {
+  --plyr-color-main: #e50914;
+  --plyr-control-icon-size: 22px;
+  --plyr-font-family: "Roboto", sans-serif;
+  --plyr-range-track-height: 4px;
+  --plyr-range-track-bg: rgba(255, 255, 255, 0.3);
+  --plyr-range-thumb-size: 12px;
+  --plyr-range-thumb-scale: 1.2;
+  --plyr-range-fill-background: #e50914;
+  --plyr-audio-controls-background: #111;
+  --plyr-video-controls-background: rgba(0, 0, 0, 0.7);
+
+  --plyr-poster-filter-brightness: 0.8;
+
+  --plyr-overlay-bg: rgba(229, 9, 20, 0.8);
+  --plyr-overlay-bg-hover: rgba(229, 9, 20, 1);
+  --plyr-overlay-size: 100px;
+  --plyr-overlay-font-size: 30px;
+
+  --plyr-controls-bg: rgba(0, 0, 0, 0.5);
+  --plyr-controls-padding: 10px;
+
+  --plyr-tooltip-font-size: 12px;
+  --plyr-tooltip-padding: 4px 6px;
+
+  --plyr-menu-bg: rgba(0, 0, 0, 0.85);
+  --plyr-menu-item-padding: 6px 12px;
+  --plyr-menu-item-hover-bg: rgba(255, 255, 255, 0.1);
+
+  --plyr-caption-font-size: 16px;
+  --plyr-caption-line-height: 1.4;
+
+  --plyr-spinner-border-size: 3px;
+
+  --plyr-toggle-hover-bg: rgba(255, 255, 255, 0.1);
+
+  --plyr-volume-container-width: 100px;
+  --plyr-volume-container-padding: 6px;
+  --plyr-volume-track-bg: rgba(255, 255, 255, 0.2);
+
+  --plyr-settings-margin: 12px;
+
+  --plyr-focus-outline: 0 0 0 2px var(--plyr-color-main);
+
+  --plyr-menu-arrow-color: #fff;
+}
+
+/* ========================================
+   Plyr Netflix-style Theme Overrides
+   ======================================== */
+
+/* Range inputs (progress & volume) */
+.plyr__progress input[type="range"],
+.plyr__volume input[type="range"] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: var(--plyr-range-track-height);
+  margin: 0;
+  background: var(--plyr-range-track-bg);
+  border-radius: calc(var(--plyr-range-track-height) / 2);
+  cursor: pointer;
+}
+.plyr__progress input[type="range"]::-webkit-slider-runnable-track,
+.plyr__volume input[type="range"]::-webkit-slider-runnable-track {
+  height: var(--plyr-range-track-height);
+  background: var(--plyr-range-track-bg);
+  border-radius: calc(var(--plyr-range-track-height) / 2);
+}
+.plyr__progress input[type="range"]::-webkit-slider-thumb,
+.plyr__volume input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: var(--plyr-range-thumb-size);
+  height: var(--plyr-range-thumb-size);
+  background: var(--plyr-color-main);
+  border-radius: 50%;
+  margin-top: calc(
+    (var(--plyr-range-track-height) - var(--plyr-range-thumb-size)) / 2
+  );
+  transition: transform 0.2s;
+}
+.plyr__progress input[type="range"]::-webkit-slider-thumb:hover,
+.plyr__volume input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(var(--plyr-range-thumb-scale));
+}
+/* Firefox */
+.plyr__progress input[type="range"]::-moz-range-thumb,
+.plyr__volume input[type="range"]::-moz-range-thumb {
+  width: var(--plyr-range-thumb-size);
+  height: var(--plyr-range-thumb-size);
+  background: var(--plyr-color-main);
+  border: none;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+.plyr__progress input[type="range"]::-moz-range-thumb:hover,
+.plyr__volume input[type="range"]::-moz-range-thumb:hover {
+  transform: scale(var(--plyr-range-thumb-scale));
+}
+
+.plyr__volume {
+  margin-right: var(--plyr-settings-margin);
+}
+
+/* Seek tooltip */
+.plyr__tooltip {
+  background: var(--plyr-controls-bg);
+  color: #fff;
+  font-size: var(--plyr-tooltip-font-size);
+  padding: var(--plyr-tooltip-padding);
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+/* Settings menu */
+.plyr__menu {
+  background: var(--plyr-menu-bg);
+  color: #fff;
+  border-radius: 4px;
+}
+
+.plyr__menu ul {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+}
+.plyr__menu li {
+  padding: var(--plyr-menu-item-padding);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.plyr__menu li:hover,
+.plyr__menu li[aria-selected="true"] {
+  background: var(--plyr-menu-item-hover-bg);
+}
+.plyr__menu .plyr__menu__value {
+  float: right;
+}
+
+/* Captions/Subtitles */
+.plyr__captions {
+  font-family: var(--plyr-font-family);
+  font-size: var(--plyr-caption-font-size);
+  line-height: var(--plyr-caption-line-height);
+  color: #fff;
+  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000,
+    1px 1px 0 #000;
+}
+.plyr--captions-active .plyr__captions {
+  padding: 0 10px 6px;
+}
+
+/* Fullscreen */
+.plyr__control--pressed .plyr__control-icon[data-icon="enter-fullscreen"],
+.plyr__control:hover .plyr__control-icon[data-icon="enter-fullscreen"],
+.plyr__control--pressed .plyr__control-icon[data-icon="exit-fullscreen"],
+.plyr__control:hover .plyr__control-icon[data-icon="exit-fullscreen"] {
+  fill: var(--plyr-color-main);
+}
+
+/* Loading spinner */
+.plyr__spinner {
+  border: var(--plyr-spinner-border-size) solid var(--plyr-range-track-bg);
+  border-top-color: var(--plyr-color-main);
+}
+
+/* Toggle buttons (mute, captions, pip) */
+.plyr__control--pressed,
+.plyr__control:hover {
+  color: var(--plyr-color-main);
+  background: var(--plyr-toggle-hover-bg);
+  border-radius: 4px;
+}
+
+/* Volume container */
+.plyr__volume--horizontal .plyr__volume__container {
+  width: var(--plyr-volume-container-width);
+  background: var(--plyr-controls-bg);
+  padding: var(--plyr-volume-container-padding);
+  border-radius: 4px;
+}
+.plyr__volume--horizontal .plyr__volume input[type="range"],
+.plyr__volume--horizontal
+  .plyr__volume
+  input[type="range"]::-webkit-slider-runnable-track {
+  background: var(--plyr-volume-track-bg);
+}
+
+/* Audio-only mode */
+.plyr--audio .plyr__controls {
+  background: var(--plyr-audio-controls-background);
+}
+
+/* Hide default focus outline, add custom */
+.plyr__control:focus {
+  outline: none;
+  box-shadow: var(--plyr-focus-outline);
+}
+
+/* Playback rate / Quality submenu arrows */
+.plyr__menu__arrow {
+  border-color: transparent transparent transparent var(--plyr-menu-arrow-color);
+  margin-left: 8px;
+}
+
+/* Caption settings button tooltip */
+.plyr__control[data-plyr="captions"]::after {
+  content: attr(data-title);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--plyr-controls-bg);
+  color: #fff;
+  font-size: 10px;
+  padding: 2px 4px;
+  border-radius: 2px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.plyr__control[data-plyr="captions"]:hover::after {
+  opacity: 1;
+}
+
+/* Conteneur vidéo + bouton externe */
+.video-wrapper {
+  position: relative;
+  max-width: 800px;
+  margin: 0 auto;
+}
+.video-wrapper .plyr__control--overlaid {
+  display: none !important;
+}
+/* Bouton Play externe */
+.custom-play-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--plyr-overlay-size);
+  height: var(--plyr-overlay-size);
+  font-size: var(--plyr-overlay-font-size);
+  background: var(--plyr-overlay-bg);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.3s, transform 0.2s;
+}
+.custom-play-btn:hover {
+  background: var(--plyr-overlay-bg-hover);
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+.player-wrapper {
+  position: relative;
+}

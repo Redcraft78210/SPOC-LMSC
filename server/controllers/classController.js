@@ -22,7 +22,16 @@ const getAllClasses = async (req, res) => {
 
     const sortedClasses = classesWithCounts.sort((a, b) => a.name.localeCompare(b.name));
 
-    res.status(200).json(sortedClasses);
+    const classesWithStudentIds = sortedClasses.map((classItem) => {
+      const studentIds = classItem.Students ? classItem.Students.map(student => student.id) : [];
+      return {
+        ...classItem,
+        students: studentIds,
+      };
+    });
+
+    res.status(200).json(classesWithStudentIds);
+
   } catch (error) {
     console.error('Error fetching classes:', error);
     res.status(500).json({ error: 'Failed to retrieve classes' });
@@ -45,11 +54,34 @@ const getClassById = async (req, res) => {
 
 const createClass = async (req, res) => {
   try {
-    const { name } = req.body;
-    const main_teacher_id = req.user.id;
-    const newClass = await Classe.create({ name, main_teacher_id });
-    res.status(201).json(newClass);
+    const { name, description, main_teacher_id, students } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ message: 'Missing required field: name' });
+    }
+
+    if (!main_teacher_id) {
+      return res.status(400).json({ message: 'Missing required field: main_teacher_id' });
+    }
+
+    // Créer la classe
+    const newClass = await Classe.create({ name, description, main_teacher_id });
+
+    // Ajouter les étudiants à la classe via StudentClass
+    if (students && students.length > 0) {
+      const studentClassEntries = students.map((studentId) => ({
+        "student_id": studentId,
+        "class_id": newClass.id,
+      }));
+
+      await StudentClass.bulkCreate(studentClassEntries);
+    }
+
+    res.status(201).json({
+      message: 'Class created successfully',
+    });
   } catch (error) {
+    console.error('Error creating class:', error);
     res.status(500).json({ error: 'Failed to create class' });
   }
 };
@@ -57,14 +89,35 @@ const createClass = async (req, res) => {
 const updateClass = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, main_teacher_id } = req.body;
-    const [updated] = await Classe.update({ name, main_teacher_id }, { where: { id } });
-    if (!updated) {
+    const { name, description, students, main_teacher_id } = req.body;
+
+    const classToUpdate = await Classe.findByPk(id);
+    if (!classToUpdate) {
       return res.status(404).json({ error: 'Classe not found' });
     }
-    const updatedClass = await Classe.findByPk(id);
+
+    classToUpdate.name = name ?? classToUpdate.name;
+    classToUpdate.description = description ?? classToUpdate.description;
+    classToUpdate.main_teacher_id = main_teacher_id ?? classToUpdate.main_teacher_id;
+
+    await classToUpdate.save();
+
+    if (students) {
+      await StudentClass.destroy({ where: { class_id: id } });
+      const studentClassEntries = students.map((studentId) => ({
+        student_id: studentId,
+        class_id: id,
+      }));
+      await StudentClass.bulkCreate(studentClassEntries);
+    }
+
+    const updatedClass = await Classe.findByPk(id, {
+      include: [{ model: Student, through: StudentClass }],
+    });
+
     res.status(200).json(updatedClass);
   } catch (error) {
+    console.error('Error updating class:', error);
     res.status(500).json({ error: 'Failed to update class' });
   }
 };

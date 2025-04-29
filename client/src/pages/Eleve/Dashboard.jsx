@@ -1,7 +1,5 @@
-import React from "react";
 import { useState, useEffect, useRef } from "react";
 import PropTypes from "prop-types";
-import { useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
 
 import { X, Pencil } from "lucide-react";
@@ -9,21 +7,19 @@ import { X, Pencil } from "lucide-react";
 import NavigationBar from "../../components/Navbar";
 // import "../style/NavigationBar.css";
 
-import Profile from "../Eleve/Profile";
-import NotFound from "../NotFound";
+import NotFound from "../Public/NotFound";
 import CoursesLibrary from "../Eleve/CoursesLibrary";
 import CourseReader from "../Eleve/CourseReader";
 import EleveDashboardHome from "./DashboardHome";
 import PictureModal from "../../components/PictureModal";
-import ThemeSettings from "../Theme";
+import ThemeSettings from "../Public/Theme";
+import Settings from "./Settings";
 import Logo from "../../Logo";
 
 const DashboardEleve = ({ content, token }) => {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showProfilepictureModal, setShowProfilepictureModal] = useState(false);
   const divRef = useRef();
-
-  const navigate = useNavigate();
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -54,10 +50,10 @@ const DashboardEleve = ({ content, token }) => {
 
   const contentMap = {
     Home: <EleveDashboardHome />,
-    Profile: <Profile authToken={token} />,
     CoursesLibrary: <CoursesLibrary authToken={token} />,
     CourseReader: <CourseReader authToken={token} />,
     ThemeSettings: <ThemeSettings />,
+    Settings: <Settings />,
   };
 
   const renderContent = () => {
@@ -167,7 +163,7 @@ const DashboardEleve = ({ content, token }) => {
                           href="/conditions-utisation"
                           className="text-blue-500"
                         >
-                          Conditions d'utilisation
+                          Conditions d&apos;utilisation
                         </a>
                       </p>
                       <p>
@@ -192,7 +188,7 @@ const DashboardEleve = ({ content, token }) => {
 };
 
 DashboardEleve.propTypes = {
-  content: PropTypes.oneOf(["Home", "Profile", "CoursesLibrary", "CourseReader", "UserManagement", "ClassManagement", "ThemeSettings"]).isRequired,
+  content: PropTypes.string.isRequired,
   token: PropTypes.string.isRequired,
 };
 
