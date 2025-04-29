@@ -82,6 +82,8 @@ Mise à Jour du 10 Avril 2025
   - Revue technique avec DE CASTRO pour validation du backend Django lié à la vidéo,
   - Sauvegarde du projet sur un dépôt distant secondaire (GITHUB personnel),
   - Préparation d’une démonstration live de la plateforme pour les enseignants.
+- Le 29 avril :
+  - Mise en place finis de l'updater des informations des vidéo (ajout des routes api dans le backend pour soulager De Castro et lien avec le frontend)
 
       
 ### DE CASTRO
