@@ -11,6 +11,10 @@ const Classe = sequelize.define('Classe', {
         type: DataTypes.STRING,
         allowNull: false
     },
+    description: {
+        type: DataTypes.TEXT,
+        allowNull: true
+    },
     main_teacher_id: {
         type: DataTypes.UUID,
         allowNull: true,

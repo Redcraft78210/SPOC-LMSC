@@ -1,4 +1,5 @@
 import React from "react";
+import { ThemeContext } from "../../contexts/ThemeContext";
 import { StreamStatusBar } from "../../components/StreamStatusBar";
 import LivePreview from "../../components/LivePreview";
 import CreateStream from "../../components/CreateStream";

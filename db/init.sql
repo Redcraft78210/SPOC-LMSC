@@ -24,22 +24,11 @@ CREATE TABLE IF NOT EXISTS users (
     )
 );
 
--- Create codes table
-CREATE TABLE IF NOT EXISTS codes (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    value VARCHAR(255) NOT NULL,
-    role VARCHAR(255) NOT NULL CHECK (role IN ('admin', 'teacher', 'student')),
-    "usageLimit" INTEGER NOT NULL CHECK ("usageLimit" > 0),
-    "remainingUses" INTEGER NOT NULL CHECK ("remainingUses" >= 0),
-    "expiresAt" TIMESTAMP NOT NULL,
-    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
 -- Create classes table
 CREATE TABLE IF NOT EXISTS classes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL UNIQUE,
+    description TEXT,
     main_teacher_id UUID NOT NULL,
     "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -48,6 +37,24 @@ CREATE TABLE IF NOT EXISTS classes (
         ON DELETE RESTRICT
         DEFERRABLE INITIALLY DEFERRED
 );
+
+-- Create codes table
+CREATE TABLE IF NOT EXISTS codes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    value VARCHAR(255) NOT NULL,
+    role VARCHAR(255) NOT NULL CHECK (role IN ('admin', 'teacher', 'student')),
+    "classId" UUID,
+    "usageLimit" INTEGER NOT NULL CHECK ("usageLimit" > 0),
+    "remainingUses" INTEGER NOT NULL CHECK ("remainingUses" >= 0),
+    "expiresAt" TIMESTAMP NOT NULL,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY ("classId")
+        REFERENCES classes(id)
+        ON DELETE RESTRICT
+        DEFERRABLE INITIALLY DEFERRED
+);
+
 
 -- Junction table for teacher-class relationships
 CREATE TABLE IF NOT EXISTS teacher_classes (
@@ -267,12 +274,12 @@ VALUES
     ),
     (
         'a6fa5fc1-1234-4321-0000-000000000006',
-        'Alice',
-        'Johnson',
+        'Ewe',
+        'Willi',
         'teacher',
-        'ajohnson_teacher',
-        'alice.johnsonteacher@spoc.lmsc',
-        '$2b$10$1Tl7ARRSx3HHsS8nehhTF.asiDLQ7IOzCJ1EzCoMGQBFysfFCdQc2'
+        'willi_teacher',
+        'willi@spoc.lmsc',
+        '$2b$05$eZDYdmMp4ZxVrl3um/hcp.G15wMNvB2/17OS7gBTtBnj4VtFIM6Z.'
     ),
     (
         'a6fa5fc1-1234-4321-0000-000000000007',
@@ -363,11 +370,12 @@ VALUES
 
 -- Insert initial data into the classes table
 INSERT INTO
-    classes (id, name, main_teacher_id)
+    classes (id, name, description, main_teacher_id)
 VALUES
     (
         'a6fa5fc1-1234-4322-0000-000000000001',
         'BTS2X',
+        'Description de la classe BTS2X',
         'a6fa5fc1-1234-4321-0000-000000000005'
     );
 
@@ -400,3 +408,4 @@ VALUES
         'a6fa5fc1-1234-4322-0000-000000000001',
         'a6fa5fc1-1234-4321-0000-000000000015'
     );
+
