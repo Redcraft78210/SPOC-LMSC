@@ -1,3 +1,6 @@
+// import PropTypes from 'prop-types';
+
+// const DashboardHome = ({ authToken }) => {
 const DashboardHome = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -74,5 +77,9 @@ const DashboardHome = () => {
     </div>
   );
 };
+
+// DashboardHome.propTypes = {
+//   authToken: PropTypes.string,
+// };
 
 export default DashboardHome;

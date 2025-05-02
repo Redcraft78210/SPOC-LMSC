@@ -9,7 +9,7 @@
   --plyr-range-thumb-scale: 1.2;
   --plyr-range-fill-background: #e50914;
   --plyr-audio-controls-background: #111;
-  --plyr-video-controls-background: rgba(0, 0, 0, 0.7);
+  --plyr-video-controls-background: var(--color-gray-800);
 
   --plyr-poster-filter-brightness: 0.8;
 
@@ -24,7 +24,7 @@
   --plyr-tooltip-font-size: 12px;
   --plyr-tooltip-padding: 4px 6px;
 
-  --plyr-menu-bg: rgba(0, 0, 0, 0.85);
+  --plyr-menu-bg: var(--color-gray-800);
   --plyr-menu-item-padding: 6px 12px;
   --plyr-menu-item-hover-bg: rgba(255, 255, 255, 0.1);
 
@@ -56,7 +56,6 @@
   -webkit-appearance: none;
   width: 100%;
   height: var(--plyr-range-track-height);
-  margin: 0;
   background: var(--plyr-range-track-bg);
   border-radius: calc(var(--plyr-range-track-height) / 2);
   cursor: pointer;
@@ -192,6 +191,10 @@
   background: var(--plyr-audio-controls-background);
 }
 
+.plyr__controls {
+  padding-top: 15px !important;
+}
+
 /* Hide default focus outline, add custom */
 .plyr__control:focus {
   outline: none;
@@ -246,7 +249,7 @@
   width: var(--plyr-overlay-size);
   height: var(--plyr-overlay-size);
   font-size: var(--plyr-overlay-font-size);
-  background: var(--plyr-overlay-bg);
+  background: var(--color-gray-800);
   color: #fff;
   border: none;
   border-radius: 50%;

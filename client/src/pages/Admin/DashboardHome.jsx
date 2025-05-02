@@ -11,9 +11,8 @@ const DashboardHome = () => {
       </header>
 
       {/* Main Dashboard Grid */}
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 justify-center">
-        {/* Card 1: Gestion des utilisateurs */}
-        <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mx-auto">
+        <div className="bg-white rounded-lg shadow-md p-6 lg:ml-15 lg:mr-10 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-blue-600">Utilisateurs</h2>
             <Users className="h-8 w-8 text-blue-600" />
@@ -28,7 +27,7 @@ const DashboardHome = () => {
         </div>
 
         {/* Card 2: Gestion des classes */}
-        <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+        <div className="bg-white rounded-lg shadow-md p-6 lg:ml-15 lg:mr-15 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-blue-600">Classes</h2>
             <ClipboardList className="h-8 w-8 text-blue-600" />
@@ -58,7 +57,7 @@ const DashboardHome = () => {
         </div> */}
 
         {/* Card 4: Paramètres */}
-        <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+        <div className="bg-white rounded-lg shadow-md p-6 lg:ml-10 lg:mr-15 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-blue-600">Paramètres</h2>
             <Settings className="h-8 w-8 text-blue-600" />

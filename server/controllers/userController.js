@@ -11,7 +11,10 @@ const getProfile = async (req, res) => {
         return res.status(200).json({
             id: user.id,
             name: user.name,
+            surname: user.surname,
+            username: user.username,
             email: user.email,
+            twoFAEnabled: user.twoFAEnabled
         });
     } catch (error) {
         console.error(error);
@@ -61,6 +64,27 @@ const changeStatus = async (req, res) => {
         }
 
         user.statut = newStatus;
+        await user.save();
+
+        return res.status(200).json({ message: 'Status changed successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+const disable2FA = async (req, res) => {
+    try {
+        const userId = req.user.id
+        const user = await User.findByPk(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        if (user.twoFAEnabled) {
+            user.twoFAEnabled = false;
+            user.twoFASecret = null;
+        }
         await user.save();
 
         return res.status(200).json({ message: 'Status changed successfully' });
@@ -250,6 +274,7 @@ module.exports = {
     getProfile,
     updateProfile,
     changePassword,
+    disable2FA,
     changeStatus,
     deleteProfile,
     getAllUsers,

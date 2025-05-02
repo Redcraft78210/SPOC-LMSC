@@ -11,9 +11,9 @@ import ProfDashboardHome from './DashboardHome';
 // import CourseReader from "..//CourseReader";
 import CoursesLibrary from './CoursesLibrary';
 import PictureModal from '../../components/PictureModal';
-import VideoManager from '../../components/ProfComp/VideoMng';
+// import VideoManager from '../../components/ProfComp/VideoMng';
 import ThemeSettings from '../Public/Theme';
-import Settings from './Settings';
+import Settings from '../Settings';
 import NotFound from '../Public/NotFound';
 import Logo from '../../Logo';
 
@@ -54,7 +54,7 @@ const DashboardProf = ({ content, token }) => {
     Home: <ProfDashboardHome />,
     CoursesLibrary: <CoursesLibrary authToken={token} />,
     // CourseReader: <CourseReader authToken={token} />,
-    VideoManager: <VideoManager authToken={token} />,
+    // VideoManager: <VideoManager authToken={token} />,
     ThemeSettings: <ThemeSettings />,
     Settings: <Settings authToken={token} />,
   };
