@@ -4,6 +4,7 @@ import {
   BrowserRouter as Router,
   Routes,
   Route,
+  useLocation,
 } from 'react-router-dom';
 // je retire useLocation car on n'en a plus besoin pour le moment
 
@@ -12,6 +13,7 @@ import { jwtDecode } from 'jwt-decode';
 // Import your components
 import About from './pages/Public/About';
 import Contact from './pages/Public/Contact';
+import FirstLogin from './pages/FirstLogin';
 import DashboardAdmin from './pages/Admin/Dashboard';
 import DashboardEleve from './pages/Eleve/Dashboard';
 import DashboardProf from './pages/Professeur/Dashboard';
@@ -26,15 +28,16 @@ let APP_STATUS = '';
 // APP_STATUS = 'MAINTENANCE'; // Set to "MAINTENANCE" for maintenance mode
 
 const routeConfig = [
-  { path: '/dashboard', content: 'Home' },
-  { path: '/profile', content: 'Profile' },
-  { path: '/courses-library', content: 'CoursesLibrary' },
-  { path: '/video-manager', content: 'VideoManager'},
-  { path: '/course-reader', content: 'CourseReader' },
-  { path: '/users-management', content: 'UserManagement' },
   { path: '/classes-management', content: 'ClassManagement' },
-  { path: '/theme-settings', content: 'ThemeSettings' },
+  { path: '/course-reader', content: 'CourseReader' },
+  { path: '/courses-library', content: 'CoursesLibrary' },
+  { path: '/dashboard', content: 'Home' },
+  { path: '/forum', content: 'Forum' },
+  { path: '/profile', content: 'Profile' },
   { path: '/settings', content: 'Settings' },
+  { path: '/theme-settings', content: 'ThemeSettings' },
+  { path: '/users-management', content: 'UserManagement' },
+  { path: '/video-manager', content: 'VideoManager' },
 ];
 
 const publicRouteConfig = [
@@ -47,7 +50,7 @@ const publicRouteConfig = [
 function AppWrapper() {
   return (
     <Router>
-        <App />
+      <App />
     </Router>
   );
 }
@@ -56,6 +59,7 @@ function App() {
   const [auth, setAuth] = useState(null);
   const [loading, setLoading] = useState(true);
   const [role, setRole] = useState(null);
+  const location = useLocation();
 
   useEffect(() => {
     if (!auth && !loading && localStorage.getItem('authToken')) {
@@ -66,14 +70,14 @@ function App() {
   useEffect(() => {
     const checkAuth = () => {
       const token = localStorage.getItem('authToken');
-
+      console.log("Checking auth...");
       if (token) {
         try {
           const decodedToken = jwtDecode(token);
           if (decodedToken.exp * 1000 < Date.now()) {
             handleLogout();
           } else {
-            setAuth(decodedToken);
+            !auth && setAuth(decodedToken);
             setRole(decodedToken.role);
           }
         } catch (error) {
@@ -87,7 +91,7 @@ function App() {
     };
 
     checkAuth();
-  }, []);
+  }, [auth, location]);
 
   const handleSetAuth = token => {
     try {
@@ -142,9 +146,38 @@ function App() {
     return <Loader />;
   }
 
-  console.log('AUTH', auth);
+  // console.log('AUTH', auth.firstLogin);
+
+  if (auth && auth.firstLogin) {
+    return (
+      <Routes>
+        <Route path="/logout" element={<Logout onLogout={handleLogout} />} />
+        <Route
+          path="*"
+          element={
+            <FirstLogin
+              token={localStorage.getItem('authToken')}
+              setAuth={handleSetAuth}
+            />
+          }
+        />
+      </Routes>
+    );
+  }
+
   return (
     <Routes>
+      {auth && auth.firstLogin && (
+        <Route
+          path="*"
+          element={
+            <FirstLogin
+              token={localStorage.getItem('authToken')}
+              setAuth={handleSetAuth}
+            />
+          }
+        />
+      )}
       {publicRouteConfig.map(route => (
         <Route
           key={route.path}
@@ -168,9 +201,6 @@ function App() {
           }
         />
       ))}
-      {
-        !auth && localStorage.getItem('authToken') && handleLogout() // Ensure the token is removed if auth is false
-      }
       {auth
         ? routeConfig.map(route => (
             <Route

@@ -9,6 +9,8 @@ const ClassLives = require('./ClassLives');
 const Course = require('./Course');
 const Admin = require('./Admin');
 const Code = require('./Code');
+const Comment = require('./Comment');
+const Thread = require('./Thread');
 
 
 // Define associations
@@ -43,6 +45,16 @@ Lives.belongsToMany(Classe, {
 Teacher.hasMany(Lives, { foreignKey: 'teacher_id' });
 Lives.belongsTo(Teacher, { foreignKey: 'teacher_id' });
 
+// Associations between User, Thread, and Comment
+User.hasMany(Thread, { foreignKey: 'authorId' });
+Thread.belongsTo(User, { foreignKey: 'authorId' });
+
+User.hasMany(Comment, { foreignKey: 'authorId' });
+Comment.belongsTo(User, { foreignKey: 'authorId' });
+
+Thread.hasMany(Comment, { foreignKey: 'threadId' });
+Comment.belongsTo(Thread, { foreignKey: 'threadId' });
+
 // Export models and sequelize instance
 module.exports = {
   User,
@@ -54,5 +66,7 @@ module.exports = {
   Teacher,
   ClassLives,
   Course,
-  Code
+  Code,
+  Comment,
+  Thread
 };

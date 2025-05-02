@@ -91,4 +91,4 @@ EXPOSE 3000
 
 # Start the backend server
 WORKDIR /usr/src/app/server
-CMD ["npm", "start"]
+CMD ["npm", "run", "server"]

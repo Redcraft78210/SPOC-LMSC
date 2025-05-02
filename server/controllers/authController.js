@@ -1,4 +1,4 @@
-const { User, Code } = require('../models');
+const { User, Code, Classe, StudentClass } = require('../models');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { authenticator } = require('otplib');
@@ -73,7 +73,7 @@ const register = async (req, res) => {
     await codeRecord.save();
   }
 
-  const role = codeRecord.role;
+  const { role, classId } = codeRecord;
 
   try {
     const [existingEmail, existingUsername] = await Promise.all([
@@ -99,6 +99,10 @@ const register = async (req, res) => {
       role
     });
 
+    if (classId) {
+      await StudentClass.create({ student_id: newUser.id, class_id: classId });
+    }
+
     const qrCode = await qrcode.toDataURL(authenticator.keyuri(email, process.env.APP_NAME, secret));
     const tempToken = generateTempToken(newUser.id, true);
 
@@ -109,6 +113,49 @@ const register = async (req, res) => {
         manualSecret: secret
       }
     });
+
+  } catch (error) {
+    console.error('Registration error:', error);
+    return res.status(500).json({ message: ERROR_MESSAGES.SERVER_ERROR });
+  }
+};
+
+const manualRegister = async (req, res) => {
+  const { email, password, role, name, surname } = req.body;
+  const requiredFields = ['email', 'password', 'role', 'name', 'surname'];
+
+  if (requiredFields.some(field => !req.body[field])) {
+    return res.status(400).json({ message: ERROR_MESSAGES.MISSING_FIELDS });
+  }
+
+  try {
+    const [existingEmail, existingUsername] = await Promise.all([
+      User.findOne({ where: { email } }),
+    ]);
+
+    if (existingEmail) return res.status(409).json({ message: ERROR_MESSAGES.EMAIL_EXISTS });
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    const newUser = await User.create({
+      email,
+      password: hashedPassword,
+      name,
+      surname,
+      firstLogin: true,
+      twoFAEnabled: false,
+      role
+    });
+
+    const tokenPayload = {
+      id: newUser.id,
+      email: newUser.email,
+      name: newUser.name,
+      role: newUser.role === 'admin' ? 'Administrateur' : newUser.role === 'teacher' ? 'Professeur' : 'Etudiant'
+    };
+
+    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '1h' });
+    return res.json({ token });
 
   } catch (error) {
     console.error('Registration error:', error);
@@ -145,10 +192,11 @@ const login = async (req, res) => {
       name: user.name,
       role: user.role === 'admin' ? 'Administrateur' :
         user.role === 'teacher' ? 'Professeur' :
-          'Etudiant'
+          'Etudiant',
+      ...(user.firstLogin && { firstLogin: true })
     };
 
-    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: user.firstLogin ? '10m' : '1h' });
     return res.json({ token });
 
   } catch (error) {
@@ -187,7 +235,8 @@ const verify2FA = async (req, res) => {
       name: user.name,
       role: user.role === 'admin' ? 'Administrateur' :
         user.role === 'teacher' ? 'Professeur' :
-          'Etudiant'
+          'Etudiant',
+      ...(user.firstLogin && { firstLogin: true })
     };
 
     const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '1h' });
@@ -198,6 +247,38 @@ const verify2FA = async (req, res) => {
       return res.status(401).json({ message: ERROR_MESSAGES.EXPIRED_TOKEN });
     }
     console.error('2FA verification error:', error);
+    return res.status(500).json({ message: ERROR_MESSAGES.SERVER_ERROR });
+  }
+};
+
+const activate2FA = async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(401).json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS });
+    }
+
+    const email = user.email;
+    const secret = authenticator.generateSecret();
+    user.twoFASecret = secret;
+
+    await user.save();
+
+    const qrCode = await qrcode.toDataURL(authenticator.keyuri(email, process.env.APP_NAME, secret));
+    const tempToken = generateTempToken(user.id, true);
+
+    return res.status(201).json({
+      tempToken,
+      twoFASetup: {
+        qrCode,
+        manualSecret: secret
+      }
+    });
+
+  } catch (error) {
+    console.error('Erreur activation 2FA:', error);
     return res.status(500).json({ message: ERROR_MESSAGES.SERVER_ERROR });
   }
 };
@@ -227,10 +308,65 @@ const refresh2FASetup = async (req, res) => {
   }
 };
 
+const firstLogin = async (req, res) => {
+  const { username, password } = req.body;
+
+  const userId = req.user.id;
+
+  if (!password || !username) {
+    return res.status(400).json({ message: ERROR_MESSAGES.MISSING_FIELDS });
+  }
+
+  try {
+    const user = await User.findByPk(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS });
+    }
+
+    if (!user.firstLogin) {
+      return res.status(400).json({ message: 'User has already completed first login.' });
+    }
+
+    const existingUser = await User.findOne({ where: { username } });
+    if (existingUser) {
+      return res.status(409).json({ message: ERROR_MESSAGES.USERNAME_EXISTS });
+    }
+
+    user.firstLogin = false;
+    user.password = await bcrypt.hash(password, 12);
+    user.username = username;
+
+    const email = user.email;
+    const secret = authenticator.generateSecret();
+    user.twoFASecret = secret;
+
+    await user.save();
+
+    const qrCode = await qrcode.toDataURL(authenticator.keyuri(email, process.env.APP_NAME, secret));
+    const tempToken = generateTempToken(user.id, true);
+
+    return res.status(201).json({
+      tempToken,
+      twoFASetup: {
+        qrCode,
+        manualSecret: secret
+      }
+    });
+
+  } catch (error) {
+    console.error('First login error:', error);
+    return res.status(500).json({ message: ERROR_MESSAGES.SERVER_ERROR });
+  }
+};
+
 module.exports = {
+  manualRegister,
   register,
   login,
+  activate2FA,
   verify2FA,
   refresh2FASetup,
-  checkRegisterCode
+  checkRegisterCode,
+  firstLogin
 };

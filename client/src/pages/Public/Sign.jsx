@@ -1,10 +1,11 @@
-import {
-  Eye,
-  EyeOff,
-} from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
-import { LoadCanvasTemplate, loadCaptchaEnginge as loadCaptchaEngine, validateCaptcha } from 'react-simple-captcha';
+import {
+  LoadCanvasTemplate,
+  loadCaptchaEnginge as loadCaptchaEngine,
+  validateCaptcha,
+} from 'react-simple-captcha';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import Logo from '../../Logo';
@@ -163,7 +164,6 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
     }
 
     // Validation CAPTCHA
-    // Décommentez la ligne suivante pour activer la validation CAPTCHA
     if (captchaValue.trim() === '') {
       return setError('Veuillez entrer le code de vérification (CAPTCHA)');
     }
@@ -195,7 +195,8 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
 
           validRegisterCode = res.data.isValid;
         } catch (error) {
-          return setError(error.message);
+          const errorCode = error.response?.data?.message || 'default';
+          return setError(errorMessages[errorCode] || errorMessages.default);
         }
 
         if (validRegisterCode) {
@@ -251,7 +252,6 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
 
     if (countEchec2FACode >= 2) {
       // Validation CAPTCHA
-      // Décommentez la ligne suivante pour activer la validation CAPTCHA
       if (captchaValue.trim() === '') {
         return setError('Veuillez entrer le code de vérification (CAPTCHA)');
       }
@@ -265,10 +265,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
     }
 
     try {
-      const endpoint =
-        authStep === '2fa-verification'
-          ? 'https://localhost:8443/api/auth/verify-2fa'
-          : 'https://localhost:8443/api/auth/activate-2fa';
+      const endpoint = 'https://localhost:8443/api/auth/verify-2fa';
 
       const { data } = await axios.post(endpoint, {
         tempToken: tempToken?.value,
