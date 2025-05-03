@@ -49,9 +49,10 @@ const NavigationBar = ({ isAdmin = false, isProf = false }) => {
       ? [
           {
             icon: FileVideo2,
-            path: 'Video-Manager',
+            path: '/video-manager',
             label: 'Gestion des vidéos',
           },
+          
         ]
       : []),
     { icon: Sun, path: '/theme-settings', label: 'Thème' },

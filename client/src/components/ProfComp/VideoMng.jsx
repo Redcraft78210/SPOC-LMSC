@@ -1,17 +1,16 @@
-import { useEffect, useState } from "react";
-import NavBar from "../../components/ProfComp/NavBar";
-import FileExplorer from "../../components/ProfComp/FileExplorer";
-import Card from "../../components/ProfComp/Card";
+import { useEffect, useState } from 'react';
+import FileExplorer from '../../components/ProfComp/FileExplorer';
 import {
   GetAll_DataStructure,
   Get_Video_Information,
-} from "../../API/VideoCaller";
-import FIleUploader from "../../components/ProfComp/FIleUploader";
-import VideoPlayer from "../../components/ProfComp/VideoPlayer";
-import VideoUpdater from "../../components/ProfComp/VideoUpdater";
+} from '../../API/VideoCaller';
+import FIleUploader from '../../components/ProfComp/FIleUploader';
+import VideoPlayer from '../../components/ProfComp/VideoPlayer';
+import VideoUpdater from '../../components/ProfComp/VideoUpdater';
+
 const VideoMng = () => {
   const [data, setData] = useState({});
-  const [idVideo, setIdVideo] = useState("");
+  const [idVideo, setIdVideo] = useState('');
   const [videoUrl, setVideoUrl] = useState(null);
   const [videoData, setVideoData] = useState({});
 
@@ -24,53 +23,61 @@ const VideoMng = () => {
     };
     handleData();
   }, []);
+
   useEffect(() => {
     const handleData = async () => {
-      console.log("his the id video : " + idVideo);
       const res = await Get_Video_Information(idVideo);
       if (res) {
         setVideoData(res.data);
-        console.log(res.data);
       }
     };
 
     if (idVideo) {
       setVideoUrl(`http://localhost:8000/api/video/view/${idVideo}/`);
-      console.log(idVideo);
-      console.log(videoUrl);
       handleData();
     }
-    // const handleInfo = async ()=>{
-    //   const res = await
-    // }
-  }, [idVideo, videoUrl]);
+  }, [idVideo]);
 
   return (
-    <div className="min-h-screen flex">
-      {/* Navbar positionnée en fixe à gauche */}
-      <nav className="w-64 fixed left-0 top-0 bottom-0 ">
-        <NavBar />
-      </nav>
-      {/* Contenu principal décalé pour laisser la place à la navbar */}
-      <main className="flex-1 ml-64 p-4">
-        {/* Top bar (title + darkmode switch) */}
-        <div className="w-full h-16 flex justify-center items-center bg-neutral-900 rounded-[15px] mb-4">
-          <h1 className="text-4xl font-bold text-white">Video Manager</h1>
-        </div>
-        {/* Première rangée de contenu */}
-        <div className="flex justify-between mb-4">
-          <Card
-            content={<FileExplorer data={data} setIdVideo={setIdVideo} />}
-          />
-          <Card content={<FIleUploader />} />
-        </div>
+    <div className="min-h-screen bg-gray-50 p-6">
+      <header className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-800">Gestion des vidéos</h1>
+        <p className="text-gray-600 mt-2">
+          Téléversez, consultez et mettez à jour les vidéos de vos cours.
+        </p>
+      </header>
 
-        {/* Deuxième rangée de contenu */}
-        <div className="flex justify-between">
-          <Card content={<VideoPlayer url={videoUrl} />} />
-          <Card content={<VideoUpdater videoData={videoData} />} />
+      {/* Section de sélection et téléversement */}
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+        <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+          <h2 className="text-xl font-semibold text-blue-600 mb-4">
+            Explorateur de fichiers
+          </h2>
+          <FileExplorer data={data} setIdVideo={setIdVideo} />
         </div>
-      </main>
+        <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+          <h2 className="text-xl font-semibold text-blue-600 mb-4">
+            Uploader une vidéo
+          </h2>
+          <FIleUploader />
+        </div>
+      </section>
+
+      {/* Section de visualisation et mise à jour */}
+      <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+          <h2 className="text-xl font-semibold text-blue-600 mb-4">
+            Prévisualisation
+          </h2>
+          <VideoPlayer url={videoUrl} />
+        </div>
+        <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+          <h2 className="text-xl font-semibold text-blue-600 mb-4">
+            Modifier les informations
+          </h2>
+          <VideoUpdater videoData={videoData} />
+        </div>
+      </section>
     </div>
   );
 };

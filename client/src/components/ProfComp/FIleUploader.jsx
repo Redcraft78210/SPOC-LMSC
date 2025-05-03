@@ -1,60 +1,54 @@
-import { useState } from "react";
-import { SendVideo } from "../../API/VideoCaller";
+import { useState } from 'react';
+import { SendVideo } from '../../API/VideoCaller';
 
 const FIleUploader = () => {
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState('');
   const [file, setFile] = useState(null);
-  const [desc, setDesc] = useState("");
+  const [desc, setDesc] = useState('');
 
-  const handleTitle = (event) => {
-    setTitle(event.target.value);
-  };
-  const handleDesc = (event) => {
-    setDesc(event.target.value);
-  };
-  const handleFile = (event) => {
-    setFile(event.target.files[0]);
-  };
   const handleSend = async () => {
     if (!file || !title) {
-      console.error("Veuillez fournir un fichier et un titre.");
+      alert('Veuillez fournir un fichier et un titre.');
       return;
     }
     const request = await SendVideo({ file, title, desc });
     if (request) {
-      alert("Video send successfully !");
+      alert('Vidéo envoyée avec succès !');
     }
-    return null;
   };
 
   return (
-    <div className="flex flex-col p-2 space-x-2 space-y-4 ">
-      <h1 className="text-2xl font-bold mb-4 text-[--white]">Send a video</h1>
+    <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+      <h2 className="text-xl font-semibold text-blue-600 mb-4">
+        Envoyer une vidéo
+      </h2>
+
       <input
         type="text"
-        onChange={handleTitle}
-        placeholder="Your video title's"
-        className="text-lg texte-[--white] bg-neutral-500 rounded-lg px-2"
+        onChange={e => setTitle(e.target.value)}
+        placeholder="Titre de la vidéo"
+        className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
+
       <input
         type="text"
-        onChange={handleDesc}
-        placeholder="Your video descriptions's"
-        className="text-lg texte-[--white] bg-neutral-500 rounded-lg px-2"
+        onChange={e => setDesc(e.target.value)}
+        placeholder="Description"
+        className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
+
       <input
-        className="flex rounded-md bg-neutral-500 text-sm text-[--white] file:border-0 file:bg-neutral-500 file:text-[--white] file:text-sm file:font-medium"
         type="file"
-        id="file"
         accept="video/*"
-        onChange={handleFile}
+        onChange={e => setFile(e.target.files[0])}
+        className="w-full mb-4 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"
       />
 
       <button
-        className=" bg-neutral-500 rounded-lg text-xl text-[--white] "
         onClick={handleSend}
+        className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition"
       >
-        Send
+        Envoyer
       </button>
     </div>
   );

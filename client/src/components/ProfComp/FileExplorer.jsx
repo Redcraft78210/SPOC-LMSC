@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import FilesystemItem  from './FilesystemItem';
+import FilesystemItem from './FilesystemItem';
 import PropTypes from 'prop-types';
+
 function transformData(data) {
   if (!data || typeof data !== 'object') return [];
 
@@ -13,7 +14,7 @@ function transformData(data) {
     visited.add(obj);
 
     if (typeof obj === 'object' && 'video_id' in obj) {
-      const tmp_name = `${obj.video_desc} | upload the: (${new Date(
+      const tmp_name = `${obj.video_desc} | uploadé le: (${new Date(
         obj.upload_date
       ).toLocaleDateString()})`;
       return {
@@ -31,7 +32,6 @@ function transformData(data) {
       };
     }
 
-    // Supprimer les champs "description" et "upload_date" du rendu
     const filteredKeys = Object.keys(obj).filter(
       key => key !== 'description' && key !== 'upload_date'
     );
@@ -47,27 +47,22 @@ function transformData(data) {
 }
 
 export default function Page({ setIdVideo, data }) {
-  const darkMode = true;
   const nodes = data && typeof data === 'object' ? transformData(data) : [];
   const [id, setId] = useState('');
+
   useEffect(() => {
     if (id) {
       setIdVideo(id);
     }
-  });
-  return (
-    <div
-      className={`rounded-xl p-4 ${
-        darkMode
-          ? 'bg-gradient-to-br from-neutral-800 to-neutral-900'
-          : 'bg-gradient-to-br from-neutral-400 to-neutral-500'
-      }`}
-    >
-      <h1 className="text-2xl font-bold mb-4 text-[--white]">
-        Explorateur de vidéos
-      </h1>
+  }, [id, setIdVideo]);
 
-      <ul className="text-[--white]">
+  return (
+    <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+      <h2 className="text-xl font-semibold text-blue-600 mb-4">
+        Explorateur de vidéos
+      </h2>
+
+      <ul className="text-gray-800 space-y-2">
         {nodes.filter(Boolean).map(node => (
           <FilesystemItem key={node.name} node={node} setId={setId} />
         ))}
