@@ -1,60 +1,28 @@
 import { useEffect, useState } from 'react';
-import FilesystemItem from './FilesystemItem';
 import PropTypes from 'prop-types';
 
-function transformData(data) {
-  if (!data || typeof data !== 'object') return [];
-
-  const transform = (obj, keyName, visited = new WeakSet()) => {
-    if (obj === null || typeof obj !== 'object') {
-      return { type: 'leaf', name: `${keyName}: ${obj}`, nodes: [] };
-    }
-
-    if (visited.has(obj)) return { type: 'folder', name: keyName, nodes: [] };
-    visited.add(obj);
-
-    if (typeof obj === 'object' && 'video_id' in obj) {
-      const tmp_name = `${obj.video_desc} | uploadé le: (${new Date(
-        obj.upload_date
-      ).toLocaleDateString()})`;
-      return {
-        type: 'video',
-        video_id: obj.video_id,
-        name: tmp_name,
-      };
-    }
-
-    if (Array.isArray(obj)) {
-      return {
-        type: 'folder',
-        name: keyName,
-        nodes: obj.map((item, index) => transform(item, `[${index}]`, visited)),
-      };
-    }
-
-    const filteredKeys = Object.keys(obj).filter(
-      key => key !== 'description' && key !== 'upload_date'
-    );
-
-    return {
-      type: 'folder',
-      name: keyName,
-      nodes: filteredKeys.map(key => transform(obj[key], key, visited)),
-    };
-  };
-
-  return Object.keys(data).map(key => transform(data[key], key, new WeakSet()));
-}
-
 export default function Page({ setIdVideo, data }) {
-  const nodes = data && typeof data === 'object' ? transformData(data) : [];
-  const [id, setId] = useState('');
+  const [selectedCourseId, setSelectedCourseId] = useState('');
+  const [videos, setVideos] = useState([]);
 
   useEffect(() => {
-    if (id) {
-      setIdVideo(id);
+    if (selectedCourseId) {
+      const selectedCourse = data[selectedCourseId];
+      if (selectedCourse && selectedCourse.video) {
+        const videoList = Array.isArray(selectedCourse.video)
+          ? selectedCourse.video
+          : [selectedCourse.video];
+        setVideos(videoList);
+      } else {
+        setVideos([]);
+      }
     }
-  }, [id, setIdVideo]);
+  }, [selectedCourseId, data]);
+
+  const handleVideoClick = videoId => {
+    console.log('Video ID:', videoId);
+    setIdVideo(videoId);
+  };
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
@@ -62,9 +30,29 @@ export default function Page({ setIdVideo, data }) {
         Explorateur de vidéos
       </h2>
 
-      <ul className="text-gray-800 space-y-2">
-        {nodes.filter(Boolean).map(node => (
-          <FilesystemItem key={node.name} node={node} setId={setId} />
+      <select
+        value={selectedCourseId}
+        onChange={e => setSelectedCourseId(e.target.value)}
+        className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4"
+      >
+        <option value="">Sélectionnez un cours</option>
+        {Object.entries(data).map(([id, course]) => (
+          <option key={id} value={id}>
+            {`${course.Matière} > ${course.chapitre} > ${course.titre}`}
+          </option>
+        ))}
+      </select>
+
+      <ul className="space-y-2">
+        {videos.map(video => (
+          <li
+            key={video.video_id}
+            onClick={() => handleVideoClick(video.video_id)}
+            className="cursor-pointer text-blue-600 hover:underline"
+          >
+            🎥 {video.video_desc} | uploadé le :{' '}
+            {new Date(video.upload_date).toLocaleDateString()}
+          </li>
         ))}
       </ul>
     </div>
@@ -73,5 +61,5 @@ export default function Page({ setIdVideo, data }) {
 
 Page.propTypes = {
   setIdVideo: PropTypes.func.isRequired,
-  data: PropTypes.oneOfType([PropTypes.object, PropTypes.array]).isRequired,
+  data: PropTypes.object.isRequired,
 };

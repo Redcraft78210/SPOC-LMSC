@@ -11,6 +11,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@react-pdf-viewer/core": "^3.12.0",
+    "@react-pdf-viewer/default-layout": "^3.12.0",
     "axios": "^1.8.4",
     "bootstrap": "^5.3.3",
     "class-variance-authority": "^0.7.1",
@@ -28,6 +30,7 @@
     "react-avataaars": "^0.2.3",
     "react-dom": "^18.3.1",
     "react-hot-toast": "^2.4.1",
+    "react-pdf": "^9.2.1",
     "react-player": "^2.16.0",
     "react-router-dom": "^6.22.0",
     "react-simple-captcha": "^9.3.1",
