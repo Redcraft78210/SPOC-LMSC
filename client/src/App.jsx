@@ -29,7 +29,8 @@ const routeConfig = [
   { path: '/dashboard', content: 'Home' },
   { path: '/profile', content: 'Profile' },
   { path: '/courses-library', content: 'CoursesLibrary' },
-  { path: '/video-manager', content: 'VideoManager'},
+  { path: '/video-manager', content: 'VideoManager' },
+  { path: '/document-manager', content: 'DocumentManager' },
   { path: '/course-reader', content: 'CourseReader' },
   { path: '/users-management', content: 'UserManagement' },
   { path: '/classes-management', content: 'ClassManagement' },
@@ -47,7 +48,7 @@ const publicRouteConfig = [
 function AppWrapper() {
   return (
     <Router>
-        <App />
+      <App />
     </Router>
   );
 }

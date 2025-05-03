@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import Checkbox from './Checkbox';
-import { UpdateVideo } from '../../API/VideoCaller';
+import { UpdateDocument } from '../../API/DocumentCaller'; // On suppose que l'API a une fonction UpdateDocument
 import PropTypes from 'prop-types';
 
-const VideoUpdater = ({ videoData }) => {
+const DocumentUpdater = ({ documentData }) => {
   const [titre, setTitre] = useState('');
   const [description, setDescription] = useState('');
   const [matiere, setMatiere] = useState('');
@@ -12,15 +12,15 @@ const VideoUpdater = ({ videoData }) => {
   const [isPublished, setIsPublished] = useState(false);
 
   useEffect(() => {
-    if (videoData) {
-      setTitre(videoData.titre || '');
-      setDescription(videoData.description || '');
-      setMatiere(videoData.Matière || '');
-      setChapitre(videoData.chapitre || '');
-      setIsMain(videoData.is_main || false);
-      setIsPublished(videoData.is_published || false);
+    if (documentData) {
+      setTitre(documentData.titre || '');
+      setDescription(documentData.description || '');
+      setMatiere(documentData.Matière || '');
+      setChapitre(documentData.chapitre || '');
+      setIsMain(documentData.is_main || false);
+      setIsPublished(documentData.is_published || false);
     }
-  }, [videoData]);
+  }, [documentData]);
 
   const handleUpdate = async () => {
     const updatedData = {
@@ -33,13 +33,13 @@ const VideoUpdater = ({ videoData }) => {
     };
 
     try {
-      const res = await UpdateVideo({
-        video_id: videoData.video.video_id,
+      const res = await UpdateDocument({
+        document_id: documentData.document.document_id,
         updatedData,
       });
 
-      console.log('Vidéo mise à jour avec succès :', res);
-      alert('Vidéo mise à jour avec succès !');
+      console.log('Document mis à jour avec succès :', res);
+      alert('Document mis à jour avec succès !');
     } catch (error) {
       console.error('Erreur lors de la mise à jour :', error);
       alert('Une erreur est survenue.');
@@ -49,14 +49,14 @@ const VideoUpdater = ({ videoData }) => {
   return (
     <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
       <h2 className="text-xl font-semibold text-blue-600 mb-4">
-        Modifier les informations de la vidéo
+        Modifier les informations du document PDF
       </h2>
 
       <input
         type="text"
         value={titre}
         readOnly
-        placeholder="Titre de la vidéo"
+        placeholder="Titre du document"
         className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-3 bg-gray-100 text-gray-500"
       />
 
@@ -85,17 +85,17 @@ const VideoUpdater = ({ videoData }) => {
       />
 
       <Checkbox
-        label="Vidéo principale"
+        label="Document principal"
         setIsMain={setIsMain}
         isMain={isMain}
-        text={'Ceci est la vidéo principale du cours.'}
+        text={'Ceci est le document principal du cours.'}
       />
       <br />
       <Checkbox
-        label="Vidéo publiée"
+        label="Document publié"
         isMain={isPublished}
         setIsMain={setIsPublished}
-        text={'Publier la video pour les élèves'}
+        text={'Publier le document pour les élèves'}
       />
 
       <button
@@ -108,19 +108,19 @@ const VideoUpdater = ({ videoData }) => {
   );
 };
 
-VideoUpdater.propTypes = {
-  videoData: PropTypes.shape({
+DocumentUpdater.propTypes = {
+  documentData: PropTypes.shape({
     titre: PropTypes.string,
     description: PropTypes.string,
     Matière: PropTypes.string,
     chapitre: PropTypes.string,
     is_main: PropTypes.bool,
     is_published: PropTypes.bool,
-    video: PropTypes.shape({
-      video_id: PropTypes.oneOfType([PropTypes.string, PropTypes.number])
+    document: PropTypes.shape({
+      document_id: PropTypes.oneOfType([PropTypes.string, PropTypes.number])
         .isRequired,
     }).isRequired,
   }).isRequired,
 };
 
-export default VideoUpdater;
+export default DocumentUpdater;

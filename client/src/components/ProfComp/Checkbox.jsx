@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-const Checkbox = ({ isMain, setIsMain }) => {
+const Checkbox = ({ isMain, setIsMain, text }) => {
   return (
     <div className="flex items-center space-x-3">
       <label className="group flex items-center cursor-pointer bg-transparent">
@@ -31,7 +31,7 @@ const Checkbox = ({ isMain, setIsMain }) => {
           </svg>
         </span>
         <span className="ml-3 text-gray-700 group-hover:text-blue-500 font-medium transition-colors duration-300">
-          Video is main for the courses
+          {text}
         </span>
       </label>
     </div>
@@ -41,5 +41,6 @@ const Checkbox = ({ isMain, setIsMain }) => {
 Checkbox.propTypes = {
   isMain: PropTypes.bool,
   setIsMain: PropTypes.func,
+  text: PropTypes.string,
 };
 export default Checkbox;
