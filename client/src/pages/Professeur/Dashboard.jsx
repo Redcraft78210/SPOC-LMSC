@@ -13,6 +13,7 @@ import CoursesLibrary from './CoursesLibrary';
 import PictureModal from '../../components/PictureModal';
 import VideoManager from '../../components/ProfComp/VideoMng';
 import DocumentManager from '../../components/ProfComp/DocumentMng';
+import CoursesManagement from '../../components/ProfComp/CoursesManagment';
 import ThemeSettings from '../Public/Theme';
 import Settings from './Settings';
 import NotFound from '../Public/NotFound';
@@ -52,10 +53,10 @@ const DashboardProf = ({ content, token }) => {
   };
 
   const contentMap = {
-    Home: <ProfDashboardHome />,
+    Home: <ProfDashboardHome token={token}/>,
     CoursesLibrary: <CoursesLibrary authToken={token} />,
     // CourseReader: <CourseReader authToken={token} />,
-
+    CoursesManagment: <CoursesManagement token={token}/>,
     VideoManager: <VideoManager authToken={token} />,
     DocumentManager: <DocumentManager authToken={token} />,
     ThemeSettings: <ThemeSettings />,

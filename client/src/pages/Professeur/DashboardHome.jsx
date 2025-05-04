@@ -9,9 +9,13 @@
 // import "./styles/Dashboard.module.css";
 
 // import PresentationCard from '../../components/PresentationCard';
+import { useEffect, useState } from 'react';
 import CourseVisibilityManager from '../../components/ProfComp/CourseVisibilityManager';
+import { GetClasses } from '../../API/ProfGestion';
+import PropTypes from 'prop-types';
 
-const DashboardProf = () => {
+const DashboardProf = ({ token }) => {
+  const [classeList, setClasseList] = useState({});
   const data = {
     courses: [
       {
@@ -33,40 +37,28 @@ const DashboardProf = () => {
         titre: 'Transmission des caractères',
       },
     ],
-    classes: [
-      {
-        id: 'classe_1',
-        name: '2nde A',
-      },
-      {
-        id: 'classe_2',
-        name: '1ère S',
-      },
-      {
-        id: 'classe_3',
-        name: 'Terminale ES',
-      },
-      {
-        id: 'classe_4',
-        name: 'Terminale S',
-      },
-    ],
   };
 
+  useEffect(() => {
+    const fetchClasse = async () => {
+      const response = await GetClasses(token);
+      if (response.status === 200) {
+        setClasseList(response.data);
+      } else {
+        console.error(response);
+      }
+    };
+    fetchClasse();
+  }, [token]);
   return (
     <div>
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <CourseVisibilityManager
-          courses={Object.values(data)} // ou ton appel API
-          classes={[
-            { id: 'classe_1', name: 'Terminale S' },
-            { id: 'classe_2', name: 'Première ES' },
-            { id: 'classe_3', name: 'Seconde A' },
-          ]}
+          courses={Object.values(data)}
+          classes={classeList}
           onSave={(courseId, classIds) => {
             console.log('Cours sélectionné :', courseId);
             console.log('Classes autorisées :', classIds);
-            // ici, tu fais un appel API pour enregistrer
           }}
         />
       </section>
@@ -74,4 +66,7 @@ const DashboardProf = () => {
   );
 };
 
+DashboardProf.propTypes = {
+  token: PropTypes.string.isRequired,
+};
 export default DashboardProf;
