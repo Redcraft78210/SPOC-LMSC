@@ -25,6 +25,20 @@ import { Toaster, toast } from 'react-hot-toast';
 
 const API_URL = 'https://localhost:8443/api';
 
+const errorMessages = {
+  'auth/invalid-credentials': 'Identifiants incorrects',
+  'auth/missing-fields': 'Veuillez remplir tous les champs',
+  'auth/invalid-register-code': "Code d'inscription invalide/expiré",
+  'auth/email-exists': 'Cet email est déjà utilisé',
+  'auth/user-not-found': 'Utilisateur introuvable',
+  'auth/username-exists': "Ce nom d'utilisateur est déjà utilisé",
+  'auth/2fa-required': 'Vérification 2FA requise',
+  'auth/invalid-2fa-code': 'Code de double authentification incorrect',
+  'auth/weak-password':
+    'Le mot de passe doit contenir au moins 12 caractères, une majuscule et un caractère spécial',
+  default: 'Une erreur est survenue. Veuillez réessayer.',
+};
+
 const UserManagement = ({ authToken }) => {
   const token = authToken;
 
@@ -72,7 +86,7 @@ const UserManagement = ({ authToken }) => {
   useEffect(() => {
     fetchUsers();
     fetchClasses();
-  }, []);
+  }, [fetchClasses, fetchUsers]);
 
   const [viewMode, setViewMode] = useState('list');
   const [searchQuery, setSearchQuery] = useState('');
@@ -213,52 +227,47 @@ const UserManagement = ({ authToken }) => {
       surname: formData.get('surname'),
       email: formData.get('email'),
       role: formData.get('role'),
-      password: formData.get('password'),
+      password:
+        formData.get('password') === '' ? null : formData.get('password'),
     };
 
-    try {
-      let response;
-      if (selectedUser) {
-        // Update user
-        response = await fetch(`${API_URL}/users/${selectedUser.id}`, {
-          method: 'PUT',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            ...userData,
-            isPasswordGeneratedByAdmin: userData.password ? true : undefined,
-          }),
-        });
-      } else {
-        // Create new user
-        userData.password = formData.get('password');
-        response = await fetch(`${API_URL}/users`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(userData),
-        });
-      }
-
-      if (!response.ok) throw new Error('Erreur lors de la requête');
-
-      toast.success(
-        selectedUser ? 'Utilisateur mis à jour' : 'Utilisateur créé avec succès'
-      );
-      fetchUsers();
-      setShowCreateModal(false);
-      setSelectedUser(null);
-    } catch (error) {
-      toast.error(
-        error.message || "Erreur lors de la sauvegarde de l'utilisateur"
-      );
-
-      throw error;
+    let response;
+    if (selectedUser) {
+      // Update user
+      response = await fetch(`${API_URL}/users/${selectedUser.id}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...userData,
+          isPasswordGeneratedByAdmin: userData.password ? true : undefined,
+        }),
+      });
+    } else {
+      // Create new user
+      response = await fetch(`${API_URL}/auth/manual-register`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData),
+      });
     }
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'default');
+    }
+
+    toast.success(
+      selectedUser ? 'Utilisateur mis à jour' : 'Utilisateur créé avec succès'
+    );
+    fetchUsers();
+    setShowCreateModal(false);
+    setSelectedUser(null);
   };
 
   const SearchUser = () => {
@@ -392,6 +401,9 @@ const UserManagement = ({ authToken }) => {
                 Nom
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Prénom
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 Email
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -422,6 +434,7 @@ const UserManagement = ({ authToken }) => {
                   />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">{user.name}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{user.surname}</td>
                 <td className="px-6 py-4 whitespace-nowrap">{user.email}</td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span
@@ -580,12 +593,13 @@ const UserManagement = ({ authToken }) => {
       name: '',
       surname: '',
       email: '',
-      role: 'élève',
+      role: 'student',
       password: '',
     });
     const [initialUser, setInitialUser] = useState(null);
 
     const [errors, setErrors] = useState({});
+    const [serverError, setServerError] = useState(''); // État pour les erreurs du serveur
     const [isLoading, setIsLoading] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
@@ -632,7 +646,7 @@ const UserManagement = ({ authToken }) => {
         );
       }
       return false;
-    }, [formData, initialUser, newPassword, selectedUser]);
+    }, [formData, initialUser, newPassword]);
 
     useEffect(() => {
       const handleBeforeUnload = e => {
@@ -670,12 +684,6 @@ const UserManagement = ({ authToken }) => {
         newErrors.email = "Format d'email invalide";
       }
 
-      if (!selectedUser && !formData.password) {
-        newErrors.password = 'Le mot de passe est requis';
-      } else if (formData.password.length > 0 && formData.password.length < 8) {
-        newErrors.password = 'Le mot de passe doit faire au moins 8 caractères';
-      }
-
       setErrors(newErrors);
       return Object.keys(newErrors).length === 0;
     };
@@ -685,6 +693,7 @@ const UserManagement = ({ authToken }) => {
       if (!validateForm()) return;
 
       setIsLoading(true);
+      setServerError(''); // Reset server error
       try {
         await handleSubmitUser(e);
         if (isMounted) {
@@ -696,13 +705,14 @@ const UserManagement = ({ authToken }) => {
           }, 1500);
         }
       } catch (error) {
-        console.error('Submission error:', error);
+        // Map server error to user-friendly message
+        const errorCode = error?.message || 'default';
+        setServerError(errorMessages[errorCode] || errorMessages.default);
       } finally {
-        if (isMounted) setIsLoading(false);
+        setIsLoading(false);
       }
     };
-
-    const handleClose = () => {
+    const handleClose = useCallback(() => {
       if (
         hasUnsavedChanges() &&
         !confirm('Etes-vous certain de vouloir annuler les modifications ?')
@@ -710,7 +720,7 @@ const UserManagement = ({ authToken }) => {
         return;
       setShowCreateModal(false);
       setSelectedUser(null);
-    };
+    }, [hasUnsavedChanges]);
 
     const handleBackdropClick = e => {
       if (e.target === e.currentTarget) handleClose();
@@ -763,6 +773,13 @@ const UserManagement = ({ authToken }) => {
           >
             {selectedUser ? "Modifier l'Utilisateur" : 'Nouvel Utilisateur'}
           </h2>
+
+          {/* Affichage des erreurs du serveur */}
+          {serverError && (
+            <div className="bg-red-100 text-red-700 p-3 rounded mb-4">
+              {serverError}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit}>
             <div className="space-y-6">
@@ -824,12 +841,7 @@ const UserManagement = ({ authToken }) => {
                   </div>
                 </div>
                 {errors.surname && (
-                  <p
-                    id="surnameError"
-                    className="text-red-600 text-sm mt-2 ml-1"
-                  >
-                    {errors.surname}
-                  </p>
+                  <p className="text-red-500 text-sm mt-1">{errors.surname}</p>
                 )}
               </div>
 
@@ -869,53 +881,21 @@ const UserManagement = ({ authToken }) => {
                 <select
                   name="role"
                   value={formData.role}
-                  onChange={e =>
-                    setFormData({ ...formData, role: e.target.value })
-                  }
+                  onChange={e => {
+                    setFormData({ ...formData, role: e.target.value });
+                    console.log(e.target.value);
+                  }}
                   className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
                   disabled={isLoading}
                 >
                   <option value="admin">Administrateur</option>
-                  <option value="professeur">Professeur</option>
-                  <option value="élève">Élève</option>
+                  <option value="teacher">Professeur</option>
+                  <option value="student">Élève</option>
                 </select>
               </div>
 
               {/* Mot de passe (uniquement pour création) */}
-              {!selectedUser && (
-                <div>
-                  <label className="block text-sm font-semibold text-gray-800 mb-2">
-                    Mot de passe *
-                  </label>
-                  <input
-                    type="password"
-                    name="password"
-                    value={formData.password}
-                    onChange={e =>
-                      setFormData({ ...formData, password: e.target.value })
-                    }
-                    className={`w-full px-4 py-2.5 rounded-lg border ${
-                      errors.password
-                        ? 'border-red-500 focus:ring-red-500'
-                        : 'border-gray-200 focus:border-blue-500'
-                    } focus:ring-2 focus:ring-blue-200 outline-none transition-all`}
-                    aria-invalid={!!errors.password}
-                    aria-describedby="passwordError"
-                    disabled={isLoading}
-                  />
-                  {errors.password && (
-                    <p
-                      id="passwordError"
-                      className="text-red-600 text-sm mt-2 ml-1"
-                    >
-                      {errors.password}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* Bouton pour générer un nouveau mot de passe */}
-              {selectedUser && (
+              {
                 <button
                   type="button"
                   onClick={handleGeneratePassword}
@@ -924,7 +904,7 @@ const UserManagement = ({ authToken }) => {
                 >
                   Générer un nouveau mot de passe
                 </button>
-              )}
+              }
 
               {/* Afficher le mot de passe */}
               {newPassword && (
@@ -941,6 +921,7 @@ const UserManagement = ({ authToken }) => {
                     lieu sûr (par exemple, dans un gestionnaire de mots de
                     passe).
                   </p>
+                  <input type="hidden" name="password" value={newPassword} />
                 </div>
               )}
             </div>
@@ -1077,7 +1058,7 @@ const UserManagement = ({ authToken }) => {
         const payload = { ...formData };
         console.log(assignClass);
         if (!assignClass) {
-          delete payload.classId; // Remove classId if checkbox is not checked
+          delete payload.classId;
         }
         console.log(payload);
 
@@ -1191,8 +1172,8 @@ const UserManagement = ({ authToken }) => {
     }, [existingCodes]);
 
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center transition-all duration-300 ease-out">
+        <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto transform transition-all duration-300 ease-in-out">
           <div className="flex justify-between items-start mb-6">
             <h2 className="text-2xl font-bold">Gestion des codes</h2>
             <button
@@ -1270,40 +1251,42 @@ const UserManagement = ({ authToken }) => {
             </div>
 
             {/* Checkbox and class selection */}
-            <div className="mt-4">
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={assignClass}
-                  onChange={e => setAssignClass(e.target.checked)}
-                  className="rounded text-blue-600 focus:ring-blue-500"
-                />
-                <span>Assigner une classe</span>
-              </label>
-              {assignClass && (
-                <div className="mt-2">
-                  <label className="block text-sm font-medium mb-2">
-                    Classe
-                  </label>
-                  <select
-                    value={formData.classId || ''}
-                    onChange={e =>
-                      setFormData({ ...formData, classId: e.target.value })
-                    }
-                    className="w-full p-2 border rounded"
-                  >
-                    <option value="" disabled>
-                      Sélectionnez une classe
-                    </option>
-                    {classes.map(cls => (
-                      <option key={cls.id} value={cls.id}>
-                        {cls.name}
+            {formData.role === 'student' && (
+              <div className="mt-4">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={assignClass}
+                    onChange={e => setAssignClass(e.target.checked)}
+                    className="rounded text-blue-600 focus:ring-blue-500"
+                  />
+                  <span>Assigner une classe</span>
+                </label>
+                {assignClass && (
+                  <div className="mt-2">
+                    <label className="block text-sm font-medium mb-2">
+                      Classe
+                    </label>
+                    <select
+                      value={formData.classId || ''}
+                      onChange={e =>
+                        setFormData({ ...formData, classId: e.target.value })
+                      }
+                      className="w-full p-2 border rounded"
+                    >
+                      <option value="" disabled>
+                        Sélectionnez une classe
                       </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </div>
+                      {classes.map(cls => (
+                        <option key={cls.id} value={cls.id}>
+                          {cls.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+            )}
 
             <button
               onClick={handleGenerate}

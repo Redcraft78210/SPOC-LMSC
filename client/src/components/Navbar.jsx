@@ -8,6 +8,7 @@ import {
   User,
   Users,
   FileVideo2,
+  MessagesSquare,
   FileSearch,
   NotepadText,
 } from 'lucide-react';
@@ -20,10 +21,12 @@ const NavigationBar = ({ isAdmin = false, isProf = false }) => {
   const [activeRoute, setActiveRoute] = React.useState(location.pathname);
 
   React.useEffect(() => {
-    setActiveRoute(location.pathname);
+    // Ignore query parameters when setting the active route
+    const currentPath = location.pathname;
+    console.log(currentPath);
+    setActiveRoute(currentPath);
   }, [location.pathname]);
-  // alert(isProf);
-  alert(isAdmin);
+
   const navItems = [
     { icon: Home, path: '/dashboard', label: 'Home' },
     { icon: LibraryBig, path: '/courses-library', label: 'Cours' },
@@ -32,6 +35,11 @@ const NavigationBar = ({ isAdmin = false, isProf = false }) => {
       path: '/course-reader',
       label: 'Reader',
       clickable: false,
+    },
+    {
+      icon: MessagesSquare,
+      path: '/forum',
+      label: 'Forum',
     },
     ...(isAdmin
       ? [
@@ -83,7 +91,9 @@ const NavigationBar = ({ isAdmin = false, isProf = false }) => {
             onClick: () => handleNavigation(item.path),
           })}
           className={`p-2 rounded-lg hover:bg-white hover:text-gray-800 transition-all duration-300 ${
-            activeRoute === item.path ? 'bg-white text-gray-800' : ''
+            activeRoute.toLowerCase() === item.path.toLowerCase()
+              ? 'bg-white text-gray-800'
+              : ''
           }`}
           aria-label={item.label}
         >

@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
     name VARCHAR(255) NOT NULL,
     surname VARCHAR(255) NOT NULL,
     role VARCHAR(255) NOT NULL CHECK (role IN ('admin', 'teacher', 'student')),
-    username VARCHAR(255) UNIQUE NOT NULL,
+    username VARCHAR(255) UNIQUE,
     email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     "twoFAEnabled" BOOLEAN DEFAULT FALSE,
@@ -98,6 +98,23 @@ CREATE TABLE IF NOT EXISTS class_lives (
     PRIMARY KEY (class_id, live_id)
 );
 
+-- Create threads table
+CREATE TABLE IF NOT EXISTS threads (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    "authorId" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create comments table
+CREATE TABLE IF NOT EXISTS comments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    content TEXT NOT NULL,
+    "authorId" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    "threadId" UUID NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 -- Trigger Functions
 CREATE OR REPLACE FUNCTION validate_teacher()
 RETURNS TRIGGER AS $$
@@ -387,6 +404,36 @@ VALUES
         'a6fa5fc1-1234-4321-0000-000000000007',
         'a6fa5fc1-1234-4322-0000-000000000001'
     );
+
+-- Insert initial data into the threads table
+INSERT INTO
+    threads (id, title, content, "authorId")
+VALUES
+    ('11111111-aaaa-bbbb-cccc-000000000001', 'Introduction to SQL', 'This thread discusses the basics of SQL.', 'a6fa5fc1-1234-4321-0000-000000000005'),
+    ('11111111-aaaa-bbbb-cccc-000000000002', 'Advanced JavaScript', 'Let''s dive into advanced JavaScript concepts.', 'a6fa5fc1-1234-4321-0000-000000000006'),
+    ('11111111-aaaa-bbbb-cccc-000000000003', 'Python for Data Science', 'A thread for Python enthusiasts.', 'a6fa5fc1-1234-4321-0000-000000000007'),
+    ('11111111-aaaa-bbbb-cccc-000000000004', 'React vs Angular', 'Which framework do you prefer and why?', 'a6fa5fc1-1234-4321-0000-000000000008'),
+    ('11111111-aaaa-bbbb-cccc-000000000005', 'Machine Learning Basics', 'Discussing the fundamentals of ML.', 'a6fa5fc1-1234-4321-0000-000000000005'),
+    ('11111111-aaaa-bbbb-cccc-000000000006', 'Docker for Beginners', 'How to get started with Docker.', 'a6fa5fc1-1234-4321-0000-000000000006'),
+    ('11111111-aaaa-bbbb-cccc-000000000007', 'Understanding REST APIs', 'A thread about building and using REST APIs.', 'a6fa5fc1-1234-4321-0000-000000000007'),
+    ('11111111-aaaa-bbbb-cccc-000000000008', 'CSS Grid vs Flexbox', 'Which layout system do you prefer?', 'a6fa5fc1-1234-4321-0000-000000000008'),
+    ('11111111-aaaa-bbbb-cccc-000000000009', 'Kubernetes Essentials', 'An introduction to Kubernetes.', 'a6fa5fc1-1234-4321-0000-000000000005'),
+    ('11111111-aaaa-bbbb-cccc-000000000010', 'GraphQL vs REST', 'Pros and cons of GraphQL and REST.', 'a6fa5fc1-1234-4321-0000-000000000006');
+
+-- Insert initial data into the comments table
+INSERT INTO
+    comments (id, content, "authorId", "threadId")
+VALUES
+    ('22222222-aaaa-bbbb-cccc-000000000001', 'Great introduction to SQL!', 'a6fa5fc1-1234-4321-0000-000000000007', '11111111-aaaa-bbbb-cccc-000000000001'),
+    ('22222222-aaaa-bbbb-cccc-000000000002', 'I prefer Angular for enterprise apps.', 'a6fa5fc1-1234-4321-0000-000000000008', '11111111-aaaa-bbbb-cccc-000000000004'),
+    ('22222222-aaaa-bbbb-cccc-000000000003', 'Python is indeed great for data science.', 'a6fa5fc1-1234-4321-0000-000000000005', '11111111-aaaa-bbbb-cccc-000000000003'),
+    ('22222222-aaaa-bbbb-cccc-000000000004', 'REST APIs are simple and effective.', 'a6fa5fc1-1234-4321-0000-000000000006', '11111111-aaaa-bbbb-cccc-000000000007'),
+    ('22222222-aaaa-bbbb-cccc-000000000005', 'CSS Grid is more powerful for complex layouts.', 'a6fa5fc1-1234-4321-0000-000000000007', '11111111-aaaa-bbbb-cccc-000000000008'),
+    ('22222222-aaaa-bbbb-cccc-000000000006', 'Docker has simplified my deployment process.', 'a6fa5fc1-1234-4321-0000-000000000008', '11111111-aaaa-bbbb-cccc-000000000006'),
+    ('22222222-aaaa-bbbb-cccc-000000000007', 'Machine learning is fascinating!', 'a6fa5fc1-1234-4321-0000-000000000005', '11111111-aaaa-bbbb-cccc-000000000005'),
+    ('22222222-aaaa-bbbb-cccc-000000000008', 'GraphQL is great for complex queries.', 'a6fa5fc1-1234-4321-0000-000000000006', '11111111-aaaa-bbbb-cccc-000000000010'),
+    ('22222222-aaaa-bbbb-cccc-000000000009', 'Kubernetes is a game-changer for container orchestration.', 'a6fa5fc1-1234-4321-0000-000000000007', '11111111-aaaa-bbbb-cccc-000000000009'),
+    ('22222222-aaaa-bbbb-cccc-000000000010', 'Advanced JavaScript concepts are tricky but rewarding.', 'a6fa5fc1-1234-4321-0000-000000000008', '11111111-aaaa-bbbb-cccc-000000000002');
 
 -- Insert initial lives data
 INSERT INTO
