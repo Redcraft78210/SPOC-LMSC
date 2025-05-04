@@ -8,63 +8,65 @@
 // import OnAir2 from "../../components/ProfComp/OnAir2";
 // import "./styles/Dashboard.module.css";
 
-const DashboardProf = () => {
-//   return (
-//     <div className="w-full h-full">
-//       <div className="absolute h-fit w-5/6 top-2 left-32 flex flex-row justify-between ">
-//         <h1 className=" text-5xl text-blue-700 font-bold w-fit h-fit ">
-//           SPOC LMSC 218
-//         </h1>
-//         <p className="w-fit -mt-6">
-//           <Darkmode2 />
-//         </p>
-//       </div>
-//       {/* <div className="row-start-1 row-span-2 flex ">
-//         <div className="mt-16 w-1/3 ">
-//           <div className="h-full w-fit  ">
-//             <NavBar />
-//           </div>
-//         </div>
-//         <div className="w-2/3 grid grid-cols-3 grid-rows-3 gap-2 grid-auto-rows-[minmax(50px,_auto)] g-4">
-//           <div className="col-start-1 row-start-1">
-//             <Darkmode />
-//           </div>
-//           <div className="col-start-2 row-start-1">
-//             <Card className={"h-full"} content={"13"} />
-//           </div>
-//           <div className="row-start-2 col-span-2">
-//             <Card className={"w-full h-full"} content={"14"} />
-//           </div>
-//           <div className="row-start-3 col-span-2">
-//             <Card className={"w-full h-full"} content={"16"} />
-//           </div>
-//           <div className="row-span-3 col-start-3 row-start-1">
-//             <Card className={"w-full h-full"} content={"11"} />
-//           </div>
-//         </div>
-//       </div> */}
+// import PresentationCard from '../../components/PresentationCard';
+import { useEffect, useState } from 'react';
+import CourseVisibilityManager from '../../components/ProfComp/CourseVisibilityManager';
+import { GetClasses } from '../../API/ProfGestion';
+import PropTypes from 'prop-types';
 
-//       <div className="flex border border-red-500 mt-[4rem] md:w-screen ">
-//         <div className="border border-lime-300 w-1/12 h-screen">
-//           <NavBar />
-//         </div>
-//         {/* dashboard */}
-//         <div className="border border-blue-600  w-11/12">
-//           {/* GRID du dashboard */}
-//           <div class="grid grid-cols-3 xl:grid-cols-3 gap-4 px-4 py-4">
-//             <div class="w-full h-48 rounded-xl">
-//               <OnAir2/>
-//             </div>
-//             <div class="w-full h-48  bg-blue-600 rounded-xl">5</div>
-//             <div class="w-full h-48  bg-blue-900 rounded-xl col-span-2">3</div>
-//             <div class="w-full row-start-1 col-start-3 bg-blue-600 rounded-xl row-span-3"></div>
-//             <div class="w-full h-48 bg-blue-900 rounded-xl ">2</div>
-//             <div class="w-full h-48 bg-blue-900 rounded-xl">6</div>
-//           </div>
-//         </div>
-//       </div>
-//     </div>
-//   );
+const DashboardProf = ({ token }) => {
+  const [classeList, setClasseList] = useState({});
+  const data = {
+    courses: [
+      {
+        ID_cours: 'cours_01',
+        Matière: 'Mathématiques',
+        chapitre: 'Fonctions',
+        titre: 'Étude des fonctions de référence',
+      },
+      {
+        ID_cours: 'cours_02',
+        Matière: 'Physique',
+        chapitre: 'Cinématique',
+        titre: 'Mouvement rectiligne uniforme',
+      },
+      {
+        ID_cours: 'cours_03',
+        Matière: 'SVT',
+        chapitre: 'Génétique',
+        titre: 'Transmission des caractères',
+      },
+    ],
+  };
+
+  useEffect(() => {
+    const fetchClasse = async () => {
+      const response = await GetClasses(token);
+      if (response.status === 200) {
+        setClasseList(response.data);
+      } else {
+        console.error(response);
+      }
+    };
+    fetchClasse();
+  }, [token]);
+  return (
+    <div>
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <CourseVisibilityManager
+          courses={Object.values(data)}
+          classes={classeList}
+          onSave={(courseId, classIds) => {
+            console.log('Cours sélectionné :', courseId);
+            console.log('Classes autorisées :', classIds);
+          }}
+        />
+      </section>
+    </div>
+  );
 };
 
+DashboardProf.propTypes = {
+  token: PropTypes.string.isRequired,
+};
 export default DashboardProf;

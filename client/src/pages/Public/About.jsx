@@ -1,5 +1,5 @@
-import PublicNavbar from "../../components/PublicComp/PublicNavbar";
-import Footer from "../../components/PublicComp/Footer";
+import PublicNavbar from '../../components/PublicComp/PublicNavbar';
+import Footer from '../../components/PublicComp/Footer';
 
 const About = () => {
   return (
@@ -28,10 +28,11 @@ const About = () => {
                 Notre Mission
               </h2>
               <p className="text-gray-600 leading-relaxed">
-                SPOC-LMSC a été créé pour offrir une plateforme d&apos;apprentissage
-                en ligne accessible, flexible et enrichissante. Nous croyons en
-                l&apos;importance de l&apos;éducation et souhaitons permettre à chacun de
-                développer ses compétences à son propre rythme.
+                SPOC-LMSC a été créé pour offrir une plateforme
+                d&apos;apprentissage en ligne accessible, flexible et
+                enrichissante. Nous croyons en l&apos;importance de
+                l&apos;éducation et souhaitons permettre à chacun de développer
+                ses compétences à son propre rythme.
               </p>
             </div>
 
@@ -41,11 +42,11 @@ const About = () => {
                 Notre Vision
               </h2>
               <p className="text-gray-600 leading-relaxed">
-                Nous imaginons un monde où l&apos;éducation est accessible à tous,
-                peu importe leur situation géographique ou leurs contraintes
-                personnelles. SPOC-LMSC vise à devenir un leader dans
-                l&apos;apprentissage en ligne en proposant des cours de qualité créés
-                par des enseignants passionnés.
+                Nous imaginons un monde où l&apos;éducation est accessible à
+                tous, peu importe leur situation géographique ou leurs
+                contraintes personnelles. SPOC-LMSC vise à devenir un leader
+                dans l&apos;apprentissage en ligne en proposant des cours de
+                qualité créés par des enseignants passionnés.
               </p>
             </div>
           </div>
@@ -63,9 +64,7 @@ const About = () => {
             <div className="flex flex-col items-center bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow">
               <img src="/img/Willi.svg" />
               <div className="p-6">
-                <h3 className="text-xl font-semibold text-gray-800">
-                  Ewen WILLIART
-                </h3>
+                <h3 className="text-xl font-semibold text-gray-800">Ewen</h3>
                 <p className="text-gray-600">Designer UI/UX & Développeur</p>
               </div>
             </div>
@@ -74,9 +73,7 @@ const About = () => {
             <div className="flex flex-col items-center bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow">
               <img src="/img/Cléclé.svg" />
               <div className="p-6">
-                <h3 className="text-xl font-semibold text-gray-800">
-                  Clément BÉLAISE
-                </h3>
+                <h3 className="text-xl font-semibold text-gray-800">Clément</h3>
                 <p className="text-gray-600">Directeur Technique</p>
               </div>
             </div>
@@ -85,9 +82,7 @@ const About = () => {
             <div className="flex flex-col items-center bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow">
               <img src="/img/AD.svg" />
               <div className="p-6">
-                <h3 className="text-xl font-semibold text-gray-800">
-                  Adrien DE CASTRO
-                </h3>
+                <h3 className="text-xl font-semibold text-gray-800">Adrien</h3>
                 <p className="text-gray-600">Responsable Projet</p>
               </div>
             </div>
