@@ -244,11 +244,8 @@ const Courses = () => {
 const CourseCard = ({ course }) => {
   CourseCard.propTypes = {
     course: PropTypes.shape({
-      id_cours: PropTypes.number.isRequired,
+      id_cours: PropTypes.string.isRequired,
       titre: PropTypes.string.isRequired,
-      matiere: PropTypes.string.isRequired,
-      date_debut: PropTypes.string.isRequired,
-      date_fin: PropTypes.string.isRequired,
       description: PropTypes.string,
       video: PropTypes.shape({
         video_id: PropTypes.string,

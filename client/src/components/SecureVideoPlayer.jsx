@@ -90,7 +90,7 @@ const SecureVideoPlayer = ({ videoId, authToken, posterUrl, onError }) => {
           playerRef.current?.play();
         }}
       >
-        <Play className="w-20 h-20" />
+        <Play className="w-14 h-14" />
       </button>
       <Logo className="absolute top-0 right-4 w-30 h-30" />
     </div>

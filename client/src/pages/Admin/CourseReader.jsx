@@ -134,7 +134,6 @@ const CourseReader = ({ authToken }) => {
             videoId={courseData.video.video_id}
             authToken={authToken}
             onError={setError}
-            posterUrl={`/videos/${courseData.video.video_id}/${courseData.video.video_id}.preview.webp`}
           />
           <div className="mt-4">
             <div className="text-sm text-gray-500">

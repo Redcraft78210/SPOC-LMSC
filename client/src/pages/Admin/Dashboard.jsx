@@ -14,7 +14,7 @@ import PictureModal from "../../components/PictureModal";
 import UserManagement from "./UserManagement";
 import ClasseManagement from "./ClassManagement";
 import ThemeSettings from "../Public/Theme";
-import Settings from "./Settings";
+import Settings from "../Settings";
 import NotFound from "../Public/NotFound";
 import Logo from "../../Logo";
 

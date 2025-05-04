@@ -15,13 +15,14 @@ const credentials = { key: privateKey, cert: certificate };
 
 // Import routes
 const authRoutes = require("./routes/authRoutes").default;
-const courseRoutes = require("./routes/courseRoutes").default;
 const classRoutes = require("./routes/classRoutes").default;
-const userRoutes = require("./routes/userRoutes").default;
 const codeRoutes = require("./routes/codeRoutes").default;
-const liveRoutes = require("./routes/liveRoutes").default;
-const videoRoutes = require("./routes/videoRoutes").default;
+const courseRoutes = require("./routes/courseRoutes").default;
 const documentRoutes = require("./routes/documentRoutes").default;
+const forumRoutes = require("./routes/forumRoutes").default;
+const liveRoutes = require("./routes/liveRoutes").default;
+const userRoutes = require("./routes/userRoutes").default;
+const videoRoutes = require("./routes/videoRoutes").default;
 
 // Initialize environment variables
 dotenv.config();
@@ -31,6 +32,10 @@ const HTTP_PORT = process.env.HTTP_PORT || 5000;
 // Create an Express app
 const app = express();
 app.enable("trust proxy");
+
+// proxied api routes
+const { displayStream } = require('./middlewares/streamMiddleware');
+displayStream(app);
 
 app.use((request, response, next) => {
   if (request.secure) {
@@ -85,14 +90,16 @@ app.use(express.urlencoded({ extended: true })); // Parse URL-encoded data
 app.use("/videos", express.static(path.join(__dirname, "public", "videos"))); // retirer dès que possible
 
 // API routes
-app.use("/api/auth", authRoutes); // Authentication routes (login, register)
-app.use("/api/courses", courseRoutes); // Courses-related routes
-app.use("/api/classes", classRoutes); // Courses-related routes
-app.use("/api/users", userRoutes); // Courses-related routes
-app.use("/api/codes", codeRoutes); // Codes-related routes
-app.use("/api/lives", liveRoutes); // Courses-related routes
-app.use("/api/videos", videoRoutes); // Video-related routes
-app.use("/api/documents", documentRoutes); // Document-related routes
+app.use('/api/auth', authRoutes); // Authentication routes (login, register)
+app.use('/api/courses', courseRoutes); // Courses-related routes
+app.use('/api/classes', classRoutes); // Classes-related routes
+app.use('/api/users', userRoutes); // User-related routes
+app.use('/api/codes', codeRoutes); // Codes-related routes
+app.use('/api/forum', forumRoutes); // Forums-related routes
+app.use('/api/lives', liveRoutes); // Live-related routes
+app.use('/api/videos', videoRoutes); // Video-related routes
+app.use('/api/documents', documentRoutes); // Document-related routes
+
 
 // Serve React frontend (if applicable)
 if (process.env.NODE_ENV === "production") {

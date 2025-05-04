@@ -1,10 +1,12 @@
 const fs = require('fs/promises');
+const fsSync = require('fs');
 const path = require('path');
 const { createReadStream } = require('fs');
 const { constants } = require('fs');
 const crypto = require('crypto');
 
-const documentsDirectory = path.resolve(__dirname, '../');
+const documentsDirectory = path.resolve(__dirname, '..', 'documents');
+
 console.log(`documentsDirectory: ${documentsDirectory}`);
 
 // Common headers
@@ -42,7 +44,7 @@ const generateETag = (fileData) => {
  * @param {Object} req - Express request object.
  * @param {Object} res - Express response object.
  */
-const getdocument = async (req, res) => {
+const getDocument = async (req, res) => {
     try {
         const { id } = req.params;
 
@@ -50,7 +52,9 @@ const getdocument = async (req, res) => {
             return res.status(400).json({ message: 'Invalid document ID' });
         }
 
-        const documentPath = path.resolve(documentsDirectory, `${id}.pdf`);
+        const documentPath = path.resolve(documentsDirectory, `${id}/${id}.pdf`);
+
+        console.log(`documentPath: ${documentPath}`);
 
         if (!isInsideDocumentsDir(documentPath)) {
             return res.status(400).json({ message: 'Invalid path' });
@@ -101,16 +105,22 @@ const getdocument = async (req, res) => {
  * @param {Object} req - Express request object.
  * @param {Object} res - Express response object.
  */
-const getblobdocument = async (req, res) => {
+const getBlobDocument = async (req, res) => {
     try {
         const { id } = req.params;
 
-        if (!id || !/^[a-zA-Z0-9_-]+$/.test(id)) {
+        // Validate ID format more thoroughly
+        if (!id || typeof id !== 'string' || !/^[a-zA-Z0-9_-]+$/.test(id)) {
             return res.status(400).json({ message: 'Invalid document ID' });
         }
 
-        const documentPath = path.resolve(documentsDirectory, `${id}.pdf`);
-        const escapedFilename = encodeURIComponent(id) + '.pdf';
+        // Use path.join for better path construction
+        const documentPath = path.resolve(
+            documentsDirectory,
+            path.join(id, `${id}.pdf`)
+        );
+        
+        const escapedFilename = encodeURIComponent(`${id}.pdf`);
 
         console.log(`documentPath: ${documentPath}`);
 
@@ -118,15 +128,21 @@ const getblobdocument = async (req, res) => {
             return res.status(400).json({ message: 'Invalid path' });
         }
 
+        if (!fsSync.existsSync(documentPath)) {
+            return res.status(404).json({ message: 'Document not found' });
+        }
+
+        // Use fs.promises to avoid callback hell
         const handle = await fs.open(documentPath, 'r');
         try {
             const stats = await handle.stat();
             const buffer = await handle.readFile();
 
+            // Set proper PDF content type without charset
             res.writeHead(200, {
                 ...COMMON_HEADERS,
                 'Content-Length': buffer.length,
-                'Content-Type': 'application/pdf; charset=utf-8',
+                'Content-Type': 'application/pdf',
                 'Content-Disposition': `attachment; filename*="UTF-8''${escapedFilename}"`,
                 'ETag': `"${generateETag(buffer)}"`
             });
@@ -147,6 +163,6 @@ const getblobdocument = async (req, res) => {
 };
 
 module.exports = {
-    getdocument,
-    getblobdocument
+    getDocument,
+    getBlobDocument
 };

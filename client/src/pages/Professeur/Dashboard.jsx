@@ -14,8 +14,9 @@ import PictureModal from '../../components/PictureModal';
 import VideoManager from '../../components/ProfComp/VideoMng';
 import DocumentManager from '../../components/ProfComp/DocumentMng';
 import CoursesManagement from '../../components/ProfComp/CoursesManagment';
+
 import ThemeSettings from '../Public/Theme';
-import Settings from './Settings';
+import Settings from '../Settings';
 import NotFound from '../Public/NotFound';
 import Logo from '../../Logo';
 
@@ -59,6 +60,7 @@ const DashboardProf = ({ content, token }) => {
     CoursesManagment: <CoursesManagement token={token}/>,
     VideoManager: <VideoManager authToken={token} />,
     DocumentManager: <DocumentManager authToken={token} />,
+
     ThemeSettings: <ThemeSettings />,
     Settings: <Settings authToken={token} />,
   };
