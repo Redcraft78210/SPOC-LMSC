@@ -31,6 +31,7 @@ const routeConfig = [
   { path: '/courses-library', content: 'CoursesLibrary' },
   { path: '/video-manager', content: 'VideoManager' },
   { path: '/document-manager', content: 'DocumentManager' },
+  { path: '/courses-managment', content:'CoursesManagment'},
   { path: '/course-reader', content: 'CourseReader' },
   { path: '/users-management', content: 'UserManagement' },
   { path: '/classes-management', content: 'ClassManagement' },

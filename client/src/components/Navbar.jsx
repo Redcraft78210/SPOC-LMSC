@@ -9,6 +9,7 @@ import {
   Users,
   FileVideo2,
   FileSearch,
+  NotepadText,
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import PropTypes from 'prop-types';
@@ -57,6 +58,11 @@ const NavigationBar = ({ isAdmin = false, isProf = false }) => {
             icon: FileSearch,
             path: '/document-manager',
             label: 'Gestion des documents de cours',
+          },
+          {
+            icon: NotepadText,
+            path: '/courses-managment',
+            label: 'Gestion des cours'
           },
         ]
       : []),
