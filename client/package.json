@@ -20,8 +20,8 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "events": "^3.3.0",
-    "hls.js": "^1.6.2",  // Gardé la version la plus récente
-    "js-cookie": "^3.0.5",  // Ajouter js-cookie qui était dans la branche devel
+    "hls.js": "^1.6.2",
+    "js-cookie": "^3.0.5",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.503.0",
     "luxon": "^3.6.1",
@@ -30,10 +30,12 @@
     "prop-types": "^15.8.1",
     "react": "^19.1.0",
     "react-avataaars": "^0.2.3",
-    "react-dom": "^19.1.0",  // Gardé la version la plus récente
+    "react-dom": "^19.1.0",
     "react-hot-toast": "^2.5.2",
     "react-markdown": "^10.1.0",
-    "react-router-dom": "^7.5.3",  // Gardé la version la plus récente
+    "react-pdf": "^9.2.1",
+    "react-player": "^2.16.0",
+    "react-router-dom": "^7.5.3",
     "react-simple-captcha": "^9.3.1",
     "react-video-js-player": "^1.1.1",
     "react-videojs-hook": "^1.0.1",
