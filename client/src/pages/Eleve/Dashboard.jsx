@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { jwtDecode } from 'jwt-decode';
 
@@ -10,6 +11,7 @@ import NavigationBar from '../../components/Navbar';
 import NotFound from '../Public/NotFound';
 import CoursesLibrary from '../Eleve/CoursesLibrary';
 import CourseReader from '../Eleve/CourseReader';
+import LiveViewer from './LiveViewer';
 import Forum from './pages/Forum';
 import EleveDashboardHome from './DashboardHome';
 import PictureModal from '../../components/PictureModal';
@@ -18,6 +20,7 @@ import Settings from '../Settings';
 import Logo from '../../Logo';
 
 const DashboardEleve = ({ content, token }) => {
+  const navigate = useNavigate();
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showProfilepictureModal, setShowProfilepictureModal] = useState(false);
   const divRef = useRef();
@@ -54,6 +57,7 @@ const DashboardEleve = ({ content, token }) => {
   const contentMap = {
     CourseReader: <CourseReader authToken={token} />,
     CoursesLibrary: <CoursesLibrary authToken={token} />,
+    LiveViewer: <LiveViewer authToken={token} />,
     Forum: <Forum authToken={token} />,
     Home: <EleveDashboardHome authToken={token} />,
     Settings: <Settings authToken={token} />,
@@ -77,7 +81,14 @@ const DashboardEleve = ({ content, token }) => {
 
       <main className="flex-1 flex flex-col min-w-0">
         <header className="h-16 bg-gray-800 flex items-center justify-between px-6">
-          <a href="/" className="flex items-center gap-2">
+          <a
+            href="#"
+            onClick={e => {
+              e.preventDefault();
+              navigate('/');
+            }}
+            className="flex items-center gap-2"
+          >
             <Logo fillColor="#F9FAFB" />
           </a>
 
@@ -156,7 +167,11 @@ const DashboardEleve = ({ content, token }) => {
                     </div>
 
                     <a
-                      href="/logout"
+                      href="#"
+                      onClick={e => {
+                        e.preventDefault();
+                        navigate('/logout');
+                      }}
                       className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-center block"
                     >
                       Log Out
@@ -164,14 +179,25 @@ const DashboardEleve = ({ content, token }) => {
                     <div className="flex justify-around mt-4">
                       <p>
                         <a
-                          href="/conditions-utisation"
+                          href="#"
+                          onClick={e => {
+                            e.preventDefault();
+                            navigate('/conditions-utilisation');
+                          }}
                           className="text-blue-500"
                         >
                           Conditions d&apos;utilisation
                         </a>
                       </p>
                       <p>
-                        <a href="/mentions-legales" className="text-blue-500">
+                        <a
+                          href="#"
+                          onClick={e => {
+                            e.preventDefault();
+                            navigate('/mentions-legales');
+                          }}
+                          className="text-blue-500"
+                        >
                           Mentions légales
                         </a>
                       </p>

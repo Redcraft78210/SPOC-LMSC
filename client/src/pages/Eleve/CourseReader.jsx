@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import SecureVideoPlayer from '../../components/SecureVideoPlayer';
 import SecureDocumentViewer from '../../components/SecureDocumentViewer';
@@ -7,6 +8,7 @@ import { toast, Toaster } from 'react-hot-toast';
 const API_URL = 'https://localhost:8443/api';
 
 const CourseReader = ({ authToken }) => {
+  const navigate = useNavigate();
   const [courseData, setCourseData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -52,6 +54,31 @@ const CourseReader = ({ authToken }) => {
             },
           ],
         };
+
+        // const data = {
+        //   Matière: 'math_info', // La matière : Mathématiques et Informatique
+        //   chapitre: 'nombres_complexes', // Chapitre sur les nombres complexes
+        //   titre: 'Introduction aux Nombres Imaginaires', // Titre du cours
+        //   date_creation: '2025-03-15T10:30:00Z', // Date de création en format ISO
+        //   description:
+        //     "Ce cours présente les bases des nombres imaginaires et leur utilité dans la résolution d'équations quadratiques.", // Brève description
+        //   'Date de création': '2025-03-15T10:30:00Z', // Date de création en format ISO
+        //   ID_cours: 'cours_123456', // Identifiant unique du cours
+        //   documents: [
+        //     {
+        //       document_id: '3f4b538504facde3c881b73844f52f24-1742237522', // Premier document associé
+        //       title: 'Introduction aux Nombres Imaginaires',
+        //       description: 'Description du premier document',
+        //       date_mise_en_ligne: '2025-03-18T08:45:00Z', // Date de mise en ligne
+        //     },
+        //     // {
+        //     //   document_id: '3f4b538504facde3c881b73844f52f24-1742237522', // Deuxième document associé
+        //     //   title: 'Explication des Nombres Imaginaires',
+        //     //   description: 'Description du deuxième document',
+        //     //   date_mise_en_ligne: '2025-03-19T09:15:00Z', // Date de mise en ligne
+        //     // },
+        //   ],
+        // };
 
         // Extraction de la première entrée du cours
         const { ...content } = data;
@@ -111,12 +138,13 @@ const CourseReader = ({ authToken }) => {
     return (
       <div className="text-center p-8">
         <p className="text-red-600 mb-4">Cours non trouvé</p>
-        <a
-          href="/courses-library"
+        <button
+          type="button"
+          onClick={() => navigate('/courses-library')}
           className="inline-block px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
         >
           Retour à la bibliothèque des cours
-        </a>
+        </button>
       </div>
     );
   }
@@ -153,8 +181,10 @@ const CourseReader = ({ authToken }) => {
       )}
       {/* Section Documents */}
       {courseData.documents && courseData.documents.length > 0 && (
-        <div className="border-t pt-8">
-          <h2 className="text-2xl font-bold mb-4">Documents associés</h2>
+        <div className={`${courseData.video ? 'mt-8 border-t' : 'pt-0'}`}>
+          {courseData.video && (
+            <h2 className="text-2xl font-bold mb-4">Documents associés</h2>
+          )}
           {documentError && (
             <p className="text-red-600 mb-4">{documentError}</p>
           )}
@@ -166,7 +196,7 @@ const CourseReader = ({ authToken }) => {
               >
                 {!courseData.video && (
                   <SecureDocumentViewer
-                    documentId={doc.id}
+                    documentId={doc.document_id}
                     authToken={authToken}
                   />
                 )}

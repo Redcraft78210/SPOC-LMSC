@@ -4,7 +4,7 @@ import Logo from "../Logo";
 
 const PictureModal = ({ setShowProfilepictureModal, user }) => {
   return (
-    <div className="bg-gray-900 min-h-screen flex items-center justify-center">
+    <div className="fixed inset-0 bg-gray-900 bg-opacity-50 blur-md flex items-center justify-center z-50">
       {/* Carte principale - Ajout de relative pour le positionnement absolu enfant */}
       <div className="bg-gray-800 text-gray-100 w-full max-w-sm rounded-xl shadow-lg p-4 md:p-6 relative">
         {/* Croix en haut à gauche - Modification de right-4 à left-4 */}

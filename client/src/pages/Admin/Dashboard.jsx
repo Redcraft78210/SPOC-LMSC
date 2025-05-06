@@ -1,24 +1,26 @@
-import { useState, useEffect, useRef } from "react";
-import PropTypes from "prop-types";
-import { jwtDecode } from "jwt-decode";
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import PropTypes from 'prop-types';
+import { jwtDecode } from 'jwt-decode';
 
-import { X, Pencil } from "lucide-react";
+import { X, Pencil } from 'lucide-react';
 
-import NavigationBar from "../../components/Navbar";
+import NavigationBar from '../../components/Navbar';
 // import "../style/NavigationBar.css";
 
-import AdminDashboardHome from "./DashboardHome";
-import CourseReader from "./CourseReader";
-import CoursesLibrary from "./CoursesLibrary";
-import PictureModal from "../../components/PictureModal";
-import UserManagement from "./UserManagement";
-import ClasseManagement from "./ClassManagement";
-import ThemeSettings from "../Public/Theme";
-import Settings from "../Settings";
-import NotFound from "../Public/NotFound";
-import Logo from "../../Logo";
+import AdminDashboardHome from './DashboardHome';
+import CourseReader from './CourseReader';
+import CoursesLibrary from './CoursesLibrary';
+import PictureModal from '../../components/PictureModal';
+import UserManagement from './UserManagement';
+import ClasseManagement from './ClassManagement';
+import ThemeSettings from '../Public/Theme';
+import Settings from '../Settings';
+import NotFound from '../Public/NotFound';
+import Logo from '../../Logo';
 
 const DashboardAdmin = ({ content, token }) => {
+  const navigate = useNavigate();
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showProfilepictureModal, setShowProfilepictureModal] = useState(false);
   const divRef = useRef();
@@ -32,20 +34,22 @@ const DashboardAdmin = ({ content, token }) => {
 
     // Ajoutez l'écouteur d'événements quand le menu profil est ouvert
     if (showProfileModal) {
-      document.addEventListener("mousedown", handleClickOutside);
+      document.addEventListener('mousedown', handleClickOutside);
     } else {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showProfileModal]);
 
   const decodedToken = jwtDecode(token);
 
   const user = {
-    name: decodedToken.name.charAt(0).toUpperCase() + decodedToken.name.slice(1).toLowerCase(),
+    name:
+      decodedToken.name.charAt(0).toUpperCase() +
+      decodedToken.name.slice(1).toLowerCase(),
     email: decodedToken.email,
     role: decodedToken.role,
   };
@@ -77,7 +81,14 @@ const DashboardAdmin = ({ content, token }) => {
 
       <main className="flex-1 flex flex-col min-w-0">
         <header className="h-16 bg-gray-800 flex items-center justify-between px-6">
-          <a href="/" className="flex items-center gap-2">
+          <a
+            href="#"
+            onClick={e => {
+              e.preventDefault();
+              navigate('/');
+            }}
+            className="flex items-center gap-2"
+          >
             <Logo fillColor="#F9FAFB" />
           </a>
 
@@ -94,8 +105,8 @@ const DashboardAdmin = ({ content, token }) => {
               >
                 {/* Votre logo / lettre / image */}
                 {!user.avater ||
-                user.avatar === "" ||
-                user.avatar === "default" ? (
+                user.avatar === '' ||
+                user.avatar === 'default' ? (
                   <div className="w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center">
                     <span className="text-xl font-bold text-gray-800">
                       {user.name.charAt(0).toUpperCase()}
@@ -117,7 +128,7 @@ const DashboardAdmin = ({ content, token }) => {
                 >
                   <div
                     className="bg-slate-800 rounded-xl p-6 max-w-full shadow-xl"
-                    onClick={(e) => e.stopPropagation()}
+                    onClick={e => e.stopPropagation()}
                   >
                     <X
                       className="absolute right-1/20 cursor-pointer"
@@ -135,8 +146,8 @@ const DashboardAdmin = ({ content, token }) => {
 
                       {/* Votre logo / lettre / image */}
                       {!user.avater ||
-                      user.avatar === "" ||
-                      user.avatar === "default" ? (
+                      user.avatar === '' ||
+                      user.avatar === 'default' ? (
                         <div className="h-20 w-20 rounded-full border-2 bg-yellow-500 mx-auto mb-4 flex items-center justify-center">
                           <span className="text-2xl font-bold text-gray-800">
                             {user.name.charAt(0).toUpperCase()}
@@ -156,7 +167,11 @@ const DashboardAdmin = ({ content, token }) => {
                     </div>
 
                     <a
-                      href="/logout"
+                      href="#"
+                      onClick={e => {
+                        e.preventDefault();
+                        navigate('/logout');
+                      }}
                       className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-center block"
                     >
                       Log Out
@@ -164,14 +179,25 @@ const DashboardAdmin = ({ content, token }) => {
                     <div className="flex justify-around mt-4">
                       <p>
                         <a
-                          href="/conditions-utisation"
+                          href="#"
+                          onClick={e => {
+                            e.preventDefault();
+                            navigate('/conditions-utilisation');
+                          }}
                           className="text-blue-500"
                         >
                           Conditions d&apos;utilisation
                         </a>
                       </p>
                       <p>
-                        <a href="/mentions-legales" className="text-blue-500">
+                        <a
+                          href="#"
+                          onClick={e => {
+                            e.preventDefault();
+                            navigate('/mentions-legales');
+                          }}
+                          className="text-blue-500"
+                        >
                           Mentions légales
                         </a>
                       </p>

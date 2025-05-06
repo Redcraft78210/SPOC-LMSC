@@ -1,7 +1,11 @@
 // import PropTypes from 'prop-types';
 
+import { useNavigate } from 'react-router-dom';
+
 // const DashboardHome = ({ authToken }) => {
 const DashboardHome = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <header className="mb-8">
@@ -20,11 +24,12 @@ const DashboardHome = () => {
           <p className="text-gray-600 mt-2">
             Consultez vos cours en cours et terminez vos leçons.
           </p>
-          <a href="/courses-library">
-            <button className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-              Voir mes cours
-            </button>
-          </a>
+          <button
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            onClick={() => navigate('/courses-library')}
+          >
+            Voir mes cours
+          </button>
         </div>
 
         {/* Card 2: Progress */}

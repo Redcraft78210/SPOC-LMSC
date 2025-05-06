@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, forwardRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FileText, SquarePlay, Settings2 } from 'lucide-react';
 import PropTypes from 'prop-types';
 
@@ -321,6 +322,8 @@ const CourseSettingsMenu = forwardRef((props, ref) => {
 });
 
 const CourseCard = ({ course }) => {
+  const navigate = useNavigate();
+
   const [isHovered, setIsHovered] = useState(false);
   const hoverTimeout = useRef(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -358,10 +361,6 @@ const CourseCard = ({ course }) => {
     setIsHovered(false);
   };
 
-  const handleClick = () => {
-    window.location.href = '/course-reader?courseId=' + course.id_cours;
-  };
-
   useEffect(() => {
     return () => {
       if (hoverTimeout.current) {
@@ -373,7 +372,7 @@ const CourseCard = ({ course }) => {
   return (
     <div
       className="group relative cursor-pointer overflow-hidden rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow duration-300"
-      onClick={handleClick}
+      onClick={() => navigate(`/course-reader?courseId=${course.id_cours}`)}
       role="button"
       tabIndex="0"
     >

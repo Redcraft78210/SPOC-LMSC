@@ -297,6 +297,28 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
     navigate('/dashboard');
   };
 
+  const handleForgotPasswordSubmit = async e => {
+    e.preventDefault();
+    setError(null);
+
+    if (!email.trim()) {
+      return setError('Veuillez entrer votre email');
+    }
+
+    try {
+      await axios.post('https://localhost:8443/api/auth/forgot-password', {
+        email,
+      });
+      setError(
+        'Un email de réinitialisation a été envoyé. Veuillez vérifier votre boîte de réception.'
+      );
+      setAuthStep('initial');
+    } catch (error) {
+      const errorCode = error.response?.data?.message || 'default';
+      setError(errorMessages[errorCode] || errorMessages.default);
+    }
+  };
+
   const toggleAuthMode = () => {
     setIsSignUpForm(!isSignUpForm);
     setError(null);
@@ -388,6 +410,41 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
           </button>
         </p>
       )}
+    </form>
+  );
+
+  const renderForgotPasswordForm = () => (
+    <form onSubmit={handleForgotPasswordSubmit} className="w-full space-y-8">
+      <div className="relative">
+        <input
+          id="email"
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          className="w-full h-14 px-6 py-3 text-base md:text-lg bg-white border-2 rounded-lg"
+          required
+          autoFocus
+        />
+      </div>
+
+      <SubmitButton
+        onSubmission={handleForgotPasswordSubmit}
+        className="w-full py-4 text-lg md:text-xl font-semibold text-white bg-[#002B2F] rounded-lg hover:bg-[#00474F]"
+      />
+
+      <p className="text-center text-base md:text-lg">
+        <button
+          type="button"
+          onClick={() => {
+            setAuthStep('initial');
+            setError(null);
+          }}
+          className="font-bold underline hover:text-[#00474F]"
+        >
+          Retour à la connexion
+        </button>
+      </p>
     </form>
   );
 
@@ -542,6 +599,18 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
           {isSignUpForm ? 'Connectez-vous ici' : 'Créez-en ici'}
         </button>
       </p>
+
+      {!isSignUpForm && (
+        <p className="text-center text-base md:text-lg">
+          <button
+            type="button"
+            onClick={() => setAuthStep('forgot-password')}
+            className="font-bold underline hover:text-[#00474F]"
+          >
+            Mot de passe oublié ?
+          </button>
+        </p>
+      )}
     </form>
   );
 
@@ -550,7 +619,14 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
       <div className="m-auto w-full max-w-2xl px-4">
         <section className="border-2 bg-gray-50 rounded-xl shadow-lg p-8 md:p-12">
           <div className="text-[#002B2F] text-center">
-            <a href="/" className="flex justify-center">
+            <a
+              href="#"
+              onClick={e => {
+                e.preventDefault();
+                navigate('/');
+              }}
+              className="flex justify-center"
+            >
               <Logo className="w-24 h-24 md:w-32 md:h-32" fillColor="#002B2F" />
             </a>
           </div>
@@ -558,6 +634,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
           <h1 className="text-4xl md:text-5xl font-bold text-center my-8">
             {authStep === '2fa-verification' && 'Vérification 2FA'}
             {authStep === '2fa-setup' && 'Activation 2FA'}
+            {authStep === 'forgot-password' && 'Mot de passe oublié'}
             {authStep === 'initial' &&
               (isSignUpForm ? 'Inscription' : 'Connexion')}
           </h1>
@@ -568,9 +645,11 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
             </div>
           )}
 
-          {authStep.startsWith('2fa')
-            ? render2FAContent()
-            : renderInitialForm()}
+          {authStep === 'forgot-password'
+            ? renderForgotPasswordForm()
+            : authStep.startsWith('2fa')
+              ? render2FAContent()
+              : renderInitialForm()}
         </section>
       </div>
     </section>

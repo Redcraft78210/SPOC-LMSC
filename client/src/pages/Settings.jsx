@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types'; // Import prop-types
 import axios from 'axios'; // Import axios pour les requêtes API
 import { toast, Toaster } from 'react-hot-toast';
+import zxcvbn from 'zxcvbn';
+import { jwtDecode } from 'jwt-decode';
+
 import {
   Globe,
   Lock,
@@ -163,7 +166,7 @@ const Settings = ({ authToken }) => {
     setErrors({}); // Clear previous errors
     try {
       await axios.put(
-        '/api/user/profile',
+        `${API_URL}/users/profile`,
         {
           name: user.name,
           email: user.email,
@@ -298,9 +301,22 @@ const Settings = ({ authToken }) => {
       return toast.error('Les nouveaux mots de passe ne correspondent pas.');
     }
 
-    if (newPassword.length < 8) {
+    if (newPassword === currentPassword) {
       return toast.error(
-        'Le nouveau mot de passe doit contenir au moins 8 caractères.'
+        'Mot de passe identique au mot de passe actuel.\n Veuillez choisir un autre mot de passe.'
+      );
+    }
+
+    if (newPassword.length < 12) {
+      return toast.error(
+        'Le nouveau mot de passe doit contenir au moins 12 caractères.'
+      );
+    }
+
+    const passwordSafety = zxcvbn(newPassword);
+    if (passwordSafety.score < 3) {
+      return toast.error(
+        `Le nouveau mot de passe n'est pas sécurisé. Il doit contenir une majuscule, une minuscule, un chiffre et un caractère spécial.`
       );
     }
 
@@ -308,8 +324,10 @@ const Settings = ({ authToken }) => {
     setErrors({}); // Clear previous errors
 
     try {
+      const userId = jwtDecode(authToken).id;
+
       await axios.put(
-        '/api/user/password',
+        `${API_URL}/users/${userId}`,
         {
           currentPassword,
           newPassword,
@@ -320,6 +338,7 @@ const Settings = ({ authToken }) => {
       );
 
       toast.success('Mot de passe mis à jour avec succès.');
+      setHasUnsavedChanges(false);
     } catch (error) {
       if (error.response) {
         console.error('Erreur serveur:', error.response.data);
@@ -765,7 +784,7 @@ const Settings = ({ authToken }) => {
       <Toaster />
 
       {loading && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-opacity-30 flex items-center justify-center z-50">
           <Spinner />
         </div>
       )}

@@ -1,7 +1,10 @@
-import PublicNavbar from "../../components/PublicComp/PublicNavbar";
-import Footer from "../../components/PublicComp/Footer";
+import { useNavigate } from 'react-router-dom';
+import PublicNavbar from '../../components/PublicComp/PublicNavbar';
+import Footer from '../../components/PublicComp/Footer';
 
 const Home = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navigation */}
@@ -17,18 +20,18 @@ const Home = () => {
             Des cours réalisés par vos propres enseignants !
           </p>
           <div className="flex justify-center space-x-4">
-            <a
-              href="/sign?register=true"
+            <button
+              onClick={() => navigate('/sign?register=true')}
               className="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
             >
               Commencer maintenant
-            </a>
-            <a
-              href="/courses-library"
+            </button>
+            <button
+              onClick={() => navigate('/courses-library')}
               className="border-2 border-white px-8 py-3 rounded-lg font-semibold hover:bg-white hover:text-blue-600 transition-colors"
             >
               Voir les cours
-            </a>
+            </button>
           </div>
         </div>
       </header>
@@ -132,11 +135,12 @@ const Home = () => {
                   <span>📚 45 leçons</span>
                   <span>⭐ 4.9/5</span>
                 </div>
-                <a href="/courses-library">
-                  <button className="w-full mt-4 bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition-colors">
-                    Voir le cours
-                  </button>
-                </a>
+                <button
+                  className="w-full mt-4 bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition-colors"
+                  onClick={() => navigate('/courses-library')}
+                >
+                  Voir le cours
+                </button>
               </div>
             </div>
 
@@ -161,11 +165,12 @@ const Home = () => {
                   <span>📚 32 leçons</span>
                   <span>⭐ 4.8/5</span>
                 </div>
-                <a href="/courses-library">
-                  <button className="w-full mt-4 bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition-colors">
-                    Voir le cours
-                  </button>
-                </a>
+                <button
+                  className="w-full mt-4 bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition-colors"
+                  onClick={() => navigate('/courses-library')}
+                >
+                  Voir le cours
+                </button>
               </div>
             </div>
 
@@ -190,11 +195,12 @@ const Home = () => {
                   <span>📚 28 leçons</span>
                   <span>⭐ 4.7/5</span>
                 </div>
-                <a href="/courses-library">
-                  <button className="w-full mt-4 bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition-colors">
-                    Voir le cours
-                  </button>
-                </a>
+                <button
+                  className="w-full mt-4 bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition-colors"
+                  onClick={() => navigate('/courses-library')}
+                >
+                  Voir le cours
+                </button>
               </div>
             </div>
           </div>

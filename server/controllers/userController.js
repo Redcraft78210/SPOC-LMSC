@@ -171,7 +171,7 @@ const getUserById = async (req, res) => {
 
 // Update user by ID
 const updateUserById = async (req, res) => {
-    const { name, surname, email, password, role, isPasswordGeneratedByAdmin } = req.body;
+    const { name, surname, email, currentPassword, newPassword, password, role, isPasswordGeneratedByAdmin } = req.body;
 
     try {
         const user = await User.findByPk(req.params.id);
@@ -186,6 +186,14 @@ const updateUserById = async (req, res) => {
 
         if (password) {
             user.password = await bcrypt.hash(password, 10);
+        }
+
+        if (currentPassword){
+            const isMatch = await bcrypt.compare(currentPassword, user.password);
+            if (!isMatch) {
+                return res.status(400).json({ message: 'Current password is incorrect' });
+            }
+            user.password = await bcrypt.hash(newPassword, 10);
         }
 
         if (isPasswordGeneratedByAdmin) {
