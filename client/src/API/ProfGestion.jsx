@@ -11,7 +11,7 @@ const api = axios.create({
 });
 
 const apiPython = axios.create({
-  baseURL: 'http://localhost:8000/api/courses',
+  baseURL: 'http://localhost:8000/cours/',
   headers: {
     'Content-Type': 'application/json',
     'X-CSRFToken': Cookies.get('csrftoken'),
@@ -40,7 +40,7 @@ const GetClasses = async authToken => {
 
 const GetCourses = async () => {
   try {
-    const response = await apiPython.get('/cours/');
+    const response = await apiPython.get('all/');
     return { status: 200, data: response.data };
   } catch (error) {
     if (error.response?.status === 404) {
@@ -55,11 +55,53 @@ const GetCourses = async () => {
 
 const CreateCourse = async courseData => {
   try {
-    const response = await api.post('/cours/', courseData); // <- courseData ajouté ici
+    const response = await apiPython.post('create/', courseData);
     return { status: 201, data: response.data };
   } catch (error) {
     if (error.response?.status === 400) {
       console.error('Données invalides :', error.response?.data);
+    } else {
+      console.error('Erreur API :', error.message);
+    }
+    console.error(error); 
+  }
+  return null;
+};
+
+const UpdateCourse = async (courseId, courseData) => {
+  try {
+    const response = await apiPython.put(`/cours/${courseId}/`, courseData, {
+      headers: {
+        Authorization: `Bearer ${Cookies.get('authToken')}`, // Remplacez par votre méthode d'authentification
+      },
+    });
+    return { status: 200, data: response.data };
+  } catch (error) {
+    if (error.response?.status === 400) {
+      console.error('Données invalides :', error.response?.data);
+    } else if (error.response?.status === 404) {
+      console.error('Cours non trouvé :', error.response?.data);
+    } else {
+      console.error('Erreur API :', error.message);
+    }
+    console.error(error);
+  }
+  return null;
+};
+
+const GetCourseDetails = async (authToken, courseId) => {
+  try {
+    const response = await api.get(`/cours/${courseId}/`, {
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+      },
+    });
+    return { status: 200, data: response.data };
+  } catch (error) {
+    if (error.response?.status === 404) {
+      console.error('Cours non trouvé :', error.response?.data);
+    } else if (error.response?.status === 400) {
+      console.error('Erreur API :', error.response?.data);
     } else {
       console.error('Erreur API :', error.message);
     }
@@ -73,6 +115,8 @@ GetClasses.propTypes = {
   authToken: PropTypes.string.isRequired,
 };
 
+GetCourses.propTypes = {};
+
 CreateCourse.propTypes = {
   courseData: PropTypes.shape({
     Matière: PropTypes.string.isRequired,
@@ -82,7 +126,7 @@ CreateCourse.propTypes = {
     description: PropTypes.string,
     ID_cours: PropTypes.string.isRequired,
     video: PropTypes.any,
-    documents: PropTypes.array,
+    documents: PropTypes.arrayOf(PropTypes.string),
     allowedClasses: PropTypes.oneOfType([
       PropTypes.arrayOf(PropTypes.string),
       PropTypes.string,
@@ -90,4 +134,27 @@ CreateCourse.propTypes = {
   }).isRequired,
 };
 
-export { GetClasses, GetCourses, CreateCourse };
+UpdateCourse.propTypes = {
+  courseId: PropTypes.string.isRequired,
+  courseData: PropTypes.shape({
+    Matière: PropTypes.string.isRequired,
+    chapitre: PropTypes.string,
+    titre: PropTypes.string.isRequired,
+    date_creation: PropTypes.string.isRequired,
+    description: PropTypes.string,
+    ID_cours: PropTypes.string.isRequired,
+    video: PropTypes.any,
+    documents: PropTypes.arrayOf(PropTypes.string),
+    allowedClasses: PropTypes.oneOfType([
+      PropTypes.arrayOf(PropTypes.string),
+      PropTypes.string,
+    ]),
+  }).isRequired,
+};
+
+GetCourseDetails.propTypes = {
+  authToken: PropTypes.string.isRequired,
+  courseId: PropTypes.string.isRequired,
+};
+
+export { GetClasses, GetCourses, CreateCourse, UpdateCourse, GetCourseDetails };
