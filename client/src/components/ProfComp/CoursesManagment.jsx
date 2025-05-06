@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { GetClasses } from '../../API/ProfGestion';
+import { GetClasses, GetCourses } from '../../API/ProfGestion'; // Import de GetCourses
 
 const matièresDisponibles = [
   { value: 'math_info', label: 'Mathématiques & Informatique' },
@@ -9,35 +9,9 @@ const matièresDisponibles = [
   { value: 'français', label: 'Français' },
 ];
 
-// ⚠️ Liste de cours simulée localement
-const fakeCourses = [
-  {
-    Matière: 'math_info',
-    chapitre: 'Logique',
-    titre: 'Initiation à la logique booléenne',
-    date_creation: '2025-05-04T08:00:00Z',
-    description: 'Cours de base sur les opérateurs logiques.',
-    ID_cours: 'cours_001',
-    video: null,
-    documents: [],
-    allowedClasses: ['1A'],
-  },
-  {
-    Matière: 'svt',
-    chapitre: 'Cellule',
-    titre: 'Structure de la cellule animale',
-    date_creation: '2025-04-30T12:45:00Z',
-    description: 'Les composants de la cellule et leur fonction.',
-    ID_cours: 'cours_002',
-    video: null,
-    documents: [],
-    allowedClasses: 'ALL',
-  },
-];
-
 const CoursesManagement = ({ token }) => {
   const [classes, setClasses] = useState([]);
-  const [courses, setCourses] = useState(fakeCourses);
+  const [courses, setCourses] = useState([]); // Initialisation avec un tableau vide
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCourseId, setEditingCourseId] = useState(null);
   const [formData, setFormData] = useState({
@@ -48,6 +22,7 @@ const CoursesManagement = ({ token }) => {
     allowedClasses: {},
   });
 
+  // Récupération des classes
   useEffect(() => {
     const fetchClasses = async () => {
       const result = await GetClasses(token);
@@ -57,6 +32,17 @@ const CoursesManagement = ({ token }) => {
     };
     fetchClasses();
   }, [token]);
+
+  // Récupération des cours via l'API
+  useEffect(() => {
+    const fetchCourses = async () => {
+      const result = await GetCourses();
+      if (result && result.status === 200) {
+        setCourses(result.data); // Mise à jour des cours avec les données de l'API
+      }
+    };
+    fetchCourses();
+  }, []);
 
   const handleChange = e => {
     setFormData(prev => ({
@@ -83,15 +69,15 @@ const CoursesManagement = ({ token }) => {
         }, {})
       : {};
 
+    // Mise à jour pour correspondre à la structure de l'API
     setFormData({
-      matière: course.Matière,
       chapitre: course.chapitre,
       titre: course.titre,
       description: course.description,
       allowedClasses: allowed,
     });
 
-    setEditingCourseId(course.ID_cours);
+    setEditingCourseId(course.id); // Utilisation de course.id au lieu de course.ID_cours
     setIsModalOpen(true);
   };
 
@@ -113,12 +99,11 @@ const CoursesManagement = ({ token }) => {
     );
 
     const newCourse = {
-      Matière: formData.matière,
       chapitre: formData.chapitre,
       titre: formData.titre,
       date_creation: new Date().toISOString(),
       description: formData.description,
-      ID_cours: editingCourseId || `cours_${Date.now()}`,
+      id: editingCourseId || `cours_${Date.now()}`, // Utilisation de id au lieu de ID_cours
       video: null,
       documents: [],
       allowedClasses: selectedClasses.length > 0 ? selectedClasses : 'ALL',
@@ -126,7 +111,7 @@ const CoursesManagement = ({ token }) => {
 
     setCourses(prev =>
       editingCourseId
-        ? prev.map(c => (c.ID_cours === editingCourseId ? newCourse : c))
+        ? prev.map(c => (c.id === editingCourseId ? newCourse : c))
         : [...prev, newCourse]
     );
 
@@ -151,8 +136,7 @@ const CoursesManagement = ({ token }) => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {courses.map(course => (
             <div
-              key={course.ID_cours}
-              onClick={() => openEditModal(course)}
+              key={course.id}
               className="cursor-pointer p-4 rounded-lg border border-gray-200 hover:shadow-md transition bg-gray-50"
             >
               <h3 className="text-lg font-semibold text-blue-700 mb-1">
@@ -160,12 +144,19 @@ const CoursesManagement = ({ token }) => {
               </h3>
               <p className="text-sm text-gray-600 mb-1">
                 Matière :{' '}
-                {matièresDisponibles.find(m => m.value === course.Matière)
-                  ?.label || course.Matière}
+                {matièresDisponibles.find(m => m.value === course.matiere)
+                  ?.label || course.matiere}
               </p>
               <p className="text-sm text-gray-500">
                 Chapitre : <span className="italic">{course.chapitre}</span>
               </p>
+              {/* Utiliser openEditModal */}
+              <button
+                onClick={() => openEditModal(course)}
+                className="mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Modifier
+              </button>
             </div>
           ))}
         </div>
@@ -193,22 +184,25 @@ const CoursesManagement = ({ token }) => {
               {editingCourseId ? 'Modifier le cours' : 'Nouveau Cours'}
             </h3>
 
-            <label className="block mb-2 text-sm font-medium text-gray-700">
-              Matière
-              <select
-                name="matière"
-                value={formData.matière}
-                onChange={handleChange}
-                className="w-full mt-1 p-2 border border-gray-300 rounded"
-              >
-                <option value="">-- Sélectionner une matière --</option>
-                {matièresDisponibles.map(m => (
-                  <option key={m.value} value={m.value}>
-                    {m.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            {/* Afficher le champ Matière uniquement pour un nouveau cours */}
+            {!editingCourseId && (
+              <label className="block mb-2 text-sm font-medium text-gray-700">
+                Matière
+                <select
+                  name="matière"
+                  value={formData.matière}
+                  onChange={handleChange}
+                  className="w-full mt-1 p-2 border border-gray-300 rounded"
+                >
+                  <option value="">-- Sélectionner une matière --</option>
+                  {matièresDisponibles.map(m => (
+                    <option key={m.value} value={m.value}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
 
             <label className="block mt-3 text-sm font-medium text-gray-700">
               Chapitre
@@ -275,7 +269,7 @@ const CoursesManagement = ({ token }) => {
               </button>
               <button
                 onClick={handleSubmit}
-                disabled={!formData.matière || !formData.titre}
+                disabled={!formData.titre}
                 className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
               >
                 {editingCourseId ? 'Mettre à jour' : 'Créer'}
