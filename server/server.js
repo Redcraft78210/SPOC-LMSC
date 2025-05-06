@@ -13,8 +13,13 @@ const privateKey = fs.readFileSync('certs/selfsigned.key', 'utf8');
 const certificate = fs.readFileSync('certs/selfsigned.crt', 'utf8');
 const credentials = { key: privateKey, cert: certificate };
 
+// Import WebSockets controller
+const { initWebSocket } = require('./controllers/socketController');
+
+
 // Import routes
 const authRoutes = require('./routes/authRoutes').default;
+const cameraRoutes = require('./routes/cameraRoutes').default;
 const classRoutes = require('./routes/classRoutes').default;
 const codeRoutes = require('./routes/codeRoutes').default;
 const courseRoutes = require('./routes/courseRoutes').default;
@@ -28,6 +33,8 @@ const videoRoutes = require('./routes/videoRoutes').default;
 dotenv.config();
 const PORT = process.env.PORT || 8443;
 const HTTP_PORT = process.env.HTTP_PORT || 5000;
+const LISTEN_IP = process.env.LISTEN_IP || '127.0.0.1';
+const ANNOUNCED_IP = process.env.ANNOUNCED_IP || null;
 
 // Create an Express app
 const app = express();
@@ -65,7 +72,7 @@ app.use(cors({
       callback(null, true);
     } else {
       console.warn(`Blocked origin: ${origin}`);
-      callback(null, false); // 👈 retourne "false" au lieu de lancer une erreur
+      callback(null, false); // retourne "false" au lieu de lancer une erreur
     }
   },
   credentials: true,
@@ -83,14 +90,15 @@ app.use('/videos', express.static(path.join(__dirname, 'public', 'videos'))); //
 
 // API routes
 app.use('/api/auth', authRoutes); // Authentication routes (login, register)
-app.use('/api/courses', courseRoutes); // Courses-related routes
+app.use('/api/cameras', cameraRoutes); // Cameras-related routes
 app.use('/api/classes', classRoutes); // Courses-related routes
-app.use('/api/users', userRoutes); // Courses-related routes
 app.use('/api/codes', codeRoutes); // Codes-related routes
+app.use('/api/courses', courseRoutes); // Courses-related routes
+app.use('/api/documents', documentRoutes); // Document-related routes
 app.use('/api/forum', forumRoutes); // Forums-related routes
 app.use('/api/lives', liveRoutes); // Courses-related routes
+app.use('/api/users', userRoutes); // Courses-related routes
 app.use('/api/videos', videoRoutes); // Video-related routes
-app.use('/api/documents', documentRoutes); // Document-related routes
 
 // Serve React frontend (if applicable)
 if (process.env.NODE_ENV === 'production') {
@@ -107,20 +115,37 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-const httpsServer = https.createServer(credentials, app);
-const httpServer = http.createServer((req, res) => {
-  req.headers["host"] = req.headers["host"].replace(/:\d+/, ":" + PORT);
-  res.writeHead(301, { "Location": "https://" + req.headers["host"] + req.url });
-  res.end();
-});
-
 // Start the HTTPS server
+const httpsServer = https.createServer(credentials, app);
+
+initWebSocket(httpsServer);
+
+const setupSocketHandlers = () => {
+  io.on('connection', (socket) => {
+    console.log('Nouvelle connexion WS sur /ws:', socket.id);
+
+    socket.on('create-consumer-transport', handleConsumerTransport(socket));
+    socket.on('disconnect', handleDisconnect(socket));
+  });
+};
+
+const cleanupResources = () => {
+  if (producer) producer.close();
+  if (transport) transport.close();
+  if (router) router.close();
+  if (worker) worker.close();
+};
+
 httpsServer.listen(PORT, () => {
   console.log(`HTTPS Server is running on port ${PORT}`);
 });
 
 // Start the HTTP server (redirects to HTTPS)
+const httpServer = http.createServer((req, res) => {
+  req.headers["host"] = req.headers["host"].replace(/:\d+/, ":" + PORT);
+  res.writeHead(301, { "Location": "https://" + req.headers["host"] + req.url });
+  res.end();
+});
 httpServer.listen(HTTP_PORT, () => {
   console.log(`HTTP Server is running on port ${HTTP_PORT} and redirecting to HTTPS`);
 });
-

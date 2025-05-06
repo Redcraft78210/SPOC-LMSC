@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import SecureVideoPlayer from '../../components/SecureVideoPlayer';
 import SecureDocumentViewer from '../../components/SecureDocumentViewer';
 
 const CourseReader = ({ authToken }) => {
+  const navigate = useNavigate();
   const [courseData, setCourseData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -107,7 +109,11 @@ const CourseReader = ({ authToken }) => {
       <div className="text-center p-8">
         <p className="text-red-600 mb-4">Cours non trouvé</p>
         <a
-          href="/courses-library"
+          href="#"
+          onClick={e => {
+            e.preventDefault();
+            navigate('/courses-library');
+          }}
           className="inline-block px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
         >
           Retour à la bibliothèque des cours

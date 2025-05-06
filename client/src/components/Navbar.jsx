@@ -9,6 +9,7 @@ import {
   Users,
   FileVideo2,
   MessagesSquare,
+  Tv,
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import PropTypes from 'prop-types';
@@ -39,6 +40,7 @@ const NavigationBar = ({ isAdmin = false, isProf = false }) => {
       path: '/forum',
       label: 'Forum',
     },
+    { icon: Tv, path: '/liveViewer', label: 'Live' },
     ...(isAdmin
       ? [
           {

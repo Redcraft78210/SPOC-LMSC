@@ -1,4 +1,16 @@
+import { useNavigate } from 'react-router-dom';
+
 const Footer = () => {
+  const navItems = [
+    { name: 'À propos', href: '/about' },
+    { name: 'Tous les cours', href: '/courses-library' },
+    { name: 'Contact', href: '/contact' },
+  ];
+
+  const footerPages = ['privacy', 'terms', 'cookies'];
+
+  const navigate = useNavigate();
+
   return (
     <footer className="bg-gray-800 text-white py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -12,53 +24,39 @@ const Footer = () => {
           <div>
             <h4 className="text-lg font-semibold mb-4">Navigation</h4>
             <ul className="space-y-2 text-gray-400">
-              <li>
-                <a href="/about" className="hover:text-white transition-colors">
-                  À propos
-                </a>
-              </li>
-              <li>
-                <a
-                  href="/courses"
-                  className="hover:text-white transition-colors"
-                >
-                  Tous les cours
-                </a>
-              </li>
-              <li>
-                <a
-                  href="/contact"
-                  className="hover:text-white transition-colors"
-                >
-                  Contact
-                </a>
-              </li>
+              {navItems.map(({ name, href }) => (
+                <li key={href}>
+                  <a
+                    href="#"
+                    onClick={e => {
+                      e.preventDefault();
+                      navigate(href);
+                    }}
+                    className="hover:text-white transition-colors"
+                  >
+                    {name}
+                  </a>
+                </li>
+              ))}
             </ul>
           </div>
           <div>
             <h4 className="text-lg font-semibold mb-4">Légal</h4>
             <ul className="space-y-2 text-gray-400">
-              <li>
-                <a
-                  href="/privacy"
-                  className="hover:text-white transition-colors"
-                >
-                  Confidentialité
-                </a>
-              </li>
-              <li>
-                <a href="/terms" className="hover:text-white transition-colors">
-                  CGU
-                </a>
-              </li>
-              <li>
-                <a
-                  href="/cookies"
-                  className="hover:text-white transition-colors"
-                >
-                  Cookies
-                </a>
-              </li>
+              {footerPages.map(page => (
+                <li key={page}>
+                  <a
+                    href="#"
+                    onClick={e => {
+                      e.preventDefault();
+                      navigate(`/${page}`);
+                    }}
+                    className="hover:text-white transition-colors"
+                  >
+                    {page.charAt(0).toUpperCase() + page.slice(1)}
+                  </a>
+                </li>
+              ))}
             </ul>
           </div>
           <div>

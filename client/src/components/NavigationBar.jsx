@@ -38,7 +38,7 @@ const NavigationBar = ({ page }) => {
       {isActive && (
         <ul className="navbar-nav">
           <li className="nav-item">
-            <a className="nav-link" href="/" onClick={handleNavigate('/')}>
+            <a className="nav-link" href="#" onClick={handleNavigate('/')}>
               <House />
             </a>
           </li>

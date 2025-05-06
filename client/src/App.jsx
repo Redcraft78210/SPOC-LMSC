@@ -31,6 +31,7 @@ const routeConfig = [
   { path: '/classes-management', content: 'ClassManagement' },
   { path: '/course-reader', content: 'CourseReader' },
   { path: '/courses-library', content: 'CoursesLibrary' },
+  { path: '/liveViewer', content: 'LiveViewer' },
   { path: '/dashboard', content: 'Home' },
   { path: '/forum', content: 'Forum' },
   { path: '/profile', content: 'Profile' },

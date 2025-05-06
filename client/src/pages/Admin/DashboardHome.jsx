@@ -1,12 +1,23 @@
-import { Users, Settings, ClipboardList, Bell, Activity, PlusCircle } from "lucide-react";
+import { useNavigate } from 'react-router-dom';
+import {
+  Users,
+  Settings,
+  ClipboardList,
+  Bell,
+  Activity,
+  PlusCircle,
+} from 'lucide-react';
 
 const DashboardHome = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <header className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800">Tableau de bord</h1>
         <p className="text-gray-600 mt-2">
-          Bienvenue sur votre tableau de bord. Gérez les utilisateurs, les classes, et bien plus encore.
+          Bienvenue sur votre tableau de bord. Gérez les utilisateurs, les
+          classes, et bien plus encore.
         </p>
       </header>
 
@@ -14,16 +25,20 @@ const DashboardHome = () => {
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mx-auto">
         <div className="bg-white rounded-lg shadow-md p-6 lg:ml-15 lg:mr-10 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-blue-600">Utilisateurs</h2>
+            <h2 className="text-xl font-semibold text-blue-600">
+              Utilisateurs
+            </h2>
             <Users className="h-8 w-8 text-blue-600" />
           </div>
-          <p className="text-gray-600 mt-2">Gérez les comptes des utilisateurs inscrits.</p>
-          <a
-            href="/users-management"
+          <p className="text-gray-600 mt-2">
+            Gérez les comptes des utilisateurs inscrits.
+          </p>
+          <button
+            onClick={() => navigate('/users-management')}
             className="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
           >
             Voir les utilisateurs
-          </a>
+          </button>
         </div>
 
         {/* Card 2: Gestion des classes */}
@@ -32,13 +47,15 @@ const DashboardHome = () => {
             <h2 className="text-xl font-semibold text-blue-600">Classes</h2>
             <ClipboardList className="h-8 w-8 text-blue-600" />
           </div>
-          <p className="text-gray-600 mt-2">Créez et gérez les classes disponibles.</p>
-          <a
-            href="/classes-management"
+          <p className="text-gray-600 mt-2">
+            Créez et gérez les classes disponibles.
+          </p>
+          <button
+            onClick={() => navigate('/classes-management')}
             className="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
           >
             Gérer les classes
-          </a>
+          </button>
         </div>
 
         {/* Card 3: Statistiques */}
@@ -48,12 +65,12 @@ const DashboardHome = () => {
             <ChartBar className="h-8 w-8 text-blue-600" />
           </div>
           <p className="text-gray-600 mt-2">Consultez les statistiques de la plateforme.</p>
-          <a
-            href="/statistics"
+          <button
+            onClick={() => navigate("/statistics")}
             className="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
           >
             Voir les statistiques
-          </a>
+          </button>
         </div> */}
 
         {/* Card 4: Paramètres */}
@@ -62,13 +79,15 @@ const DashboardHome = () => {
             <h2 className="text-xl font-semibold text-blue-600">Paramètres</h2>
             <Settings className="h-8 w-8 text-blue-600" />
           </div>
-          <p className="text-gray-600 mt-2">Configurez les paramètres de votre compte.</p>
-          <a
-            href="/settings"
+          <p className="text-gray-600 mt-2">
+            Configurez les paramètres de votre compte.
+          </p>
+          <button
+            onClick={() => navigate('/settings')}
             className="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
           >
             Modifier les paramètres
-          </a>
+          </button>
         </div>
       </section>
 
@@ -77,71 +96,89 @@ const DashboardHome = () => {
         {/* Notifications */}
         <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-green-600">Notifications</h2>
+            <h2 className="text-xl font-semibold text-green-600">
+              Notifications
+            </h2>
             <Bell className="h-8 w-8 text-green-600" />
           </div>
           <ul className="mt-4 space-y-2">
-            <li className="text-gray-600">Nouvel utilisateur inscrit : John Doe</li>
-            <li className="text-gray-600">Classe &quot;Mathématiques&quot; mise à jour</li>
-            <li className="text-gray-600">Problème signalé par un utilisateur</li>
+            <li className="text-gray-600">
+              Nouvel utilisateur inscrit : John Doe
+            </li>
+            <li className="text-gray-600">
+              Classe &quot;Mathématiques&quot; mise à jour
+            </li>
+            <li className="text-gray-600">
+              Problème signalé par un utilisateur
+            </li>
           </ul>
-          <a
-            href="/notifications"
+          <button
+            onClick={() => navigate('/notifications')}
             className="mt-4 inline-block px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
           >
             Voir toutes les notifications
-          </a>
+          </button>
         </div>
 
         {/* Recent Activity */}
         <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-purple-600">Activité récente</h2>
+            <h2 className="text-xl font-semibold text-purple-600">
+              Activité récente
+            </h2>
             <Activity className="h-8 w-8 text-purple-600" />
           </div>
           <ul className="mt-4 space-y-2">
-            <li className="text-gray-600">John Doe a rejoint la classe &quot;Physique&quot;</li>
-            <li className="text-gray-600">Nouvelle classe créée : &quot;Chimie&quot;</li>
+            <li className="text-gray-600">
+              John Doe a rejoint la classe &quot;Physique&quot;
+            </li>
+            <li className="text-gray-600">
+              Nouvelle classe créée : &quot;Chimie&quot;
+            </li>
             <li className="text-gray-600">Paramètres mis à jour par Admin</li>
           </ul>
-          <a
-            href="/activity-log"
+          <button
+            onClick={() => navigate('/activity-log')}
             className="mt-4 inline-block px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
           >
             Voir le journal
-          </a>
+          </button>
         </div>
 
         {/* Quick Actions */}
         <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-orange-600">Actions rapides</h2>
+            <h2 className="text-xl font-semibold text-orange-600">
+              Actions rapides
+            </h2>
             <PlusCircle className="h-8 w-8 text-orange-600" />
           </div>
           <ul className="mt-4 space-y-2">
             <li>
-              <a
-                href="/users-management?create-user=true"
+              <button
+                onClick={() => navigate('/users-management?create-user=true')}
                 className="text-orange-600 hover:underline"
               >
                 Ajouter un utilisateur
-              </a>
+              </button>
             </li>
             <li>
-              <a
-                href="/users-management?invite-code=true"
+              <button
+                onClick={() => navigate('/users-management?invite-code=true')}
                 className="text-orange-600 hover:underline"
               >
                 Créer un code d&apos;invitation
-              </a>
+              </button>
             </li>
             <li>
-              <a
-                href="/classes-management?create-class=true"
+              <button
+                onClick={() =>
+                  navigate('/classes-management?create-class=true')
+                }
                 className="text-orange-600 hover:underline"
               >
                 Créer une classe
-              </a>
+              </button>
             </li>
           </ul>
         </div>
