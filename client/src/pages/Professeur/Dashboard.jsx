@@ -10,9 +10,13 @@ import NavigationBar from '../../components/Navbar';
 
 import ProfDashboardHome from './DashboardHome';
 // import CourseReader from "..//CourseReader";
+import CourseReader from '../../components/ProfComp/CourseReader';
 import CoursesLibrary from './CoursesLibrary';
 import PictureModal from '../../components/PictureModal';
-// import VideoManager from '../../components/ProfComp/VideoMng';
+import VideoManager from '../../components/ProfComp/VideoMng';
+import DocumentManager from '../../components/ProfComp/DocumentMng';
+import CoursesManagement from '../../components/ProfComp/CoursesManagment';
+
 import ThemeSettings from '../Public/Theme';
 import Settings from '../Settings';
 import NotFound from '../Public/NotFound';
@@ -53,10 +57,13 @@ const DashboardProf = ({ content, token }) => {
   };
 
   const contentMap = {
-    Home: <ProfDashboardHome />,
+    Home: <ProfDashboardHome token={token} />,
     CoursesLibrary: <CoursesLibrary authToken={token} />,
     // CourseReader: <CourseReader authToken={token} />,
-    // VideoManager: <VideoManager authToken={token} />,
+    CoursesManagment: <CoursesManagement token={token} />,
+    VideoManager: <VideoManager authToken={token} />,
+    DocumentManager: <DocumentManager authToken={token} />,
+    CourseReader: <CourseReader token={token} />, // Ajout de CourseReader
     ThemeSettings: <ThemeSettings />,
     Settings: <Settings authToken={token} />,
   };

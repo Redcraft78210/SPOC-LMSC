@@ -35,10 +35,19 @@ const routeConfig = [
   { path: '/dashboard', content: 'Home' },
   { path: '/forum', content: 'Forum' },
   { path: '/profile', content: 'Profile' },
+  { path: '/courses-library', content: 'CoursesLibrary' },
+  { path: '/video-manager', content: 'VideoManager' },
+  { path: '/document-manager', content: 'DocumentManager' },
+  { path: '/courses-managment', content:'CoursesManagment'},
+  { path: '/course-reader', content: 'CourseReader' },
+  { path: '/users-management', content: 'UserManagement' },
+  { path: '/classes-management', content: 'ClassManagement' },
+  { path: '/theme-settings', content: 'ThemeSettings' },
   { path: '/settings', content: 'Settings' },
   { path: '/theme-settings', content: 'ThemeSettings' },
   { path: '/users-management', content: 'UserManagement' },
   { path: '/video-manager', content: 'VideoManager' },
+  { path: '/course-reader', content: 'CourseReader' }, 
 ];
 
 const publicRouteConfig = [

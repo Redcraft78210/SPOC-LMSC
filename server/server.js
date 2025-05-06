@@ -1,16 +1,16 @@
 // server.js
 
 // Required modules
-const express = require('express');
-const cors = require('cors');
-const morgan = require('morgan');
-const dotenv = require('dotenv');
-const path = require('path');
-const http = require('http');
-const https = require('https');
-const fs = require('fs');
-const privateKey = fs.readFileSync('certs/selfsigned.key', 'utf8');
-const certificate = fs.readFileSync('certs/selfsigned.crt', 'utf8');
+const express = require("express");
+const cors = require("cors");
+const morgan = require("morgan");
+const dotenv = require("dotenv");
+const path = require("path");
+const http = require("http");
+const https = require("https");
+const fs = require("fs");
+const privateKey = fs.readFileSync("certs/selfsigned.key", "utf8");
+const certificate = fs.readFileSync("certs/selfsigned.crt", "utf8");
 const credentials = { key: privateKey, cert: certificate };
 
 // Import WebSockets controller
@@ -38,7 +38,7 @@ const ANNOUNCED_IP = process.env.ANNOUNCED_IP || null;
 
 // Create an Express app
 const app = express();
-app.enable('trust proxy');
+app.enable("trust proxy");
 
 // proxied api routes
 const { displayStream } = require('./middlewares/streamMiddleware');
@@ -49,11 +49,11 @@ app.use((request, response, next) => {
     next();
   } else {
     var secure_host = request.headers.host.replace(/:\d+/, ":" + PORT);
-    response.redirect('https://' + secure_host + request.url);
+    response.redirect("https://" + secure_host + request.url);
   }
 });
 
-const allowedOrigins = ['https://localhost:5173', 'https://localhost:8443'];
+const allowedOrigins = ["https://localhost:5173", "https://localhost:8443"];
 
 // Middleware
 app.use(cors({
@@ -81,12 +81,12 @@ app.use(cors({
   maxAge: 1728000
 }));
 
-app.use(morgan('dev')); // Log HTTP requests in the console
+app.use(morgan("dev")); // Log HTTP requests in the console
 app.use(express.json()); // Parse incoming JSON requests
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded data
 
 // Serve public static files
-app.use('/videos', express.static(path.join(__dirname, 'public', 'videos'))); // retirer dès que possible
+app.use("/videos", express.static(path.join(__dirname, "public", "videos"))); // retirer dès que possible
 
 // API routes
 app.use('/api/auth', authRoutes); // Authentication routes (login, register)
@@ -101,51 +101,36 @@ app.use('/api/users', userRoutes); // Courses-related routes
 app.use('/api/videos', videoRoutes); // Video-related routes
 
 // Serve React frontend (if applicable)
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../client/dist')));
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static(path.join(__dirname, "../client/dist")));
 
   // Serve all frontend routes as the index.html page for React Router to handle
-  app.all('*path', (req, res) => {
-    res.sendFile(path.resolve(__dirname, '../client/dist', 'index.html'));
+  app.get("*", (req, res) => {
+    res.sendFile(path.resolve(__dirname, "../client/dist", "index.html"));
   });
 } else {
   // In development mode, fallback to React's development server
-  app.all('*path', (req, res) => {
-    res.send('API is running');
+  app.get("*", (req, res) => {
+    res.send("API is running");
   });
 }
 
 // Start the HTTPS server
 const httpsServer = https.createServer(credentials, app);
-
-initWebSocket(httpsServer);
-
-const setupSocketHandlers = () => {
-  io.on('connection', (socket) => {
-    console.log('Nouvelle connexion WS sur /ws:', socket.id);
-
-    socket.on('create-consumer-transport', handleConsumerTransport(socket));
-    socket.on('disconnect', handleDisconnect(socket));
-  });
-};
-
-const cleanupResources = () => {
-  if (producer) producer.close();
-  if (transport) transport.close();
-  if (router) router.close();
-  if (worker) worker.close();
-};
-
-httpsServer.listen(PORT, () => {
-  console.log(`HTTPS Server is running on port ${PORT}`);
-});
-
-// Start the HTTP server (redirects to HTTPS)
 const httpServer = http.createServer((req, res) => {
   req.headers["host"] = req.headers["host"].replace(/:\d+/, ":" + PORT);
   res.writeHead(301, { "Location": "https://" + req.headers["host"] + req.url });
   res.end();
 });
+
+// Start the HTTPS server
+httpsServer.listen(PORT, () => {
+  console.log(`HTTPS Server is running on port ${PORT}`);
+});
+
+// Start the HTTP server (redirects to HTTPS)
 httpServer.listen(HTTP_PORT, () => {
-  console.log(`HTTP Server is running on port ${HTTP_PORT} and redirecting to HTTPS`);
+  console.log(
+    `HTTP Server is running on port ${HTTP_PORT} and redirecting to HTTPS`
+  );
 });
