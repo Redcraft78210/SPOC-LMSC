@@ -46,6 +46,7 @@ const routeConfig = [
   { path: '/theme-settings', content: 'ThemeSettings' },
   { path: '/users-management', content: 'UserManagement' },
   { path: '/video-manager', content: 'VideoManager' },
+  { path: '/course-reader', content: 'CourseReader' }, 
 ];
 
 const publicRouteConfig = [
