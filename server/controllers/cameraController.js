@@ -1,78 +1,165 @@
-const ffmpeg = require('fluent-ffmpeg');
-const axios = require('axios');
+const express = require('express');
+const app = express();
+const path = require('path');
+const cors = require('cors');
+const net = require('net');
+const fs = require('fs');
+const { v4: uuidv4 } = require('uuid');
 
-const CAMERA_IP = '192.168.0.12';
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.static(path.join(__dirname, '../client/build')));
 
-const record = async (req, res) => {
+// TCP server and recording state
+let isRecording = false;
+let currentRecordingFile = null;
+let writeStream = null;
+const recordingsDir = path.join(__dirname, '../recordings');
 
-    const { videoId } = req.query;
+// Ensure recordings directory exists
+if (!fs.existsSync(recordingsDir)) {
+  fs.mkdirSync(recordingsDir, { recursive: true });
+}
 
-    const launchRecord = (videoId) => {
-        console.log('Starting stream recording...');
+// Create TCP server to listen for FFmpeg stream
+const tcpServer = net.createServer((socket) => {
+  console.log('FFmpeg connected to TCP server');
+  
+  socket.on('data', (chunk) => {
+    // If recording is active, write the data to file
+    if (isRecording && writeStream) {
+      writeStream.write(chunk);
+    }
+  });
+  
+  socket.on('end', () => {
+    console.log('FFmpeg disconnected from TCP server');
+  });
+  
+  socket.on('error', (err) => {
+    console.error('Socket error:', err);
+  });
+});
 
-        const videoDirectory = 'videos/';
-        const videoPath = path.resolve(videoDirectory, `${videoId}.mp4`);
+// Listen on TCP port 9000 - this is where FFmpeg will send the stream
+tcpServer.listen(9000, () => {
+  console.log('TCP server listening on port 9000');
+});
 
-        const proc = ffmpeg()
-            .input(`udp://${CAMERA_IP}:1234`)
-            .outputOptions(['-movflags', 'faststart'])
-            .output(videoPath)
-            .on('end', () => {
-                console.log('Stream recording stopped');
-            })
-            .on('error', (err) => {
-                console.error('Stream recording error:', err);
-            })
-            .run();
+// Route to start recording
+app.post('/camera/record', (req, res) => {
+  if (isRecording) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Already recording' 
+    });
+  }
+  
+  // Generate unique filename with timestamp
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const filename = `recording-${timestamp}.ts`;
+  currentRecordingFile = path.join(recordingsDir, filename);
+  
+  // Create write stream to save the data
+  writeStream = fs.createWriteStream(currentRecordingFile);
+  
+  writeStream.on('error', (err) => {
+    console.error('File write error:', err);
+    isRecording = false;
+    if (writeStream) {
+      writeStream.end();
+      writeStream = null;
+    }
+  });
+  
+  isRecording = true;
+  
+  res.json({
+    success: true,
+    message: 'Recording started',
+    filename: filename
+  });
+});
 
-        return proc.pid;
-    };
+// Route to stop recording
+app.post('/camera/stop-record', (req, res) => {
+  if (!isRecording) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Not currently recording' 
+    });
+  }
+  
+  // Close the write stream
+  if (writeStream) {
+    writeStream.end();
+    writeStream = null;
+  }
+  
+  isRecording = false;
+  
+  res.json({
+    success: true,
+    message: 'Recording stopped',
+    filename: path.basename(currentRecordingFile)
+  });
+});
 
-    const stopRecord = async (videoId) => {
-        const videoDirectory = 'videos/';
-        const videoPath = path.resolve(videoDirectory, `${videoId}.mp4`);
+// Get recording status
+app.get('/camera/record-status', (req, res) => {
+  res.json({
+    recording: isRecording,
+    currentFile: isRecording ? path.basename(currentRecordingFile) : null
+  });
+});
 
-        const pid = videoId.split('-')[1];
-
-        await new Promise((resolve, reject) => {
-            const checkProcess = setInterval(() => {
-                try {
-                    process.kill(pid, 0);
-                } catch (e) {
-                    clearInterval(checkProcess);
-                    resolve();
-                }
-            }, 100);
-        });
-
-        return { success: true };
-    };
-
-    try {
-
-        if (videoId) {
-            const { success } = await stopRecord(videoId);
-
-            if (!success) {
-                return res.status(500).send('Internal Server Error');
-            }
-
-            return res.status(200).send('Record stopped');
-        }
-
-        const videoTempID = Math.random().toString(36).substring(2, 10) + (new Date()).getTime().toString(36);
-        const pid = launchRecord(videoTempID);
-
-        return res.status(200).json({
-            videoTempID: videoTempID + '-' + pid,
-        });
-    } catch (error) {
-        console.error('Error fetching data:', error);
-        res.status(500).send('Internal Server Error');
+// List all recordings
+app.get('/camera/recordings', (req, res) => {
+  fs.readdir(recordingsDir, (err, files) => {
+    if (err) {
+      return res.status(500).json({ success: false, error: err.message });
     }
 
-};
+    // Get file details
+    const recordings = files
+      .filter(file => file.endsWith('.ts'))
+      .map(file => {
+        const filePath = path.join(recordingsDir, file);
+        const stats = fs.statSync(filePath);
+        return {
+          filename: file,
+          size: stats.size,
+          created: stats.birthtime
+        };
+      })
+      .sort((a, b) => b.created - a.created); // Sort newest first
 
-module.exports = {
-    record,
-};
+    res.json({ success: true, recordings });
+  });
+});
+
+// Download a recording
+app.get('/camera/recordings/:filename', (req, res) => {
+  const filename = req.params.filename;
+  const filePath = path.join(recordingsDir, filename);
+
+  // Security check to prevent directory traversal
+  if (!filename.match(/^[a-zA-Z0-9_-]+\.ts$/)) {
+    return res.status(400).json({ success: false, message: 'Invalid filename' });
+  }
+
+  // Check if file exists
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ success: false, message: 'File not found' });
+  }
+
+  // Send the file
+  res.download(filePath);
+});
+
+// Start the server
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
