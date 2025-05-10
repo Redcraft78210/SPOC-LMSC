@@ -13,13 +13,9 @@ const privateKey = fs.readFileSync("certs/selfsigned.key", "utf8");
 const certificate = fs.readFileSync("certs/selfsigned.crt", "utf8");
 const credentials = { key: privateKey, cert: certificate };
 
-// Import WebSockets controller
-const { initWebSocket } = require('./controllers/socketController');
-
 
 // Import routes
 const authRoutes = require('./routes/authRoutes').default;
-const cameraRoutes = require('./routes/cameraRoutes').default;
 const classRoutes = require('./routes/classRoutes').default;
 const codeRoutes = require('./routes/codeRoutes').default;
 const courseRoutes = require('./routes/courseRoutes').default;
@@ -28,21 +24,16 @@ const forumRoutes = require('./routes/forumRoutes').default;
 const liveRoutes = require('./routes/liveRoutes').default;
 const userRoutes = require('./routes/userRoutes').default;
 const videoRoutes = require('./routes/videoRoutes').default;
+const recordingRoutes = require('./routes/recordingRoutes').default;
 
 // Initialize environment variables
 dotenv.config();
 const PORT = process.env.PORT || 8443;
 const HTTP_PORT = process.env.HTTP_PORT || 5000;
-const LISTEN_IP = process.env.LISTEN_IP || '127.0.0.1';
-const ANNOUNCED_IP = process.env.ANNOUNCED_IP || null;
 
 // Create an Express app
 const app = express();
 app.enable("trust proxy");
-
-// proxied api routes
-const { displayStream } = require('./middlewares/streamMiddleware');
-displayStream(app);
 
 app.use((request, response, next) => {
   if (request.secure) {
@@ -90,7 +81,6 @@ app.use("/videos", express.static(path.join(__dirname, "public", "videos"))); //
 
 // API routes
 app.use('/api/auth', authRoutes); // Authentication routes (login, register)
-app.use('/api/cameras', cameraRoutes); // Cameras-related routes
 app.use('/api/classes', classRoutes); // Courses-related routes
 app.use('/api/codes', codeRoutes); // Codes-related routes
 app.use('/api/courses', courseRoutes); // Courses-related routes
@@ -99,6 +89,7 @@ app.use('/api/forum', forumRoutes); // Forums-related routes
 app.use('/api/lives', liveRoutes); // Courses-related routes
 app.use('/api/users', userRoutes); // Courses-related routes
 app.use('/api/videos', videoRoutes); // Video-related routes
+app.use('/api/recordings', recordingRoutes); // Recording-related routes
 
 // Serve React frontend (if applicable)
 if (process.env.NODE_ENV === "production") {
@@ -117,6 +108,10 @@ if (process.env.NODE_ENV === "production") {
 
 // Start the HTTPS server
 const httpsServer = https.createServer(credentials, app);
+
+const { setupStreaming } = require('./controllers/socketController');
+setupStreaming(httpsServer);
+
 const httpServer = http.createServer((req, res) => {
   req.headers["host"] = req.headers["host"].replace(/:\d+/, ":" + PORT);
   res.writeHead(301, { "Location": "https://" + req.headers["host"] + req.url });
