@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { startRecording, stopRecording, getRecordingStatus } = require('../controllers/recordingController');
-const authMiddleware = require('../middleware/authMiddleware');
+const authMiddleware = require('../middlewares/authMiddleware.js');
 
 // Recording routes
 router.post('/record', authMiddleware, startRecording);

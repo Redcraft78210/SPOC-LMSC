@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { uploadAvatar, getAvatar, getMyAvatar, deleteAvatar, deleteUserAvatar } = require('../controllers/avatarController');
-const authMiddleware = require('../middlewares/authMiddleware');
+const authMiddleware = require('../middlewares/authMiddleware.js');
 const multer = require('multer');
 
 // Configuration de Multer pour stocker les fichiers en mémoire
