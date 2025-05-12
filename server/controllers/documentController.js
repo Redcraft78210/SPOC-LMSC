@@ -39,6 +39,12 @@ const generateETag = (fileData) => {
     return hash.digest('hex');
 };
 
+// Ajouter une fonction pour générer le chemin de fichier basé sur l'ID
+const generateDocumentPath = (id, fingerprint) => {
+    // Le chemin est fixe, le nom du fichier est basé sur l'ID
+    return path.resolve(documentsDirectory, `${id}-${fingerprint}.pdf`);
+};
+
 /**
  * Stream a document file by its ID.
  * @param {Object} req - Express request object.
@@ -52,7 +58,13 @@ const getDocument = async (req, res) => {
             return res.status(400).json({ message: 'Invalid document ID' });
         }
 
-        const documentPath = path.resolve(documentsDirectory, `${id}/${id}.pdf`);
+        // check if document exists in database
+        const document = await Document.findByPk(id);
+        if (!document) {
+            return res.status(404).json({ message: 'Document not found' });
+        }
+
+        const documentPath = generateDocumentPath(id, document.fingerprint);
 
         console.log(`documentPath: ${documentPath}`);
 

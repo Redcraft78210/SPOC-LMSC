@@ -7,10 +7,6 @@ const Document = sequelize.define('Document', {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true
     },
-    path: {
-        type: DataTypes.STRING,
-        allowNull: false
-    },
     course_id: {
         type: DataTypes.UUID,
         allowNull: true,
@@ -18,6 +14,10 @@ const Document = sequelize.define('Document', {
             model: 'Course',
             key: 'id'
         }
+    },
+    fingerprint: {
+        type: DataTypes.STRING,
+        allowNull: false
     },
     commit_msg: {
         type: DataTypes.STRING,
@@ -27,6 +27,9 @@ const Document = sequelize.define('Document', {
         type: DataTypes.BOOLEAN,
         defaultValue: false
     }
+}, {
+    tableName: 'documents',
+    timestamps: true
 });
 
 module.exports = Document;

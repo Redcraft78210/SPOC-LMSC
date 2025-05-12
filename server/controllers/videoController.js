@@ -33,6 +33,13 @@ const parseRange = (rangeHeader, fileSize) => {
     return { start, end };
 };
 
+// Ajouter une fonction pour générer le chemin de fichier basé sur l'ID
+const generateVideoPath = (id, fingerprint) => {
+    // Le chemin est fixe, le nom du fichier est basé sur l'ID
+    return path.resolve(videosDirectory, `${id}-${fingerprint}.mp4`);
+};
+
+// Mettre à jour la fonction getVideo pour utiliser la nouvelle fonction
 const getVideo = async (req, res) => {
     try {
         setCORSHeaders(res);
@@ -46,7 +53,13 @@ const getVideo = async (req, res) => {
             return res.status(400).json({ message: 'ID invalide' });
         }
 
-        const videoPath = path.resolve(videosDirectory, `${id}/${id}.mp4`);
+        // Check if video exists in database
+        const video = await Video.findOne({ where: { id } });
+        if (!video) {
+            return res.status(404).json({ message: 'Vidéo non trouvée' });
+        }
+
+        const videoPath = generateVideoPath(id, video.fingerprint);
         if (!isInsideDirectory(videoPath, videosDirectory)) {
             return res.status(400).json({ message: 'Chemin invalide' });
         }

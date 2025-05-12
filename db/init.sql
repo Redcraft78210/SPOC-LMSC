@@ -92,7 +92,11 @@ CREATE TABLE IF NOT EXISTS lives (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title VARCHAR(255) NOT NULL,
     description TEXT,
-    link VARCHAR(255) NOT NULL,
+    subject VARCHAR(255) NOT NULL,
+    chapter VARCHAR(255),
+    start_time TIMESTAMP NOT NULL,
+    end_time TIMESTAMP NOT NULL,
+    status VARCHAR(255) NOT NULL CHECK (status IN ('scheduled', 'ongoing', 'completed', 'cancelled')),
     "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     teacher_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE
@@ -332,8 +336,8 @@ UPDATE ON courses FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 -- Create documents table
 CREATE TABLE IF NOT EXISTS documents (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    path VARCHAR(255) NOT NULL,
     course_id UUID REFERENCES courses(id) ON DELETE CASCADE,
+    fingerprint VARCHAR(255) NOT NULL,
     commit_msg VARCHAR(255) NOT NULL,
     is_main BOOLEAN DEFAULT FALSE,
     "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -343,8 +347,8 @@ CREATE TABLE IF NOT EXISTS documents (
 -- Create videos table
 CREATE TABLE IF NOT EXISTS videos (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    path VARCHAR(255) NOT NULL,
     course_id UUID REFERENCES courses(id) ON DELETE CASCADE,
+    fingerprint VARCHAR(255) NOT NULL,
     commit_msg VARCHAR(255) NOT NULL,
     is_main BOOLEAN DEFAULT FALSE,
     "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -541,13 +545,17 @@ VALUES
 
 -- Insert initial lives data
 INSERT INTO
-    lives (id, title, description, link, teacher_id)
+    lives (id, title, description, subject, chapter, start_time, end_time, status, teacher_id)
 VALUES
     (
         'a6fa5fc1-1234-4321-0000-000000000015',
         'Understanding JavaScript Closures',
         'An in-depth session on JavaScript closures and their applications.',
-        '/api/lives/a6fa5fc1-1234-4321-0000-000000000015',
+        'Programmation',
+        'JS',
+        '2024-05-01 10:00:00',
+        '2024-05-01 11:00:00',
+        'scheduled',
         'a6fa5fc1-1234-4321-0000-000000000005'
     );
 
@@ -583,3 +591,17 @@ values
 ('a6fa5fc1-1234-4321-0000-000000000012', 'Advanced Quantum Physics', 'An advanced course covering complex topics in quantum physics.', TRUE, 'a6fa5fc1-1234-4321-0000-000000000005', 'Bob Smith', 'Physics', 'Advanced Topics'),
 ('a6fa5fc1-1234-4321-0000-000000000013', 'Quantum Computing Basics', 'An introduction to the principles of quantum computing.', TRUE, 'a6fa5fc1-1234-4321-0000-000000000005', 'Bob Smith', 'Computer Science', 'Quantum Computing'),
 ('a6fa5fc1-1234-4321-0000-000000000014', 'Quantum Entanglement Explained', 'A detailed look at the phenomenon of quantum entanglement.', TRUE, 'a6fa5fc1-1234-4321-0000-000000000005', 'Bob Smith', 'Physics', 'Quantum Phenomena');
+
+insert into documents (id, course_id, fingerprint, commit_msg, is_main)
+values
+('7f4b5385-04fa-cde3-c881-b73844f52f26', '7f4b5385-04fa-cde3-c881-b73844f52f25', 'f1e2d3c4', 'Initial commit for the course document.', TRUE),
+('a6fa5fc1-1234-4321-0000-000000000016', 'a6fa5fc1-1234-4321-0000-000000000012', '2e3d4c5b', 'Initial commit for the advanced course document.', TRUE),
+('a6fa5fc1-1234-4321-0000-000000000017', 'a6fa5fc1-1234-4321-0000-000000000013', '3e4d5c6b', 'Initial commit for the quantum computing document.', TRUE),
+('a6fa5fc1-1234-4321-0000-000000000018', 'a6fa5fc1-1234-4321-0000-000000000014', '4e5d6c7b', 'Initial commit for the entanglement document.', TRUE);
+
+insert into videos (id, course_id, fingerprint, commit_msg, is_main)
+values
+('7f4b5385-04fa-cde3-c881-b73844f52f27', '7f4b5385-04fa-cde3-c881-b73844f52f25', '5f6e7d8c', 'Initial commit for the course video.', TRUE),
+('a6fa5fc1-1234-4321-0000-000000000019', 'a6fa5fc1-1234-4321-0000-000000000012', '6f7e8d9c', 'Initial commit for the advanced course video.', TRUE),
+('a6fa5fc1-1234-4321-0000-000000000020', 'a6fa5fc1-1234-4321-0000-000000000013', '7f8e9d0c', 'Initial commit for the quantum computing video.', TRUE),
+('a6fa5fc1-1234-4321-0000-000000000021', 'a6fa5fc1-1234-4321-0000-000000000014', '8f9e0d1c', 'Initial commit for the entanglement video.', TRUE);

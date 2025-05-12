@@ -21,9 +21,49 @@ const getLive = async (req, res) => {
 
 const getAllLives = async (req, res) => {
     try {
-        const lives = await Lives.findAll();
-        res.json(lives);
+        const lives = await Lives.findAll({
+            include: [
+                { model: Teacher, attributes: ['username'] }
+            ]
+        });
+
+        // Transformation des données en structure imbriquée
+        const structuredData = {};
+
+        lives.forEach(live => {
+            const professor = live.Teacher ? live.Teacher.username : 'Unknown Professor';
+            const subject = live.subject || 'Unknown Subject';
+            const topic = live.chapter || 'Unknown Topic';
+
+            if (!structuredData[professor]) {
+                structuredData[professor] = {};
+            }
+
+            if (!structuredData[professor][subject]) {
+                structuredData[professor][subject] = {};
+            }
+
+            if (!structuredData[professor][subject][topic]) {
+                structuredData[professor][subject][topic] = {};
+            }
+
+            structuredData[professor][subject][topic] = {
+                titre: live.title,
+                description: live.description,
+                date_creation: live.createdAt,
+                id: live.id,
+                type: 'live',
+                live: {
+                    date_debut: live.start_time,
+                    date_fin: live.end_time,
+                    statut: live.status
+                }
+            };
+        });
+
+        res.status(200).json(structuredData);
     } catch (error) {
+        console.error('Error retrieving all live data:', error);
         res.status(500).json({ message: 'Error retrieving all live data', error });
     }
 };

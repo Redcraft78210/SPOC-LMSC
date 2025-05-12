@@ -7,10 +7,6 @@ const Video = sequelize.define('Video', {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true
     },
-    path: {
-        type: DataTypes.STRING,
-        allowNull: false
-    },
     course_id: {
         type: DataTypes.UUID,
         allowNull: true,
@@ -18,6 +14,10 @@ const Video = sequelize.define('Video', {
             model: 'Course',
             key: 'id'
         }
+    },
+    fingerprint: {
+        type: DataTypes.STRING,
+        allowNull: false
     },
     commit_msg: {
         type: DataTypes.STRING,
@@ -27,6 +27,9 @@ const Video = sequelize.define('Video', {
         type: DataTypes.BOOLEAN,
         defaultValue: false
     }
+}, {
+    tableName: 'videos',
+    timestamps: true
 });
 
 module.exports = Video;
