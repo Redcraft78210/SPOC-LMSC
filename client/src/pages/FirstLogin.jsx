@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import PropTypes from 'prop-types';
@@ -16,6 +16,7 @@ const errorMessages = {
   'auth/invalid-2fa-code': 'Code de double authentification incorrect',
   'auth/weak-password':
     'Le mot de passe doit contenir au moins 12 caractères, une majuscule et un caractère spécial',
+  'auth/invalid-token': 'Session expirée',
   default: 'Une erreur est survenue. Veuillez réessayer.',
 };
 
@@ -27,6 +28,7 @@ const FirstLogin = ({ token, setAuth }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [is2FAAlreadySetup, setIs2FAAlreadySetup] = useState(false);
 
   const storedis2FASetup = localStorage.getItem('is2FASetup');
   const storedTempToken = localStorage.getItem('tempToken');
@@ -48,7 +50,8 @@ const FirstLogin = ({ token, setAuth }) => {
     storedManualSecret ? storedManualSecret : ''
   );
 
-  const [twoFACode, setTwoFACode] = useState('');
+  const [twoFADigits, setTwoFADigits] = useState(['', '', '', '', '', '']);
+  const digitsRefs = useRef([]);
   const [is2FARefreshing, setIs2FARefreshing] = useState(false);
   const navigate = useNavigate();
 
@@ -70,12 +73,14 @@ const FirstLogin = ({ token, setAuth }) => {
         setError(null);
       } catch (error) {
         setError(error.response?.data?.message || errorMessages.default);
-        setIs2FASetup(false);
-        setTempToken(null);
-        localStorage.removeItem('is2FASetup'); // Remove 2FA setup state
-        localStorage.removeItem('tempToken'); // Remove temp token
-        localStorage.removeItem('QrCodeData'); // Remove QR code data
-        localStorage.removeItem('manualSecret'); // Remove manual secret
+        if (error.data.message === 'auth/invalid-token') {
+          setIs2FASetup(false);
+          setTempToken(null);
+          localStorage.removeItem('is2FASetup'); // Remove 2FA setup state
+          localStorage.removeItem('tempToken'); // Remove temp token
+          localStorage.removeItem('QrCodeData'); // Remove QR code data
+          localStorage.removeItem('manualSecret'); // Remove manual secret
+        }
       } finally {
         setIs2FARefreshing(false);
       }
@@ -112,6 +117,24 @@ const FirstLogin = ({ token, setAuth }) => {
     };
   }, [setTempToken, manualSecret, qrCodeData, tempToken]);
 
+  useEffect(() => {
+    // Check if 2FA is already configured for the user
+    const check2FAStatus = async () => {
+      try {
+        const { data } = await axios.get(`${API_URL}/users/2fa`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        setIs2FAAlreadySetup(data.is2FAEnabled);
+      } catch (error) {
+        console.error('Error checking 2FA status:', error);
+      }
+    };
+
+    check2FAStatus();
+  }, [token]);
+
   const handleSubmit = async e => {
     e.preventDefault();
     setError(null);
@@ -141,6 +164,13 @@ const FirstLogin = ({ token, setAuth }) => {
         }
       );
 
+      // If 2FA is already setup, skip the 2FA setup process
+      if (is2FAAlreadySetup) {
+        setAuth(data.token);
+        navigate('/dashboard');
+        return;
+      }
+
       localStorage.setItem('token', data.tempToken);
       localStorage.setItem('QrCodeData', data.twoFASetup.qrCode);
       localStorage.setItem('manualSecret', data.twoFASetup.manualSecret);
@@ -157,9 +187,96 @@ const FirstLogin = ({ token, setAuth }) => {
         navigate('/logout');
         localStorage.removeItem('token'); // Remove token on logout
       }
+      if (errorCode === 'auth/invalid-token') {
+        setTempToken(null);
+        localStorage.removeItem('is2FASetup'); // Remove 2FA setup state
+        localStorage.removeItem('tempToken'); // Remove temp token
+        localStorage.removeItem('QrCodeData'); // Remove QR code data
+        localStorage.removeItem('manualSecret'); // Remove manual secret
+        navigate('/sign');
+      }
       setError(errorMessages[errorCode] || errorMessages.default);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const allDigitsFilled = () => twoFADigits.every(digit => digit !== '');
+
+  const handleDigitChange = (index, value) => {
+    // Vérifier que la valeur est un chiffre unique ou vide
+    if (!/^[0-9]?$/.test(value)) return;
+
+    const newDigits = [...twoFADigits];
+    newDigits[index] = value;
+    setTwoFADigits(newDigits);
+
+    // Si une valeur est entrée (pas vide), passer au champ suivant
+    if (value && index < 5) {
+      digitsRefs.current[index + 1].focus();
+    }
+  };
+
+  const handleDigitKeyDown = (index, e) => {
+    // Pour les touches de navigation
+    if (e.key === 'Backspace') {
+      // Si le champ actuel a une valeur, simplement l'effacer
+      if (twoFADigits[index] !== '') {
+        const newDigits = [...twoFADigits];
+        newDigits[index] = '';
+        setTwoFADigits(newDigits);
+        // Garder le focus sur le champ actuel
+      }
+      // Si le champ actuel est vide et qu'on n'est pas sur le premier champ, aller au champ précédent
+      else if (index > 0) {
+        const newDigits = [...twoFADigits];
+        newDigits[index - 1] = ''; // Effacer le champ précédent
+        setTwoFADigits(newDigits);
+        digitsRefs.current[index - 1].focus();
+      }
+    } else if (e.key === 'ArrowLeft' && index > 0) {
+      // Déplacer le focus au champ précédent
+      digitsRefs.current[index - 1].focus();
+    } else if (e.key === 'ArrowRight' && index < 5) {
+      // Déplacer le focus au champ suivant
+      digitsRefs.current[index + 1].focus();
+    } else if (/^[0-9]$/.test(e.key)) {
+      // Si on tape un nouveau chiffre sur un champ déjà rempli, remplacer la valeur et passer au suivant
+      const newDigits = [...twoFADigits];
+      newDigits[index] = e.key;
+      setTwoFADigits(newDigits);
+
+      // Passer au champ suivant si possible
+      if (index < 5) {
+        e.preventDefault(); // Empêcher la saisie par défaut
+        digitsRefs.current[index + 1].focus();
+      }
+    }
+  };
+
+  const handleDigitPaste = (index, e) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text').trim();
+
+    const digits = pastedData.replace(/\D/g, '').slice(0, 6).split('');
+
+    if (digits.length > 0) {
+      const newDigits = [...twoFADigits];
+
+      digits.forEach((digit, i) => {
+        if (index + i < 6) {
+          newDigits[index + i] = digit;
+        }
+      });
+
+      setTwoFADigits(newDigits);
+
+      const nextEmptyIndex = newDigits.findIndex(digit => digit === '');
+      if (nextEmptyIndex !== -1 && nextEmptyIndex < 6) {
+        digitsRefs.current[nextEmptyIndex].focus();
+      } else if (digits.length > 0) {
+        digitsRefs.current[Math.min(index + digits.length, 5)].focus();
+      }
     }
   };
 
@@ -167,14 +284,16 @@ const FirstLogin = ({ token, setAuth }) => {
     e.preventDefault();
     setError(null);
 
-    if (!twoFACode.trim()) {
-      return setError(errorMessages['auth/missing-fields']);
+    const fullCode = twoFADigits.join('');
+
+    if (fullCode.length !== 6) {
+      return setError('Veuillez entrer un code à 6 chiffres');
     }
 
     try {
       const { data } = await axios.post(
         'https://localhost:8443/api/auth/verify-2fa',
-        { code: twoFACode, tempToken, setup: true },
+        { code: fullCode, tempToken, setup: true },
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -182,22 +301,21 @@ const FirstLogin = ({ token, setAuth }) => {
         }
       );
 
+      localStorage.removeItem('is2FASetup');
+      localStorage.removeItem('tempToken');
+      localStorage.removeItem('QrCodeData');
+      localStorage.removeItem('manualSecret');
 
-      localStorage.removeItem('is2FASetup'); // Remove 2FA setup state
-      localStorage.removeItem('tempToken'); // Remove temp token
-      localStorage.removeItem('QrCodeData'); // Remove QR code data
-      localStorage.removeItem('manualSecret'); // Remove manual secret
-      
       setAuth(data.token);
       navigate('/dashboard');
     } catch (err) {
       const errorCode = err.response?.data?.message || 'default';
       if (errorCode === 'auth/session-expired') {
         setIs2FASetup(false);
-        localStorage.removeItem('is2FASetup'); // Remove 2FA setup state
-        localStorage.removeItem('tempToken'); // Remove temp token
-        localStorage.removeItem('QrCodeData'); // Remove QR code data
-        localStorage.removeItem('manualSecret'); // Remove manual secret
+        localStorage.removeItem('is2FASetup');
+        localStorage.removeItem('tempToken');
+        localStorage.removeItem('QrCodeData');
+        localStorage.removeItem('manualSecret');
       }
       setError(errorMessages[errorCode] || errorMessages.default);
     }
@@ -215,7 +333,7 @@ const FirstLogin = ({ token, setAuth }) => {
     );
   }
 
-  if (is2FASetup) {
+  if (is2FASetup && !is2FAAlreadySetup) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="bg-white shadow-lg rounded-lg p-8 max-w-md w-full">
@@ -244,26 +362,31 @@ const FirstLogin = ({ token, setAuth }) => {
           )}
           <form onSubmit={handle2FASubmit} className="space-y-6">
             <div>
-              <label
-                htmlFor="twoFACode"
-                className="block text-sm font-medium text-gray-800 mb-2"
-              >
+              <label className="block text-sm font-medium text-gray-800 mb-2">
                 Code de vérification 2FA
               </label>
-              <input
-                id="twoFACode"
-                type="text"
-                value={twoFACode}
-                onChange={e => setTwoFACode(e.target.value)}
-                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Entrez le code 2FA"
-                required
-              />
+              <div className="flex gap-2 justify-center mb-4">
+                {twoFADigits.map((digit, index) => (
+                  <input
+                    key={index}
+                    ref={el => (digitsRefs.current[index] = el)}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength="1"
+                    value={digit}
+                    onChange={e => handleDigitChange(index, e.target.value)}
+                    onKeyDown={e => handleDigitKeyDown(index, e)}
+                    onPaste={e => handleDigitPaste(index, e)}
+                    className="w-12 h-12 border border-gray-300 rounded-lg text-center text-xl font-bold"
+                    aria-label={`Digit ${index + 1} of verification code`}
+                  />
+                ))}
+              </div>
             </div>
             <button
               type="submit"
               className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-              disabled={isLoading}
+              disabled={isLoading || !allDigitsFilled()}
             >
               {isLoading ? 'Chargement...' : 'Vérifier'}
             </button>

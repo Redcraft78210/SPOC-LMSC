@@ -75,7 +75,7 @@ const StreamReader = ({ authToken, controls }) => {
 
   useEffect(() => {
     // Constants
-    const WSURL = 'wss://localhost:8443/?token=' + authToken;
+    const WSURL = 'wss://localhost:8443/stream?token=' + authToken;
 
     // Create the Broadway player
     const player = new Player({

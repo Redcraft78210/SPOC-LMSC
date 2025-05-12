@@ -4,7 +4,7 @@ import {
   LibraryBig,
   BookOpen,
   Settings,
-  Sun,
+  // Sun,
   User,
   Users,
   FileVideo2,
@@ -42,7 +42,7 @@ const NavigationBar = ({ isAdmin = false, isProf = false }) => {
       path: '/forum',
       label: 'Forum',
     },
-    { icon: Tv, path: '/liveViewer', label: 'Live' },
+    { icon: Tv, path: '/liveViewer', label: 'Live', clickable: false },
     ...(isAdmin
       ? [
           {
@@ -76,7 +76,7 @@ const NavigationBar = ({ isAdmin = false, isProf = false }) => {
           },
         ]
       : []),
-    { icon: Sun, path: '/theme-settings', label: 'Thème' },
+    // { icon: Sun, path: '/theme-settings', label: 'Thème' },
     { icon: Settings, path: '/settings', label: 'Paramètres' },
   ];
 

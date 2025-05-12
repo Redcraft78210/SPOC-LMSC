@@ -1,14 +1,16 @@
-// server/routes/courseRoutes.js
 import express from 'express';
-import validateCourse from '../middlewares/courseValidation.js';
-import courseController from '../controllers/courseController.js';
+import {
+    getAllCours, getCours,
+    getCoursMain, createCours, updateCours, deleteCours
+} from '../controllers/courseController.js';
 
 const router = express.Router();
 
-router.get('/', courseController.getAllCourses);
-router.get('/:id', courseController.getCourseById);
-router.post('/', validateCourse, courseController.createCourse); // Use validateCourse middleware
-router.put('/:id', validateCourse, courseController.updateCourse); // Use validateCourse middleware
-router.delete('/:id', courseController.deleteCourse);
+router.get('/all', getAllCours);
+router.get('/:id', getCours);
+router.get('/:id/main', getCoursMain);
+router.post('/create', createCours);
+router.put('/update/:id', updateCours);
+router.delete('/delete/:id', deleteCours);
 
-export default router;
+module.exports = router;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react'; // Add useRef
 import PropTypes from 'prop-types'; // Import prop-types
 import axios from 'axios'; // Import axios pour les requêtes API
 import { toast, Toaster } from 'react-hot-toast';
@@ -12,6 +12,7 @@ import {
   CogIcon,
   BellIcon,
   UserCircleIcon,
+  Loader2,
 } from 'lucide-react';
 
 import PictureModal from '../components/PictureModal';
@@ -23,7 +24,7 @@ import {
 
 const API_URL = 'https://localhost:8443/api';
 
-const Settings = ({ authToken }) => {
+const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
   const [activeTab, setActiveTab] = useState('general');
   const [dataSharing, setDataSharing] = useState({
     analytics: true,
@@ -34,7 +35,8 @@ const Settings = ({ authToken }) => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
-  const [twoFACode, setTwoFACode] = useState('');
+  const [twoFADigits, setTwoFADigits] = useState(['', '', '', '', '', '']);
+  const digitsRefs = useRef([]);
   const [qrCodeData, setQrCodeData] = useState('');
   const [manualSecret, setManualSecret] = useState('');
   const [authStep, setAuthStep] = useState('initial');
@@ -42,17 +44,6 @@ const Settings = ({ authToken }) => {
   const [countEchec2FACode, setCountEchec2FACode] = useState(0);
   const [tempToken, setTempToken] = useState(null);
   const [twoFactorAuth, setTwoFactorAuth] = useState(false);
-
-  // const handleImageUpload = e => {
-  //   const file = e.target.files[0];
-  //   if (file) {
-  //     const reader = new FileReader();
-  //     reader.onloadend = () => {
-  //       setAvatarPreview(reader.result);
-  //     };
-  //     reader.readAsDataURL(file);
-  //   }
-  // };
 
   useEffect(() => {
     if (countEchec2FACode >= 2) {
@@ -206,6 +197,83 @@ const Settings = ({ authToken }) => {
     }
   };
 
+  const handleDigitChange = (index, value) => {
+    // Vérifier que la valeur est un chiffre unique ou vide
+    if (!/^[0-9]?$/.test(value)) return;
+
+    const newDigits = [...twoFADigits];
+    newDigits[index] = value;
+    setTwoFADigits(newDigits);
+
+    // Si une valeur est entrée (pas vide), passer au champ suivant
+    if (value && index < 5) {
+      digitsRefs.current[index + 1].focus();
+    }
+  };
+
+  const handleDigitKeyDown = (index, e) => {
+    // Pour les touches de navigation
+    if (e.key === 'Backspace') {
+      // Si le champ actuel a une valeur, simplement l'effacer
+      if (twoFADigits[index] !== '') {
+        const newDigits = [...twoFADigits];
+        newDigits[index] = '';
+        setTwoFADigits(newDigits);
+        // Garder le focus sur le champ actuel
+      }
+      // Si le champ actuel est vide et qu'on n'est pas sur le premier champ, aller au champ précédent
+      else if (index > 0) {
+        const newDigits = [...twoFADigits];
+        newDigits[index - 1] = ''; // Effacer le champ précédent
+        setTwoFADigits(newDigits);
+        digitsRefs.current[index - 1].focus();
+      }
+    } else if (e.key === 'ArrowLeft' && index > 0) {
+      // Déplacer le focus au champ précédent
+      digitsRefs.current[index - 1].focus();
+    } else if (e.key === 'ArrowRight' && index < 5) {
+      // Déplacer le focus au champ suivant
+      digitsRefs.current[index + 1].focus();
+    } else if (/^[0-9]$/.test(e.key)) {
+      // Si on tape un nouveau chiffre sur un champ déjà rempli, remplacer la valeur et passer au suivant
+      const newDigits = [...twoFADigits];
+      newDigits[index] = e.key;
+      setTwoFADigits(newDigits);
+
+      // Passer au champ suivant si possible
+      if (index < 5) {
+        e.preventDefault(); // Empêcher la saisie par défaut
+        digitsRefs.current[index + 1].focus();
+      }
+    }
+  };
+
+  const handleDigitPaste = (index, e) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text').trim();
+
+    const digits = pastedData.replace(/\D/g, '').slice(0, 6).split('');
+
+    if (digits.length > 0) {
+      const newDigits = [...twoFADigits];
+
+      digits.forEach((digit, i) => {
+        if (index + i < 6) {
+          newDigits[index + i] = digit;
+        }
+      });
+
+      setTwoFADigits(newDigits);
+
+      const nextEmptyIndex = newDigits.findIndex(digit => digit === '');
+      if (nextEmptyIndex !== -1 && nextEmptyIndex < 6) {
+        digitsRefs.current[nextEmptyIndex].focus();
+      } else if (digits.length > 0) {
+        digitsRefs.current[Math.min(index + digits.length, 5)].focus();
+      }
+    }
+  };
+
   const handle2FASubmit = async e => {
     e.preventDefault();
 
@@ -218,22 +286,25 @@ const Settings = ({ authToken }) => {
       }
     }
 
-    if (!twoFACode.trim()) {
-      return toast.error('Veuillez entrer le code de vérification 2FA');
+    // Join twoFADigits array to get the complete code
+    const fullCode = twoFADigits.join('');
+
+    if (fullCode.length !== 6) {
+      return toast.error('Veuillez entrer un code à 6 chiffres');
     }
 
     setLoading(true); // Début du chargement
     try {
       const { data } = await axios.post(
         'https://localhost:8443/api/auth/verify-2fa',
-        { code: twoFACode, tempToken, setup: true },
+        { code: fullCode, tempToken, setup: true },
         { headers: { Authorization: `Bearer ${authToken}` } }
       );
 
       if (data.token) {
         setTwoFactorAuth(true);
         setTempToken(null);
-        setTwoFACode('');
+        setTwoFADigits(['', '', '', '', '', '']);
         setCountEchec2FACode(0);
         setAuthStep('initial');
         toast.success('2FA activé avec succès.');
@@ -415,7 +486,7 @@ const Settings = ({ authToken }) => {
   };
 
   const TwoFASetupModal = () => (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center transition-all duration-300 ease-out">
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center transition-all duration-300 ease-out z-10">
       <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md transform transition-all duration-300 ease-in-out">
         <div className="text-center space-y-7 mb-4">
           <h3 className="text-xl font-semibold">Configuration 2FA</h3>
@@ -433,19 +504,6 @@ const Settings = ({ authToken }) => {
           </div>
         </div>
 
-        {countEchec2FACode >= 2 && (
-          <>
-            <LoadCanvasTemplate reloadColor="red" />
-            <input
-              type="text"
-              placeholder="Entrez le texte CAPTCHA"
-              value={captchaValue}
-              onChange={e => setCaptchaValue(e.target.value)}
-              className="w-full px-4 py-2 border rounded-lg"
-            />
-          </>
-        )}
-
         <form onSubmit={handle2FASubmit} className="space-y-4">
           {countEchec2FACode >= 2 && (
             <>
@@ -459,16 +517,21 @@ const Settings = ({ authToken }) => {
               />
             </>
           )}
-          <input
-            type="text"
-            placeholder="Code à 6 chiffres"
-            value={twoFACode}
-            onChange={e =>
-              setTwoFACode(e.target.value.replace(/\D/g, '').slice(0, 6))
-            }
-            className="w-full px-4 py-2 border rounded-lg"
-            required
-          />
+          <div className="flex space-x-2 items-center justify-center">
+            {twoFADigits.map((digit, index) => (
+              <input
+                key={index}
+                type="text"
+                value={digit}
+                onChange={e => handleDigitChange(index, e.target.value)}
+                onKeyDown={e => handleDigitKeyDown(index, e)}
+                onPaste={e => handleDigitPaste(index, e)}
+                ref={el => (digitsRefs.current[index] = el)}
+                maxLength="1"
+                className="w-12 h-12 text-center border rounded-lg"
+              />
+            ))}
+          </div>
           <div className="flex items-center space-x-2">
             <button
               type="button"
@@ -615,19 +678,22 @@ const Settings = ({ authToken }) => {
                   </button>
 
                   {/* User avatar or placeholder */}
-                  {!user.avatar ||
-                  user.avatar === '' ||
-                  user.avatar === 'default' ? (
+                  {loadingAvatar ? (
+                    <div className="h-20 w-20 rounded-full border-2 bg-gray-200 mx-auto flex items-center justify-center">
+                      <Loader2 className="h-8 w-8 text-gray-400 animate-spin" />
+                    </div>
+                  ) : !userAvatar ? (
                     <div className="h-20 w-20 rounded-full border-2 bg-yellow-500 mx-auto flex items-center justify-center">
                       <span className="text-2xl font-bold text-gray-800">
-                        {user.name.charAt(0).toUpperCase()}
+                        {user.name ? user.name.charAt(0).toUpperCase() : ''}
                       </span>
                     </div>
                   ) : (
                     <img
-                      src="https://via.placeholder.com/150"
+                      src={userAvatar}
                       alt="Avatar"
                       className="h-20 w-20 rounded-full object-cover"
+                      onError={() => refreshAvatar()} // En cas d'erreur, demandez au parent de rafraîchir
                     />
                   )}
                 </div>
@@ -792,7 +858,8 @@ const Settings = ({ authToken }) => {
       {showProfilepictureModal && (
         <PictureModal
           setShowProfilepictureModal={setShowProfilepictureModal}
-          user={user}
+          authToken={authToken}
+          refreshAvatar={refreshAvatar}
         />
       )}
       {authStep === '2fa-setup' && TwoFASetupModal()}
@@ -928,5 +995,8 @@ const Settings = ({ authToken }) => {
 
 Settings.propTypes = {
   authToken: PropTypes.string.isRequired,
+  refreshAvatar: PropTypes.func.isRequired,
+  userAvatar: PropTypes.string, // Peut être null
+  loadingAvatar: PropTypes.bool.isRequired
 };
 export default Settings;

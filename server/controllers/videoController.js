@@ -36,16 +36,6 @@ const parseRange = (rangeHeader, fileSize) => {
 const getVideo = async (req, res) => {
     try {
         setCORSHeaders(res);
-        const authToken = req.query.authToken;
-        if (authToken) {
-            try {
-                const decoded = jwt.verify(authToken, process.env.JWT_SECRET);
-                req.user = decoded;
-            } catch (error) {
-                console.error(error);
-            }
-        }
-
         // Auth
         if (!req.user) {
             return res.status(403).json({ message: 'Accès non autorisé' });
@@ -104,6 +94,119 @@ const getVideo = async (req, res) => {
     }
 };
 
+const downloadVideo = async (req, res) => {
+    try {
+        setCORSHeaders(res);
+        // Auth
+        if (!req.user) {
+            return res.status(403).json({ message: 'Accès non autorisé' });
+        }
+        const { id } = req.params;
+        if (!id || !/^[a-zA-Z0-9_-]+$/.test(id)) {
+            return res.status(400).json({ message: 'ID invalide' });
+        }
+        const videoPath = path.resolve(videosDirectory, `${id}/${id}.mp4`);
+        if (!isInsideDirectory(videoPath, videosDirectory)) {
+            return res.status(400).json({ message: 'Chemin invalide' });
+        }
+        await fs.access(videoPath, constants.F_OK | constants.R_OK);
+        const stats = await fs.stat(videoPath);
+        const range = parseRange(req.headers.range, stats.size);
+        const headers = {
+            'Content-Type': 'octet/stream',
+            'Content-Disposition': `attachment; filename="${id}.mp4"`,
+            'Accept-Ranges': 'bytes',
+            'Cache-Control': 'private, max-age=3600',
+            'Content-Length': range ? range.end - range.start + 1 : stats.size,
+            'Connection': 'keep-alive'
+        };
+        if (range) {
+            headers['Content-Range'] = `bytes ${range.start}-${range.end}/${stats.size}`;
+            res.writeHead(206, headers);
+        } else {
+            headers['Content-Range'] = `bytes 0-${stats.size - 1}/${stats.size}`;
+            res.writeHead(200, headers);
+        }
+
+    } catch (error) {
+        console.error('Erreur serveur:', error);
+        if (!res.headersSent) {
+            res.status(error.code === 'ENOENT' ? 404 : 500).json({
+                message: error.message || 'Erreur interne'
+            });
+        }
+    }
+}
+
+const uploadVideo = async (req, res) => {
+    try {
+        // Auth
+        if (!req.user) {
+            return res.status(403).json({ message: 'Accès non autorisé' });
+        }
+
+        const { id } = req.params;
+        if (!id || !/^[a-zA-Z0-9_-]+$/.test(id)) {
+            return res.status(400).json({ message: 'ID invalide' });
+        }
+
+        const videoPath = path.resolve(videosDirectory, `${id}/${id}.mp4`);
+        if (!isInsideDirectory(videoPath, videosDirectory)) {
+            return res.status(400).json({ message: 'Chemin invalide' });
+        }
+
+        await fs.mkdir(path.dirname(videoPath), { recursive: true });
+
+        const writeStream = fs.createWriteStream(videoPath);
+        req.pipe(writeStream);
+
+        writeStream.on('finish', () => {
+            res.status(201).json({ message: 'Vidéo téléchargée avec succès' });
+        });
+
+    } catch (error) {
+        console.error('Erreur serveur:', error);
+        if (!res.headersSent) {
+            res.status(error.code === 'ENOENT' ? 404 : 500).json({
+                message: error.message || 'Erreur interne'
+            });
+        }
+    }
+}
+
+const deleteVideo = async (req, res) => {
+    try {
+        // Auth
+        if (!req.user) {
+            return res.status(403).json({ message: 'Accès non autorisé' });
+        }
+
+        const { id } = req.params;
+        if (!id || !/^[a-zA-Z0-9_-]+$/.test(id)) {
+            return res.status(400).json({ message: 'ID invalide' });
+        }
+
+        const videoPath = path.resolve(videosDirectory, `${id}/${id}.mp4`);
+        if (!isInsideDirectory(videoPath, videosDirectory)) {
+            return res.status(400).json({ message: 'Chemin invalide' });
+        }
+
+        await fs.unlink(videoPath);
+        res.status(200).json({ message: 'Vidéo supprimée avec succès' });
+
+    } catch (error) {
+        console.error('Erreur serveur:', error);
+        if (!res.headersSent) {
+            res.status(error.code === 'ENOENT' ? 404 : 500).json({
+                message: error.message || 'Erreur interne'
+            });
+        }
+    }
+};
+
 module.exports = {
-    getVideo
+    getVideo,
+    uploadVideo,
+    deleteVideo,
+    downloadVideo
 };

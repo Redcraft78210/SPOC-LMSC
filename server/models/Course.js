@@ -1,25 +1,49 @@
-const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
+const { DataTypes } = require('sequelize');
 
-// Define the Course model
 const Course = sequelize.define('Course', {
   id: {
     type: DataTypes.UUID,
     defaultValue: DataTypes.UUIDV4,
-    primaryKey: true,
+    primaryKey: true
   },
-  title: {
+  title: {  
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: false
   },
   description: {
     type: DataTypes.TEXT,
-    allowNull: false,
+    allowNull: true  
   },
-  instructor: {
+  
+  is_published: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
+  teacher_id: {
+    type: DataTypes.UUID,
+    allowNull: false,
+    references: {
+      model: 'users',  
+      key: 'id'
+    }
+  },
+  teacher_name: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true  
   },
+  matiere: {
+    type: DataTypes.STRING,
+    allowNull: true  
+  },
+  chapitre: {
+    type: DataTypes.STRING,
+    allowNull: true  
+  }
+}, {
+  tableName: 'courses',
+  
+  timestamps: true
 });
 
 module.exports = Course;

@@ -13,6 +13,14 @@ const privateKey = fs.readFileSync("certs/selfsigned.key", "utf8");
 const certificate = fs.readFileSync("certs/selfsigned.crt", "utf8");
 const credentials = { key: privateKey, cert: certificate };
 
+const {
+  createChatWSS,
+  createStreamWSS,
+  setupWebSocketHandlers
+} = require('./websocket/socketManager');
+
+const { setupChatWebSocket } = require('./controllers/chatController');
+const { setupStreaming } = require('./controllers/socketController');
 
 // Import routes
 const authRoutes = require('./routes/authRoutes').default;
@@ -25,6 +33,10 @@ const liveRoutes = require('./routes/liveRoutes').default;
 const userRoutes = require('./routes/userRoutes').default;
 const videoRoutes = require('./routes/videoRoutes').default;
 const recordingRoutes = require('./routes/recordingRoutes').default;
+const chatRoutes = require('./routes/chatRoutes');
+const progressRoutes = require('./routes/progressTracking');
+const avatarRoutes = require('./routes/avatarRoutes');
+
 
 // Initialize environment variables
 dotenv.config();
@@ -44,6 +56,12 @@ app.use((request, response, next) => {
   }
 });
 
+// CORS configuration
+// Allowed origins for CORS
+// En développement, attention à autoriser le certificat auto-signé
+// En production, il faut ajouter le nom de domaine de l'application
+// const allowedOrigins = ["https://localhost:5173", "https://localhost:8443", "https://your-production-domain.com"];
+
 const allowedOrigins = ["https://localhost:5173", "https://localhost:8443"];
 
 // Middleware
@@ -57,8 +75,8 @@ app.use(cors({
   origin: function (origin, callback) {
     console.log(`Checking origin: ${origin}`);
     // Dé-commenter la ligne suivante pour autoriser les requêtes sans origin
-    // if (!origin || allowedOrigins.includes(origin)) {
-    if (allowedOrigins.includes(origin)) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      // if (allowedOrigins.includes(origin)) {
       console.log(`Origin allowed: ${origin}`);
       callback(null, true);
     } else {
@@ -90,27 +108,38 @@ app.use('/api/lives', liveRoutes); // Courses-related routes
 app.use('/api/users', userRoutes); // Courses-related routes
 app.use('/api/videos', videoRoutes); // Video-related routes
 app.use('/api/recordings', recordingRoutes); // Recording-related routes
+app.use('/api/streams', chatRoutes);
+app.use('/api/progress', progressRoutes);
+app.use('/api/avatars', avatarRoutes); // Avatar-related routes
 
 // Serve React frontend (if applicable)
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "../client/dist")));
 
   // Serve all frontend routes as the index.html page for React Router to handle
-  app.get("*", (req, res) => {
+  app.get("*path", (req, res) => {
     res.sendFile(path.resolve(__dirname, "../client/dist", "index.html"));
   });
 } else {
   // In development mode, fallback to React's development server
-  app.get("*", (req, res) => {
+  app.get("*path", (req, res) => {
     res.send("API is running");
   });
 }
 
-// Start the HTTPS server
-const httpsServer = https.createServer(credentials, app);
+// Create HTTPS server
+const server = https.createServer(credentials, app);
 
-const { setupStreaming } = require('./controllers/socketController');
-setupStreaming(httpsServer);
+// Create WebSocket servers
+const chatWSS = createChatWSS();
+const streamWSS = createStreamWSS();
+
+// Set up central WebSocket routing
+setupWebSocketHandlers(server, chatWSS, streamWSS);
+
+// Initialize WebSocket handlers with their respective WSS instances
+setupChatWebSocket(chatWSS);
+setupStreaming(streamWSS);
 
 const httpServer = http.createServer((req, res) => {
   req.headers["host"] = req.headers["host"].replace(/:\d+/, ":" + PORT);
@@ -119,7 +148,7 @@ const httpServer = http.createServer((req, res) => {
 });
 
 // Start the HTTPS server
-httpsServer.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`HTTPS Server is running on port ${PORT}`);
 });
 

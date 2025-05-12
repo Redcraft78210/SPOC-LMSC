@@ -7,7 +7,7 @@ import {
   validateCaptcha,
 } from 'react-simple-captcha';
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react'; // Add useRef import
 import Logo from '../../Logo';
 import SubmitButton from '../../components/SubmitButton';
 import PropTypes from 'prop-types';
@@ -21,7 +21,7 @@ const errorMessages = {
   'auth/2fa-required': 'Vérification 2FA requise',
   'auth/invalid-2fa-code': 'Code de double authentification incorrect',
   'auth/weak-password':
-    'Le mot de passe doit contenir au moins 12 caractères, une majuscule et un caractère spécial',
+    'Le mot de passe doit contenir au moins 12 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial',
   default: 'Une erreur est survenue. Veuillez réessayer.',
 };
 
@@ -31,7 +31,9 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
   const [isSignUpForm, setIsSignUpForm] = useState(false);
   const [authStep, setAuthStep] = useState('initial');
   const [tempToken, setTempToken] = useState(null);
-  const [twoFACode, setTwoFACode] = useState('');
+  // Replace single string state with array of 6 digits
+  const [twoFADigits, setTwoFADigits] = useState(['', '', '', '', '', '']);
+  const digitsRefs = useRef([]);
   const [countEchec2FACode, setCountEchec2FACode] = useState(0);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -138,7 +140,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
   }, [tempToken?.value, qrCodeData, manualSecret]);
 
   const validatePassword = pw => {
-    return /^(?=.*[A-Z])(?=.*[!@#$%^&*])(?=.{12,})/.test(pw);
+    return /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{12,}$/.test(pw);
   };
 
   const handleSubmit = async e => {
@@ -159,6 +161,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
         return setError("Veuillez entrer le code d'inscription");
       }
       if (!validatePassword(password)) {
+        console.log('password', password);
         return setError(errorMessages['auth/weak-password']);
       }
     }
@@ -178,8 +181,18 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
         : 'https://localhost:8443/api/auth/login';
 
       const body = isSignUpForm
-        ? { email, username, password, name, surname, registerCode: code }
-        : { email, password };
+        ? {
+            email: email.trim(),
+            username: username.trim(),
+            password: password.trim(),
+            name: name.trim(),
+            surname: surname.trim(),
+            registerCode: code.trim(),
+          }
+        : {
+            email: email.trim(),
+            password: password.trim(),
+          };
 
       if (isSignUpForm) {
         let validRegisterCode = false;
@@ -244,11 +257,95 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
     }
   };
 
+  // Helper to check if all digits are filled
+  const allDigitsFilled = () => twoFADigits.every(digit => digit !== '');
+
+  const handleDigitChange = (index, value) => {
+    // Vérifier que la valeur est un chiffre unique ou vide
+    if (!/^[0-9]?$/.test(value)) return;
+
+    const newDigits = [...twoFADigits];
+    newDigits[index] = value;
+    setTwoFADigits(newDigits);
+
+    // Si une valeur est entrée (pas vide), passer au champ suivant
+    if (value && index < 5) {
+      digitsRefs.current[index + 1].focus();
+    }
+  };
+
+  const handleDigitKeyDown = (index, e) => {
+    // Pour les touches de navigation
+    if (e.key === 'Backspace') {
+      // Si le champ actuel a une valeur, simplement l'effacer
+      if (twoFADigits[index] !== '') {
+        const newDigits = [...twoFADigits];
+        newDigits[index] = '';
+        setTwoFADigits(newDigits);
+        // Garder le focus sur le champ actuel
+      }
+      // Si le champ actuel est vide et qu'on n'est pas sur le premier champ, aller au champ précédent
+      else if (index > 0) {
+        const newDigits = [...twoFADigits];
+        newDigits[index - 1] = ''; // Effacer le champ précédent
+        setTwoFADigits(newDigits);
+        digitsRefs.current[index - 1].focus();
+      }
+    } else if (e.key === 'ArrowLeft' && index > 0) {
+      // Déplacer le focus au champ précédent
+      digitsRefs.current[index - 1].focus();
+    } else if (e.key === 'ArrowRight' && index < 5) {
+      // Déplacer le focus au champ suivant
+      digitsRefs.current[index + 1].focus();
+    } else if (/^[0-9]$/.test(e.key)) {
+      // Si on tape un nouveau chiffre sur un champ déjà rempli, remplacer la valeur et passer au suivant
+      const newDigits = [...twoFADigits];
+      newDigits[index] = e.key;
+      setTwoFADigits(newDigits);
+
+      // Passer au champ suivant si possible
+      if (index < 5) {
+        e.preventDefault(); // Empêcher la saisie par défaut
+        digitsRefs.current[index + 1].focus();
+      }
+    }
+  };
+
+  const handleDigitPaste = (index, e) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text').trim();
+
+    const digits = pastedData.replace(/\D/g, '').slice(0, 6).split('');
+
+    if (digits.length > 0) {
+      const newDigits = [...twoFADigits];
+
+      digits.forEach((digit, i) => {
+        if (index + i < 6) {
+          newDigits[index + i] = digit;
+        }
+      });
+
+      setTwoFADigits(newDigits);
+
+      const nextEmptyIndex = newDigits.findIndex(digit => digit === '');
+      if (nextEmptyIndex !== -1 && nextEmptyIndex < 6) {
+        digitsRefs.current[nextEmptyIndex].focus();
+      } else if (digits.length > 0) {
+        digitsRefs.current[Math.min(index + digits.length, 5)].focus();
+      }
+    }
+  };
+
+  // Update the 2FA submit handler to use joined digits
   const handle2FASubmit = async e => {
     e.preventDefault();
     if (Date.now() - lastSubmit < 2000) return;
     setLastSubmit(Date.now());
     setError(null);
+
+    // Get the full 2FA code by joining the digits
+    const fullCode = twoFADigits.join('');
 
     if (countEchec2FACode >= 2) {
       // Validation CAPTCHA
@@ -260,8 +357,8 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
       }
     }
 
-    if (!twoFACode.trim()) {
-      return setError('Veuillez entrer le code de vérification 2FA');
+    if (fullCode.length !== 6) {
+      return setError('Veuillez entrer un code à 6 chiffres');
     }
 
     try {
@@ -269,7 +366,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
 
       const { data } = await axios.post(endpoint, {
         tempToken: tempToken?.value,
-        code: twoFACode,
+        code: fullCode, // Use the joined digits
         setup: authStep === '2fa-setup',
       });
 
@@ -369,28 +466,35 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
         </>
       )}
 
-      <div className="relative">
-        <input
-          id="2faCode"
-          type="text"
-          placeholder="Code à 6 chiffres"
-          value={twoFACode}
-          onChange={e =>
-            setTwoFACode(e.target.value.replace(/\D/g, '').slice(0, 6))
-          }
-          className="w-full h-14 px-6 py-3 text-base md:text-lg bg-white border-2 rounded-lg focus:ring-2 focus:ring-[#002B2F]"
-          required
-          autoComplete="off"
-          inputMode="numeric"
-          pattern="[0-9]{6}"
-          maxLength="6"
-          autoFocus
-        />
+      {/* Replace single input with 6 digit inputs */}
+      <div>
+        <label className="block text-sm font-medium text-gray-800 mb-2">
+          Code de vérification 2FA
+        </label>
+        <div className="flex gap-2 justify-center mb-4">
+          {twoFADigits.map((digit, index) => (
+            <input
+              key={index}
+              ref={el => (digitsRefs.current[index] = el)}
+              type="text"
+              inputMode="numeric"
+              maxLength="1"
+              value={digit}
+              onChange={e => handleDigitChange(index, e.target.value)}
+              onKeyDown={e => handleDigitKeyDown(index, e)}
+              onPaste={e => handleDigitPaste(index, e)}
+              className="w-12 h-12 border-2 border-gray-300 rounded-lg text-center text-xl font-bold bg-white focus:ring-2 focus:ring-[#002B2F]"
+              aria-label={`Digit ${index + 1} of verification code`}
+              autoFocus={index === 0}
+            />
+          ))}
+        </div>
       </div>
 
       <SubmitButton
         onSubmission={handle2FASubmit}
         className="w-full py-4 text-lg md:text-xl font-semibold text-white bg-[#002B2F] rounded-lg hover:bg-[#00474F]"
+        disabled={!allDigitsFilled()}
       />
 
       {authStep !== '2fa-setup' && (
@@ -400,6 +504,8 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
             onClick={() => {
               setAuthStep('initial');
               setTempToken(null);
+              // Reset the 2FA digits when going back
+              setTwoFADigits(['', '', '', '', '', '']);
               setTimeout(() => {
                 loadCaptchaEngine(6, '#f9fafb');
               }, 100); // ensure canvas is mounted

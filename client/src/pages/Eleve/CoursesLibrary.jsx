@@ -1,121 +1,135 @@
 import { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 
-import { FileText, SquarePlay } from 'lucide-react';
+import { FileText, SquarePlay, Radio } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const Courses = () => {
   const [selectedProfessor, setSelectedProfessor] = useState('Tous');
   const [selectedSubject, setSelectedSubject] = useState('Tous');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('date_recent');
-  const [courses, setCourses] = useState([]);
+  const [selectedType, setSelectedType] = useState('Tous');
+  const [content, setContent] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Récupération des données depuis l'API
+  // Récupération des données depuis les APIs
   useEffect(() => {
-    const fetchCourses = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        // const response = await axios.get('/api/courses');
-        // const apiData = response.data;
-        const apiData = {
+
+        // Mock API calls
+        const fetchCourses = async () => ({
           'Mr grandingo': {
             math_info: {
               complexe: {
                 titre: 'Nombres imaginaires',
                 description: 'Introduction aux nombres imaginaires',
                 date_creation: '2025-03-17T18:52:02.826Z',
-                id_cours: '7f4b538504facde3c881b73844f52f24',
+                id: '7f4b5385-04fa-cde3-c881-b73844f52f25',
+                type: 'cours',
                 video: {
-                  video_id: '3f4b538504facde3c881b73844f52f24-1742237522', // à retirer dès que possible
-                  chemin_fichier:
-                    'videos/3f4b538504facde3c881b73844f52f24-1742237522.mp4',
+                  video_id: '3f4b538504facde3c881b73844f52f24-1742237522',
                   date_mise_en_ligne: '2024-03-17T18:52:48.781Z',
                 },
                 nombre_de_documents: 4,
               },
             },
           },
+        });
+
+        const fetchLives = async () => ({
           'Mme claquette': {
             physique: {
               asservissement: {
-                titre: 'Pont diviseur de tension',
-                description: 'Cours sur le pont diviseur de tension',
+                titre: 'Live Pont diviseur',
+                description: 'Session en direct sur le pont diviseur',
                 date_creation: '2025-03-17T18:52:02.826Z',
-                id_cours: '7f4b538504facde3c881b73844f52f25',
-                video: {
-                  video_id: '5f4b538504facde3c881b73844f52f24-1742237522',
-                  chemin_fichier:
-                    'videos/5f4b538504facde3c881b73844f52f24-1742237522.mp4',
-                  date_mise_en_ligne: '2024-06-17T18:52:48.781Z',
+                id: 'a6fa5fc1-1234-4321-0000-000000000015',
+                type: 'live',
+                live: {
+                  date_debut: '2024-06-18T14:30:00.000Z',
+                  statut: 'programme',
                 },
-                nombre_de_documents: 2,
               },
             },
           },
-        };
+        });
+
+        const [coursesData, livesData] = await Promise.all([
+          fetchCourses(),
+          fetchLives(),
+        ]);
 
         // Transformation des données en tableau plat
-        const coursesArray = [];
-
-        for (const [professor, subjects] of Object.entries(apiData)) {
-          for (const [subject, topics] of Object.entries(subjects)) {
-            for (const [topic, details] of Object.entries(topics)) {
-              coursesArray.push({
-                ...details,
-                professor,
-                subject,
-                topic,
-                video: details.video, // On récupère l'objet vidéo,
-                nombre_de_documents: details.nombre_de_documents,
-              });
+        const transformData = (data, type) => {
+          const result = [];
+          for (const [professor, subjects] of Object.entries(data)) {
+            for (const [subject, topics] of Object.entries(subjects)) {
+              for (const [topic, details] of Object.entries(topics)) {
+                result.push({
+                  ...details,
+                  professor,
+                  subject,
+                  topic,
+                  type,
+                });
+              }
             }
           }
-        }
+          return result;
+        };
 
-        setCourses(coursesArray);
+        setContent([
+          ...transformData(coursesData, 'cours'),
+          ...transformData(livesData, 'live'),
+        ]);
+
         setError(null);
       } catch (err) {
-        console.error('Erreur lors de la récupération des cours:', err);
-        setError('Impossible de charger les cours. Veuillez réessayer.');
+        console.error('Erreur:', err);
+        setError('Erreur de chargement des données');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchCourses();
+    fetchData();
   }, []);
 
   // Filtrage et tri
-  const filteredCourses = courses
-    .filter(
-      course =>
-        (selectedProfessor === 'Tous' ||
-          course.professor === selectedProfessor) &&
-        (selectedSubject === 'Tous' || course.subject === selectedSubject) &&
-        (course.titre.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          course.description
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-          course.professor.toLowerCase().includes(searchQuery.toLowerCase()))
-    )
+  const filteredContent = content
+    .filter(item => {
+      const matchesType =
+        selectedType === 'Tous' || item.type === selectedType.toLowerCase();
+      const matchesProfessor =
+        selectedProfessor === 'Tous' || item.professor === selectedProfessor;
+      const matchesSubject =
+        selectedSubject === 'Tous' || item.subject === selectedSubject;
+      const matchesSearch =
+        item.titre.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.description.toLowerCase().includes(searchQuery.toLowerCase());
+
+      return matchesType && matchesProfessor && matchesSubject && matchesSearch;
+    })
     .sort((a, b) => {
-      if (sortBy === 'date_recent') {
-        return (
-          new Date(b.video.date_mise_en_ligne) -
-          new Date(a.video.date_mise_en_ligne)
-        );
-      }
-      return (
-        new Date(a.video.date_mise_en_ligne) -
-        new Date(b.video.date_mise_en_ligne)
-      );
+      const getDate = item => {
+        return item.type === 'cours'
+          ? item.video.date_mise_en_ligne
+          : item.live.date_debut;
+      };
+
+      return sortBy === 'date_recent'
+        ? new Date(getDate(b)) - new Date(getDate(a))
+        : new Date(getDate(a)) - new Date(getDate(b));
     });
 
   // Récupère les filtres uniques
-  const professors = [...new Set(courses.map(course => course.professor))];
-  const subjects = [...new Set(courses.map(course => course.subject))];
+  const professors = [...new Set(content.map(item => item.professor))];
+  const subjects = [...new Set(content.map(item => item.subject))];
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -183,6 +197,17 @@ const Courses = () => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {/* Type de contenu */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Type de contenu
+              </label>
+              <FilterDropdown
+                items={['Tous', 'Cours', 'Live']}
+                selected={selectedType}
+                setSelected={setSelectedType}
+              />
+            </div>
             {/* Professeur */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -223,16 +248,16 @@ const Courses = () => {
         </div>
 
         {/* Résultats */}
-        {filteredCourses.length === 0 ? (
+        {filteredContent.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500 text-lg">
-              Aucun cours trouvé avec ces critères.
+              Aucun contenu trouvé avec ces critères.
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredCourses.map(course => (
-              <CourseCard key={course.id_cours} course={course} />
+            {filteredContent.map(item => (
+              <ContentCard key={item.id} item={item} />
             ))}
           </div>
         )}
@@ -241,22 +266,8 @@ const Courses = () => {
   );
 };
 
-const CourseCard = ({ course }) => {
-  CourseCard.propTypes = {
-    course: PropTypes.shape({
-      id_cours: PropTypes.string.isRequired,
-      titre: PropTypes.string.isRequired,
-      description: PropTypes.string,
-      video: PropTypes.shape({
-        video_id: PropTypes.string,
-        date_mise_en_ligne: PropTypes.string,
-      }),
-      nombre_de_documents: PropTypes.number,
-      professor: PropTypes.string.isRequired,
-      subject: PropTypes.string,
-    }).isRequired,
-  };
-
+const ContentCard = ({ item }) => {
+  const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
   const hoverTimeout = useRef(null);
 
@@ -272,7 +283,12 @@ const CourseCard = ({ course }) => {
   };
 
   const handleClick = () => {
-    window.location.href = '/course-reader?courseId=' + course.id_cours;
+    // Utilisation de l'id au lieu de id_cours pour correspondre aux données
+    if (item.type === 'live') {
+      navigate('/liveViewer?liveid=' + item.id);
+    } else {
+      navigate('/course-reader?courseId=' + item.id);
+    }
   };
 
   useEffect(() => {
@@ -286,74 +302,117 @@ const CourseCard = ({ course }) => {
   return (
     <div
       className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 cursor-pointer"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       onClick={handleClick}
     >
-      {/* Image/aperçu vidéo */}
-      <div
-        className="aspect-video bg-gray-200 relative"
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-      >
-        {course.video && (
+      <div className="aspect-video bg-gray-200 relative">
+        {item.type === 'cours' ? (
           <>
             {isHovered ? (
               <img
                 className="w-full h-full object-cover"
-                src={`/videos/${course.video.video_id}/${course.video.video_id}.preview.webp`}
-                alt={course.titre}
+                src={`/videos/${item.video.video_id}/${item.video.video_id}.preview.webp`}
+                alt={item.titre}
                 style={{ display: 'block' }}
               />
             ) : (
               <img
                 className="w-full h-full object-cover"
-                src={`/videos/${course.video.video_id}/0.png`}
-                alt={course.titre}
+                src={`/videos/${item.video.video_id}/0.png`}
+                alt={item.titre}
                 style={{ display: 'block' }}
               />
             )}
           </>
+        ) : (
+          <div className="w-full h-full bg-blue-50 flex items-center justify-center">
+            <div className="text-center">
+              <Radio className="w-8 h-8 text-blue-600 mx-auto mb-2" />
+              <p className="text-sm text-blue-600 font-medium">
+                Live programmé
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                {new Date(item.live.date_debut).toLocaleDateString('fr-FR', {
+                  day: 'numeric',
+                  month: 'long',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </p>
+            </div>
+          </div>
         )}
       </div>
 
-      {/* Corps de la carte */}
       <div className="p-4 relative">
         <div className="flex flex-col items-end gap-2 absolute right-2 top-2">
-          {course.video && (
-            <div className="flex items-center">
-              <SquarePlay className="w-4 h-4 mr-2" />
-              <span className="text-xs text-gray-500">
-                {/* {course.video.duree} */}
-                00:27:30
-              </span>
-            </div>
+          {item.type === 'cours' && (
+            <>
+              <div className="flex items-center">
+                <SquarePlay className="w-4 h-4 mr-2" />
+                <span className="text-xs text-gray-500">00:27:30</span>
+              </div>
+              {item.nombre_de_documents > 0 && (
+                <div className="flex items-center">
+                  <FileText className="w-4 h-4 mr-2" />
+                  <span className="text-xs text-gray-500">
+                    {item.nombre_de_documents}
+                  </span>
+                </div>
+              )}
+            </>
           )}
-          {course.nombre_de_documents > 0 && (
-            <div className="flex items-center">
-              <FileText className="w-4 h-4 mr-2" />
-              <span className="text-xs text-gray-500">
-                {course.nombre_de_documents}
-              </span>
+          {item.type === 'live' && (
+            <div className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs">
+              En direct à{' '}
+              {new Date(item.live.date_debut).toLocaleTimeString('fr-FR', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
             </div>
           )}
         </div>
+
         <h2 className="text-lg font-semibold text-gray-800 mb-2">
-          {course.titre}
+          {item.titre}
         </h2>
-        <p className="text-sm text-gray-600 line-clamp-2">
-          {course.description}
-        </p>
+        <p className="text-sm text-gray-600 line-clamp-2">{item.description}</p>
 
         <div className="flex items-center justify-between mt-3 text-sm text-gray-500">
-          <span className="font-medium">{course.professor}</span>
+          <span className="font-medium">{item.professor}</span>
           <span className="italic">
-            {new Date(course.video.date_mise_en_ligne).toLocaleDateString(
-              'fr-FR'
-            )}
+            {item.type === 'cours'
+              ? new Date(item.video.date_mise_en_ligne).toLocaleDateString(
+                  'fr-FR'
+                )
+              : new Date(item.live.date_debut).toLocaleDateString('fr-FR')}
           </span>
         </div>
       </div>
     </div>
   );
+};
+
+// PropTypes définis à l'extérieur du composant
+ContentCard.propTypes = {
+  item: PropTypes.shape({
+    id: PropTypes.string.isRequired, // Changé de id_cours à id
+    titre: PropTypes.string.isRequired,
+    type: PropTypes.oneOf(['cours', 'live']).isRequired,
+    live: PropTypes.shape({
+      date_debut: PropTypes.string,
+      statut: PropTypes.string,
+    }),
+    description: PropTypes.string,
+    video: PropTypes.shape({
+      video_id: PropTypes.string,
+      date_mise_en_ligne: PropTypes.string,
+    }),
+    nombre_de_documents: PropTypes.number,
+    professor: PropTypes.string.isRequired,
+    subject: PropTypes.string,
+  }).isRequired,
 };
 
 // Composant de filtre déroulant
