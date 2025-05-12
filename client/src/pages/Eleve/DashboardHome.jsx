@@ -1,10 +1,31 @@
-// import PropTypes from 'prop-types';
-
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import PropTypes from 'prop-types';
 
-// const DashboardHome = ({ authToken }) => {
-const DashboardHome = () => {
+const API_URL = 'https://localhost:8443/api';
+
+const DashboardHome = ({ authToken }) => {
   const navigate = useNavigate();
+  const [stats, setStats] = useState({ completedCourses: 0, liveSessions: 0 });
+
+  useEffect(() => {
+    // Simuler un appel API pour récupérer les données
+    const fetchData = async () => {
+      try {
+        const statsData = await fetch(`${API_URL}/progress/stats`, {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+        }).then(res => res.json());
+
+        setStats(statsData);
+      } catch (error) {
+        console.error('Erreur lors de la récupération des données:', error);
+      }
+    };
+
+    fetchData();
+  }, [authToken]);
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -31,18 +52,16 @@ const DashboardHome = () => {
             Voir mes cours
           </button>
         </div>
-
-        {/* Card 2: Progress */}
+        {/* Card 2: Progress
         <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
           <h2 className="text-xl font-semibold text-blue-600">Progression</h2>
           <p className="text-gray-600 mt-2">
-            Suivez vos progrès et atteignez vos objectifs.
+            {'Suivez vos progrès et atteignez vos objectifs.'}
           </p>
           <button className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
             Voir ma progression
           </button>
-        </div>
-
+        </div> */}
         {/* Card 3: Live Sessions */}
         <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
           <h2 className="text-xl font-semibold text-blue-600">
@@ -51,8 +70,24 @@ const DashboardHome = () => {
           <p className="text-gray-600 mt-2">
             Rejoignez des sessions en direct avec vos enseignants.
           </p>
-          <button className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+          <button
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            onClick={() => navigate('/courses-library?lives')}
+          >
             Rejoindre une session
+          </button>
+        </div>
+        {/*  Card 4: Forum  */}
+        <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+          <h2 className="text-xl font-semibold text-blue-600">Forum</h2>
+          <p className="text-gray-600 mt-2">
+            Participez aux discussions et posez vos questions.
+          </p>
+          <button
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            onClick={() => navigate('/forum')}
+          >
+            Accéder au forum
           </button>
         </div>
       </section>
@@ -62,20 +97,18 @@ const DashboardHome = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Stat 1 */}
           <div className="bg-white rounded-lg shadow-md p-6 text-center">
-            <h3 className="text-3xl font-bold text-blue-600">12</h3>
+            <h3 className="text-3xl font-bold text-blue-600">
+              {stats.completedCourses}
+            </h3>
             <p className="text-gray-600 mt-2">Cours terminés</p>
           </div>
 
           {/* Stat 2 */}
           <div className="bg-white rounded-lg shadow-md p-6 text-center">
-            <h3 className="text-3xl font-bold text-blue-600">8</h3>
+            <h3 className="text-3xl font-bold text-blue-600">
+              {stats.liveSessions}
+            </h3>
             <p className="text-gray-600 mt-2">Sessions en direct suivies</p>
-          </div>
-
-          {/* Stat 3 */}
-          <div className="bg-white rounded-lg shadow-md p-6 text-center">
-            <h3 className="text-3xl font-bold text-blue-600">95%</h3>
-            <p className="text-gray-600 mt-2">Taux de réussite</p>
           </div>
         </div>
       </section>
@@ -83,8 +116,8 @@ const DashboardHome = () => {
   );
 };
 
-// DashboardHome.propTypes = {
-//   authToken: PropTypes.string,
-// };
+DashboardHome.propTypes = {
+  authToken: PropTypes.string.isRequired,
+};
 
 export default DashboardHome;

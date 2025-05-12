@@ -73,6 +73,20 @@ const changeStatus = async (req, res) => {
     }
 };
 
+const get2FAStatus = async (req, res) => {
+    try {
+        const userId = req.user.id
+        const user = await User.findByPk(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        return res.status(200).json({ is2FAEnabled: user.twoFAEnabled });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
 const disable2FA = async (req, res) => {
     try {
         const userId = req.user.id
@@ -188,7 +202,7 @@ const updateUserById = async (req, res) => {
             user.password = await bcrypt.hash(password, 10);
         }
 
-        if (currentPassword){
+        if (currentPassword) {
             const isMatch = await bcrypt.compare(currentPassword, user.password);
             if (!isMatch) {
                 return res.status(400).json({ message: 'Current password is incorrect' });
@@ -282,6 +296,7 @@ module.exports = {
     getProfile,
     updateProfile,
     changePassword,
+    get2FAStatus,
     disable2FA,
     changeStatus,
     deleteProfile,

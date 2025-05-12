@@ -123,7 +123,7 @@ const DashboardAdmin = ({ content, token }) => {
               </button>
               {showProfileModal && (
                 <div
-                  className="absolute right-0 mt-13 w-96 bg-white border rounded-xl shadow-lg z-10"
+                  className="absolute right-0 mt-13 w-96 bg-white border rounded-xl shadow-lg z-1000"
                   ref={divRef}
                 >
                   <div

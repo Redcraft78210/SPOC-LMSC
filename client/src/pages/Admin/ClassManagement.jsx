@@ -361,19 +361,35 @@ const ClasseManagement = ({ authToken }) => {
           </div>
           <div className="mt-4">
             <h3 className="text-lg font-semibold">{Classe.name}</h3>
-            <p className="text-gray-600 text-sm mt-2">{Classe.description}</p>
+            <p className="text-gray-600 text-sm mt-2">
+              {Classe.description
+                ? `${Classe.description.charAt(0).toUpperCase()}${Classe.description.slice(1)}`
+                : 'Aucune description'}
+            </p>
             <div className="flex items-center mt-4 text-gray-500">
               <Users className="w-5 h-5 mr-2" />
               <span>
                 {Classe.memberCount || 0} membre{Classe.memberCount > 1 && 's'}
               </span>
             </div>
+            <div className="flex items-center mt-2 text-gray-500">
+              <Users className="w-5 h-5 mr-2" />
+              {Classe.main_teacher_id ? (
+                <span>
+                  {
+                    teachersUsers.find(user => user.id === Classe.main_teacher_id)
+                      ?.name || 'Aucun enseignant principal'
+                  }
+                </span>
+              ) : (
+                <span>Aucun enseignant principal</span>
+              )}
+            </div>
           </div>
         </div>
       ))}
     </div>
   );
-
   const ClasseCreationModal = () => {
     const [formData, setFormData] = useState({
       name: '',
@@ -477,7 +493,7 @@ const ClasseManagement = ({ authToken }) => {
 
     return (
       <div
-        className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center transition-all duration-300 ease-out"
+        className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center transition-all duration-300 ease-out z-10"
         onClick={handleBackdropClick}
         role="dialog"
         aria-labelledby="modalTitle"

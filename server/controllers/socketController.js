@@ -4,8 +4,11 @@ const jwt = require('jsonwebtoken');
 const { Lives } = require('../models');
 const SECRET = process.env.JWT_SECRET
 
-function setupStreaming(server) {
-  const wss = new WebSocket.Server({ server });
+function setupStreaming(wss) {
+  const videoSocket = dgram.createSocket('udp4');
+  const audioSocket = dgram.createSocket('udp4');
+  // Buffer pour chaque client WebSocket
+  const wsVideoBuffers = new Map();
 
   // Serveur WebSocket pour le streaming video
   wss.on('connection', async (ws, req) => {
@@ -15,7 +18,9 @@ function setupStreaming(server) {
       const fullUrl = new URL(req.url, `https://${req.headers.host}`);
       token = fullUrl.searchParams.get('token');
       if (!token) {
-        throw new ws.WSClientError(4001, 'Token manquant');
+        const error = new Error('Token manquant');
+        error.code = 4001;
+        throw error;
       }
     } catch (e) {
       // URL parsing failed or token missing
@@ -68,13 +73,15 @@ function setupStreaming(server) {
     ws.on('error', (error) => {
       console.error('Erreur WebSocket :', error);
     });
+
+    // Après l'authentification réussie:
+    wsVideoBuffers.set(ws, []);
+
+    ws.on('close', () => {
+      wsVideoBuffers.delete(ws);
+      console.log('Client déconnecté');
+    });
   });
-
-
-  const videoSocket = dgram.createSocket('udp4');
-  const audioSocket = dgram.createSocket('udp4');
-  // Buffer pour chaque client WebSocket
-  const wsVideoBuffers = new Map();
 
   // Buffer global pour accumuler les données vidéo entre les paquets UDP
   let videoBuffer = Buffer.alloc(0);
@@ -127,6 +134,14 @@ function setupStreaming(server) {
     videoBuffer = videoBuffer.subarray(startPos);
   });
 
+  videoSocket.on('error', (err) => {
+    console.error('Erreur sur le socket vidéo UDP :', err);
+  });
+
+  audioSocket.on('error', (err) => {
+    console.error('Erreur sur le socket audio UDP :', err);
+  });
+
   function processNalUnit(nal) {
     const fullNal = Buffer.concat([Buffer.from([0x00, 0x00, 0x00, 0x01]), nal]);
 
@@ -168,16 +183,6 @@ function setupStreaming(server) {
           }
         });
       }
-    });
-  });
-
-  // Gestion de la déconnexion des clients WebSocket
-  wss.on('connection', (ws) => {
-    wsVideoBuffers.set(ws, []);
-
-    ws.on('close', () => {
-      wsVideoBuffers.delete(ws);
-      console.log('Client déconnecté');
     });
   });
 

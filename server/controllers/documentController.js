@@ -119,7 +119,7 @@ const getBlobDocument = async (req, res) => {
             documentsDirectory,
             path.join(id, `${id}.pdf`)
         );
-        
+
         const escapedFilename = encodeURIComponent(`${id}.pdf`);
 
         console.log(`documentPath: ${documentPath}`);
@@ -162,7 +162,70 @@ const getBlobDocument = async (req, res) => {
     }
 };
 
+const uploadDocument = async (req, res) => {
+    try {
+        // Auth
+        if (!req.user) {
+            return res.status(403).json({ message: 'Accès non autorisé' });
+        }
+
+        const { id } = req.params;
+        if (!id || !/^[a-zA-Z0-9_-]+$/.test(id)) {
+            return res.status(400).json({ message: 'ID invalide' });
+        }
+
+        const documentPath = path.resolve(documentsDirectory, `${id}/${id}.pdf`);
+        if (!isInsideDocumentsDir(documentPath)) {
+            return res.status(400).json({ message: 'Chemin invalide' });
+        }
+
+        await fs.mkdir(path.dirname(documentPath), { recursive: true });
+
+        // Handle file upload logic here...
+
+    } catch (error) {
+        console.error('Erreur serveur:', error);
+        if (!res.headersSent) {
+            res.status(error.code === 'ENOENT' ? 404 : 500).json({
+                message: error.message || 'Erreur interne'
+            });
+        }
+    }
+}
+
+const deleteDocument = async (req, res) => {
+    try {
+        // Auth
+        if (!req.user) {
+            return res.status(403).json({ message: 'Accès non autorisé' });
+        }
+
+        const { id } = req.params;
+        if (!id || !/^[a-zA-Z0-9_-]+$/.test(id)) {
+            return res.status(400).json({ message: 'ID invalide' });
+        }
+
+        const documentPath = path.resolve(documentsDirectory, `${id}/${id}.pdf`);
+        if (!isInsideDocumentsDir(documentPath)) {
+            return res.status(400).json({ message: 'Chemin invalide' });
+        }
+
+        await fs.unlink(documentPath);
+        res.status(200).json({ message: 'Document supprimé avec succès' });
+
+    } catch (error) {
+        console.error('Erreur serveur:', error);
+        if (!res.headersSent) {
+            res.status(error.code === 'ENOENT' ? 404 : 500).json({
+                message: error.message || 'Erreur interne'
+            });
+        }
+    }
+};
+
 module.exports = {
     getDocument,
-    getBlobDocument
+    getBlobDocument,
+    uploadDocument,
+    deleteDocument
 };

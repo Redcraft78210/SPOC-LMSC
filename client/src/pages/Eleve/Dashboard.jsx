@@ -1,9 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { jwtDecode } from 'jwt-decode';
-
-import { X, Pencil } from 'lucide-react';
+import { X, Pencil, Loader2 } from 'lucide-react';
 
 import NavigationBar from '../../components/Navbar';
 // import "../style/NavigationBar.css";
@@ -19,11 +18,67 @@ import ThemeSettings from '../Public/Theme';
 import Settings from '../Settings';
 import Logo from '../../Logo';
 
+const API_URL = 'https://localhost:8443/api';
+
 const DashboardEleve = ({ content, token }) => {
   const navigate = useNavigate();
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showProfilepictureModal, setShowProfilepictureModal] = useState(false);
   const divRef = useRef();
+  const [userAvatar, setUserAvatar] = useState(null);
+  const [avatarVersion, setAvatarVersion] = useState(0);
+  const [loadingAvatar, setLoadingAvatar] = useState(false);
+
+  // Fonction pour rafraîchir l'avatar
+  const refreshAvatar = useCallback(() => {
+    // Force a re-fetch of the avatar by updating the version with the current timestamp
+    setAvatarVersion(Date.now());
+  }, []);
+
+  // Récupération de l'avatar avec fetch
+  useEffect(() => {
+    const fetchAvatar = async () => {
+      try {
+        setLoadingAvatar(true);
+
+        // Clear previous avatar URL to prevent showing stale images
+        if (userAvatar) {
+          URL.revokeObjectURL(userAvatar);
+          setUserAvatar(null);
+        }
+
+        const response = await fetch(`${API_URL}/avatars?t=${avatarVersion}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          // Disable cache to ensure fresh avatar
+          cache: 'no-store',
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch avatar');
+        }
+
+        const blob = await response.blob();
+        const imageUrl = URL.createObjectURL(blob);
+        setUserAvatar(imageUrl);
+      } catch (error) {
+        console.error('Error fetching avatar:', error);
+        setUserAvatar(null);
+      } finally {
+        setLoadingAvatar(false);
+      }
+    };
+
+    fetchAvatar();
+
+    // Nettoie l'URL de l'objet lorsque le composant est démonté
+    return () => {
+      if (userAvatar) {
+        URL.revokeObjectURL(userAvatar);
+      }
+    };
+  }, [token, avatarVersion]);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -60,7 +115,14 @@ const DashboardEleve = ({ content, token }) => {
     LiveViewer: <LiveViewer authToken={token} />,
     Forum: <Forum authToken={token} />,
     Home: <EleveDashboardHome authToken={token} />,
-    Settings: <Settings authToken={token} />,
+    Settings: (
+      <Settings
+        authToken={token}
+        refreshAvatar={refreshAvatar}
+        userAvatar={userAvatar}
+        loadingAvatar={loadingAvatar}
+      />
+    ),
     ThemeSettings: <ThemeSettings />,
   };
 
@@ -68,10 +130,12 @@ const DashboardEleve = ({ content, token }) => {
     return contentMap[content] || <NotFound />;
   };
 
+  // Pour le PictureModal, vous transmettez déjà les bonnes props
   return showProfilepictureModal ? (
     <PictureModal
       setShowProfilepictureModal={setShowProfilepictureModal}
-      user={user}
+      refreshAvatar={refreshAvatar}
+      authToken={token}
     />
   ) : (
     <div className="h-screen w-full bg-white flex overflow-hidden">
@@ -103,10 +167,11 @@ const DashboardEleve = ({ content, token }) => {
                 className="hover:ring-2 hover:ring-blue-400 rounded-full transition-all"
                 onClick={() => setShowProfileModal(true)}
               >
-                {/* Votre logo / lettre / image */}
-                {!user.avater ||
-                user.avatar === '' ||
-                user.avatar === 'default' ? (
+                {loadingAvatar ? (
+                  <div className="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center">
+                    <Loader2 className="h-6 w-6 text-blue-500 animate-spin" />
+                  </div>
+                ) : !userAvatar ? (
                   <div className="w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center">
                     <span className="text-xl font-bold text-gray-800">
                       {user.name.charAt(0).toUpperCase()}
@@ -114,16 +179,16 @@ const DashboardEleve = ({ content, token }) => {
                   </div>
                 ) : (
                   <img
-                    // src={user.avatar}
-                    src="https://via.placeholder.com/150"
+                    src={userAvatar}
                     alt="Avatar"
-                    className="w-full h-full rounded-full"
+                    className="w-12 h-12 rounded-full object-cover"
+                    onError={() => setUserAvatar(null)}
                   />
                 )}
               </button>
               {showProfileModal && (
                 <div
-                  className="absolute right-0 mt-13 w-96 bg-white border rounded-xl shadow-lg z-10"
+                  className="absolute right-0 mt-13 w-96 bg-white border rounded-xl shadow-lg z-1000"
                   ref={divRef}
                 >
                   <div
@@ -144,10 +209,11 @@ const DashboardEleve = ({ content, token }) => {
                         <Pencil className="h-4 w-4" />
                       </p>
 
-                      {/* Votre logo / lettre / image */}
-                      {!user.avater ||
-                      user.avatar === '' ||
-                      user.avatar === 'default' ? (
+                      {loadingAvatar ? (
+                        <div className="h-20 w-20 rounded-full border-2 bg-gray-700 mx-auto mb-4 flex items-center justify-center">
+                          <Loader2 className="h-8 w-8 text-blue-500 animate-spin" />
+                        </div>
+                      ) : !userAvatar ? (
                         <div className="h-20 w-20 rounded-full border-2 bg-yellow-500 mx-auto mb-4 flex items-center justify-center">
                           <span className="text-2xl font-bold text-gray-800">
                             {user.name.charAt(0).toUpperCase()}
@@ -155,10 +221,10 @@ const DashboardEleve = ({ content, token }) => {
                         </div>
                       ) : (
                         <img
-                          // src={user.avatar}
-                          src="https://via.placeholder.com/150"
+                          src={userAvatar}
                           alt="Avatar"
-                          className="w-full h-full rounded-full object-cover"
+                          className="h-20 w-20 rounded-full mx-auto mb-4 object-cover"
+                          onError={() => setUserAvatar(null)}
                         />
                       )}
                       <p className="text-center text-lg text-xl font-thin text-white mt-1">

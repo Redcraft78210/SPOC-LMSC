@@ -55,7 +55,6 @@ CREATE TABLE IF NOT EXISTS codes (
         DEFERRABLE INITIALLY DEFERRED
 );
 
-
 -- Junction table for teacher-class relationships
 CREATE TABLE IF NOT EXISTS teacher_classes (
     teacher_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -73,11 +72,19 @@ CREATE TABLE IF NOT EXISTS student_classes (
 -- Create courses table
 CREATE TABLE IF NOT EXISTS courses (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    title VARCHAR(255) NOT NULL,
+    title VARCHAR(255) NOT NULL,            -- corresponds to titre in model
     description TEXT,
-    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- corresponds to date_creation
     "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    teacher_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE
+    is_published BOOLEAN DEFAULT FALSE,     -- missing from table
+    teacher_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    teacher_name VARCHAR(255),              -- missing from table
+    matiere VARCHAR(255),                   -- missing from table
+    chapitre VARCHAR(255),                  -- missing from table
+    CONSTRAINT fk_teacher 
+      FOREIGN KEY (teacher_id)
+      REFERENCES users(id)
+      ON DELETE CASCADE
 );
 
 -- Create lives table
@@ -89,6 +96,36 @@ CREATE TABLE IF NOT EXISTS lives (
     "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     teacher_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS course_progress (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    course_id UUID NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    status VARCHAR(255) NOT NULL CHECK (status IN ('not_started', 'in_progress', 'completed')),
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (user_id, course_id)
+);
+
+CREATE TABLE IF NOT EXISTS live_attendance (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    live_id UUID NOT NULL REFERENCES lives(id) ON DELETE CASCADE,
+    status VARCHAR(255) NOT NULL CHECK (status IN ('attended', 'missed')),
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (user_id, live_id)
+);
+
+-- Create chat_messages table
+CREATE TABLE IF NOT EXISTS chat_messages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    content TEXT NOT NULL,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    live_id UUID NOT NULL REFERENCES lives(id) ON DELETE CASCADE,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Junction table for class-lives relationships
@@ -115,6 +152,26 @@ CREATE TABLE IF NOT EXISTS comments (
     "threadId" UUID NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
     "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Table pour stocker les avatars des utilisateurs
+CREATE TABLE IF NOT EXISTS user_avatars (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    mime_type VARCHAR(128) NOT NULL,
+    file_name VARCHAR(255),
+    original_size INTEGER NOT NULL,
+    compressed_size INTEGER NOT NULL,
+    data BYTEA NOT NULL,
+    compression_quality SMALLINT NOT NULL,
+    dimensions VARCHAR(20) NOT NULL,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (user_id)
+);
+
+-- Index pour optimiser les recherches par user_id
+CREATE INDEX IF NOT EXISTS idx_user_avatars_user_id ON user_avatars(user_id);
+
 -- Trigger Functions
 CREATE OR REPLACE FUNCTION validate_teacher()
 RETURNS TRIGGER AS $$
@@ -222,6 +279,8 @@ CREATE TRIGGER trg_class_lives
 BEFORE INSERT OR UPDATE ON class_lives
 FOR EACH ROW EXECUTE FUNCTION validate_class_lives();
 
+
+
 -- Universal update trigger
 CREATE OR REPLACE FUNCTION update_updated_at()
 RETURNS TRIGGER AS $$
@@ -233,6 +292,9 @@ $$ LANGUAGE plpgsql;
 
 -- Apply to all tables
 CREATE TRIGGER users_updated_at BEFORE UPDATE ON users
+FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE TRIGGER user_avatars_updated_at BEFORE UPDATE ON user_avatars
 FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 CREATE TRIGGER codes_updated_at BEFORE UPDATE ON codes
@@ -247,6 +309,15 @@ FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE TRIGGER lives_updated_at BEFORE UPDATE ON lives
 FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
+CREATE TRIGGER chat_updated_at BEFORE UPDATE ON chat_messages
+FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE TRIGGER student_stats_updated_at BEFORE UPDATE ON course_progress
+FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE TRIGGER student_stats_updated_at BEFORE UPDATE ON live_attendance
+FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
 -- Optimized Indexes
 CREATE INDEX idx_users_username ON users (username);
 CREATE INDEX idx_users_email ON users (email);
@@ -257,6 +328,39 @@ CREATE INDEX idx_classes_main_teacher ON classes (main_teacher_id);
 -- Attach the trigger to the courses table
 CREATE TRIGGER trigger_courses_updated_at BEFORE
 UPDATE ON courses FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- Create documents table
+CREATE TABLE IF NOT EXISTS documents (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    path VARCHAR(255) NOT NULL,
+    course_id UUID REFERENCES courses(id) ON DELETE CASCADE,
+    commit_msg VARCHAR(255) NOT NULL,
+    is_main BOOLEAN DEFAULT FALSE,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create videos table
+CREATE TABLE IF NOT EXISTS videos (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    path VARCHAR(255) NOT NULL,
+    course_id UUID REFERENCES courses(id) ON DELETE CASCADE,
+    commit_msg VARCHAR(255) NOT NULL,
+    is_main BOOLEAN DEFAULT FALSE,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create triggers for updating timestamp
+CREATE TRIGGER documents_updated_at BEFORE UPDATE ON documents
+FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE TRIGGER videos_updated_at BEFORE UPDATE ON videos
+FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- Create indexes for better performance
+CREATE INDEX idx_documents_course_id ON documents(course_id);
+CREATE INDEX idx_videos_course_id ON videos(course_id);
 
 -- Insert initial data into the teachers table
 INSERT INTO
@@ -456,3 +560,26 @@ VALUES
         'a6fa5fc1-1234-4321-0000-000000000015'
     );
 
+insert into chat_messages (content, user_id, live_id)
+values
+('Salut, j''espère que vous allez bien !', 'a6fa5fc1-1234-4321-0000-000000000006', 'a6fa5fc1-1234-4321-0000-000000000015'),
+('Bonjour à tous !', 'a6fa5fc1-1234-4321-0000-000000000007', 'a6fa5fc1-1234-4321-0000-000000000015'),
+('Bienvenue au live, n''hésitez pas à poser vos questions', 'a6fa5fc1-1234-4321-0000-000000000005', 'a6fa5fc1-1234-4321-0000-000000000015'),
+('Merci, hâte de commencer !', 'a6fa5fc1-1234-4321-0000-000000000008', 'a6fa5fc1-1234-4321-0000-000000000015'),
+('Quelle est la durée prévue pour ce live ?', 'a6fa5fc1-1234-4321-0000-000000000007', 'a6fa5fc1-1234-4321-0000-000000000015'),
+('Environ 1 heure, avec une session de questions à la fin.', 'a6fa5fc1-1234-4321-0000-000000000005', 'a6fa5fc1-1234-4321-0000-000000000015'),
+('Est-ce que les slides seront disponibles après le live ?', 'a6fa5fc1-1234-4321-0000-000000000008', 'a6fa5fc1-1234-4321-0000-000000000015'),
+('Oui, je les partagerai à la fin.', 'a6fa5fc1-1234-4321-0000-000000000005', 'a6fa5fc1-1234-4321-0000-000000000015'),
+('Super, merci beaucoup !', 'a6fa5fc1-1234-4321-0000-000000000008', 'a6fa5fc1-1234-4321-0000-000000000015'),
+('Est-ce que vous allez parler du principe d’incertitude ?', 'a6fa5fc1-1234-4321-0000-000000000007', 'a6fa5fc1-1234-4321-0000-000000000015'),
+('Oui, c’est prévu dans la deuxième partie du live.', 'a6fa5fc1-1234-4321-0000-000000000005', 'a6fa5fc1-1234-4321-0000-000000000015'),
+('Merci pour cette précision.', 'a6fa5fc1-1234-4321-0000-000000000008', 'a6fa5fc1-1234-4321-0000-000000000015'),
+('Est-ce que vous allez aussi parler de la dualité onde-particule ?', 'a6fa5fc1-1234-4321-0000-000000000008', 'a6fa5fc1-1234-4321-0000-000000000015'),
+('Absolument, c’est un des sujets principaux.', 'a6fa5fc1-1234-4321-0000-000000000005', 'a6fa5fc1-1234-4321-0000-000000000015');
+
+insert into courses (id, title, description, is_published, teacher_id, teacher_name, matiere, chapitre)
+values
+('7f4b5385-04fa-cde3-c881-b73844f52f25', 'Introduction to Quantum Mechanics', 'A beginner-friendly course on the principles of quantum mechanics.', TRUE, 'a6fa5fc1-1234-4321-0000-000000000005', 'Bob Smith', 'Physics', 'Fundamentals'),
+('a6fa5fc1-1234-4321-0000-000000000012', 'Advanced Quantum Physics', 'An advanced course covering complex topics in quantum physics.', TRUE, 'a6fa5fc1-1234-4321-0000-000000000005', 'Bob Smith', 'Physics', 'Advanced Topics'),
+('a6fa5fc1-1234-4321-0000-000000000013', 'Quantum Computing Basics', 'An introduction to the principles of quantum computing.', TRUE, 'a6fa5fc1-1234-4321-0000-000000000005', 'Bob Smith', 'Computer Science', 'Quantum Computing'),
+('a6fa5fc1-1234-4321-0000-000000000014', 'Quantum Entanglement Explained', 'A detailed look at the phenomenon of quantum entanglement.', TRUE, 'a6fa5fc1-1234-4321-0000-000000000005', 'Bob Smith', 'Physics', 'Quantum Phenomena');

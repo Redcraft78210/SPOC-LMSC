@@ -1,8 +1,5 @@
-const Thread = require('../models/Thread');
-const Comment = require('../models/Comment');
-const User = require('../models/User'); // Assuming you have a User model
+const { Thread, Comment, User, sequelize } = require('../models');
 
-const sequelize = require('../config/database');
 const leoProfanity = require('leo-profanity');
 const frenchBadwordsList = require('french-badwords-list');
 

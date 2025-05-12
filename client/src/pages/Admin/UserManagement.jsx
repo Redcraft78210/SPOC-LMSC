@@ -528,7 +528,7 @@ const UserManagement = ({ authToken }) => {
           <div
             key={user.id}
             className={`bg-white p-4 rounded-lg shadow ${
-              !user.active === 'actif' ? 'opacity-75' : ''
+              user.active !== 'actif' ? 'opacity-75' : ''
             }`}
           >
             <div className="flex justify-between items-start">
@@ -548,12 +548,50 @@ const UserManagement = ({ authToken }) => {
                 >
                   <Edit className="w-5 h-5" />
                 </button>
+                {user.active === 'actif' ? (
+                  <button
+                    className="text-red-600 hover:text-red-900"
+                    onClick={() => toggleStatus(user.id, false)}
+                  >
+                    <Ban className="w-5 h-5" />
+                  </button>
+                ) : (
+                  <button
+                    className="text-green-600 hover:text-green-900"
+                    onClick={() => toggleStatus(user.id, true)}
+                  >
+                    <Check className="w-5 h-5" />
+                  </button>
+                )}
                 <button
                   onClick={() => deleteUser(user.id)}
                   className="text-red-600 hover:text-red-900"
                 >
                   <Trash2 className="w-5 h-5" />
                 </button>
+                {user.role === 'Etudiant' || user.role === 'Professeur' ? (
+                  <button
+                    className="text-blue-600 hover:text-blue-900"
+                    onClick={() => upgradeUser(user.id)}
+                  >
+                    <UserPlus className="w-5 h-5" />
+                  </button>
+                ) : (
+                  <button
+                    className="text-green-600 hover:text-green-900"
+                    onClick={() => retrogradeUser(user.id)}
+                  >
+                    <UserMinus className="w-5 h-5" />
+                  </button>
+                )}
+                {user.role === 'Professeur' && (
+                  <button
+                    className="text-green-600 hover:text-green-900"
+                    onClick={() => retrogradeUser(user.id)}
+                  >
+                    <UserMinus className="w-5 h-5" />
+                  </button>
+                )}
               </div>
             </div>
             <div className="mt-4">
@@ -757,7 +795,7 @@ const UserManagement = ({ authToken }) => {
 
     return (
       <div
-        className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center transition-all duration-300 ease-out"
+        className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center transition-all duration-300 ease-out z-10"
         onClick={handleBackdropClick}
         role="dialog"
         aria-labelledby="userModalTitle"
@@ -814,7 +852,6 @@ const UserManagement = ({ authToken }) => {
                   </p>
                 )}
               </div>
-
               {/* Prénom */}
               <div>
                 <label className="block text-sm font-semibold text-gray-800 mb-2">
@@ -844,7 +881,6 @@ const UserManagement = ({ authToken }) => {
                   <p className="text-red-500 text-sm mt-1">{errors.surname}</p>
                 )}
               </div>
-
               {/* Email */}
               <div>
                 <label className="block text-sm font-semibold text-gray-800 mb-2">
@@ -872,18 +908,25 @@ const UserManagement = ({ authToken }) => {
                   </p>
                 )}
               </div>
-
               {/* Rôle */}
+              {console.log(formData.role)}
               <div>
                 <label className="block text-sm font-semibold text-gray-800 mb-2">
                   Rôle *
                 </label>
                 <select
                   name="role"
-                  value={formData.role}
+                  value={
+                    formData.role === 'Administrateur'
+                      ? 'admin'
+                      : formData.role === 'Professeur'
+                        ? 'teacher'
+                        : formData.role === 'Etudiant'
+                          ? 'student'
+                          : formData.role
+                  }
                   onChange={e => {
                     setFormData({ ...formData, role: e.target.value });
-                    console.log(e.target.value);
                   }}
                   className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
                   disabled={isLoading}
@@ -893,8 +936,6 @@ const UserManagement = ({ authToken }) => {
                   <option value="student">Élève</option>
                 </select>
               </div>
-
-              {/* Mot de passe (uniquement pour création) */}
               {
                 <button
                   type="button"
@@ -905,7 +946,6 @@ const UserManagement = ({ authToken }) => {
                   Générer un nouveau mot de passe
                 </button>
               }
-
               {/* Afficher le mot de passe */}
               {newPassword && (
                 <div className="mt-4">
@@ -1172,7 +1212,7 @@ const UserManagement = ({ authToken }) => {
     }, [existingCodes]);
 
     return (
-      <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center transition-all duration-300 ease-out">
+      <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center transition-all duration-300 ease-out z-10">
         <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto transform transition-all duration-300 ease-in-out">
           <div className="flex justify-between items-start mb-6">
             <h2 className="text-2xl font-bold">Gestion des codes</h2>

@@ -14,6 +14,7 @@ const CourseReader = ({ authToken }) => {
   const [error, setError] = useState(null);
   const [documentError, setDocumentError] = useState(null);
   const courseId = new URLSearchParams(window.location.search).get('courseId');
+  const [completed, setCompleted] = useState(false);
 
   useEffect(() => {
     const fetchCourseData = async () => {
@@ -80,6 +81,48 @@ const CourseReader = ({ authToken }) => {
         //   ],
         // };
 
+        if (data) {
+          // Marquer le cours comme commencé
+          try {
+            const progressResponse = await fetch(
+              `${API_URL}/progress/course-progress/${courseId}`,
+              {
+                method: 'POST',
+                headers: {
+                  Authorization: `Bearer ${authToken}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  status: 'in_progress',
+                }),
+              }
+            );
+
+            if (!progressResponse.ok) {
+              const errorData = await progressResponse.json();
+              if (
+                progressResponse.status === 400 &&
+                errorData.message ===
+                  'Cannot mark as in progress, already completed'
+              ) {
+                setCompleted(true);
+                toast.success(
+                  'Vous avez déjà terminé ce cours.\nVous pouvez le revoir à tout moment.'
+                );
+              } else {
+                throw new Error(
+                  errorData.message || 'Erreur lors de la validation'
+                );
+              }
+            }
+          } catch (err) {
+            console.error('Error marking course as in progress:', err);
+            throw err;
+          }
+        } else {
+          throw new Error('Cours non trouvé');
+        }
+
         // Extraction de la première entrée du cours
         const { ...content } = data;
 
@@ -93,6 +136,68 @@ const CourseReader = ({ authToken }) => {
 
     fetchCourseData();
   }, [courseId, authToken]);
+
+  useEffect(() => {
+    const checkCourseCompletion = async () => {
+      try {
+        const response = await fetch(
+          `${API_URL}/progress/course-progress/${courseId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+            },
+          }
+        );
+        if (!response.ok) {
+          if (response.status === 404) {
+            setCompleted(false);
+            return;
+          }
+          const errorData = await response.json();
+          throw new Error(
+            errorData.message || 'Erreur lors de la vérification'
+          );
+        }
+        const data = await response.json();
+        setCompleted(data.completed);
+      } catch (err) {
+        console.error('Completion check error:', err);
+        setError(err.message || 'Erreur lors de la vérification');
+      }
+    };
+    if (courseId) {
+      checkCourseCompletion();
+    }
+  }, [courseId, authToken]);
+
+  const handleCompleteCourse = async () => {
+    try {
+      const response = await fetch(
+        `${API_URL}/progress/course-progress/${courseId}`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            status: 'completed',
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erreur lors de la validation');
+      }
+
+      toast.success('Cours terminé !');
+      setCompleted(true);
+    } catch (err) {
+      console.error('Completion error:', err);
+      toast.error(err.message || 'Erreur lors de la validation');
+    }
+  };
 
   const handleDownloadDocument = async documentId => {
     try {
@@ -160,7 +265,7 @@ const CourseReader = ({ authToken }) => {
           Créé le : {new Date(courseData.date_creation).toLocaleDateString()}
         </div>
       </div>
-      <p>{error && <p className="text-red-600 mb-4">{error}</p>}</p>
+      {error && <p className="text-red-600 mb-4">{error}</p>}
       {/* Section Vidéo */}
       {courseData.video && (
         <div className="mb-8">
@@ -225,12 +330,18 @@ const CourseReader = ({ authToken }) => {
 
       {/* Bouton "Cours terminé" */}
       <div className="text-center mt-8">
-        <button
-          onClick={() => toast.success('Cours terminé !')}
-          className="bg-blue-600 text-white px-6 py-3 rounded-md text-lg hover:bg-green-700 transition-colors"
-        >
-          Cours terminé
-        </button>
+        {completed ? (
+          <p className="text-green-600 font-semibold">
+            Cours terminé ! Vous pouvez le revoir à tout moment.
+          </p>
+        ) : (
+          <button
+            onClick={handleCompleteCourse}
+            className="bg-blue-600 text-white px-6 py-3 rounded-md text-lg hover:bg-green-700 transition-colors"
+          >
+            Terminer le cours
+          </button>
+        )}
       </div>
     </div>
   );

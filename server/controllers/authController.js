@@ -337,6 +337,22 @@ const firstLogin = async (req, res) => {
     user.password = await bcrypt.hash(password, 12);
     user.username = username;
 
+    // check if the user has 2FA enabled to direct login
+    if (user.twoFAEnabled) {
+      const tokenPayload = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role === 'admin' ? 'Administrateur' :
+          user.role === 'teacher' ? 'Professeur' :
+            'Etudiant',
+        ...(user.firstLogin && { firstLogin: true })
+      };
+
+      const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '1h' });
+      return res.json({ token });
+    }
+
     const email = user.email;
     const secret = authenticator.generateSecret();
     user.twoFASecret = secret;
