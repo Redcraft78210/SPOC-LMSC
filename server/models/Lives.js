@@ -15,9 +15,25 @@ const Lives = sequelize.define('Lives', {
         type: DataTypes.TEXT,
         allowNull: true
     },
-    link: {
+    subject: {
         type: DataTypes.STRING,
         allowNull: false
+    },
+    chapter: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
+    start_time: {
+        type: DataTypes.DATE,
+        allowNull: false
+    },
+    end_time: {
+        type: DataTypes.DATE,
+        allowNull: false
+    },
+    status: {
+        type: DataTypes.ENUM('scheduled', 'ongoing', 'completed', 'cancelled'),
+        defaultValue: 'scheduled'
     },
     createdAt: {
         type: DataTypes.DATE,

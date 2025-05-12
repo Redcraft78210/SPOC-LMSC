@@ -4,7 +4,9 @@ import PropTypes from 'prop-types';
 import { FileText, SquarePlay, Radio } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const Courses = () => {
+const API_URL = 'https://localhost:8443/api';
+
+const Courses = ({ authToken }) => {
   const [selectedProfessor, setSelectedProfessor] = useState('Tous');
   const [selectedSubject, setSelectedSubject] = useState('Tous');
   const [searchQuery, setSearchQuery] = useState('');
@@ -21,50 +23,80 @@ const Courses = () => {
         setLoading(true);
 
         // Mock API calls
-        const fetchCourses = async () => ({
-          'Mr grandingo': {
-            math_info: {
-              complexe: {
-                titre: 'Nombres imaginaires',
-                description: 'Introduction aux nombres imaginaires',
-                date_creation: '2025-03-17T18:52:02.826Z',
-                id: '7f4b5385-04fa-cde3-c881-b73844f52f25',
-                type: 'cours',
-                video: {
-                  video_id: '3f4b538504facde3c881b73844f52f24-1742237522',
-                  date_mise_en_ligne: '2024-03-17T18:52:48.781Z',
-                },
-                nombre_de_documents: 4,
-              },
-            },
-          },
-        });
+        // const fetchCourses = async () => ({
+        //   'Mr grandingo': {
+        //     math_info: {
+        //       complexe: {
+        //         titre: 'Nombres imaginaires',
+        //         description: 'Introduction aux nombres imaginaires',
+        //         date_creation: '2025-03-17T18:52:02.826Z',
+        //         id: '7f4b5385-04fa-cde3-c881-b73844f52f25',
+        //         type: 'cours',
+        //         video: {
+        //           video_id: '3f4b538504facde3c881b73844f52f24-1742237522',
+        //           date_mise_en_ligne: '2024-03-17T18:52:48.781Z',
+        //         },
+        //         nombre_de_documents: 4,
+        //       },
+        //     },
+        //   },
+        // });
 
-        const fetchLives = async () => ({
-          'Mme claquette': {
-            physique: {
-              asservissement: {
-                titre: 'Live Pont diviseur',
-                description: 'Session en direct sur le pont diviseur',
-                date_creation: '2025-03-17T18:52:02.826Z',
-                id: 'a6fa5fc1-1234-4321-0000-000000000015',
-                type: 'live',
-                live: {
-                  date_debut: '2024-06-18T14:30:00.000Z',
-                  statut: 'programme',
-                },
-              },
+        // const fetchLives = async () => ({
+        //   'Mme claquette': {
+        //     physique: {
+        //       asservissement: {
+        //         titre: 'Live Pont diviseur',
+        //         description: 'Session en direct sur le pont diviseur',
+        //         date_creation: '2025-03-17T18:52:02.826Z',
+        //         id: 'a6fa5fc1-1234-4321-0000-000000000015',
+        //         type: 'live',
+        //         live: {
+        //           date_debut: '2024-06-18T14:30:00.000Z',
+        //           statut: 'programme',
+        //         },
+        //       },
+        //     },
+        //   },
+        // });
+
+        // Fetch courses from the API
+        const fetchCourses = async () => {
+          const response = await fetch(`${API_URL}/courses/all`, {
+            headers: {
+              Authorization: `Bearer ${authToken}`,
             },
-          },
-        });
+          });
+          if (!response.ok) {
+            throw new Error('Failed to fetch courses');
+          }
+          return await response.json();
+        };
+
+        // Fetch lives from the API
+        const fetchLives = async () => {
+          const response = await fetch(`${API_URL}/lives/all`, {
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+            },
+          });
+          if (!response.ok) {
+            throw new Error('Failed to fetch lives');
+          }
+          return await response.json();
+        };
 
         const [coursesData, livesData] = await Promise.all([
           fetchCourses(),
           fetchLives(),
         ]);
-
         // Transformation des données en tableau plat
         const transformData = (data, type) => {
+          if (!data || typeof data !== 'object') {
+            console.error(`Invalid data passed to transformData:`, data);
+            return [];
+          }
+
           const result = [];
           for (const [professor, subjects] of Object.entries(data)) {
             for (const [subject, topics] of Object.entries(subjects)) {
@@ -73,7 +105,7 @@ const Courses = () => {
                   ...details,
                   professor,
                   subject,
-                  topic,
+                  titre: details.titre || topic, // Add topic as titre if titre is not present
                   type,
                 });
               }
@@ -97,7 +129,7 @@ const Courses = () => {
     };
 
     fetchData();
-  }, []);
+  }, [authToken]);
 
   // Filtrage et tri
   const filteredContent = content
@@ -116,9 +148,12 @@ const Courses = () => {
     })
     .sort((a, b) => {
       const getDate = item => {
-        return item.type === 'cours'
-          ? item.video.date_mise_en_ligne
-          : item.live.date_debut;
+        if (item.type === 'cours' && item.video) {
+          return item.video.date_mise_en_ligne;
+        } else if (item.type === 'live' && item.live) {
+          return item.live.date_debut;
+        }
+        return null; // Fallback if no date is available
       };
 
       return sortBy === 'date_recent'
@@ -307,7 +342,7 @@ const ContentCard = ({ item }) => {
       onClick={handleClick}
     >
       <div className="aspect-video bg-gray-200 relative">
-        {item.type === 'cours' ? (
+        {item.type === 'cours' && item.video ? (
           <>
             {isHovered ? (
               <img
@@ -333,12 +368,16 @@ const ContentCard = ({ item }) => {
                 Live programmé
               </p>
               <p className="text-xs text-gray-500 mt-1">
-                {new Date(item.live.date_debut).toLocaleDateString('fr-FR', {
-                  day: 'numeric',
-                  month: 'long',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
+                {item.live && item.live.date_debut ? (
+                  new Date(item.live.date_debut).toLocaleDateString('fr-FR', {
+                    day: 'numeric',
+                    month: 'long',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })
+                ) : (
+                  <span className="text-gray-500">Date non disponible</span>
+                )}
               </p>
             </div>
           </div>
@@ -353,11 +392,11 @@ const ContentCard = ({ item }) => {
                 <SquarePlay className="w-4 h-4 mr-2" />
                 <span className="text-xs text-gray-500">00:27:30</span>
               </div>
-              {item.nombre_de_documents > 0 && (
+              {item.nombre_de_documents && item.nombre_de_documents > 0 && (
                 <div className="flex items-center">
                   <FileText className="w-4 h-4 mr-2" />
                   <span className="text-xs text-gray-500">
-                    {item.nombre_de_documents}
+                    {item.nombre_de_documents} document(s)
                   </span>
                 </div>
               )}
@@ -383,10 +422,10 @@ const ContentCard = ({ item }) => {
           <span className="font-medium">{item.professor}</span>
           <span className="italic">
             {item.type === 'cours'
-              ? new Date(item.video.date_mise_en_ligne).toLocaleDateString(
-                  'fr-FR'
-                )
-              : new Date(item.live.date_debut).toLocaleDateString('fr-FR')}
+              ? item.video &&
+                new Date(item.video.date_creation).toLocaleDateString('fr-FR')
+              : item.live &&
+                new Date(item.live.date_debut).toLocaleDateString('fr-FR')}
           </span>
         </div>
       </div>
@@ -407,7 +446,7 @@ ContentCard.propTypes = {
     description: PropTypes.string,
     video: PropTypes.shape({
       video_id: PropTypes.string,
-      date_mise_en_ligne: PropTypes.string,
+      date_creation: PropTypes.string,
     }),
     nombre_de_documents: PropTypes.number,
     professor: PropTypes.string.isRequired,
@@ -436,4 +475,7 @@ FilterDropdown.propTypes = {
   setSelected: PropTypes.func.isRequired,
 };
 
+Courses.propTypes = {
+  authToken: PropTypes.string.isRequired,
+};
 export default Courses;

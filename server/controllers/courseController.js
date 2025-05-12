@@ -1,26 +1,61 @@
 const { Course, Video, Document } = require('../models');
 
-const getAllCours = async (req, res) => {
+const getAllCourses = async (req, res) => {
   try {
-    const cours = await Course.findAll({
+    const courses = await Course.findAll({
       include: [
-        { model: Video, as: 'videos' },
-        { model: Document, as: 'documents' }
+        { model: Video },
+        { model: Document }
       ]
     });
 
-    res.status(200).json(cours);
+    // Transformation des données en structure imbriquée
+    const structuredData = {};
+
+    courses.forEach(course => {
+      const professor = course.professor || 'Unknown Professor';
+      const subject = course.matiere || 'Unknown Subject';
+      const topic = course.chapitre || 'Unknown Topic';
+
+      if (!structuredData[professor]) {
+        structuredData[professor] = {};
+      }
+
+      if (!structuredData[professor][subject]) {
+        structuredData[professor][subject] = {};
+      }
+
+      if (!structuredData[professor][subject][topic]) {
+        structuredData[professor][subject][topic] = {};
+      }
+
+      structuredData[professor][subject][topic] = {
+        titre: course.titre,
+        description: course.description,
+        date_creation: course.createdAt,
+        id: course.id,
+        type: 'cours',
+        video: course.Video ? {
+          video_id: course.Video.id,
+          date_mise_en_ligne: `/media/video/${course.Video.path.split('/').pop()}`
+        } : null,
+        nombre_de_documents: course.Documents ? course.Documents.length : 0
+      };
+    });
+
+    res.status(200).json(structuredData);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error fetching all courses:', error);
+    res.status(500).json({ error: 'An error occurred while fetching courses.' });
   }
 };
 
-const getCours = async (req, res) => {
+const getCourse = async (req, res) => {
   try {
     const cours = await Course.findByPk(req.params.id, {
       include: [
-        { model: Video, as: 'videos' },
-        { model: Document, as: 'documents' }
+        { model: Video },
+        { model: Document }
       ]
     });
 
@@ -34,7 +69,7 @@ const getCours = async (req, res) => {
   }
 };
 
-const getCoursMain = async (req, res) => {
+const getMainCourse = async (req, res) => {
   try {
     const cours = await Course.findByPk(req.params.id);
 
@@ -76,4 +111,62 @@ const getCoursMain = async (req, res) => {
   }
 };
 
-export { getAllCours, getCours, getCoursMain };
+const deleteCourse = async (req, res) => {
+  try {
+    const cours = await Course.findByPk(req.params.id);
+
+    if (!cours) {
+      return res.status(404).json({ error: 'Cours not found' });
+    }
+
+    await cours.destroy();
+
+    res.status(200).json({ message: 'Cours deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
+const updateCourse = async (req, res) => {
+  try {
+    const cours = await Course.findByPk(req.params.id);
+
+    if (!cours) {
+      return res.status(404).json({ error: 'Cours not found' });
+    }
+
+    const { matiere, chapitre, titre, date_creation, description } = req.body;
+
+    await cours.update({
+      matiere,
+      chapitre,
+      titre,
+      date_creation,
+      description
+    });
+
+    res.status(200).json(cours);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
+const createCourse = async (req, res) => {
+  try {
+    const { matiere, chapitre, titre, date_creation, description } = req.body;
+
+    const cours = await Course.create({
+      matiere,
+      chapitre,
+      titre,
+      date_creation,
+      description
+    });
+
+    res.status(201).json(cours);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
+module.exports = { getAllCourses, getCourse, getMainCourse, deleteCourse, updateCourse, createCourse };
