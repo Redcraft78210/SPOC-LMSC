@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { getMessages, postMessage, deleteMessage, deleteUserMessages, deleteLiveMessages, deleteUserLiveMessages } = require('../controllers/chatController.js');
-const authMiddleware = require('../middlewares/authMiddleware');
+const authMiddleware = require('../middlewares/authMiddleware.js');
 
 // Récupérer les messages d'un live
 router.get('/:liveId/chat', authMiddleware, getMessages);
