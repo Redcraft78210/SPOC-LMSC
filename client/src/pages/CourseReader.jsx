@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
-import SecureVideoPlayer from '../../components/SecureVideoPlayer';
-import SecureDocumentViewer from '../../components/SecureDocumentViewer';
+import SecureVideoPlayer from '../components/SecureVideoPlayer';
+import SecureDocumentViewer from '../components/SecureDocumentViewer';
 import { toast, Toaster } from 'react-hot-toast';
 
 const API_URL = 'https://localhost:8443/api';
@@ -19,108 +19,51 @@ const CourseReader = ({ authToken }) => {
   useEffect(() => {
     const fetchCourseData = async () => {
       try {
-        // const response = await fetch(`/api/cours/${courseId}`, {
-        //   headers: {
-        //     Authorization: `Bearer ${authToken}`,
-        //   },
-        // });
-
-        // if (!response.ok) throw new Error("Cours non trouvé");
-        // const data = await response.json();
-        const data = {
-          Matière: 'math_info', // La matière : Mathématiques et Informatique
-          chapitre: 'nombres_complexes', // Chapitre sur les nombres complexes
-          titre: 'Introduction aux Nombres Imaginaires', // Titre du cours
-          date_creation: '2025-03-15T10:30:00Z', // Date de création en format ISO
-          description:
-            "Ce cours présente les bases des nombres imaginaires et leur utilité dans la résolution d'équations quadratiques.", // Brève description
-          'Date de création': '2025-03-15T10:30:00Z', // Date de création en format ISO
-          ID_cours: 'cours_123456', // Identifiant unique du cours
-          video: {
-            video_id: '3f4b538504facde3c881b73844f52f24-1742237522', // ID unique de la vidéo
-            date_mise_en_ligne: '2025-03-20T14:00:00Z', // Date de mise en ligne de la vidéo
+        const response = await fetch(`${API_URL}/courses/${courseId}/main`, {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
           },
-          documents: [
+        });
+
+        if (!response.ok) throw new Error('Cours non trouvé');
+        const data = await response.json();
+
+        // Marquer le cours comme commencé
+        try {
+          const progressResponse = await fetch(
+            `${API_URL}/progress/course-progress/${courseId}`,
             {
-              document_id: '3f4b538504facde3c881b73844f52f24-1742237522', // Premier document associé
-              title: 'Introduction aux Nombres Imaginaires',
-              description: 'Description du premier document',
-              date_mise_en_ligne: '2025-03-18T08:45:00Z', // Date de mise en ligne
-            },
-            {
-              document_id: 'doc_002', // Deuxième document associé
-              title: 'Explication des Nombres Imaginaires',
-              description: 'Description du deuxième document',
-              date_mise_en_ligne: '2025-03-19T09:15:00Z', // Date de mise en ligne
-            },
-          ],
-        };
-
-        // const data = {
-        //   Matière: 'math_info', // La matière : Mathématiques et Informatique
-        //   chapitre: 'nombres_complexes', // Chapitre sur les nombres complexes
-        //   titre: 'Introduction aux Nombres Imaginaires', // Titre du cours
-        //   date_creation: '2025-03-15T10:30:00Z', // Date de création en format ISO
-        //   description:
-        //     "Ce cours présente les bases des nombres imaginaires et leur utilité dans la résolution d'équations quadratiques.", // Brève description
-        //   'Date de création': '2025-03-15T10:30:00Z', // Date de création en format ISO
-        //   ID_cours: 'cours_123456', // Identifiant unique du cours
-        //   documents: [
-        //     {
-        //       document_id: '3f4b538504facde3c881b73844f52f24-1742237522', // Premier document associé
-        //       title: 'Introduction aux Nombres Imaginaires',
-        //       description: 'Description du premier document',
-        //       date_mise_en_ligne: '2025-03-18T08:45:00Z', // Date de mise en ligne
-        //     },
-        //     // {
-        //     //   document_id: '3f4b538504facde3c881b73844f52f24-1742237522', // Deuxième document associé
-        //     //   title: 'Explication des Nombres Imaginaires',
-        //     //   description: 'Description du deuxième document',
-        //     //   date_mise_en_ligne: '2025-03-19T09:15:00Z', // Date de mise en ligne
-        //     // },
-        //   ],
-        // };
-
-        if (data) {
-          // Marquer le cours comme commencé
-          try {
-            const progressResponse = await fetch(
-              `${API_URL}/progress/course-progress/${courseId}`,
-              {
-                method: 'POST',
-                headers: {
-                  Authorization: `Bearer ${authToken}`,
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  status: 'in_progress',
-                }),
-              }
-            );
-
-            if (!progressResponse.ok) {
-              const errorData = await progressResponse.json();
-              if (
-                progressResponse.status === 400 &&
-                errorData.message ===
-                  'Cannot mark as in progress, already completed'
-              ) {
-                setCompleted(true);
-                toast.success(
-                  'Vous avez déjà terminé ce cours.\nVous pouvez le revoir à tout moment.'
-                );
-              } else {
-                throw new Error(
-                  errorData.message || 'Erreur lors de la validation'
-                );
-              }
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${authToken}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                status: 'in_progress',
+              }),
             }
-          } catch (err) {
-            console.error('Error marking course as in progress:', err);
-            throw err;
+          );
+
+          if (!progressResponse.ok) {
+            const errorData = await progressResponse.json();
+            if (
+              progressResponse.status === 400 &&
+              errorData.message ===
+                'Cannot mark as in progress, already completed'
+            ) {
+              setCompleted(true);
+              toast.success(
+                'Vous avez déjà terminé ce cours.\nVous pouvez le revoir à tout moment.'
+              );
+            } else {
+              throw new Error(
+                errorData.message || 'Erreur lors de la validation'
+              );
+            }
           }
-        } else {
-          throw new Error('Cours non trouvé');
+        } catch (err) {
+          console.error('Error marking course as in progress:', err);
+          throw err;
         }
 
         // Extraction de la première entrée du cours
@@ -201,14 +144,11 @@ const CourseReader = ({ authToken }) => {
 
   const handleDownloadDocument = async documentId => {
     try {
-      const response = await fetch(
-        `${API_URL}/documents/download/${documentId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${authToken}`, // Make sure authToken is in scope
-          },
-        }
-      );
+      const response = await fetch(`${API_URL}/documents/${documentId}`, {
+        headers: {
+          Authorization: `Bearer ${authToken}`, // Make sure authToken is in scope
+        },
+      });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -219,7 +159,10 @@ const CourseReader = ({ authToken }) => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `${documentId}.pdf`);
+      link.setAttribute(
+        'download',
+        `${courseData.titre.replace(/[^a-z0-9]/gi, '_')}.pdf`
+      );
       document.body.appendChild(link);
       link.click();
 
@@ -295,13 +238,10 @@ const CourseReader = ({ authToken }) => {
           )}
           <div className="grid gap-4">
             {courseData.documents.map(doc => (
-              <div
-                key={doc.document_id || doc.id}
-                className="border rounded-lg p-4"
-              >
+              <div key={doc.id} className="border rounded-lg p-4">
                 {!courseData.video && (
                   <SecureDocumentViewer
-                    documentId={doc.document_id}
+                    documentId={doc.id}
                     authToken={authToken}
                   />
                 )}
@@ -315,7 +255,7 @@ const CourseReader = ({ authToken }) => {
                       {new Date(doc.date_mise_en_ligne).toLocaleDateString()}
                     </span>
                     <button
-                      onClick={() => handleDownloadDocument(doc.document_id)}
+                      onClick={() => handleDownloadDocument(doc.id)}
                       className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700 transition-colors"
                     >
                       Télécharger

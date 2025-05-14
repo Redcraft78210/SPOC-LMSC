@@ -7,13 +7,18 @@ const Video = sequelize.define('Video', {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true
     },
-    course_id: {
-        type: DataTypes.UUID,
-        allowNull: true,
-        references: {
-            model: 'Course',
-            key: 'id'
-        }
+    cover_image: {
+        type: DataTypes.BLOB('long'),
+        allowNull: true
+    },
+    preview_image: {
+        type: DataTypes.BLOB('long'),
+        allowNull: true
+    },
+    duration: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0
     },
     fingerprint: {
         type: DataTypes.STRING,
@@ -23,10 +28,6 @@ const Video = sequelize.define('Video', {
         type: DataTypes.STRING,
         allowNull: false
     },
-    is_main: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false
-    }
 }, {
     tableName: 'videos',
     timestamps: true

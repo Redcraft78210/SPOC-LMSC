@@ -51,7 +51,7 @@ const Lives = sequelize.define('Lives', {
             key: 'id'
         },
         onDelete: 'CASCADE'
-    }
+    },
 }, {
     tableName: 'lives',
     timestamps: false

@@ -23,20 +23,33 @@ const { setupChatWebSocket } = require('./controllers/chatController');
 const { setupStreaming } = require('./controllers/socketController');
 
 // Import routes
-const authRoutes = require('./routes/authRoutes').default;
-const classRoutes = require('./routes/classRoutes').default;
-const codeRoutes = require('./routes/codeRoutes').default;
-const courseRoutes = require('./routes/courseRoutes').default;
-const documentRoutes = require('./routes/documentRoutes').default;
-const forumRoutes = require('./routes/forumRoutes').default;
-const liveRoutes = require('./routes/liveRoutes').default;
-const userRoutes = require('./routes/userRoutes').default;
-const videoRoutes = require('./routes/videoRoutes').default;
-const recordingRoutes = require('./routes/recordingRoutes').default;
-const chatRoutes = require('./routes/chatRoutes');
-const progressRoutes = require('./routes/progressTracking');
+
+// Authentication and user management
+const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
 const avatarRoutes = require('./routes/avatarRoutes');
 
+// Course and class management
+const classRoutes = require('./routes/classRoutes');
+const courseRoutes = require('./routes/courseRoutes');
+const progressRoutes = require('./routes/progressTracking');
+
+// Content management
+const documentRoutes = require('./routes/documentRoutes');
+const videoRoutes = require('./routes/videoRoutes');
+const recordingRoutes = require('./routes/recordingRoutes');
+
+// Communication and interaction
+const forumRoutes = require('./routes/forumRoutes');
+const messageRoutes = require('./routes/messageRoutes');
+const contactRoutes = require('./routes/contactRoutes');
+
+// Live and streaming
+const liveRoutes = require('./routes/liveRoutes');
+const chatRoutes = require('./routes/chatRoutes');
+
+// Miscellaneous
+const codeRoutes = require('./routes/codeRoutes');
 
 // Initialize environment variables
 dotenv.config();
@@ -98,19 +111,33 @@ app.use(express.urlencoded({ extended: true })); // Parse URL-encoded data
 app.use("/videos", express.static(path.join(__dirname, "public", "videos"))); // retirer dès que possible
 
 // API routes
-app.use('/api/auth', authRoutes); // Authentication routes (login, register)
-app.use('/api/classes', classRoutes); // Courses-related routes
-app.use('/api/codes', codeRoutes); // Codes-related routes
-app.use('/api/courses', courseRoutes); // Courses-related routes
-app.use('/api/documents', documentRoutes); // Document-related routes
-app.use('/api/forum', forumRoutes); // Forums-related routes
-app.use('/api/lives', liveRoutes); // Courses-related routes
-app.use('/api/users', userRoutes); // Courses-related routes
-app.use('/api/videos', videoRoutes); // Video-related routes
-app.use('/api/recordings', recordingRoutes); // Recording-related routes
-app.use('/api/streams', chatRoutes);
-app.use('/api/progress', progressRoutes);
-app.use('/api/avatars', avatarRoutes); // Avatar-related routes
+
+// Authentication and user management
+app.use('/api/auth', authRoutes.route); // Authentication routes (login, register)
+app.use('/api/users', userRoutes.route); // User-related routes
+app.use('/api/avatars', avatarRoutes.route); // Avatar-related routes
+
+// Course and class management
+app.use('/api/classes', classRoutes.route); // Class-related routes
+app.use('/api/courses', courseRoutes.route); // Course-related routes
+app.use('/api/progress', progressRoutes.route); // Progress tracking routes
+
+// Content management
+app.use('/api/documents', documentRoutes.route); // Document-related routes
+app.use('/api/videos', videoRoutes.route); // Video-related routes
+app.use('/api/recordings', recordingRoutes.route); // Recording-related routes
+
+// Communication and interaction
+app.use('/api/forum', forumRoutes.route); // Forum-related routes
+app.use('/api/messages', messageRoutes.route); // Message-related routes
+app.use('/api/contact', contactRoutes.route); // Contact-related routes
+
+// Live and streaming
+app.use('/api/lives', liveRoutes.route); // Live session-related routes
+app.use('/api/streams', chatRoutes.route); // Streaming and chat-related routes
+
+// Miscellaneous
+app.use('/api/codes', codeRoutes.route); // Code-related routes
 
 // Serve React frontend (if applicable)
 if (process.env.NODE_ENV === "production") {

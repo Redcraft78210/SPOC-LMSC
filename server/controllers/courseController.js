@@ -1,19 +1,81 @@
-const { Course, Video, Document } = require('../models');
+const { Course, Video, Document, Teacher, CourseVideo, CourseDocument } = require('../models');
+const fs = require('fs');
+const path = require('path');
+
+const imageToByteArray = (imagePath) => {
+  try {
+    const absolutePath = path.resolve(imagePath);
+    const imageBuffer = fs.readFileSync(absolutePath);
+    return Array.from(imageBuffer);
+  } catch (error) {
+    console.error('Error converting image to byte array:', error);
+    return null;
+  }
+};
+
+const updateVideoCoverImages = async () => {
+  try {
+    const imagePath = path.join(__dirname, '../../client/public/videos/3f4b538504facde3c881b73844f52f24-1742237522/0.png');
+    const imageBytes = imageToByteArray(imagePath);
+
+    if (!imageBytes) {
+      console.error('Failed to convert image to byte array. Skipping video updates.');
+      return;
+    }
+
+    const videos = await Video.findAll();
+
+    for (const video of videos) {
+      await video.update({ duration: 370, cover_image: Buffer.from(imageBytes) });
+      break;
+    }
+
+    console.log('Video cover images updated successfully.');
+  } catch (error) {
+    console.error('Error updating video cover images:', error);
+  }
+};
+
+updateVideoCoverImages();
 
 const getAllCourses = async (req, res) => {
   try {
     const courses = await Course.findAll({
+      where: {
+        is_published: true
+      },
       include: [
-        { model: Video },
-        { model: Document }
+        {
+          model: Video,
+          through: {
+            model: CourseVideo,
+            where: { is_main: true }
+          },
+          required: false
+        },
+        {
+          model: Document,
+          through: {
+            model: CourseDocument,
+            where: { is_main: true }
+          },
+          required: false
+        },
+        {
+          model: Teacher,
+          attributes: ['surname'],
+          required: false
+        }
       ]
     });
+
+    console.log('Courses:', JSON.stringify(courses, null, 2));
 
     // Transformation des données en structure imbriquée
     const structuredData = {};
 
     courses.forEach(course => {
-      const professor = course.professor || 'Unknown Professor';
+      const professor = course.Teacher ? 'Professeur ' + course.Teacher.surname : 'Unknown Professor';
       const subject = course.matiere || 'Unknown Subject';
       const topic = course.chapitre || 'Unknown Topic';
 
@@ -29,15 +91,23 @@ const getAllCourses = async (req, res) => {
         structuredData[professor][subject][topic] = {};
       }
 
+      const cover_image = (course.Videos && course.Videos.length > 0 && course.Videos[0].cover_image)
+        ? course.Videos[0].cover_image.toString('base64')
+        : null;
+
+
       structuredData[professor][subject][topic] = {
-        titre: course.titre,
+        titre: course.title,
         description: course.description,
         date_creation: course.createdAt,
         id: course.id,
         type: 'cours',
-        video: course.Video ? {
-          video_id: course.Video.id,
-          date_mise_en_ligne: `/media/video/${course.Video.path.split('/').pop()}`
+        video: course.Videos.length > 0 ? {
+          id: course.Videos[0].id,
+          fingerprint: course.Videos[0].fingerprint,
+          duration: course.Videos[0].duration,
+          cover_image,
+          preview_image: course.Videos[0].preview_image,
         } : null,
         nombre_de_documents: course.Documents ? course.Documents.length : 0
       };
@@ -71,38 +141,50 @@ const getCourse = async (req, res) => {
 
 const getMainCourse = async (req, res) => {
   try {
-    const cours = await Course.findByPk(req.params.id);
+    const cours = await Course.findByPk(req.params.id, {
+      include: [
+        {
+          model: Video,
+          through: {
+            model: CourseVideo,
+            where: { is_main: true }
+          },
+          required: false
+        },
+        {
+          model: Document,
+          through: {
+            model: CourseDocument,
+            where: { is_main: true }
+          },
+          required: false
+        }
+      ]
+    });
 
     if (!cours) {
       return res.status(404).json({ error: 'Cours not found' });
     }
 
-    const mainVideo = await Video.findOne({
-      where: { coursId: cours.id, is_main: true }
-    });
-
-    const mainDocuments = await Document.findAll({
-      where: { coursId: cours.id, is_main: true }
-    });
-
     const response = {
+      "id": cours.id,
       "Matière": cours.matiere,
       "chapitre": cours.chapitre,
-      "titre": cours.titre,
-      "date_creation": cours.date_creation,
+      "titre": cours.title,
+      "date_creation": cours.createdAt,
       "description": cours.description,
-      "Date de création": cours.date_creation,
-      "ID_cours": `cours_${cours.id}`,
-      "video": mainVideo ? {
-        "video_id": mainVideo.id,
-        "date_mise_en_ligne": `/media/video/${mainVideo.path.split('/').pop()}`
+      "video": cours.Videos.length > 0 ? {
+        "video_id": cours.Videos[0].id,
+        "date_mise_en_ligne": cours.Videos[0].createdAt,
+        "fingerprint": cours.Videos[0].fingerprint,
       } : null,
-      "documents": mainDocuments.map(doc => ({
-        "id": `doc_${doc.id}`,
-        "title": doc.commit_msg,
-        "description": "Description du document",
-        "date_mise_en_ligne": `/media/documents/${doc.path.split('/').pop()}`
-      }))
+      "documents": cours.Documents.length > 0 ? cours.Documents.map(doc => ({
+        "id": doc.id,
+        "title": doc.title,
+        "description": doc.description || "Description du document",
+        "date_mise_en_ligne": doc.createdAt,
+        "fingerprint": doc.fingerprint,
+      })) : []
     };
 
     res.status(200).json(response);

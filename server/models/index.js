@@ -16,8 +16,12 @@ const Comment = require('./Comment');
 const Thread = require('./Thread');
 const ChatMessage = require('./ChatMessage');
 const UserAvatar = require('./UserAvatar');
-const Document = require('./Document');  // Add Document import
-const Video = require('./Video');  // Add Video import
+const Document = require('./Document');
+const Video = require('./Video');
+const CourseDocument = require('./CourseDocument');
+const CourseVideo = require('./CourseVideo');
+const Attachment = require('./Attachment');
+const Message = require('./Message');
 
 // Define associations
 Course.belongsToMany(Student, { through: 'Enrollments' });
@@ -56,6 +60,9 @@ ChatMessage.belongsTo(User, { foreignKey: 'user_id' });
 Teacher.hasMany(Lives, { foreignKey: 'teacher_id' });
 Lives.belongsTo(Teacher, { foreignKey: 'teacher_id' });
 
+Teacher.hasMany(Course, { foreignKey: 'teacher_id' });
+Course.belongsTo(Teacher, { foreignKey: 'teacher_id' });
+
 User.hasMany(Thread, { foreignKey: 'authorId' });
 Thread.belongsTo(User, { foreignKey: 'authorId' });
 
@@ -79,13 +86,39 @@ Student.hasMany(LiveAttendance, { foreignKey: 'user_id' });
 LiveAttendance.belongsTo(Lives, { foreignKey: 'live_id' });
 Lives.hasMany(LiveAttendance, { foreignKey: 'live_id' });
 
-// Add Document associations
-Document.belongsTo(Course, { foreignKey: 'course_id' });
-Course.hasMany(Document, { foreignKey: 'course_id' });
+// Update Document associations
+Course.belongsToMany(Document, {
+  through: CourseDocument,
+  foreignKey: 'course_id',
+  otherKey: 'document_id'
+});
+Document.belongsToMany(Course, {
+  through: CourseDocument,
+  foreignKey: 'document_id',
+  otherKey: 'course_id'
+});
 
-// Add Video associations with Course (assuming a course can have many videos)
-Video.belongsTo(Course, { foreignKey: 'course_id' });
-Course.hasMany(Video, { foreignKey: 'course_id' });
+// Update Video associations
+Course.belongsToMany(Video, {
+  through: CourseVideo,
+  foreignKey: 'course_id',
+  otherKey: 'video_id'
+});
+Video.belongsToMany(Course, {
+  through: CourseVideo,
+  foreignKey: 'video_id',
+  otherKey: 'course_id'
+});
+
+
+
+Message.belongsTo(User, { as: 'sender', foreignKey: 'senderId' });
+
+Message.belongsTo(User, { as: 'recipient', foreignKey: 'recipientId' });
+
+Message.hasMany(Attachment);
+
+Attachment.belongsTo(Message);
 
 // Association User-Avatar (One-to-One)
 User.hasOne(UserAvatar, { foreignKey: 'user_id', as: 'avatar' });
@@ -95,6 +128,8 @@ UserAvatar.belongsTo(User, { foreignKey: 'user_id' });
 module.exports = {
   User,
   Admin,
+  Attachment,
+  Message,
   Student,
   StudentClass,
   Classe,
@@ -109,7 +144,9 @@ module.exports = {
   CourseProgress,
   LiveAttendance,
   UserAvatar,
-  Document,  // Add Document to exports
-  Video,     // Add Video to exports
+  Document,
+  Video,
+  CourseDocument,  // Add CourseDocument to exports
+  CourseVideo,     // Add CourseVideo to exports
   sequelize,
 };

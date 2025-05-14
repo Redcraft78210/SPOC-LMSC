@@ -2,6 +2,8 @@ const fs = require('fs/promises');
 const path = require('path');
 const { createReadStream } = require('fs');
 const { constants } = require('fs');
+const { Video } = require('../models');
+
 const { spawn } = require('child_process'); // pour ffprobe si besoin
 const jwt = require('jsonwebtoken');
 
@@ -44,8 +46,16 @@ const getVideo = async (req, res) => {
     try {
         setCORSHeaders(res);
         // Auth
-        if (!req.user) {
-            return res.status(403).json({ message: 'Accès non autorisé' });
+        const { authToken } = req.query;
+        if (!authToken) {
+            return res.status(401).json({ message: 'Token manquant' });
+        }
+
+        try {
+            const decoded = jwt.verify(authToken, process.env.JWT_SECRET);
+            req.user = decoded;
+        } catch (err) {
+            return res.status(403).json({ message: 'Token invalide' });
         }
 
         const { id } = req.params;

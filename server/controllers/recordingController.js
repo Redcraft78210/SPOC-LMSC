@@ -1,12 +1,23 @@
 const fs = require('fs');
 const path = require('path');
 const crc32 = require('buffer-crc32');
-const { spawn } = require('child_process');
+const { spawn, execSync } = require('child_process');
+
+const { Video } = require('../models');
 
 let isRecording = false;
 let currentRecordingFile = null;
 let ffmpegProcess = null;
+
 const recordingsDir = path.join(__dirname, '../recordings');
+const videosDir = path.join(__dirname, '../videos');
+
+function getVideoDuration(filePath) {
+  const output = execSync(
+    `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${filePath}"`
+  );
+  return parseInt(output, 10);
+}
 
 if (!fs.existsSync(recordingsDir)) {
   fs.mkdirSync(recordingsDir, { recursive: true });
@@ -23,6 +34,8 @@ const startRecording = (req, res) => {
 
   // Changement du format d'entrée pour MPEG-TS (plus adapté au streaming)
   const ffmpegArgs = [
+    '-hide_banner',
+    '-loglevel', 'error',
     '-f', 'mpegts', // Format d'entrée
     '-listen', '1', // Écoute sur le port
     '-i', 'tcp://0.0.0.0:9000', // FFmpeg écoute sur ce port
@@ -74,20 +87,33 @@ const stopRecording = async (req, res) => {
   }
 
   // Arrête FFmpeg proprement
-  ffmpegProcess.on('close', () => {
+  ffmpegProcess.on('close', async () => {
     try {
       const fileBuffer = fs.readFileSync(currentRecordingFile);
-      const checksum = crc32.unsigned(fileBuffer);
+      const checksum = crc32.unsigned(fileBuffer).toString(16);
+      const videoDuration = getVideoDuration(currentRecordingFile);
+
+      const video = new Video({
+        duration: videoDuration,
+        fingerprint: checksum,
+        commit_msg: "Nouvel enregistrement",
+      });
+
+      const savedVideo = await video.save();
+
       const newPath = path.join(
-        recordingsDir,
-        `${path.basename(currentRecordingFile, '.mp4')}-${checksum}.mp4`
+        videosDir,
+        `${savedVideo.id}-${checksum}.mp4`
       );
+
       fs.renameSync(currentRecordingFile, newPath);
 
       res.json({
         success: true,
         message: 'Recording saved',
-        filename: path.basename(newPath)
+        video: {
+          id: savedVideo.id
+        }
       });
     } catch (err) {
       console.error('Finalization error:', err);

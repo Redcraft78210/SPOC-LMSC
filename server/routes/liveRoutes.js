@@ -1,34 +1,36 @@
-import express from 'express';
-import liveValidation from '../middlewares/liveValidation.js';
-import authMiddleware from '../middlewares/authMiddleware.js';
-import {
+const express = require('express');
+const liveValidation = require('../middlewares/liveValidation.js');
+const authMiddleware = require('../middlewares/authMiddleware.js');
+const {
     getLive,
     getAllLives,
     getLiveByClass,
     addLive,
     editLive,
     deleteLive,
-} from '../controllers/liveController.js';
+} = require('../controllers/liveController.js');
 
 const router = express.Router();
 
+router.use(authMiddleware);
+
+
 // Get all lives
-router.get('/all', authMiddleware, getAllLives);
+router.get('/all', getAllLives);
 
 // Get live by id
-router.get('/:id', authMiddleware, getLive);
+router.get('/:id', getLive);
 
 // Add a new live if pass validation middleware and auth middleware
-router.post('/', authMiddleware, liveValidation.liveValidationRules(), liveValidation.validate, addLive);
+router.post('/', liveValidation.liveValidationRules(), liveValidation.validate, addLive);
 
 // Edit an existing live
-router.put('/:id', authMiddleware, editLive);
+router.put('/:id', editLive);
 
 // Delete an existing live
-router.delete('/:id', authMiddleware, deleteLive);
+router.delete('/:id', deleteLive);
 
 // Get live by student id and student class
-router.get('/class/:classId', authMiddleware, getLiveByClass);
+router.get('/class/:classId', getLiveByClass);
 
-export default router;
-
+module.exports = { route: router };

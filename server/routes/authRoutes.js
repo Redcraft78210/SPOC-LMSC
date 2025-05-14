@@ -1,9 +1,9 @@
 // server/routes/authRoutes.js
 
-import express from 'express';
-import validateUser from '../middlewares/userValidation.js'; // Validation middleware for user registration
-import authMiddleware from '../middlewares/authMiddleware.js';
-import { checkRegisterCode, register, manualRegister, firstLogin, login, activate2FA, verify2FA, refresh2FASetup } from '../controllers/authController.js'; // Import the register and login functions from the controller module
+const express = require('express');
+const validateUser = require('../middlewares/userValidation.js'); // Validation middleware for user registration
+const authMiddleware = require('../middlewares/authMiddleware.js');
+const { checkRegisterCode, register, manualRegister, firstLogin, login, activate2FA, verify2FA, refresh2FASetup } = require('../controllers/authController.js'); // Import the register and login functions from the controller module
 
 const router = express.Router();
 
@@ -31,4 +31,4 @@ router.post('/verify-2fa', verify2FA)
 // 2FA refresh setup temp token route
 router.post('/refresh-2fa-setup', refresh2FASetup);
 
-export default router;
+module.exports = { route: router };
