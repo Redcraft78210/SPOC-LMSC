@@ -1,12 +1,21 @@
--- Create ENUM type for status
+-- ============================================================
+-- TYPES ET ÉNUMÉRATIONS
+-- ============================================================
 CREATE TYPE statut_type AS ENUM ('actif', 'inactif');
+CREATE TYPE scan_status_type AS ENUM ('pending', 'clean', 'infected');
+CREATE TYPE user_role AS ENUM ('admin', 'teacher', 'student');
+CREATE TYPE live_status AS ENUM ('scheduled', 'ongoing', 'completed', 'cancelled');
+CREATE TYPE progress_status AS ENUM ('not_started', 'in_progress', 'completed');
+CREATE TYPE attendance_status AS ENUM ('attended', 'missed');
 
--- Create unified users table
-CREATE TABLE IF NOT EXISTS users (
+-- ============================================================
+-- TABLES PRINCIPALES
+-- ============================================================
+CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
     surname VARCHAR(255) NOT NULL,
-    role VARCHAR(255) NOT NULL CHECK (role IN ('admin', 'teacher', 'student')),
+    role user_role NOT NULL,
     username VARCHAR(255) UNIQUE,
     email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
@@ -15,80 +24,43 @@ CREATE TABLE IF NOT EXISTS users (
     statut statut_type DEFAULT 'actif',
     "firstLogin" BOOLEAN DEFAULT TRUE,
     "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    -- Improved 2FA validation
-    CHECK (
-        ("twoFAEnabled" = TRUE AND "twoFASecret" IS NOT NULL) OR
-        ("twoFAEnabled" = FALSE AND "twoFASecret" IS NOT NULL) OR
-        ("twoFAEnabled" = FALSE AND "twoFASecret" IS NULL)
-    )
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create classes table
-CREATE TABLE IF NOT EXISTS classes (
+CREATE TABLE classes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL UNIQUE,
     description TEXT,
-    main_teacher_id UUID NOT NULL,
+    main_teacher_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
     "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (main_teacher_id) 
-        REFERENCES users(id) 
-        ON DELETE RESTRICT
-        DEFERRABLE INITIALLY DEFERRED
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create codes table
-CREATE TABLE IF NOT EXISTS codes (
+CREATE TABLE codes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     value VARCHAR(255) NOT NULL,
-    role VARCHAR(255) NOT NULL CHECK (role IN ('admin', 'teacher', 'student')),
-    "classId" UUID,
+    role user_role NOT NULL,
+    "classId" UUID REFERENCES classes(id) ON DELETE RESTRICT,
     "usageLimit" INTEGER NOT NULL CHECK ("usageLimit" > 0),
     "remainingUses" INTEGER NOT NULL CHECK ("remainingUses" >= 0),
     "expiresAt" TIMESTAMP NOT NULL,
     "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY ("classId")
-        REFERENCES classes(id)
-        ON DELETE RESTRICT
-        DEFERRABLE INITIALLY DEFERRED
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Junction table for teacher-class relationships
-CREATE TABLE IF NOT EXISTS teacher_classes (
-    teacher_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    class_id UUID NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
-    PRIMARY KEY (teacher_id, class_id)
-);
-
--- Junction table for student-class relationships
-CREATE TABLE IF NOT EXISTS student_classes (
-    student_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    class_id UUID NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
-    PRIMARY KEY (student_id, class_id)
-);
-
--- Create courses table
-CREATE TABLE IF NOT EXISTS courses (
+CREATE TABLE courses (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    title VARCHAR(255) NOT NULL,            -- corresponds to titre in model
+    title VARCHAR(255) NOT NULL,
     description TEXT,
-    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- corresponds to date_creation
-    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    is_published BOOLEAN DEFAULT FALSE,     -- missing from table
+    is_published BOOLEAN DEFAULT FALSE,
     teacher_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    teacher_name VARCHAR(255),              -- missing from table
-    matiere VARCHAR(255),                   -- missing from table
-    chapitre VARCHAR(255),                  -- missing from table
-    CONSTRAINT fk_teacher 
-      FOREIGN KEY (teacher_id)
-      REFERENCES users(id)
-      ON DELETE CASCADE
+    matiere VARCHAR(255),
+    chapitre VARCHAR(255),
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create lives table
-CREATE TABLE IF NOT EXISTS lives (
+CREATE TABLE lives (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title VARCHAR(255) NOT NULL,
     description TEXT,
@@ -96,51 +68,40 @@ CREATE TABLE IF NOT EXISTS lives (
     chapter VARCHAR(255),
     start_time TIMESTAMP NOT NULL,
     end_time TIMESTAMP NOT NULL,
-    status VARCHAR(255) NOT NULL CHECK (status IN ('scheduled', 'ongoing', 'completed', 'cancelled')),
-    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    teacher_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS course_progress (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    course_id UUID NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
-    status VARCHAR(255) NOT NULL CHECK (status IN ('not_started', 'in_progress', 'completed')),
-    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (user_id, course_id)
-);
-
-CREATE TABLE IF NOT EXISTS live_attendance (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    live_id UUID NOT NULL REFERENCES lives(id) ON DELETE CASCADE,
-    status VARCHAR(255) NOT NULL CHECK (status IN ('attended', 'missed')),
-    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (user_id, live_id)
-);
-
--- Create chat_messages table
-CREATE TABLE IF NOT EXISTS chat_messages (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    content TEXT NOT NULL,
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    live_id UUID NOT NULL REFERENCES lives(id) ON DELETE CASCADE,
+    status live_status NOT NULL,
+    teacher_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Junction table for class-lives relationships
-CREATE TABLE IF NOT EXISTS class_lives (
-    class_id UUID NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
-    live_id UUID NOT NULL REFERENCES lives(id) ON DELETE CASCADE,
-    PRIMARY KEY (class_id, live_id)
+CREATE TABLE documents (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    fingerprint VARCHAR(255) NOT NULL,
+    commit_msg VARCHAR(255) NOT NULL,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create threads table
-CREATE TABLE IF NOT EXISTS threads (
+CREATE TABLE videos (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    fingerprint VARCHAR(255) NOT NULL,
+    cover_image BYTEA,
+    preview_image BYTEA,
+    duration INTEGER DEFAULT 0,
+    commit_msg VARCHAR(255) NOT NULL,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CHECK (
+        (preview_image IS NULL) AND
+        (cover_image is not null and preview_image is null and duration > 0) OR
+        (cover_image is not null and preview_image is not null and duration > 0) OR
+        (cover_image is null and preview_image is null)
+    )
+);
+
+CREATE TABLE threads (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title VARCHAR(255) NOT NULL,
     content TEXT NOT NULL,
@@ -148,8 +109,7 @@ CREATE TABLE IF NOT EXISTS threads (
     "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create comments table
-CREATE TABLE IF NOT EXISTS comments (
+CREATE TABLE comments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     content TEXT NOT NULL,
     "authorId" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -157,10 +117,9 @@ CREATE TABLE IF NOT EXISTS comments (
     "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Table pour stocker les avatars des utilisateurs
-CREATE TABLE IF NOT EXISTS user_avatars (
+CREATE TABLE user_avatars (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE UNIQUE,
     mime_type VARCHAR(128) NOT NULL,
     file_name VARCHAR(255),
     original_size INTEGER NOT NULL,
@@ -169,28 +128,201 @@ CREATE TABLE IF NOT EXISTS user_avatars (
     compression_quality SMALLINT NOT NULL,
     dimensions VARCHAR(20) NOT NULL,
     "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (user_id)
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Index pour optimiser les recherches par user_id
-CREATE INDEX IF NOT EXISTS idx_user_avatars_user_id ON user_avatars(user_id);
+CREATE TABLE messages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    subject VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    read BOOLEAN DEFAULT FALSE,
+    deleted BOOLEAN DEFAULT FALSE,
+    "senderId" UUID REFERENCES users(id) ON DELETE CASCADE,
+    "recipientId" UUID REFERENCES users(id) ON DELETE CASCADE,
+    "fromContactForm" BOOLEAN DEFAULT FALSE,
+    "deletedAt" TIMESTAMP,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
--- Trigger Functions
+CREATE TABLE attachments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    message_id UUID NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+    original_filename VARCHAR(255) NOT NULL,
+    stored_filename VARCHAR(255) NOT NULL,
+    file_size INTEGER NOT NULL,
+    mime_type VARCHAR(255) NOT NULL,
+    scan_status scan_status_type DEFAULT 'pending',
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE registry_rgpd (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_email VARCHAR(255) NOT NULL REFERENCES users(email),
+    action VARCHAR(255) NOT NULL,
+    details TEXT,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================================
+-- TABLES DE JONCTION
+-- ============================================================
+CREATE TABLE teacher_classes (
+    teacher_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    class_id UUID NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+    PRIMARY KEY (teacher_id, class_id)
+);
+
+CREATE TABLE student_classes (
+    student_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    class_id UUID NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+    PRIMARY KEY (student_id, class_id)
+);
+
+CREATE TABLE course_progress (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    course_id UUID NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    status progress_status NOT NULL,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (user_id, course_id)
+);
+
+CREATE TABLE live_attendance (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    live_id UUID NOT NULL REFERENCES lives(id) ON DELETE CASCADE,
+    status attendance_status NOT NULL,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (user_id, live_id)
+);
+
+CREATE TABLE chat_messages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    content TEXT NOT NULL,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    live_id UUID NOT NULL REFERENCES lives(id) ON DELETE CASCADE,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE class_lives (
+    class_id UUID NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+    live_id UUID NOT NULL REFERENCES lives(id) ON DELETE CASCADE,
+    PRIMARY KEY (class_id, live_id)
+);
+
+CREATE TABLE course_documents (
+    course_id UUID NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    is_main BOOLEAN DEFAULT FALSE,
+    PRIMARY KEY (course_id, document_id)
+);
+
+CREATE TABLE course_videos (
+    course_id UUID NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    video_id UUID NOT NULL REFERENCES videos(id) ON DELETE CASCADE,
+    is_main BOOLEAN DEFAULT FALSE,
+    PRIMARY KEY (course_id, video_id)
+);
+
+CREATE TABLE message_recipients (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    message_id UUID NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+    recipient_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    read BOOLEAN DEFAULT FALSE,
+    deleted BOOLEAN DEFAULT FALSE,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================================
+-- FONCTIONS ET TRIGGERS
+-- ============================================================
+
+-- Fonction générique de validation pour les relations utilisateur-rôle
+CREATE OR REPLACE FUNCTION validate_user_role(user_id UUID, required_role user_role)
+RETURNS BOOLEAN AS $$
+BEGIN
+    RETURN EXISTS (
+        SELECT 1 FROM users WHERE id = user_id AND role = required_role
+    );
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger pour la validation du rôle enseignant dans les classes
 CREATE OR REPLACE FUNCTION validate_teacher()
 RETURNS TRIGGER AS $$
 BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM users 
-        WHERE id = NEW.main_teacher_id 
-        AND role = 'teacher'
-    ) THEN
+    IF NOT validate_user_role(NEW.main_teacher_id, 'teacher') THEN
         RAISE EXCEPTION 'User % is not a teacher', NEW.main_teacher_id;
     END IF;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
+
+-- Universal update trigger
+CREATE OR REPLACE FUNCTION update_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW."updatedAt" = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Application des triggers updatedAt à toutes les tables
+DO $$ 
+DECLARE
+    tab TEXT;
+BEGIN
+    FOR tab IN 
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_type = 'BASE TABLE'
+        AND table_name NOT IN ('threads', 'comments') -- Tables sans updatedAt
+    LOOP
+        EXECUTE format('
+            CREATE TRIGGER %s_updated_at 
+            BEFORE UPDATE ON %s 
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at()', 
+            tab, tab);
+    END LOOP;
+END $$;
+
+-- Application des triggers de validation
+CREATE TRIGGER trg_classes_teacher 
+BEFORE INSERT OR UPDATE ON classes
+FOR EACH ROW EXECUTE FUNCTION validate_teacher();
+
+-- ============================================================
+-- INDEX ESSENTIELS 
+-- ============================================================
+CREATE INDEX idx_users_role ON users(role);
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_courses_teacher_id ON courses(teacher_id);
+CREATE INDEX idx_lives_teacher_id ON lives(teacher_id);
+CREATE INDEX idx_chat_messages_live_id ON chat_messages(live_id);
+CREATE INDEX idx_message_recipients_recipient_id ON message_recipients(recipient_id);
+CREATE INDEX idx_user_avatars_user_id ON user_avatars(user_id);
+
+
+-- ============================================================
+-- DONNÉES MINIMALES D'INITIALISATION
+-- ============================================================
+-- Admin
+INSERT INTO users (id, name, surname, role, username, email, password)
+VALUES ('a0000000-0000-0000-0000-000000000001', 'Admin', 'System', 'admin', 'admin', 'admin@spoc.lmsc', '$2b$10$1Tl7ARRSx3HHsS8nehhTF.asiDLQ7IOzCJ1EzCoMGQBFysfFCdQc2');
+
+-- Code d'inscription initial
+INSERT INTO codes (id, value, role, "usageLimit", "remainingUses", "expiresAt")
+VALUES ('b0000000-0000-0000-0000-000000000001', 'ADMIN-INIT', 'admin', 10, 10, '2030-01-01 00:00:00');
+
+-- Trigger Functions
 CREATE OR REPLACE FUNCTION validate_teacher_class()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -258,113 +390,228 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Apply Triggers
-CREATE TRIGGER trg_classes_teacher 
-BEFORE INSERT OR UPDATE ON classes
-FOR EACH ROW EXECUTE FUNCTION validate_teacher();
-
-CREATE TRIGGER trg_teacher_classes 
-BEFORE INSERT OR UPDATE ON teacher_classes
-FOR EACH ROW EXECUTE FUNCTION validate_teacher_class();
-
-CREATE TRIGGER trg_student_classes 
-BEFORE INSERT OR UPDATE ON student_classes
-FOR EACH ROW EXECUTE FUNCTION validate_student_class();
-
-CREATE TRIGGER trg_courses_teacher 
-BEFORE INSERT OR UPDATE ON courses
-FOR EACH ROW EXECUTE FUNCTION validate_course_teacher();
-
-CREATE TRIGGER trg_lives_teacher 
-BEFORE INSERT OR UPDATE ON lives
-FOR EACH ROW EXECUTE FUNCTION validate_course_teacher();
-
-CREATE TRIGGER trg_class_lives 
-BEFORE INSERT OR UPDATE ON class_lives
-FOR EACH ROW EXECUTE FUNCTION validate_class_lives();
-
-
-
--- Universal update trigger
-CREATE OR REPLACE FUNCTION update_updated_at()
+CREATE OR REPLACE FUNCTION validate_course_documents()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW."updatedAt" = CURRENT_TIMESTAMP;
+    IF NOT EXISTS (
+        SELECT 1 FROM courses 
+        WHERE id = NEW.course_id
+    ) THEN
+        RAISE EXCEPTION 'Course % does not exist', NEW.course_id;
+    END IF;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
--- Apply to all tables
-CREATE TRIGGER users_updated_at BEFORE UPDATE ON users
-FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE OR REPLACE FUNCTION validate_course_videos()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM courses 
+        WHERE id = NEW.course_id
+    ) THEN
+        RAISE EXCEPTION 'Course % does not exist', NEW.course_id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
-CREATE TRIGGER user_avatars_updated_at BEFORE UPDATE ON user_avatars
-FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE OR REPLACE FUNCTION validate_course_progress()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM users 
+        WHERE id = NEW.user_id
+    ) THEN
+        RAISE EXCEPTION 'User % does not exist', NEW.user_id;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM courses 
+        WHERE id = NEW.course_id
+    ) THEN
+        RAISE EXCEPTION 'Course % does not exist', NEW.course_id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
-CREATE TRIGGER codes_updated_at BEFORE UPDATE ON codes
-FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE OR REPLACE FUNCTION validate_live_attendance()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM users 
+        WHERE id = NEW.user_id
+    ) THEN
+        RAISE EXCEPTION 'User % does not exist', NEW.user_id;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM lives 
+        WHERE id = NEW.live_id
+    ) THEN
+        RAISE EXCEPTION 'Live % does not exist', NEW.live_id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
-CREATE TRIGGER classes_updated_at BEFORE UPDATE ON classes
-FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE OR REPLACE FUNCTION validate_chat_messages()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM users 
+        WHERE id = NEW.user_id
+    ) THEN
+        RAISE EXCEPTION 'User % does not exist', NEW.user_id;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM lives 
+        WHERE id = NEW.live_id
+    ) THEN
+        RAISE EXCEPTION 'Live % does not exist', NEW.live_id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
-CREATE TRIGGER courses_updated_at BEFORE UPDATE ON courses
-FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE OR REPLACE FUNCTION validate_user_avatars()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM users 
+        WHERE id = NEW.user_id
+    ) THEN
+        RAISE EXCEPTION 'User % does not exist', NEW.user_id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
-CREATE TRIGGER lives_updated_at BEFORE UPDATE ON lives
-FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+CREATE OR REPLACE FUNCTION validate_thread_comments()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM threads 
+        WHERE id = NEW.threadId
+    ) THEN
+        RAISE EXCEPTION 'Thread % does not exist', NEW.threadId;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM users 
+        WHERE id = NEW.authorId
+    ) THEN
+        RAISE EXCEPTION 'User % does not exist', NEW.authorId;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
-CREATE TRIGGER chat_updated_at BEFORE UPDATE ON chat_messages
-FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-
-CREATE TRIGGER student_stats_updated_at BEFORE UPDATE ON course_progress
-FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-
-CREATE TRIGGER student_stats_updated_at BEFORE UPDATE ON live_attendance
-FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-
+CREATE OR REPLACE FUNCTION validate_thread()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM users 
+        WHERE id = NEW.authorId
+    ) THEN
+        RAISE EXCEPTION 'User % does not exist', NEW.authorId;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+ 
 -- Optimized Indexes
 CREATE INDEX idx_users_username ON users (username);
-CREATE INDEX idx_users_email ON users (email);
-CREATE INDEX idx_users_role ON users (role);
 CREATE INDEX idx_codes_value ON codes (value);
 CREATE INDEX idx_classes_main_teacher ON classes (main_teacher_id);
 
--- Attach the trigger to the courses table
-CREATE TRIGGER trigger_courses_updated_at BEFORE
-UPDATE ON courses FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
--- Create documents table
-CREATE TABLE IF NOT EXISTS documents (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    course_id UUID REFERENCES courses(id) ON DELETE CASCADE,
-    fingerprint VARCHAR(255) NOT NULL,
-    commit_msg VARCHAR(255) NOT NULL,
-    is_main BOOLEAN DEFAULT FALSE,
-    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Create videos table
-CREATE TABLE IF NOT EXISTS videos (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    course_id UUID REFERENCES courses(id) ON DELETE CASCADE,
-    fingerprint VARCHAR(255) NOT NULL,
-    commit_msg VARCHAR(255) NOT NULL,
-    is_main BOOLEAN DEFAULT FALSE,
-    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Create triggers for updating timestamp
-CREATE TRIGGER documents_updated_at BEFORE UPDATE ON documents
-FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-
-CREATE TRIGGER videos_updated_at BEFORE UPDATE ON videos
-FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+-- ÉTAPE 4: Créer des index pour améliorer les performances
+CREATE INDEX idx_course_documents_course_id ON course_documents(course_id);
+CREATE INDEX idx_course_documents_document_id ON course_documents(document_id);
+CREATE INDEX idx_course_videos_course_id ON course_videos(course_id);
+CREATE INDEX idx_course_videos_video_id ON course_videos(video_id);
 
 -- Create indexes for better performance
-CREATE INDEX idx_documents_course_id ON documents(course_id);
-CREATE INDEX idx_videos_course_id ON videos(course_id);
+CREATE INDEX "idx_messages_senderId" ON messages("senderId");
+CREATE INDEX idx_messages_contact_form ON messages("fromContactForm");
+CREATE INDEX idx_message_recipients_message_id ON message_recipients(message_id);
+CREATE INDEX idx_message_recipients_read ON message_recipients(read);
+CREATE INDEX idx_message_recipients_deleted ON message_recipients(deleted);
+CREATE INDEX idx_attachments_message_id ON attachments(message_id);
+CREATE INDEX idx_attachments_scan_status ON attachments(scan_status);
+CREATE INDEX idx_registry_rgpd_user_email ON registry_rgpd(user_email);
+
+-- Create validation function for message recipients
+CREATE OR REPLACE FUNCTION validate_message_recipient()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM users 
+        WHERE id = NEW.recipient_id
+    ) THEN
+        RAISE EXCEPTION 'User % does not exist', NEW.recipient_id;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM messages 
+        WHERE id = NEW.message_id
+    ) THEN
+        RAISE EXCEPTION 'Message % does not exist', NEW.message_id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create validation function for message sender
+CREATE OR REPLACE FUNCTION validate_message_sender()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Skip validation if "senderId" is NULL (for contact form messages)
+    IF NEW."senderId" IS NULL THEN
+        -- NULL "senderId" is allowed when "fromContactForm" is TRUE
+        IF NEW."fromContactForm" = TRUE THEN
+            RETURN NEW;
+        ELSE
+            RAISE EXCEPTION 'NULL "senderId" is only allowed for contact form messages';
+        END IF;
+    END IF;
+    
+    -- For non-NULL "senderId", validate that the user exists
+    IF NOT EXISTS (
+        SELECT 1 FROM users 
+        WHERE id = NEW."senderId"
+    ) THEN
+        RAISE EXCEPTION 'User % does not exist', NEW."senderId";
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create validation function for attachments
+CREATE OR REPLACE FUNCTION validate_attachment()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM messages 
+        WHERE id = NEW.message_id
+    ) THEN
+        RAISE EXCEPTION 'Message % does not exist', NEW.message_id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Apply validation triggers
+CREATE TRIGGER trg_message_recipients 
+BEFORE INSERT OR UPDATE ON message_recipients
+FOR EACH ROW EXECUTE FUNCTION validate_message_recipient();
+
+CREATE TRIGGER trg_messages_sender 
+BEFORE INSERT OR UPDATE ON messages
+FOR EACH ROW EXECUTE FUNCTION validate_message_sender();
+
+CREATE TRIGGER trg_attachments 
+BEFORE INSERT OR UPDATE ON attachments
+FOR EACH ROW EXECUTE FUNCTION validate_attachment();
 
 -- Insert initial data into the teachers table
 INSERT INTO
@@ -585,23 +832,63 @@ values
 ('Est-ce que vous allez aussi parler de la dualité onde-particule ?', 'a6fa5fc1-1234-4321-0000-000000000008', 'a6fa5fc1-1234-4321-0000-000000000015'),
 ('Absolument, c’est un des sujets principaux.', 'a6fa5fc1-1234-4321-0000-000000000005', 'a6fa5fc1-1234-4321-0000-000000000015');
 
-insert into courses (id, title, description, is_published, teacher_id, teacher_name, matiere, chapitre)
+insert into courses (id, title, description, is_published, teacher_id, matiere, chapitre)
 values
-('7f4b5385-04fa-cde3-c881-b73844f52f25', 'Introduction to Quantum Mechanics', 'A beginner-friendly course on the principles of quantum mechanics.', TRUE, 'a6fa5fc1-1234-4321-0000-000000000005', 'Bob Smith', 'Physics', 'Fundamentals'),
-('a6fa5fc1-1234-4321-0000-000000000012', 'Advanced Quantum Physics', 'An advanced course covering complex topics in quantum physics.', TRUE, 'a6fa5fc1-1234-4321-0000-000000000005', 'Bob Smith', 'Physics', 'Advanced Topics'),
-('a6fa5fc1-1234-4321-0000-000000000013', 'Quantum Computing Basics', 'An introduction to the principles of quantum computing.', TRUE, 'a6fa5fc1-1234-4321-0000-000000000005', 'Bob Smith', 'Computer Science', 'Quantum Computing'),
-('a6fa5fc1-1234-4321-0000-000000000014', 'Quantum Entanglement Explained', 'A detailed look at the phenomenon of quantum entanglement.', TRUE, 'a6fa5fc1-1234-4321-0000-000000000005', 'Bob Smith', 'Physics', 'Quantum Phenomena');
+('7f4b5385-04fa-cde3-c881-b73844f52f25', 'Introduction to Quantum Mechanics', 'A beginner-friendly course on the principles of quantum mechanics.', TRUE, 'a6fa5fc1-1234-4321-0000-000000000005', 'Physics', 'Fundamentals'),
+('a6fa5fc1-1234-4321-0000-000000000012', 'Advanced Quantum Physics', 'An advanced course covering complex topics in quantum physics.', TRUE, 'a6fa5fc1-1234-4321-0000-000000000005', 'Physics', 'Advanced Topics'),
+('a6fa5fc1-1234-4321-0000-000000000013', 'Quantum Computing Basics', 'An introduction to the principles of quantum computing.', TRUE, 'a6fa5fc1-1234-4321-0000-000000000005', 'Computer Science', 'Quantum Computing'),
+('a6fa5fc1-1234-4321-0000-000000000014', 'Quantum Entanglement Explained', 'A detailed look at the phenomenon of quantum entanglement.', TRUE, 'a6fa5fc1-1234-4321-0000-000000000005', 'Physics', 'Quantum Phenomena');
 
-insert into documents (id, course_id, fingerprint, commit_msg, is_main)
-values
-('7f4b5385-04fa-cde3-c881-b73844f52f26', '7f4b5385-04fa-cde3-c881-b73844f52f25', 'f1e2d3c4', 'Initial commit for the course document.', TRUE),
-('a6fa5fc1-1234-4321-0000-000000000016', 'a6fa5fc1-1234-4321-0000-000000000012', '2e3d4c5b', 'Initial commit for the advanced course document.', TRUE),
-('a6fa5fc1-1234-4321-0000-000000000017', 'a6fa5fc1-1234-4321-0000-000000000013', '3e4d5c6b', 'Initial commit for the quantum computing document.', TRUE),
-('a6fa5fc1-1234-4321-0000-000000000018', 'a6fa5fc1-1234-4321-0000-000000000014', '4e5d6c7b', 'Initial commit for the entanglement document.', TRUE);
+INSERT INTO
+    documents (id, title, description, fingerprint, commit_msg)
+VALUES
+    ('a6fa5fc1-1234-4321-0000-000000000016', 'Fondamentaux de la mécanique quantique', 'Document principal couvrant les principes fondamentaux de la mécanique quantique, incluant les équations de Schrödinger et les postulats de base.', '2e3d4c5b', 'Initial commit for the course document.'),
+    ('a6fa5fc1-1234-4321-0000-000000000040', 'Physique quantique avancée: théorie et applications', 'Document complet sur les théories quantiques avancées, incluant la théorie quantique des champs et les applications expérimentales récentes.', '2e3d4c5b', 'Initial commit for the advanced course document.'),
+    ('a6fa5fc1-1234-4321-0000-000000000041', 'Introduction à l''informatique quantique', 'Document explicatif sur les qubits, les portes quantiques et les algorithmes fondamentaux comme celui de Shor et de Grover.', '3e4d5c6b', 'Initial commit for the quantum computing document.'),
+    ('a6fa5fc1-1234-4321-0000-000000000042', 'L''intrication quantique expliquée', 'Document détaillant le phénomène d''intrication quantique, les expériences EPR et les implications pour la téléportation quantique.', '4e5d6c7b', 'Initial commit for the entanglement document.');
 
-insert into videos (id, course_id, fingerprint, commit_msg, is_main)
-values
-('7f4b5385-04fa-cde3-c881-b73844f52f27', '7f4b5385-04fa-cde3-c881-b73844f52f25', '5f6e7d8c', 'Initial commit for the course video.', TRUE),
-('a6fa5fc1-1234-4321-0000-000000000019', 'a6fa5fc1-1234-4321-0000-000000000012', '6f7e8d9c', 'Initial commit for the advanced course video.', TRUE),
-('a6fa5fc1-1234-4321-0000-000000000020', 'a6fa5fc1-1234-4321-0000-000000000013', '7f8e9d0c', 'Initial commit for the quantum computing video.', TRUE),
-('a6fa5fc1-1234-4321-0000-000000000021', 'a6fa5fc1-1234-4321-0000-000000000014', '8f9e0d1c', 'Initial commit for the entanglement video.', TRUE);
+-- Document-course relationships in the junction table
+INSERT INTO
+    course_documents (course_id, document_id, is_main)
+VALUES
+    ('7f4b5385-04fa-cde3-c881-b73844f52f25', 'a6fa5fc1-1234-4321-0000-000000000016', TRUE),
+    ('a6fa5fc1-1234-4321-0000-000000000012', 'a6fa5fc1-1234-4321-0000-000000000016', TRUE),
+    ('a6fa5fc1-1234-4321-0000-000000000013', 'a6fa5fc1-1234-4321-0000-000000000016', TRUE),
+    ('a6fa5fc1-1234-4321-0000-000000000014', 'a6fa5fc1-1234-4321-0000-000000000016', TRUE);
+
+-- Updated video inserts - without course_id and is_main
+INSERT INTO
+    videos (id, fingerprint, commit_msg)
+VALUES
+    ('7f4b5385-04fa-cde3-c881-b73844f52f27', '5f6e7d8c', 'Initial commit for the course video.'),
+    ('a6fa5fc1-1234-4321-0000-000000000020', '7f8e9d0c', 'Initial commit for the quantum computing video.'),
+    ('a6fa5fc1-1234-4321-0000-000000000021', '8f9e0d1c', 'Initial commit for the entanglement video.');
+
+-- Video-course relationships in the junction table
+INSERT INTO
+    course_videos (course_id, video_id, is_main)
+VALUES
+    ('7f4b5385-04fa-cde3-c881-b73844f52f25', '7f4b5385-04fa-cde3-c881-b73844f52f27', TRUE),
+    ('a6fa5fc1-1234-4321-0000-000000000013', 'a6fa5fc1-1234-4321-0000-000000000020', TRUE),
+    ('a6fa5fc1-1234-4321-0000-000000000014', 'a6fa5fc1-1234-4321-0000-000000000021', TRUE);
+
+-- Insert some sample messages
+INSERT INTO messages (id, subject, content, "senderId", "recipientId", "fromContactForm")
+VALUES
+    ('33333333-aaaa-bbbb-cccc-000000000001', 'Bienvenue sur la plateforme', 'Bonjour et bienvenue sur notre plateforme d''apprentissage. N''hésitez pas à contacter l''équipe administrative si vous avez des questions.', 'a6fa5fc1-1234-4321-0000-000000000003', 'a6fa5fc1-1234-4321-0000-000000000007', FALSE),
+    ('33333333-aaaa-bbbb-cccc-000000000002', 'Question sur le cours de JavaScript', 'Bonjour, j''ai une question concernant le dernier cours sur les closures en JavaScript. Pourriez-vous préciser leur utilité dans un contexte réel ?', 'a6fa5fc1-1234-4321-0000-000000000007', 'a6fa5fc1-1234-4321-0000-000000000005', FALSE),
+    ('33333333-aaaa-bbbb-cccc-000000000003', 'Demande de contact via formulaire', 'Bonjour, je suis intéressé par vos formations en ligne. Pouvez-vous me donner plus d''informations sur les prérequis pour la formation en développement web ?', NULL, 'a6fa5fc1-1234-4321-0000-000000000006', TRUE);
+
+-- Insert message recipients
+INSERT INTO message_recipients (message_id, recipient_id, read)
+VALUES
+    ('33333333-aaaa-bbbb-cccc-000000000001', 'a6fa5fc1-1234-4321-0000-000000000007', TRUE),
+    ('33333333-aaaa-bbbb-cccc-000000000001', 'a6fa5fc1-1234-4321-0000-000000000008', FALSE),
+    ('33333333-aaaa-bbbb-cccc-000000000002', 'a6fa5fc1-1234-4321-0000-000000000005', TRUE),
+    ('33333333-aaaa-bbbb-cccc-000000000003', 'a6fa5fc1-1234-4321-0000-000000000003', FALSE),
+    ('33333333-aaaa-bbbb-cccc-000000000003', 'a6fa5fc1-1234-4321-0000-000000000009', FALSE);
+
+-- Insert sample attachment
+INSERT INTO attachments (message_id, original_filename, stored_filename, file_size, mime_type, scan_status)
+VALUES
+    ('33333333-aaaa-bbbb-cccc-000000000002', 'question_code.js', '55555555-aaaa-bbbb-cccc-000000000001.js', 1024, 'application/javascript', 'clean');

@@ -1,29 +1,84 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { jwtDecode } from 'jwt-decode';
+import { X, Pencil, Loader2, Mail, Bell } from 'lucide-react';
 
-import { X, Pencil } from 'lucide-react';
+import NavigationBar from '../components/Navbar';
+import PictureModal from '../components/PictureModal';
+import Logo from '../Logo';
 
-import NavigationBar from '../../components/Navbar';
-// import "../style/NavigationBar.css";
+import AdminDashboardHome from './Admin/DashboardHome';
+import ProfDashboardHome from './Professeur/DashboardHome';
+import EleveDashboardHome from './Eleve/DashboardHome';
+import ProfCoursesLibrary from './Professeur/CoursesLibrary';
+import AdminCoursesLibrary from './Admin/CoursesLibrary';
+import CoursesLibrary from './Eleve/CoursesLibrary';
 
-import AdminDashboardHome from './DashboardHome';
 import CourseReader from './CourseReader';
-import CoursesLibrary from './CoursesLibrary';
-import PictureModal from '../../components/PictureModal';
-import UserManagement from './UserManagement';
-import ClasseManagement from './ClassManagement';
-import ThemeSettings from '../Public/Theme';
-import Settings from '../Settings';
-import NotFound from '../Public/NotFound';
-import Logo from '../../Logo';
+import LiveViewer from './Eleve/LiveViewer';
+import Forum from './Forum';
+import UserManagement from './Admin/UserManagement';
+import ClassManagement from './Admin/ClassManagement';
+import ThemeSettings from './Public/Theme';
+import Settings from './Settings';
+import NotFound from './Public/NotFound';
+import Mailbox from './Mailbox';
 
-const DashboardAdmin = ({ content, token }) => {
+const API_URL = 'https://localhost:8443/api';
+
+const Dashboard = ({ content, token, role }) => {
   const navigate = useNavigate();
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showProfilepictureModal, setShowProfilepictureModal] = useState(false);
   const divRef = useRef();
+  const [userAvatar, setUserAvatar] = useState(null);
+  const [avatarVersion, setAvatarVersion] = useState(0);
+  const [loadingAvatar, setLoadingAvatar] = useState(false);
+  const [showMailModal, setShowMailModal] = useState(false);
+  const avatarUrlRef = useRef(null);
+
+  // Fonction pour rafraîchir l'avatar
+  const refreshAvatar = useCallback(() => {
+    setAvatarVersion(Date.now());
+  }, []);
+
+  // Récupération de l'avatar
+  useEffect(() => {
+    const fetchAvatar = async () => {
+      try {
+        setLoadingAvatar(true);
+        if (avatarUrlRef.current) {
+          URL.revokeObjectURL(avatarUrlRef.current);
+        }
+
+        const response = await fetch(`${API_URL}/avatars?t=${avatarVersion}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store',
+        });
+
+        if (!response.ok) throw new Error('Failed to fetch avatar');
+
+        const blob = await response.blob();
+        const imageUrl = URL.createObjectURL(blob);
+        avatarUrlRef.current = imageUrl;
+        setUserAvatar(imageUrl);
+      } catch (error) {
+        console.error('Error fetching avatar:', error);
+        setUserAvatar(null);
+      } finally {
+        setLoadingAvatar(false);
+      }
+    };
+
+    fetchAvatar();
+
+    return () => {
+      if (avatarUrlRef.current) {
+        URL.revokeObjectURL(avatarUrlRef.current);
+      }
+    };
+  }, [token, avatarVersion]);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -32,7 +87,6 @@ const DashboardAdmin = ({ content, token }) => {
       }
     }
 
-    // Ajoutez l'écouteur d'événements quand le menu profil est ouvert
     if (showProfileModal) {
       document.addEventListener('mousedown', handleClickOutside);
     } else {
@@ -55,13 +109,46 @@ const DashboardAdmin = ({ content, token }) => {
   };
 
   const contentMap = {
-    Home: <AdminDashboardHome />,
     CoursesLibrary: <CoursesLibrary authToken={token} />,
     CourseReader: <CourseReader authToken={token} />,
-    UserManagement: <UserManagement authToken={token} />,
-    ClassManagement: <ClasseManagement authToken={token} />,
+    ...(user.role === 'Administrateur'
+      ? {
+          Home: <AdminDashboardHome authToken={token} />,
+          CoursesLibrary: <AdminCoursesLibrary authToken={token} />,
+        }
+      : {}),
+    ...(user.role === 'Administrateur' || user.role === 'Professeur'
+      ? {
+          UserManagement: <UserManagement authToken={token} />,
+          ClassManagement: <ClassManagement authToken={token} />,
+        }
+      : {}),
+    ...(user.role === 'Professeur'
+      ? {
+          Home: <ProfDashboardHome authToken={token} />,
+          CoursesLibrary: <ProfCoursesLibrary authToken={token} />,
+          // LiveManager: <LiveManager authToken={token} />,
+          // CourseManager: <CourseManager authToken={token} />,
+        }
+      : {}),
+    ...(user.role === 'Etudiant'
+      ? {
+          Home: <EleveDashboardHome authToken={token} />,
+          CoursesLibrary: <CoursesLibrary authToken={token} />,
+          CourseReader: <CourseReader authToken={token} />,
+        }
+      : {}),
     ThemeSettings: <ThemeSettings />,
-    Settings: <Settings authToken={token} />,
+    Forum: <Forum authToken={token} />,
+    LiveViewer: <LiveViewer authToken={token} />,
+    Settings: (
+      <Settings
+        authToken={token}
+        refreshAvatar={refreshAvatar}
+        userAvatar={userAvatar}
+        loadingAvatar={loadingAvatar}
+      />
+    ),
   };
 
   const renderContent = () => {
@@ -71,13 +158,28 @@ const DashboardAdmin = ({ content, token }) => {
   return showProfilepictureModal ? (
     <PictureModal
       setShowProfilepictureModal={setShowProfilepictureModal}
-      user={user}
+      refreshAvatar={refreshAvatar}
+      authToken={token}
     />
   ) : (
     <div className="h-screen w-full bg-white flex overflow-hidden">
       <aside className="flex-shrink-0">
-        <NavigationBar page={content} isAdmin={true} />
+        <NavigationBar
+          page={content}
+          isAdmin={role === 'admin'}
+          isProf={role === 'prof'}
+        />
       </aside>
+
+      {showMailModal && (
+        <Mailbox
+          user={user}
+          role={role}
+          onClose={() => {
+            setShowMailModal(false);
+          }}
+        />
+      )}
 
       <main className="flex-1 flex flex-col min-w-0">
         <header className="h-16 bg-gray-800 flex items-center justify-between px-6">
@@ -92,10 +194,17 @@ const DashboardAdmin = ({ content, token }) => {
             <Logo fillColor="#F9FAFB" />
           </a>
 
-          <div className="flex items-center gap-4 text-white">
-            <div className="flex flex-col items-end">
-              <div className="text-md font-medium">{`${user.name}`}</div>
-              <div className="text-sm font-regular">Administrateur</div>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-4 text-white">
+              <Bell className="h-6 w-6 mx-1" />
+              <Mail
+                className="h-6 w-6 mx-3"
+                onClick={() => setShowMailModal(true)}
+              />
+              <div className="flex flex-col items-end">
+                <div className="text-md font-medium">{`${user.name}`}</div>
+                <div className="text-sm font-regular">{role}</div>
+              </div>
             </div>
 
             <div className="relative flex">
@@ -103,10 +212,11 @@ const DashboardAdmin = ({ content, token }) => {
                 className="hover:ring-2 hover:ring-blue-400 rounded-full transition-all"
                 onClick={() => setShowProfileModal(true)}
               >
-                {/* Votre logo / lettre / image */}
-                {!user.avater ||
-                user.avatar === '' ||
-                user.avatar === 'default' ? (
+                {loadingAvatar ? (
+                  <div className="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center">
+                    <Loader2 className="h-6 w-6 text-blue-500 animate-spin" />
+                  </div>
+                ) : !userAvatar ? (
                   <div className="w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center">
                     <span className="text-xl font-bold text-gray-800">
                       {user.name.charAt(0).toUpperCase()}
@@ -114,10 +224,10 @@ const DashboardAdmin = ({ content, token }) => {
                   </div>
                 ) : (
                   <img
-                    // src={user.avatar}
-                    src="https://via.placeholder.com/150"
+                    src={userAvatar}
                     alt="Avatar"
-                    className="w-full h-full rounded-full"
+                    className="w-12 h-12 rounded-full object-cover"
+                    onError={() => setUserAvatar(null)}
                   />
                 )}
               </button>
@@ -144,10 +254,11 @@ const DashboardAdmin = ({ content, token }) => {
                         <Pencil className="h-4 w-4" />
                       </p>
 
-                      {/* Votre logo / lettre / image */}
-                      {!user.avater ||
-                      user.avatar === '' ||
-                      user.avatar === 'default' ? (
+                      {loadingAvatar ? (
+                        <div className="h-20 w-20 rounded-full border-2 bg-gray-700 mx-auto mb-4 flex items-center justify-center">
+                          <Loader2 className="h-8 w-8 text-blue-500 animate-spin" />
+                        </div>
+                      ) : !userAvatar ? (
                         <div className="h-20 w-20 rounded-full border-2 bg-yellow-500 mx-auto mb-4 flex items-center justify-center">
                           <span className="text-2xl font-bold text-gray-800">
                             {user.name.charAt(0).toUpperCase()}
@@ -155,10 +266,10 @@ const DashboardAdmin = ({ content, token }) => {
                         </div>
                       ) : (
                         <img
-                          // src={user.avatar}
-                          src="https://via.placeholder.com/150"
+                          src={userAvatar}
                           alt="Avatar"
-                          className="w-full h-full rounded-full object-cover"
+                          className="h-20 w-20 rounded-full mx-auto mb-4 object-cover"
+                          onError={() => setUserAvatar(null)}
                         />
                       )}
                       <p className="text-center text-lg text-xl font-thin text-white mt-1">
@@ -217,9 +328,10 @@ const DashboardAdmin = ({ content, token }) => {
   );
 };
 
-DashboardAdmin.propTypes = {
+Dashboard.propTypes = {
   content: PropTypes.string.isRequired,
   token: PropTypes.string.isRequired,
+  role: PropTypes.oneOf(['admin', 'prof', 'eleve']).isRequired,
 };
 
-export default DashboardAdmin;
+export default Dashboard;

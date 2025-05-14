@@ -1,4 +1,3 @@
-const { timeEnd } = require('console');
 const { Lives, ClassLives, Classe, Teacher } = require('../models');
 const ffmpeg = require('fluent-ffmpeg');
 const fs = require('fs');
@@ -23,7 +22,7 @@ const getAllLives = async (req, res) => {
     try {
         const lives = await Lives.findAll({
             include: [
-                { model: Teacher, attributes: ['username'] }
+                { model: Teacher, attributes: ['surname'] }
             ]
         });
 
@@ -31,7 +30,7 @@ const getAllLives = async (req, res) => {
         const structuredData = {};
 
         lives.forEach(live => {
-            const professor = live.Teacher ? live.Teacher.username : 'Unknown Professor';
+            const professor = live.Teacher ? 'Professeur ' + live.Teacher.surname : 'Unknown Professor';
             const subject = live.subject || 'Unknown Subject';
             const topic = live.chapter || 'Unknown Topic';
 

@@ -51,7 +51,12 @@ const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
     }
   }, [countEchec2FACode]);
 
-  const handleInputChange = () => {
+  const handleInputChange = e => {
+    const { id, value } = e.target;
+    setUser(prevUser => ({
+      ...prevUser,
+      [id]: value, // Met à jour la propriété correspondante
+    }));
     setHasUnsavedChanges(true);
   };
 
@@ -65,6 +70,12 @@ const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
     setErrors({});
     setActiveTab(tab);
     setHasUnsavedChanges(false);
+  };
+
+  window.onbeforeunload = function () {
+    if (hasUnsavedChanges) {
+      return 'Vous avez des modifications non enregistrées. Êtes-vous sûr de vouloir quitter cette page ?';
+    }
   };
 
   const Switch = ({ checked, onChange, disabled }) => {
@@ -160,6 +171,7 @@ const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
         `${API_URL}/users/profile`,
         {
           name: user.name,
+          surname: user.surname,
           email: user.email,
           username: user.username,
         },
@@ -712,7 +724,7 @@ const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
                   Prénom
                 </label>
                 <input
-                  id="first-name"
+                  id="name"
                   type="text"
                   placeholder="Votre prénom"
                   className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -723,13 +735,13 @@ const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
 
               <div>
                 <label
-                  htmlFor="last-name"
+                  htmlFor="name"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
                   Nom
                 </label>
                 <input
-                  id="last-name"
+                  id="surname"
                   type="text"
                   placeholder="Votre nom"
                   className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -997,6 +1009,6 @@ Settings.propTypes = {
   authToken: PropTypes.string.isRequired,
   refreshAvatar: PropTypes.func.isRequired,
   userAvatar: PropTypes.string, // Peut être null
-  loadingAvatar: PropTypes.bool.isRequired
+  loadingAvatar: PropTypes.bool.isRequired,
 };
 export default Settings;

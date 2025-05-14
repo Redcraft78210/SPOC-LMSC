@@ -1,9 +1,8 @@
 const fs = require('fs/promises');
 const fsSync = require('fs');
 const path = require('path');
-const { createReadStream } = require('fs');
-const { constants } = require('fs');
 const crypto = require('crypto');
+const { Document, Course, CourseDocument } = require('../models');
 
 const documentsDirectory = path.resolve(__dirname, '..', 'documents');
 
@@ -46,73 +45,6 @@ const generateDocumentPath = (id, fingerprint) => {
 };
 
 /**
- * Stream a document file by its ID.
- * @param {Object} req - Express request object.
- * @param {Object} res - Express response object.
- */
-const getDocument = async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        if (!id || !/^[a-zA-Z0-9_-]+$/.test(id)) {
-            return res.status(400).json({ message: 'Invalid document ID' });
-        }
-
-        // check if document exists in database
-        const document = await Document.findByPk(id);
-        if (!document) {
-            return res.status(404).json({ message: 'Document not found' });
-        }
-
-        const documentPath = generateDocumentPath(id, document.fingerprint);
-
-        console.log(`documentPath: ${documentPath}`);
-
-        if (!isInsideDocumentsDir(documentPath)) {
-            return res.status(400).json({ message: 'Invalid path' });
-        }
-
-        const handle = await fs.open(documentPath, 'r');
-        try {
-            const stats = await handle.stat();
-
-            // Read first 8KB for ETag generation (balance between performance and accuracy)
-            const buffer = Buffer.alloc(Math.min(8192, stats.size));
-            const { bytesRead } = await handle.read(buffer, 0, buffer.length, 0);
-            const partialHash = generateETag(bytesRead < buffer.length ? buffer.slice(0, bytesRead) : buffer);
-
-            res.writeHead(200, {
-                ...COMMON_HEADERS,
-                'Content-Length': stats.size,
-                'Content-Type': 'application/pdf; charset=utf-8',
-                'ETag': `"${partialHash}-${stats.size}"`
-            });
-
-            const documentStream = handle.createReadStream();
-
-            documentStream.on('error', (error) => {
-                console.error('Stream error:', error);
-                if (!res.headersSent) {
-                    res.status(500).json({ message: 'Streaming error' });
-                }
-            });
-
-            documentStream.pipe(res);
-        } finally {
-            await handle.close();
-        }
-    } catch (error) {
-        console.error('Server error:', error);
-        if (!res.headersSent) {
-            if (error.code === 'ENOENT') {
-                return res.status(404).json({ message: 'Document non trouvé' });
-            }
-            res.status(500).json({ message: 'Internal server error' });
-        }
-    }
-};
-
-/**
  * Get document as blob with additional security headers.
  * @param {Object} req - Express request object.
  * @param {Object} res - Express response object.
@@ -126,21 +58,37 @@ const getBlobDocument = async (req, res) => {
             return res.status(400).json({ message: 'Invalid document ID' });
         }
 
+        // Check if document is in database
+        const document = await Document.findOne({
+            where: { id },
+            include: {
+                model: Course,
+                attributes: ['title']
+            }
+        });
+
+        if (!document) {
+            return res.status(404).json({ message: 'Document not found' });
+        }
+
+        const fingerprint = document.fingerprint;
+
         // Use path.join for better path construction
-        const documentPath = path.resolve(
-            documentsDirectory,
-            path.join(id, `${id}.pdf`)
-        );
+        const documentPath = generateDocumentPath(id, fingerprint)
 
-        const escapedFilename = encodeURIComponent(`${id}.pdf`);
+        // Safely access document title
+        const documentTitle = document.Course?.title;
 
-        console.log(`documentPath: ${documentPath}`);
+        const escapedFilename = documentTitle 
+            ? encodeURIComponent(`${documentTitle}.pdf`) 
+            : encodeURIComponent(`${id}-${fingerprint}.pdf`);
 
         if (!isInsideDocumentsDir(documentPath)) {
             return res.status(400).json({ message: 'Invalid path' });
         }
 
         if (!fsSync.existsSync(documentPath)) {
+            console.error('File not found:', documentPath);
             return res.status(404).json({ message: 'Document not found' });
         }
 
@@ -186,24 +134,71 @@ const uploadDocument = async (req, res) => {
             return res.status(400).json({ message: 'ID invalide' });
         }
 
-        const documentPath = path.resolve(documentsDirectory, `${id}/${id}.pdf`);
+        // Récupérer le fingerprint depuis la base de données ou en générer un nouveau
+        let fingerprint = req.body.fingerprint || crypto.randomBytes(8).toString('hex');
+        const courseId = req.body.courseId; // Récupérer l'ID du cours associé
+        const isMain = req.body.isMain || false; // Document principal ou non
+        
+        // Utiliser generateDocumentPath pour la cohérence
+        const documentPath = generateDocumentPath(id, fingerprint);
+        
         if (!isInsideDocumentsDir(documentPath)) {
             return res.status(400).json({ message: 'Chemin invalide' });
         }
 
+        // Créer le répertoire parent si nécessaire
         await fs.mkdir(path.dirname(documentPath), { recursive: true });
 
-        // Handle file upload logic here...
+        // Gestion de l'upload de fichier
+        const fileData = [];
+        req.on('data', (chunk) => {
+            fileData.push(chunk);
+        });
+        
+        req.on('end', async () => {
+            try {
+                const buffer = Buffer.concat(fileData);
+                await fs.writeFile(documentPath, buffer);
+                
+                // Enregistrer ou mettre à jour le document dans la base de données
+                const [document, created] = await Document.upsert({
+                    id,
+                    fingerprint,
+                    title: req.body.title || `Document ${id}`,
+                    description: req.body.description
+                }, { returning: true });
+                
+                // Créer l'association avec le cours si un courseId est fourni
+                if (courseId) {
+                    await CourseDocument.upsert({
+                        course_id: courseId,
+                        document_id: id,
+                        is_main: isMain
+                    });
+                }
+                
+                res.status(201).json({ 
+                    message: 'Document téléchargé avec succès',
+                    id,
+                    fingerprint,
+                    courseId: courseId || null,
+                    isMain
+                });
+            } catch (error) {
+                console.error('Erreur lors de l\'écriture du fichier:', error);
+                res.status(500).json({ message: 'Erreur interne du serveur' });
+            }
+        });
 
     } catch (error) {
         console.error('Erreur serveur:', error);
         if (!res.headersSent) {
-            res.status(error.code === 'ENOENT' ? 404 : 500).json({
+            res.status(500).json({
                 message: error.message || 'Erreur interne'
             });
         }
     }
-}
+};
 
 const deleteDocument = async (req, res) => {
     try {
@@ -217,12 +212,37 @@ const deleteDocument = async (req, res) => {
             return res.status(400).json({ message: 'ID invalide' });
         }
 
-        const documentPath = path.resolve(documentsDirectory, `${id}/${id}.pdf`);
+        // Récupérer le document de la base de données pour obtenir le fingerprint
+        const document = await Document.findByPk(id);
+        if (!document) {
+            return res.status(404).json({ message: 'Document non trouvé' });
+        }
+
+        // Utiliser generateDocumentPath pour la cohérence
+        const documentPath = generateDocumentPath(id, document.fingerprint);
+        
         if (!isInsideDocumentsDir(documentPath)) {
             return res.status(400).json({ message: 'Chemin invalide' });
         }
 
-        await fs.unlink(documentPath);
+        // Vérifier si le fichier existe avant de le supprimer
+        try {
+            await fs.access(documentPath);
+            await fs.unlink(documentPath);
+        } catch (error) {
+            if (error.code !== 'ENOENT') {
+                throw error;
+            }
+            // Si le fichier n'existe pas, on continue avec la suppression en base
+        }
+        
+        // Supprimer les associations dans CourseDocument
+        const { CourseDocument } = require('../models');
+        await CourseDocument.destroy({ where: { document_id: id }});
+        
+        // Supprimer le document de la base de données
+        await document.destroy();
+        
         res.status(200).json({ message: 'Document supprimé avec succès' });
 
     } catch (error) {
@@ -236,7 +256,6 @@ const deleteDocument = async (req, res) => {
 };
 
 module.exports = {
-    getDocument,
     getBlobDocument,
     uploadDocument,
     deleteDocument

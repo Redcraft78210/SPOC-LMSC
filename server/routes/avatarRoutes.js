@@ -11,19 +11,21 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB max
 });
 
+router.use(authMiddleware);
+
 // Route pour uploader un avatar (utilisateur connecté)
-router.post('/', authMiddleware, upload.single('avatar'), uploadAvatar);
+router.post('/', upload.single('avatar'), uploadAvatar);
 
 // Route pour récupérer son propre avatar
-router.get('/', authMiddleware, getMyAvatar);
+router.get('/', getMyAvatar);
 
 // Route pour récupérer l'avatar d'un utilisateur spécifique
 router.get('/:userId', getAvatar);
 
 // Route pour supprimer son propre avatar
-router.delete('/', authMiddleware, deleteAvatar);
+router.delete('/', deleteAvatar);
 
 // Route pour supprimer l'avatar d'un utilisateur spécifique (admin)
-router.delete('/:userId', authMiddleware, deleteUserAvatar);
+router.delete('/:userId', deleteUserAvatar);
 
-module.exports = router;
+module.exports = { route: router };

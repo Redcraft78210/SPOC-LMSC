@@ -1,7 +1,6 @@
-// routes/codes.js
-import express from 'express';
-import { getAllCodes, createCode, deleteCode } from '../controllers/codeController.js';
-import authMiddleware from '../middlewares/authMiddleware.js';
+const express = require('express');
+const { getAllCodes, createCode, deleteCode } = require('../controllers/codeController.js');
+const authMiddleware = require('../middlewares/authMiddleware.js');
 
 const router = express.Router();
 
@@ -16,4 +15,4 @@ router.post('/', createCode);
 // DELETE code
 router.delete('/:code', deleteCode);
 
-export default router;
+module.exports = { route: router };

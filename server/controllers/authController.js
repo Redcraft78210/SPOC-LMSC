@@ -177,6 +177,11 @@ const login = async (req, res) => {
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) return res.status(401).json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS });
 
+    const isAccountLocked = user.status === 'inactif';
+    if (isAccountLocked) {
+      return res.status(403).json({ message: 'Account is locked. Please contact support using contact form.' });
+    }
+
     if (user.twoFAEnabled) {
       const tempToken = generateTempToken(user.id);
       return res.status(202).json({

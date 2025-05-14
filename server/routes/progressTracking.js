@@ -9,36 +9,38 @@ const { getUserCourseProgress,
     getUserStats } = require('../controllers/progressTracking.js');
 const authMiddleware = require('../middlewares/authMiddleware.js');
 
+router.use(authMiddleware);
+
 /**
  * Course Progress Routes
  */
 // Get course progress for logged in user
-router.get('/course-progress/:courseId', authMiddleware, getUserCourseProgress);
+router.get('/course-progress/:courseId', getUserCourseProgress);
 // Get course progress for a specific user
-router.get('/course-progress/user/:userId', authMiddleware, getUserCourseProgress);
+router.get('/course-progress/user/:userId', getUserCourseProgress);
 // Get all progress entries for a specific course
-router.get('/course-progress/course/:courseId', authMiddleware, getCourseProgress);
+router.get('/course-progress/course/:courseId', getCourseProgress);
 // Create or update course progress
-router.post('/course-progress/:courseId', authMiddleware, updateCourseProgress);
+router.post('/course-progress/:courseId', updateCourseProgress);
 
 /**
  * Lives Attendance Routes
  */
 // Get attendance records for logged in user
-router.get('/attendance', authMiddleware, getUserAttendance);
+router.get('/attendance', getUserAttendance);
 // Get attendance records for a specific user
-router.get('/attendance/user/:userId', authMiddleware, getUserAttendance);
+router.get('/attendance/user/:userId', getUserAttendance);
 // Get attendance statistics for a specific Lives session
-router.get('/attendance/lives/:LivesId', authMiddleware, getLiveAttendanceStats);
+router.get('/attendance/lives/:LivesId', getLiveAttendanceStats);
 // Mark attendance for a Lives session
-router.post('/attendance', authMiddleware, markAttendance);
+router.post('/attendance', markAttendance);
 
 /**
  * User Statistics Routes
  */
 // Get statistics for logged in user
-router.get('/stats', authMiddleware, getUserStats);
+router.get('/stats', getUserStats);
 // Get statistics for a specific user
-router.get('/stats/user/:userId', authMiddleware, getUserStats);
+router.get('/stats/user/:userId', getUserStats);
 
-module.exports = router;
+module.exports = { route: router };

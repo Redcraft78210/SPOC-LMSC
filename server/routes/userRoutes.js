@@ -1,6 +1,6 @@
-import express from 'express';
+const express = require('express');
 
-import {
+const {
   getAllUsers,
   getUserById,
   updateUserById,
@@ -14,49 +14,50 @@ import {
   deleteProfile,
   retrogradeUser,
   upgradeUser
-} from '../controllers/userController.js';
-import authMiddleware from '../middlewares/authMiddleware.js';
+} = require('../controllers/userController.js');
+const authMiddleware = require('../middlewares/authMiddleware.js');
 
 const router = express.Router();
 
+router.use(authMiddleware);
+
 // Get all users
-router.get('/', authMiddleware, getAllUsers);
+router.get('/', getAllUsers);
 
 // Get the user profile
-router.get('/profile', authMiddleware, getProfile);
+router.get('/profile', getProfile);
 
 // Get 2FA Status for a user
-router.get('/2fa', authMiddleware, get2FAStatus);
+router.get('/2fa', get2FAStatus);
 
 // Get a user by its ID
-router.get('/:id', authMiddleware, getUserById);
+router.get('/:id', getUserById);
 
 // Retrograde a user
-router.patch('/retrograde/:id', authMiddleware, retrogradeUser);
+router.patch('/retrograde/:id', retrogradeUser);
 
 // Upgrade a user
-router.patch('/upgrade/:id', authMiddleware, upgradeUser);
+router.patch('/upgrade/:id', upgradeUser);
 
 // Update the user profile
-router.put('/profile', authMiddleware, updateProfile);
+router.put('/profile', updateProfile);
 
 // Update a user status
-router.patch('/:id', authMiddleware, changeStatus);
+router.patch('/:id', changeStatus);
 
 // Change the user password
-router.put('/change-password', authMiddleware, changePassword);
+router.put('/change-password', changePassword);
 
 // Update a user
-router.put('/:id', authMiddleware, updateUserById);
+router.put('/:id', updateUserById);
 
 // Disable 2FA for user
-router.delete('/2fa', authMiddleware, disable2FA);
+router.delete('/2fa', disable2FA);
 
 // Delete the user profile
-router.delete('/profile', authMiddleware, deleteProfile);
+router.delete('/profile', deleteProfile);
 
 // Delete a user
-router.delete('/:id', authMiddleware, deleteUserById);
+router.delete('/:id', deleteUserById);
 
-export default router;
-
+module.exports = { route: router };

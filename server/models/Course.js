@@ -28,10 +28,6 @@ const Course = sequelize.define('Course', {
       key: 'id'
     }
   },
-  teacher_name: {
-    type: DataTypes.STRING,
-    allowNull: true  
-  },
   matiere: {
     type: DataTypes.STRING,
     allowNull: true  

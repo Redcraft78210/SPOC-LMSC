@@ -1,13 +1,13 @@
-import {
+const {
     getAllClasses,
     getClassById,
     createClass,
     updateClass,
     deleteClass,
-} from '../controllers/classController.js';
-import authMiddleware from '../middlewares/authMiddleware.js';
+} = require('../controllers/classController.js');
+const authMiddleware = require('../middlewares/authMiddleware.js');
 
-import { Router } from 'express';
+const { Router } = require('express');
 
 const router = Router();
 
@@ -28,4 +28,4 @@ router.put('/:id', updateClass);
 // Delete a class
 router.delete('/:id', deleteClass);
 
-export default router;
+module.exports = { route: router };

@@ -6,17 +6,12 @@ import {
   Route,
   useLocation,
 } from 'react-router-dom';
-// je retire useLocation car on n'en a plus besoin pour le moment
-
 import { jwtDecode } from 'jwt-decode';
 
-// Import your components
 import About from './pages/Public/About';
 import Contact from './pages/Public/Contact';
 import FirstLogin from './pages/FirstLogin';
-import DashboardAdmin from './pages/Admin/Dashboard';
-import DashboardEleve from './pages/Eleve/Dashboard';
-import DashboardProf from './pages/Professeur/Dashboard';
+import Dashboard from './pages/Dashboard'; // Utilisation du composant fusionné
 import Home from './pages/Public/Home';
 import Logout from './components/Logout';
 import MaintenanceBanner from './pages/Public/Maintenance';
@@ -28,26 +23,35 @@ let APP_STATUS = '';
 // APP_STATUS = 'MAINTENANCE'; // Set to "MAINTENANCE" for maintenance mode
 
 const routeConfig = [
-  { path: '/classes-management', content: 'ClassManagement' },
+  // Dashboard and Home
+  { path: '/dashboard', content: 'Home' },
+
+  // Course-related routes
   { path: '/course-reader', content: 'CourseReader' },
   { path: '/courses-library', content: 'CoursesLibrary' },
-  { path: '/liveViewer', content: 'LiveViewer' },
-  { path: '/dashboard', content: 'Home' },
-  { path: '/forum', content: 'Forum' },
+  { path: '/courses-managment', content: 'CoursesManagment' },
+
+  // Class-related routes
+  { path: '/classes-management', content: 'ClassManagement' },
+
+  // User-related routes
+  { path: '/users-management', content: 'UserManagement' },
   { path: '/profile', content: 'Profile' },
-  { path: '/courses-library', content: 'CoursesLibrary' },
+
+  // Media-related routes
   { path: '/video-manager', content: 'VideoManager' },
   { path: '/document-manager', content: 'DocumentManager' },
-  { path: '/courses-managment', content:'CoursesManagment'},
-  { path: '/course-reader', content: 'CourseReader' },
-  { path: '/users-management', content: 'UserManagement' },
-  { path: '/classes-management', content: 'ClassManagement' },
+
+  // Communication-related routes
+  { path: '/forum', content: 'Forum' },
+  { path: '/mailbox', content: 'Mailbox' },
+
+  // Live-related routes
+  { path: '/liveViewer', content: 'LiveViewer' },
+
+  // Settings
   { path: '/theme-settings', content: 'ThemeSettings' },
   { path: '/settings', content: 'Settings' },
-  { path: '/theme-settings', content: 'ThemeSettings' },
-  { path: '/users-management', content: 'UserManagement' },
-  { path: '/video-manager', content: 'VideoManager' },
-  { path: '/course-reader', content: 'CourseReader' }, 
 ];
 
 const publicRouteConfig = [
@@ -73,14 +77,13 @@ function App() {
 
   useEffect(() => {
     if (!auth && !loading && localStorage.getItem('authToken')) {
-      handleLogout(); // Ensure the token is removed if auth is false
+      handleLogout();
     }
   }, [auth, loading]);
 
   useEffect(() => {
     const checkAuth = () => {
       const token = localStorage.getItem('authToken');
-      console.log("Checking auth...");
       if (token) {
         try {
           const decodedToken = jwtDecode(token);
@@ -121,18 +124,6 @@ function App() {
     localStorage.removeItem('authToken');
   };
 
-  let DashboardComponent;
-  switch (role) {
-    case 'Professeur':
-      DashboardComponent = DashboardProf;
-      break;
-    case 'Administrateur':
-      DashboardComponent = DashboardAdmin;
-      break;
-    default:
-      DashboardComponent = DashboardEleve;
-  }
-
   const Loader = () => (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-white bg-opacity-50 backdrop-blur-sm">
       <div className="flex flex-col items-center space-y-4">
@@ -155,8 +146,6 @@ function App() {
   if (loading) {
     return <Loader />;
   }
-
-  // console.log('AUTH', auth.firstLogin);
 
   if (auth && auth.firstLogin) {
     return (
@@ -204,8 +193,8 @@ function App() {
                 route.content === 'Home'
                   ? Home
                   : route.content === 'About'
-                    ? About
-                    : Contact
+                  ? About
+                  : Contact
               )
             )
           }
@@ -217,9 +206,10 @@ function App() {
               key={route.path}
               path={route.path}
               element={
-                <DashboardComponent
+                <Dashboard
                   content={route.content}
                   token={localStorage.getItem('authToken')}
+                  role={role}
                 />
               }
             />

@@ -1,26 +1,23 @@
-import express from 'express';
-import authMiddleware from '../middlewares/authMiddleware.js';
-import {
-    getDocument,
+const express = require('express');
+const authMiddleware = require('../middlewares/authMiddleware.js');
+const {
     getBlobDocument,
     uploadDocument,
     deleteDocument
-} from '../controllers/documentController.js';
+} = require('../controllers/documentController.js');
 
 
 const router = express.Router();
 
-// Get a document
-router.get('/:id', authMiddleware, getDocument);
+router.use(authMiddleware);
 
-// Download a document
-router.get('/download/:id', authMiddleware, getBlobDocument);
+// Get a document
+router.get('/:id', getBlobDocument);
 
 // Upload a document
-router.post('/:id', authMiddleware, uploadDocument);
+router.post('/:id', uploadDocument);
 
 // Delete a document
-router.delete('/:id', authMiddleware, deleteDocument);
+router.delete('/:id', deleteDocument);
 
-export default router;
-
+module.exports = { route: router };

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -12,21 +12,35 @@ const API_URL = 'https://localhost:8443/api';
 const SecureDocumentViewer = ({ authToken, documentId }) => {
   const [pdfData, setPdfData] = useState(null);
   const [numPages, setNumPages] = useState(null);
+  const [width, setWidth] = useState(0);
+  const containerRef = useRef(null);
+
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    // Création de l'observer
+    const observer = new ResizeObserver(entries => {
+      for (let entry of entries) {
+        const w = entry.contentRect.width;
+        setWidth(w);
+      }
+    });
+    observer.observe(containerRef.current);
+    // nettoyage
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const fetchPDF = async () => {
       const controller = new AbortController();
 
       try {
-        const response = await fetch(
-          `${API_URL}/documents/download/${documentId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${authToken}`,
-            },
-            signal: controller.signal,
-          }
-        );
+        const response = await fetch(`${API_URL}/documents/${documentId}`, {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+          signal: controller.signal,
+        });
 
         if (!response.ok) {
           const text = await response.text();
@@ -55,7 +69,11 @@ const SecureDocumentViewer = ({ authToken, documentId }) => {
   return (
     <div className="bg-gray-100 min-h-screen p-4">
       <div className="max-w-6xl mx-auto">
-        <div className="border border-gray-300 rounded-lg bg-white shadow-sm p-4">
+        <div
+          className="border border-gray-300 rounded-lg bg-white shadow-sm p-4"
+          ref={containerRef}
+          style={{ width: '100%', height: '100%' }}
+        >
           {pdfData && (
             <Document
               file={pdfData}
@@ -73,6 +91,7 @@ const SecureDocumentViewer = ({ authToken, documentId }) => {
                         Chargement de la page...
                       </div>
                     }
+                    width={width}
                   />
                 ))}
               </div>

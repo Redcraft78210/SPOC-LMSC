@@ -1,19 +1,21 @@
-import express from 'express';
-import { getThreads, createThread, getThreadDetails, addComment } from '../controllers/forumController.js';
-import authMiddleware from '../middlewares/authMiddleware.js';
+const express = require('express');
+const { getThreads, createThread, getThreadDetails, addComment } = require('../controllers/forumController.js');
+const authMiddleware = require('../middlewares/authMiddleware.js');
 
 const router = express.Router();
 
+router.use(authMiddleware);
+
 // GET /api/forum/threads - Liste des discussions
-router.get('/threads', authMiddleware, getThreads);
+router.get('/threads', getThreads);
 
 // POST /api/forum/threads - Créer une discussion
-router.post('/threads', authMiddleware, createThread);
+router.post('/threads', createThread);
 
 // GET /api/forum/threads/:threadId - Détail d'une discussion avec commentaires
-router.get('/threads/:threadId', authMiddleware, getThreadDetails);
+router.get('/threads/:threadId', getThreadDetails);
 
 // POST /api/forum/threads/:threadId/comments - Ajouter un commentaire
-router.post('/threads/:threadId/comments', authMiddleware, addComment);
+router.post('/threads/:threadId/comments', addComment);
 
-export default router;
+module.exports = { route: router };

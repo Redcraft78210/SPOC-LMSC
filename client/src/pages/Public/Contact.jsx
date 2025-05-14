@@ -1,46 +1,50 @@
-import { useState } from "react";
-import PublicNavbar from "../../components/PublicComp/PublicNavbar";
-import Footer from "../../components/PublicComp/Footer";
+import { useState } from 'react';
+import PublicNavbar from '../../components/PublicComp/PublicNavbar';
+import Footer from '../../components/PublicComp/Footer';
+
+const API_URL = 'https://localhost:8443/api';
 
 const Contact = () => {
   const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    message: "",
+    name: '',
+    email: '',
+    motif: '', // Added motif (reason)
+    objet: '', // Added objet (subject)
+    message: '',
   });
 
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState('');
 
-  const handleChange = (e) => {
+  const handleChange = e => {
     const { name, value } = e.target;
-    setFormData((prevData) => ({
+    setFormData(prevData => ({
       ...prevData,
       [name]: value,
     }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async e => {
     e.preventDefault();
-    setStatus("loading");
+    setStatus('loading');
 
     try {
-      const response = await fetch("/api/contact", {
-        method: "POST",
+      const response = await fetch(`${API_URL}/contact`, {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(formData),
       });
 
       if (response.ok) {
-        setStatus("success");
-        setFormData({ name: "", email: "", message: "" });
+        setStatus('success');
+        setFormData({ name: '', email: '', motif: '', objet: '', message: '' });
       } else {
-        setStatus("error");
+        setStatus('error');
       }
     } catch (error) {
       console.error("Erreur lors de l'envoi du formulaire :", error);
-      setStatus("error");
+      setStatus('error');
     }
   };
 
@@ -97,6 +101,42 @@ const Contact = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
+                Motif de contact
+              </label>
+              <select
+                name="motif"
+                value={formData.motif}
+                onChange={handleChange}
+                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              >
+                <option value="" disabled>
+                  Sélectionnez un motif
+                </option>
+                <option value="information">Information générale</option>
+                <option value="support">Support technique</option>
+                <option value="service_client">Service client</option>
+                <option value="rgpd">Faire valoir mes droits RGPD</option>
+                <option value="partenariat">Partenariat</option>
+                <option value="autre">Autre</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Objet du message
+              </label>
+              <input
+                type="text"
+                name="objet"
+                value={formData.objet}
+                onChange={handleChange}
+                placeholder="Sujet de votre message"
+                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Message
               </label>
               <textarea
@@ -113,17 +153,17 @@ const Contact = () => {
               <button
                 type="submit"
                 className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                disabled={status === "loading"}
+                disabled={status === 'loading'}
               >
-                {status === "loading" ? "Envoi en cours..." : "Envoyer"}
+                {status === 'loading' ? 'Envoi en cours...' : 'Envoyer'}
               </button>
             </div>
-            {status === "success" && (
+            {status === 'success' && (
               <p className="text-green-600 text-center mt-4">
                 Votre message a été envoyé avec succès !
               </p>
             )}
-            {status === "error" && (
+            {status === 'error' && (
               <p className="text-red-600 text-center mt-4">
                 Une erreur est survenue. Veuillez réessayer.
               </p>
