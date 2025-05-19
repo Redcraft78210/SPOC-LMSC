@@ -82,10 +82,45 @@ Mise à Jour du 10 Avril 2025
   - Revue technique avec DE CASTRO pour validation du backend Django lié à la vidéo,
   - Sauvegarde du projet sur un dépôt distant secondaire (GITHUB personnel),
   - Préparation d’une démonstration live de la plateforme pour les enseignants.
-- Le 29 avril :
-  - Mise en place finis de l'updater des informations des vidéo (ajout des routes api dans le backend pour soulager De Castro et lien avec le frontend)
+  - 
+* Du 15 avril au 20 avril :
 
-      
+  * Finalisation de l’upload vidéo (interface et interaction complète avec l’API Django),
+  * Intégration d’un système de notification utilisateur en cas d’échec ou succès (toasts),
+  * Ajout de la gestion des formats vidéos acceptés (.mp4, .webm, .mkv),
+  * Déploiement sur environnement de test.
+
+* Du 21 avril au 25 avril :
+
+  * Tests multi-utilisateurs du composant VideoManager (pagination, tri dynamique, upload),
+  * Optimisation de la gestion d’état React (utilisation de Zustand pour alléger les props drilling),
+  * Mise en place du système de rôles dans l'interface : Prof vs Élève.
+
+* Du 26 avril au 1er mai :
+
+  * Tests sur les permissions d’accès frontend en fonction des rôles,
+  * Correction des comportements anormaux lors du changement d’état (ex : vidéo supprimée par erreur),
+  * Documentation interne : début de la rédaction du guide de développement frontend.
+
+* Du 2 mai au 6 mai :
+
+  * Création d’un composant d’aperçu rapide des vidéos sur hover,
+  * Mise à jour des pages LiveManager et VideoManager avec un design plus sobre et cohérent avec la charte graphique,
+  * Déploiement de la version stable frontend sur l'environnement de staging.
+
+* Du 7 mai au 10 mai :
+
+  * Réunion d’équipe pour synchronisation avec les évolutions backend,
+  * Participation à la phase de test des routes API Django en postman,
+  * Débogage suite à l'intégration du nouveau middleware de sécurité.
+
+* Du 11 mai au 16 mai :
+
+  * Ajout du système de recherche dynamique (titre, date, type),
+  * Réalisation d’une vidéo de démonstration du SPOC pour les soutenances,
+  * Finalisation de la documentation utilisateur (guide d’utilisation de l’interface),
+  * Début du diaporama de soutenance (slides techniques côté frontend).
+
 ### DE CASTRO
 
 - Du 16 janvier au 03 février 2025  :
@@ -129,7 +164,38 @@ Mise à Jour du 10 Avril 2025
   - Adapté la réponse de ma vue get_all pour m'adapter au besoins de Belaise,
   - Reçu un un schéma de câblage pour le contrôle de la camèra,
   - Fini le synoptique , prêt à être basculé physiquement.
-    
+
+* Du 15 avril au 21 avril :
+
+  * Finalisation de l’API de gestion des documents pédagogiques (upload, get, delete),
+  * Sécurisation des endpoints : authentification JWT + autorisation basée sur les rôles,
+  * Intégration des documents associés à une vidéo dans les réponses API.
+
+* Du 22 avril au 28 avril :
+
+  * Mise en place de tests automatisés sur les endpoints critiques (pytest + coverage),
+  * Documentation Swagger du backend,
+  * Optimisation de la sérialisation des vidéos pour limiter les temps de réponse.
+
+* Du 29 avril au 3 mai :
+
+  * Création d’une tâche cron pour la purge des fichiers non utilisés,
+  * Participation aux tests d’intégration frontend/backend avec Williart,
+  * Revue de sécurité : mise à jour de Django + ajout des headers HTTP recommandés (CSP, X-Frame-Options, etc.).
+
+* Du 4 mai au 10 mai :
+
+  * Refonte partielle du modèle de base de données pour supporter la multi-session vidéo,
+  * Mise en place d’un cache Redis pour les vidéos les plus consultées,
+  * Tests de montée en charge (simulations via Locust).
+
+* Du 11 mai au 16 mai :
+
+  * Finalisation du backend : gel des fonctionnalités,
+  * Préparation de la soutenance technique : rédaction du dossier technique backend,
+  * Capture d’écran, logs de tests, schémas techniques à jour,
+  * Déploiement sur VPS (environnement de pré-production).
+
   
 ### BELAISE
 
@@ -226,4 +292,62 @@ Mise à Jour du 10 Avril 2025
 - **Amélioration de l’expérience utilisateur :**
   - Mise en place d’un menu accessible via la photo de profil, permettant la modification du profil ainsi qu’un bouton de déconnexion.
   - Finalisation de la page d’accueil **PUBLIQUE** du SPOC pour une meilleure présentation aux utilisateurs externes.
+
+
+
+#### 15 - 20 avril : Validation et sécurisation des accès
+
+* **Authentification :**
+
+  * Validation complète du 2FA avec tests multi-navigateurs.
+  * Finalisation de l’intégration frontend du Captcha.
+* **Robustesse API :**
+
+  * Lancement de tests de résistance sur les endpoints d’authentification.
+  * Analyse des logs backend pour détection d’anomalies.
+
+---
+
+#### 21 - 27 avril : Environnements et automatisation
+
+* **Environnements d’exécution :**
+
+  * Séparation propre des environnements **production**, **staging** et **développement** dans les configurations Docker.
+* **Déploiement :**
+
+  * Écriture d’un **script de déploiement unifié** pour faciliter l'installation du projet (DB + API + Front).
+* **UX et erreurs :**
+
+  * Personnalisation des pages d'erreur 404/500.
+
+---
+
+#### 28 avril - 4 mai : Sécurité avancée et monitoring
+
+* **Sessions :**
+
+  * Implémentation d’un module de **gestion des sessions actives** : affichage et révocation depuis l’espace utilisateur.
+* **Observabilité :**
+
+  * Déploiement de **Grafana + Prometheus** pour monitorer les ressources système et les appels API.
+* **Documentation technique :**
+
+  * Début de rédaction de la **documentation back-end** (routes API, schéma DB, système d’authentification).
+
+---
+
+#### 5 - 16 mai : Finalisation du backend et documentation
+
+* **CI/CD et qualité :**
+
+  * Mise en place d’un pipeline d’intégration continue basique avec GitHub Actions (tests, lint, build).
+  * Ajout de tests automatisés sur les routes d’authentification et de gestion utilisateur.
+* **Finalisation documentaire :**
+
+  * Clôture de la documentation technique (API REST + schémas + procédure d’installation).
+  * Contribution au **dossier de soutenance**, rédaction d’un résumé technique de la partie backend.
+* **Répétition de soutenance :**
+
+  * Simulation de présentation, retour de l’équipe sur les points d’amélioration,
+  * Ajustements mineurs du backend suite aux retours (messages d’erreur, statuts HTTP, logs).
 
