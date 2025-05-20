@@ -168,33 +168,30 @@ Mise à Jour du 10 Avril 2025
 * Du 15 avril au 21 avril :
 
   * Finalisation de l’API de gestion des documents pédagogiques (upload, get, delete),
-  * Sécurisation des endpoints : authentification JWT + autorisation basée sur les rôles,
   * Intégration des documents associés à une vidéo dans les réponses API.
 
 * Du 22 avril au 28 avril :
 
-  * Mise en place de tests automatisés sur les endpoints critiques (pytest + coverage),
-  * Documentation Swagger du backend,
+  * Documentation de l'API,
   * Optimisation de la sérialisation des vidéos pour limiter les temps de réponse.
 
 * Du 29 avril au 3 mai :
 
   * Création d’une tâche cron pour la purge des fichiers non utilisés,
-  * Participation aux tests d’intégration frontend/backend avec Williart,
-  * Revue de sécurité : mise à jour de Django + ajout des headers HTTP recommandés (CSP, X-Frame-Options, etc.).
+  * Participation aux tests d’intégration frontend/backend avec Williart.
+
 
 * Du 4 mai au 10 mai :
 
-  * Refonte partielle du modèle de base de données pour supporter la multi-session vidéo,
-  * Mise en place d’un cache Redis pour les vidéos les plus consultées,
-  * Tests de montée en charge (simulations via Locust).
-
-* Du 11 mai au 16 mai :
+  * Refonte partielle du modèle de base de données pour supporter la multi-session vidéo.
+.
+* Du 11 mai au 20 mai :
 
   * Finalisation du backend : gel des fonctionnalités,
   * Préparation de la soutenance technique : rédaction du dossier technique backend,
   * Capture d’écran, logs de tests, schémas techniques à jour,
-  * Déploiement sur VPS (environnement de pré-production).
+  * Réseau réalisé .
+
 
   
 ### BELAISE
