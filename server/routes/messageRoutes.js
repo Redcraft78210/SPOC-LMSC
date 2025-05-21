@@ -17,7 +17,7 @@ const multer = require('multer');
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB max file size
+    fileSize: 1 * 1024 * 1024 * 1024, // 1GB max file size
     files: 5 // Max 5 files per request
   }
 });
@@ -30,6 +30,16 @@ router.get('/inbox', getInboxMessages);
 router.get('/sent', getSentMessages);
 router.get('/trash', getTrashMessages);
 router.get('/:messageId', getMessage);
+
+// Create a new message
+router.post('/', upload.array('attachments', 5), sendMessage);
+
+// Create a new message with contact form
+router.post('/contact', upload.array('attachments', 5), createContactMessage);
+// Create a new message without attachments
+router.post('/no-attachments', sendMessage);
+// Create a new message without attachments and with contact form
+router.post('/contact/no-attachments', createContactMessage);
 
 // Message actions
 router.put('/:messageId/read', markMessageAsRead);

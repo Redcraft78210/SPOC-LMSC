@@ -1,4 +1,4 @@
-const { User } = require('../models');
+const { User, sequelize } = require('../models');
 const bcrypt = require('bcrypt');
 
 // Get the authenticated user's profile
@@ -151,23 +151,58 @@ const deleteProfile = async (req, res) => {
 
 // Get all users
 const getAllUsers = async (req, res) => {
+    const { role, mailboxrecipients } = req.query;
+    const userRole = req.user.role;
+    console.log(userRole);
+
     try {
-        const users = await User.findAll();
-        return res.status(200).json(users.map(user => ({
-            id: user.id,
-            name: user.name,
-            surname: user.surname,
-            email: user.email,
-            active: user.statut,
-            role: user.role === 'admin' ? 'Administrateur' :
-                user.role === 'teacher' ? 'Professeur' :
-                    'Etudiant'
-        })));
+        // Build filter only if role is provided
+        const where = role ? { role } : {};
+
+        // If the current user is a student, exclude admin accounts
+        if (userRole === 'Etudiant') {
+            where.role = { [sequelize.Op.ne]: 'admin' }; // Sequelize operator to exclude 'admin'
+        }
+
+        const users = await User.findAll({ where });
+
+        // Sequelize returns an array, even if empty
+        if (!users.length) {
+            return res.status(404).json({ message: 'No users found' });
+        }
+
+        // Centralize role→label mapping
+        const ROLE_LABELS = {
+            admin: 'Administrateur',
+            teacher: 'Professeur',
+            student: 'Étudiant',
+        };
+
+        const result = users.map(({ id, name, surname, email, statut, role: rawRole }) => {
+            const label = ROLE_LABELS[rawRole] || rawRole;
+
+            // Always include id/name/surname/role
+            const output = { id, surname, role: label };
+
+            // If not for mailbox recipients, also include email + active status
+            if (!mailboxrecipients) {
+                output.name = name;
+                output.email = email;
+                output.active = statut;
+            } else {
+                output.name = rawRole === "teacher" ? "Professeur" : name;
+            }
+
+            return output;
+        });
+
+        return res.status(200).json(result);
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Server error' });
     }
 };
+
 
 // Get user by ID
 const getUserById = async (req, res) => {

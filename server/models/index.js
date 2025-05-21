@@ -1,4 +1,6 @@
 const sequelize = require('../config/database');
+const { Sequelize } = require('sequelize');
+sequelize.Op = Sequelize.Op;
 
 const User = require('./User');
 const CourseProgress = require('./CourseProgress');

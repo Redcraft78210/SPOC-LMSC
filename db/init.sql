@@ -147,12 +147,12 @@ CREATE TABLE messages (
 
 CREATE TABLE attachments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    message_id UUID NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
-    original_filename VARCHAR(255) NOT NULL,
-    stored_filename VARCHAR(255) NOT NULL,
-    file_size INTEGER NOT NULL,
-    mime_type VARCHAR(255) NOT NULL,
-    scan_status scan_status_type DEFAULT 'pending',
+    "MessageId" UUID NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+    filename VARCHAR(255) NOT NULL,
+    "fileSize" INTEGER NOT NULL,
+    "mimeType" VARCHAR(255) NOT NULL,
+    "scanStatus" scan_status_type DEFAULT 'pending',
+    "deletedAt" TIMESTAMP,
     "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -536,8 +536,8 @@ CREATE INDEX idx_messages_contact_form ON messages("fromContactForm");
 CREATE INDEX idx_message_recipients_message_id ON message_recipients(message_id);
 CREATE INDEX idx_message_recipients_read ON message_recipients(read);
 CREATE INDEX idx_message_recipients_deleted ON message_recipients(deleted);
-CREATE INDEX idx_attachments_message_id ON attachments(message_id);
-CREATE INDEX idx_attachments_scan_status ON attachments(scan_status);
+CREATE INDEX idx_attachments_message_id ON attachments("MessageId");
+CREATE INDEX idx_attachments_scan_status ON attachments("scanStatus");
 CREATE INDEX idx_registry_rgpd_user_email ON registry_rgpd(user_email);
 
 -- Create validation function for message recipients
@@ -592,9 +592,9 @@ RETURNS TRIGGER AS $$
 BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM messages 
-        WHERE id = NEW.message_id
+        WHERE id = NEW."MessageId"
     ) THEN
-        RAISE EXCEPTION 'Message % does not exist', NEW.message_id;
+        RAISE EXCEPTION 'Message % does not exist', NEW."MessageId";
     END IF;
     RETURN NEW;
 END;
@@ -889,6 +889,6 @@ VALUES
     ('33333333-aaaa-bbbb-cccc-000000000003', 'a6fa5fc1-1234-4321-0000-000000000009', FALSE);
 
 -- Insert sample attachment
-INSERT INTO attachments (message_id, original_filename, stored_filename, file_size, mime_type, scan_status)
+INSERT INTO attachments ("MessageId", filename, "fileSize", "mimeType", "scanStatus")
 VALUES
-    ('33333333-aaaa-bbbb-cccc-000000000002', 'question_code.js', '55555555-aaaa-bbbb-cccc-000000000001.js', 1024, 'application/javascript', 'clean');
+    ('33333333-aaaa-bbbb-cccc-000000000002', 'question_code.js', 1024, 'application/javascript', 'clean');

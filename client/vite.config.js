@@ -19,7 +19,7 @@ export default defineConfig({
       key: fs.readFileSync('../server/certs2/selfsigned.key'),
       cert: fs.readFileSync('../server/certs2/selfsigned.crt')
     },
-    port: 5173,
+    port: 443,
     host: '0.0.0.0'
   }
 })

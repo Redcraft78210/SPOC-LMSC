@@ -1,6 +1,7 @@
 // server.js
 
 // Required modules
+const { spawn } = require('child_process');
 const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
@@ -53,8 +54,8 @@ const codeRoutes = require('./routes/codeRoutes');
 
 // Initialize environment variables
 dotenv.config();
-const PORT = process.env.PORT || 8443;
-const HTTP_PORT = process.env.HTTP_PORT || 5000;
+const PORT = process.env.PORT || 443;
+const HTTP_PORT = process.env.HTTP_PORT || 80;
 
 // Create an Express app
 const app = express();
@@ -68,6 +69,14 @@ app.use((request, response, next) => {
     response.redirect("https://" + secure_host + request.url);
   }
 });
+
+const DEFAULTS = {
+  imageName: 'quarantine-image',
+  containerName: 'quarantine',
+  dockerfile: 'Quarantine.Dockerfile',
+  buildTimeoutMs: 5 * 60 * 1000,   // 5 minutes
+  runTimeoutMs: 30 * 1000,         // 30 seconds
+};
 
 // CORS configuration
 // Allowed origins for CORS
@@ -173,6 +182,105 @@ const httpServer = http.createServer((req, res) => {
   res.writeHead(301, { "Location": "https://" + req.headers["host"] + req.url });
   res.end();
 });
+
+const createQuarantineContainer = () => {
+  /**
+ * Runs a command and collects stdout/stderr.
+ * Rejects on non-zero exit or spawn error.
+ * @returns {Promise<{ code: number, stdout: string, stderr: string }>}
+ */
+  function runCommand(cmd, args = [], opts = {}) {
+    const { label = '' } = opts;
+    return new Promise((resolve, reject) => {
+      const proc = spawn(cmd, args);
+      let stdout = '', stderr = '';
+
+      proc.stdout.on('data', chunk => {
+        const str = chunk.toString();
+        stdout += str;
+        // Only collect stdout, don't display it immediately
+      });
+
+      proc.stderr.on('data', chunk => {
+        const str = chunk.toString();
+        stderr += str;
+        // Only collect stderr, don't display it immediately
+      });
+
+      proc.once('error', reject);
+
+      proc.once('close', code => {
+        const out = { code, stdout: stdout.trim(), stderr: stderr.trim() };
+        if (code !== 0) {
+          // Only display logs on error
+          process.stdout.write(label + out.stdout + '\n');
+          process.stderr.write(label + out.stderr + '\n');
+          return reject(new Error(`${label || cmd} exited ${code}\n${out.stderr}`));
+        }
+        resolve(out);
+      });
+    });
+  }
+
+  async function imageExists(imageName) {
+    try {
+      await runCommand('docker', ['image', 'inspect', `${imageName}`]);
+      return true;  // l'image existe
+    } catch (err) {
+      return false; // l'image n'existe pas
+    }
+  }
+
+  async function buildAndRun() {
+    try {
+      const imageName = 'quarantine-image';
+      const containerName = 'quarantine';
+      const dockerfile = 'Quarantine.Dockerfile';
+      console.log('🔨 Building image…');
+
+      // Check if the image already exists
+      const exists = await imageExists(imageName);
+      if (!exists) {
+        console.log(`🖼️  Image "${imageName}" not found. Building...`);
+        await runCommand('docker', ['build', '-t', imageName, '-f', dockerfile, '.'], { label: 'DOCKER-BUILD ' });
+        console.log('✅ Image built.');
+      } else {
+        console.log(`🖼️  Image "${imageName}" already exists. Skipping build.`);
+      }
+
+
+      console.log('🔍 Checking for existing container…');
+      const { stdout: existing } = await runCommand('docker', [
+        'ps', '-a',
+        '--filter', `name=^/${containerName}$`,
+        '--format', '{{.Names}}'
+      ], { label: 'DOCKER-PS ' });
+
+      if (existing === containerName) {
+        console.log(`⚠️  “${containerName}” exists—skipping creation.`);
+        return;
+      }
+
+      console.log('🚀 Running new container…');
+      const { stdout: id } = await runCommand('docker', [
+        'run', '-d',
+        '--name', containerName,
+        '--network', 'none',
+        imageName
+      ], { label: 'DOCKER-RUN ' });
+
+      console.log(`✅ Container started (ID: ${id})`);
+    } catch (err) {
+      console.error('❌ Error:', err.message);
+      process.exit(1);
+    }
+  }
+
+  buildAndRun();
+};
+
+// Create the Quarantine container
+createQuarantineContainer();
 
 // Start the HTTPS server
 server.listen(PORT, () => {
