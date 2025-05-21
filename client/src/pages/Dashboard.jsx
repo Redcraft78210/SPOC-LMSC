@@ -15,6 +15,10 @@ import ProfCoursesLibrary from './Professeur/CoursesLibrary';
 import AdminCoursesLibrary from './Admin/CoursesLibrary';
 import CoursesLibrary from './Eleve/CoursesLibrary';
 
+import CoursesManagement from '../components/ProfComp/CoursesManagment';
+import DocumentManager from '../components/ProfComp/DocumentMng';
+import VideoManager from '../components/ProfComp/VideoMng';
+
 import CourseReader from './CourseReader';
 import LiveViewer from './Eleve/LiveViewer';
 import Forum from './Forum';
@@ -108,6 +112,7 @@ const Dashboard = ({ content, token, role }) => {
     role: decodedToken.role,
   };
 
+  console.log('Decoded token:', decodedToken);
   const contentMap = {
     CoursesLibrary: <CoursesLibrary authToken={token} />,
     CourseReader: <CourseReader authToken={token} />,
@@ -129,6 +134,9 @@ const Dashboard = ({ content, token, role }) => {
           CoursesLibrary: <ProfCoursesLibrary authToken={token} />,
           // LiveManager: <LiveManager authToken={token} />,
           // CourseManager: <CourseManager authToken={token} />,
+          CoursesManagement: CoursesManagement,
+          VideoManager: <VideoManager authToken={token} />,
+          DocumentManager: <DocumentManager authToken={token} />,
         }
       : {}),
     ...(user.role === 'Etudiant'
@@ -154,7 +162,7 @@ const Dashboard = ({ content, token, role }) => {
   const renderContent = () => {
     return contentMap[content] || <NotFound />;
   };
-
+  console.log(role);
   return showProfilepictureModal ? (
     <PictureModal
       setShowProfilepictureModal={setShowProfilepictureModal}

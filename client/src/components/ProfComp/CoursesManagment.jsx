@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { GetClasses, GetCourses } from '../../API/ProfGestion'; // Import de GetCourses
+import {
+  GetClasses,
+  GetCourses,
+  CreateCourse,
+  UpdateCourse,
+  DeleteCourse,
+} from '../../API/ProfGestion'; // Import de GetCourses et UpdateCourse
 
 const matièresDisponibles = [
   { value: 'math_info', label: 'Mathématiques & Informatique' },
@@ -19,6 +25,7 @@ const CoursesManagement = ({ token }) => {
     chapitre: '',
     titre: '',
     description: '',
+    teacher_name: '', // Ajout du champ teacher_name
     allowedClasses: {},
   });
 
@@ -74,6 +81,7 @@ const CoursesManagement = ({ token }) => {
       chapitre: course.chapitre,
       titre: course.titre,
       description: course.description,
+      teacher_name: course.teacher_name, // Ajout du champ teacher_name
       allowedClasses: allowed,
     });
 
@@ -88,42 +96,91 @@ const CoursesManagement = ({ token }) => {
       chapitre: '',
       titre: '',
       description: '',
+      teacher_name: '', // Réinitialisation du champ teacher_name
       allowedClasses: {},
     });
     setIsModalOpen(true);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const selectedClasses = Object.keys(formData.allowedClasses).filter(
       id => formData.allowedClasses[id]
     );
 
-    const newCourse = {
+    const courseData = {
+      matiere: formData.matière, // Pour nouveau cours seulement
       chapitre: formData.chapitre,
       titre: formData.titre,
-      date_creation: new Date().toISOString(),
       description: formData.description,
-      id: editingCourseId || `cours_${Date.now()}`, // Utilisation de id au lieu de ID_cours
-      video: null,
-      documents: [],
-      allowedClasses: selectedClasses.length > 0 ? selectedClasses : 'ALL',
+      teacher_name: formData.teacher_name, // Ajout du champ teacher_name
+      date_creation: new Date().toISOString(),
+      allowed_classes: selectedClasses.length > 0 ? selectedClasses : 'ALL',
     };
 
-    setCourses(prev =>
-      editingCourseId
-        ? prev.map(c => (c.id === editingCourseId ? newCourse : c))
-        : [...prev, newCourse]
-    );
+    try {
+      let result;
 
-    setIsModalOpen(false);
-    setEditingCourseId(null);
-    setFormData({
-      matière: '',
-      chapitre: '',
-      titre: '',
-      description: '',
-      allowedClasses: {},
-    });
+      if (editingCourseId) {
+        // Mise à jour d'un cours existant
+        result = await UpdateCourse(editingCourseId, courseData);
+      } else {
+        // Création d'un nouveau cours
+        result = await CreateCourse(courseData);
+      }
+
+      if (result && (result.status === 200 || result.status === 201)) {
+        // Rafraîchir la liste des cours
+        const coursesResult = await GetCourses();
+        if (coursesResult && coursesResult.status === 200) {
+          setCourses(coursesResult.data);
+        }
+
+        // Réinitialiser le formulaire et fermer la modal
+        setIsModalOpen(false);
+        setEditingCourseId(null);
+        setFormData({
+          matière: '',
+          chapitre: '',
+          titre: '',
+          description: '',
+          teacher_name: '', // Réinitialisation du champ teacher_name
+          allowedClasses: {},
+        });
+
+        // Notification de succès
+        alert(
+          editingCourseId
+            ? 'Cours mis à jour avec succès'
+            : 'Cours créé avec succès'
+        );
+      } else {
+        throw new Error("Erreur lors de l'opération");
+      }
+    } catch (error) {
+      console.error('Erreur:', error);
+      alert("Une erreur est survenue lors de l'opération");
+    }
+  };
+
+  const handleDelete = async courseId => {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer ce cours ?')) {
+      try {
+        const result = await DeleteCourse(courseId);
+        if (result && result.status === 200) {
+          // Rafraîchir la liste des cours
+          const coursesResult = await GetCourses();
+          if (coursesResult && coursesResult.status === 200) {
+            setCourses(coursesResult.data);
+          }
+          alert('Cours supprimé avec succès');
+        } else {
+          throw new Error('Erreur lors de la suppression');
+        }
+      } catch (error) {
+        console.error('Erreur:', error);
+        alert('Une erreur est survenue lors de la suppression');
+      }
+    }
   };
 
   return (
@@ -151,12 +208,20 @@ const CoursesManagement = ({ token }) => {
                 Chapitre : <span className="italic">{course.chapitre}</span>
               </p>
               {/* Utiliser openEditModal */}
-              <button
-                onClick={() => openEditModal(course)}
-                className="mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-              >
-                Modifier
-              </button>
+              <div className="flex gap-2 mt-2">
+                <button
+                  onClick={() => openEditModal(course)}
+                  className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                >
+                  Modifier
+                </button>
+                <button
+                  onClick={() => handleDelete(course.id)}
+                  className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+                >
+                  Supprimer
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -236,6 +301,19 @@ const CoursesManagement = ({ token }) => {
               />
             </label>
 
+            <label className="block mt-3 text-sm font-medium text-gray-700">
+              Nom du professeur
+              <input
+                type="text"
+                name="teacher_name"
+                value={formData.teacher_name}
+                onChange={handleChange}
+                required
+                className="w-full mt-1 p-2 border border-gray-300 rounded"
+                placeholder="Entrez le nom du professeur"
+              />
+            </label>
+
             <div className="mt-4">
               <h4 className="font-semibold text-gray-700 text-sm mb-1">
                 Classes autorisées
@@ -267,6 +345,14 @@ const CoursesManagement = ({ token }) => {
               >
                 Annuler
               </button>
+              {editingCourseId && (
+                <button
+                  onClick={() => handleDelete(editingCourseId)}
+                  className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700"
+                >
+                  Supprimer
+                </button>
+              )}
               <button
                 onClick={handleSubmit}
                 disabled={!formData.titre}

@@ -193,8 +193,8 @@ function App() {
                 route.content === 'Home'
                   ? Home
                   : route.content === 'About'
-                  ? About
-                  : Contact
+                    ? About
+                    : Contact
               )
             )
           }

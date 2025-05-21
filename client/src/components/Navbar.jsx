@@ -11,6 +11,7 @@ import {
   MessagesSquare,
   Tv,
   FileSearch,
+  Video,
   NotepadText,
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -72,7 +73,12 @@ const NavigationBar = ({ isAdmin = false, isProf = false }) => {
           {
             icon: NotepadText,
             path: '/courses-managment',
-            label: 'Gestion des cours'
+            label: 'Gestion des cours',
+          },
+          {
+            icon: Video,
+            path: '/video-recording',
+            label: 'Enregistrement vidéo',
           },
         ]
       : []),
