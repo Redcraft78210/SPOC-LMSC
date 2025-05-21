@@ -8,11 +8,12 @@ const Contact = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    motif: '', // Added motif (reason)
-    objet: '', // Added objet (subject)
+    motif: '',
+    objet: '',
     message: '',
   });
 
+  const [attachments, setAttachments] = useState([]); // New state for attachments
   const [status, setStatus] = useState('');
 
   const handleChange = e => {
@@ -23,22 +24,34 @@ const Contact = () => {
     }));
   };
 
+  const handleFileChange = e => {
+    setAttachments(e.target.files); // Store selected files
+  };
+
   const handleSubmit = async e => {
     e.preventDefault();
     setStatus('loading');
 
+    const formDataToSend = new FormData();
+    Object.keys(formData).forEach(key => {
+      formDataToSend.append(key, formData[key]);
+    });
+
+    // Append attachments to the FormData
+    Array.from(attachments).forEach(file => {
+      formDataToSend.append('attachments', file);
+    });
+
     try {
       const response = await fetch(`${API_URL}/contact`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
+        body: formDataToSend,
       });
 
       if (response.ok) {
         setStatus('success');
         setFormData({ name: '', email: '', motif: '', objet: '', message: '' });
+        setAttachments([]); // Clear attachments
       } else {
         setStatus('error');
       }
@@ -148,6 +161,18 @@ const Contact = () => {
                 className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 required
               ></textarea>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Pièces jointes (facultatif)
+              </label>
+              <input
+                type="file"
+                name="attachments"
+                onChange={handleFileChange}
+                multiple
+                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
             </div>
             <div className="text-center">
               <button

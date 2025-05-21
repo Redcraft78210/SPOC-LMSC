@@ -1,6 +1,41 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+################################################################################
+# Script de streaming vidéo et audio
+#
+# Description :
+# Ce script configure et démarre un flux vidéo et audio en utilisant `ffmpeg`.
+# Il vérifie les périphériques nécessaires, ajuste les tailles de paquets pour
+# optimiser les performances réseau, et gère les flux TCP et UDP.
+#
+# Usage :
+#   ./startStream.sh
+#
+# Prérequis :
+#   - Ce script doit être exécuté avec des privilèges root.
+#   - Les dépendances suivantes doivent être installées :
+#       - ffmpeg
+#       - v4l-utils
+#       - alsa-utils
+#   - Les périphériques vidéo et audio doivent être correctement configurés.
+#
+# Configuration :
+#   - Adresse IP de destination : Modifiez la variable `DEST_IP`.
+#   - Paramètres vidéo : Modifiez les variables `VIDEO_DEV`, `VIDEO_SIZE`, etc.
+#   - Paramètres audio : Modifiez les variables `AUDIO_DEV`, `A_BITRATE`, etc.
+#
+# Logs :
+#   Les actions et erreurs sont enregistrées dans `logs/streamer.log`.
+#
+# Auteur :
+#   SPOC-LMSC
+#
+# Date :
+#   15/05/2025
+################################################################################
+
+
 # Check if running with root privileges
 if [ "$EUID" -ne 0 ]; then
   echo "🔒 This script requires root privileges to access hardware devices"

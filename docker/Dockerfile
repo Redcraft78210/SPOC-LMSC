@@ -70,7 +70,7 @@ WORKDIR /usr/src/app
 
 # Install runtime system dependencies first for better caching
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ffmpeg && \
+    apt-get install -y --no-install-recommends ffmpeg docker* clamav clamav-daemon && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 

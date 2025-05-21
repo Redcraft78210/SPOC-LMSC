@@ -4,7 +4,7 @@
   "description": "SPOC (Small Private Online Course) application with Node.js, React, PostgreSQL, Bootstrap, and Tailwind CSS",
   "main": "server.js",
   "scripts": {
-    "server": "node --trace-warnings server.js"
+    "server": "freshclam && node --trace-warnings server.js"
   },
   "dependencies": {
     "axios": "^1.9.0",

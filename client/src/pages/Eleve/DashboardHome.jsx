@@ -106,6 +106,15 @@ const DashboardHome = ({ authToken }) => {
           {/* Stat 2 */}
           <div className="bg-white rounded-lg shadow-md p-6 text-center">
             <h3 className="text-3xl font-bold text-blue-600">
+              {stats.startedCourses || 0}
+            </h3>
+            <p className="text-gray-600 mt-2">Cours commencés</p>
+          </div>
+
+
+          {/* Stat 3 */}
+          <div className="bg-white rounded-lg shadow-md p-6 text-center">
+            <h3 className="text-3xl font-bold text-blue-600">
               {stats.liveSessions}
             </h3>
             <p className="text-gray-600 mt-2">Sessions en direct suivies</p>

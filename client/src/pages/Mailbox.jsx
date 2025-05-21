@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   Inbox,
   Send,
@@ -30,12 +30,17 @@ const Mailbox = ({ authToken, role, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showComposeModal, setShowComposeModal] = useState(false);
-  const [replyData, setReplyData] = useState(null); // Add this for storing reply information
+  const [replyData, setReplyData] = useState(null);
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
     totalMessages: 0,
   });
+
+  // Add missing state variables
+  const [downloadingAttachments, setDownloadingAttachments] = useState({});
+  const [loadingMessageDetails, setLoadingMessageDetails] = useState(false);
+  const [deletingMessage, setDeletingMessage] = useState(false);
 
   // Filter options
   const [filters, setFilters] = useState({
@@ -64,28 +69,27 @@ const Mailbox = ({ authToken, role, onClose }) => {
     try {
       const endpoint = getEndpointForView();
 
-      const response = await fetch(
-        `${API_URL}/messages/${endpoint}?page=${pagination.currentPage}&unread=${filters.unread}&hasAttachments=${filters.hasAttachments}&fromContact=${filters.fromContact}`,
-        {
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-          },
-        }
-      );
+      // Using axios consistently for all API calls
+      const response = await axios.get(`${API_URL}/messages/${endpoint}`, {
+        params: {
+          page: pagination.currentPage,
+          unread: filters.unread,
+          hasAttachments: filters.hasAttachments,
+          fromContact: filters.fromContact,
+        },
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch messages');
-      }
-
-      const data = await response.json();
-      setMessages(data.messages);
+      setMessages(response.data.messages);
       setPagination({
-        currentPage: data.currentPage,
-        totalPages: data.totalPages,
-        totalMessages: data.total,
+        currentPage: response.data.currentPage,
+        totalPages: response.data.totalPages,
+        totalMessages: response.data.total,
       });
     } catch (error) {
-      toast.error(`Error: ${error.message}`);
+      toast.error(`Error: ${error.response?.data?.message || error.message}`);
     } finally {
       setLoading(false);
     }
@@ -97,18 +101,14 @@ const Mailbox = ({ authToken, role, onClose }) => {
 
   const handleMessageSelect = async messageId => {
     try {
-      setLoading(true);
-      const response = await fetch(`${API_URL}/messages/${messageId}`, {
+      setLoadingMessageDetails(true);
+      const response = await axios.get(`${API_URL}/messages/${messageId}`, {
         headers: {
           Authorization: `Bearer ${authToken}`,
         },
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch message details');
-      }
-
-      const messageData = await response.json();
+      const messageData = response.data;
       setSelectedMessage(messageData);
 
       // Mark as read if it's unread
@@ -116,20 +116,23 @@ const Mailbox = ({ authToken, role, onClose }) => {
         markAsRead(messageId);
       }
     } catch (error) {
-      toast.error(`Error: ${error.message}`);
+      toast.error(`Error: ${error.response?.data?.message || error.message}`);
     } finally {
-      setLoading(false);
+      setLoadingMessageDetails(false);
     }
   };
 
   const markAsRead = async messageId => {
     try {
-      await fetch(`${API_URL}/messages/${messageId}/read`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
-      });
+      await axios.put(
+        `${API_URL}/messages/${messageId}/read`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+        }
+      );
 
       // Update the local messages array
       setMessages(
@@ -148,16 +151,12 @@ const Mailbox = ({ authToken, role, onClose }) => {
     }
 
     try {
-      const response = await fetch(`${API_URL}/messages/${messageId}`, {
-        method: 'DELETE',
+      setDeletingMessage(true);
+      await axios.delete(`${API_URL}/messages/${messageId}`, {
         headers: {
           Authorization: `Bearer ${authToken}`,
         },
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete message');
-      }
 
       toast.success('Message supprimé avec succès');
 
@@ -167,27 +166,27 @@ const Mailbox = ({ authToken, role, onClose }) => {
 
       fetchMessages();
     } catch (error) {
-      toast.error(`Error: ${error.message}`);
+      toast.error(`Error: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setDeletingMessage(false);
     }
   };
 
   const downloadAttachment = async (attachmentId, filename) => {
     try {
-      const response = await fetch(`${API_URL}/attachments/${attachmentId}`, {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to download attachment');
-      }
-
-      // Create a blob from the response
-      const blob = await response.blob();
+      setDownloadingAttachments(prev => ({ ...prev, [attachmentId]: true }));
+      const response = await axios.get(
+        `${API_URL}/messages/attachments/${attachmentId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+          responseType: 'blob',
+        }
+      );
 
       // Create a download link
-      const url = window.URL.createObjectURL(blob);
+      const url = window.URL.createObjectURL(response.data);
       const a = document.createElement('a');
       a.style.display = 'none';
       a.href = url;
@@ -200,22 +199,24 @@ const Mailbox = ({ authToken, role, onClose }) => {
       // Clean up
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
+      toast.success(`Téléchargement terminé: ${filename}`);
     } catch (error) {
-      toast.error(`Error downloading attachment: ${error.message}`);
+      toast.error(
+        `Error downloading attachment: ${error.response?.data?.message || error.message}`
+      );
+    } finally {
+      setDownloadingAttachments(prev => ({ ...prev, [attachmentId]: false }));
     }
   };
 
-  const filteredMessages = messages.filter(msg => {
+  const filteredMessages = useMemo(() => {
     const searchLower = searchQuery.toLowerCase();
-    return (
-      msg.subject?.toLowerCase().includes(searchLower) ||
-      msg.sender?.name?.toLowerCase().includes(searchLower) ||
-      msg.sender?.email?.toLowerCase().includes(searchLower) ||
-      msg.recipient?.name?.toLowerCase().includes(searchLower) ||
-      msg.recipient?.email?.toLowerCase().includes(searchLower) ||
-      msg.content?.toLowerCase().includes(searchLower)
+    return messages.filter(msg =>
+      [msg.subject, msg.sender?.name, msg.recipient?.name, msg.content]
+        .filter(Boolean)
+        .some(field => field.toLowerCase().includes(searchLower))
     );
-  });
+  }, [messages, searchQuery]);
 
   const ComposeMail = () => {
     const [recipients, setRecipients] = useState([]);
@@ -225,17 +226,16 @@ const Mailbox = ({ authToken, role, onClose }) => {
     const [attachments, setAttachments] = useState([]);
     const [sending, setSending] = useState(false);
     const [recipientType, setRecipientType] = useState('individual'); // individual, all-admins, all-teachers, all-students
+    const [searchQuery, setSearchQuery] = useState('');
+    const [showSuggestions, setShowSuggestions] = useState(false); // New state for suggestions visibility
+    const recipientsInitialized = useRef(false);
+    const [loadingRecipients, setLoadingRecipients] = useState(false);
+    const searchInputRef = useRef(null); // Ref for the search input
 
     const fetchAvailableRecipients = useCallback(async () => {
       try {
-        let endpoint = 'users';
-
-        // Different endpoint based on recipient type
-        if (recipientType === 'all-admins') {
-          endpoint = 'users?role=admin';
-        } else if (recipientType === 'all-teachers') {
-          endpoint = 'users?role=teacher';
-        }
+        setLoadingRecipients(true);
+        let endpoint = 'users?mailboxrecipients=true';
 
         const response = await fetch(`${API_URL}/${endpoint}`, {
           headers: {
@@ -247,12 +247,14 @@ const Mailbox = ({ authToken, role, onClose }) => {
           throw new Error('Failed to fetch recipients');
         }
 
-        const data = await response.json();
-        setAvailableRecipients(data.users || []);
+        const users = await response.json();
+        setAvailableRecipients(users);
       } catch (error) {
         toast.error(`Error: ${error.message}`);
+      } finally {
+        setLoadingRecipients(false);
       }
-    }, [recipientType, authToken]);
+    }, [recipientType]);
 
     useEffect(() => {
       fetchAvailableRecipients();
@@ -260,7 +262,11 @@ const Mailbox = ({ authToken, role, onClose }) => {
 
     // Add effect to handle reply data initialization
     useEffect(() => {
-      if (replyData && availableRecipients.length > 0) {
+      if (
+        replyData &&
+        availableRecipients.length > 0 &&
+        !recipientsInitialized.current
+      ) {
         // Pre-fill subject from replyData
         setSubject(replyData.subject);
 
@@ -271,9 +277,27 @@ const Mailbox = ({ authToken, role, onClose }) => {
         if (replyRecipient) {
           setRecipients([replyRecipient]);
           setRecipientType('individual');
+          recipientsInitialized.current = true;
         }
       }
     }, [replyData, availableRecipients]);
+
+    // Close suggestions on outside click
+    useEffect(() => {
+      const handleClickOutside = event => {
+        if (
+          searchInputRef.current &&
+          !searchInputRef.current.contains(event.target)
+        ) {
+          setShowSuggestions(false);
+        }
+      };
+
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }, []);
 
     const handleFileChange = e => {
       const files = Array.from(e.target.files);
@@ -296,15 +320,28 @@ const Mailbox = ({ authToken, role, onClose }) => {
       setAttachments(attachments.filter((_, i) => i !== index));
     };
 
-    const handleRecipientSelect = e => {
-      const selectedOptions = Array.from(
-        e.target.selectedOptions,
-        option => option.value
+    const handleSearchChange = e => {
+      setSearchQuery(e.target.value);
+      setShowSuggestions(true); // Show suggestions when typing
+    };
+
+    const handleRecipientSelect = input => {
+      const userId = input.toString();
+      const selectedUser = availableRecipients.find(
+        user => user.id.toString() === userId
       );
-      const selectedUsers = availableRecipients.filter(user =>
-        selectedOptions.includes(user.id.toString())
-      );
-      setRecipients(selectedUsers);
+      if (selectedUser) {
+        setRecipients(prevRecipients => {
+          // Check if the user is already selected
+          if (!prevRecipients.some(r => r.id === selectedUser.id)) {
+            console.log('Selected user:', selectedUser);
+            return [...prevRecipients, selectedUser];
+          }
+          return prevRecipients;
+        });
+      }
+      setSearchQuery(''); // Clear search query after selection
+      setShowSuggestions(false); // Hide suggestions after selection
     };
 
     const handleSpecialRecipientSelect = type => {
@@ -345,15 +382,24 @@ const Mailbox = ({ authToken, role, onClose }) => {
           });
         }
 
-        // Add attachments
-        attachments.forEach(file => {
-          formData.append('attachments', file);
-        });
+        // Determine endpoint based on attachments
+        let endpoint = '/messages';
+        let content_type = 'application/json';
 
-        const response = await axios.post(`${API_URL}/messages`, formData, {
+        // Add attachments if any
+        if (attachments.length > 0) {
+          content_type = 'multipart/form-data';
+          attachments.forEach(file => {
+            formData.append('attachments', file);
+          });
+        } else {
+          endpoint = '/messages/no-attachments';
+        }
+
+        const response = await axios.post(`${API_URL}${endpoint}`, formData, {
           headers: {
             Authorization: `Bearer ${authToken}`,
-            'Content-Type': 'multipart/form-data',
+            'Content-Type': content_type,
           },
         });
 
@@ -411,7 +457,7 @@ const Mailbox = ({ authToken, role, onClose }) => {
                   Individuel
                 </button>
 
-                {role === 'admin' || role === 'teacher' ? (
+                {role !== 'Etudiant' ? (
                   <>
                     <button
                       type="button"
@@ -428,22 +474,20 @@ const Mailbox = ({ authToken, role, onClose }) => {
                       Tous les étudiants
                     </button>
 
-                    {role === 'admin' && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleSpecialRecipientSelect('all-teachers')
-                        }
-                        className={`px-3 py-2 rounded-md text-sm flex items-center gap-1 ${
-                          recipientType === 'all-teachers'
-                            ? 'bg-blue-100 text-blue-800 border border-blue-300'
-                            : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                        }`}
-                      >
-                        <UserCheck size={16} />
-                        Tous les professeurs
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleSpecialRecipientSelect('all-teachers')
+                      }
+                      className={`px-3 py-2 rounded-md text-sm flex items-center gap-1 ${
+                        recipientType === 'all-teachers'
+                          ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                          : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                      }`}
+                    >
+                      <UserCheck size={16} />
+                      Tous les professeurs
+                    </button>
                   </>
                 ) : (
                   <button
@@ -469,23 +513,123 @@ const Mailbox = ({ authToken, role, onClose }) => {
                   htmlFor="recipients"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
-                  Destinataires
+                  {(() => {
+                    switch (recipients.length) {
+                      case 0:
+                        return 'Aucun destinataire sélectionné';
+                      case 1:
+                        return '1 destinataire sélectionné';
+                      default:
+                        return `${recipients.length} destinataires sélectionnés`;
+                    }
+                  })()}
+                  {loadingRecipients && (
+                    <span className="ml-2 inline-flex items-center">
+                      <svg
+                        className="animate-spin h-4 w-4 text-blue-600"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                    </span>
+                  )}
                 </label>
-                <select
-                  id="recipients"
-                  multiple
-                  value={recipients.map(r => r.id)}
-                  onChange={handleRecipientSelect}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                  size={3}
-                >
-                  {availableRecipients.map(recipient => (
-                    <option key={recipient.id} value={recipient.id}>
-                      {recipient.name} {recipient.surname} ({recipient.email}) -{' '}
-                      {recipient.role}
-                    </option>
+
+                {/* Selected Recipients Tags */}
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {recipients.map(recipient => (
+                    <div
+                      key={recipient.id}
+                      className="flex items-center bg-blue-100 text-blue-800 px-2 py-1 rounded-md"
+                    >
+                      <span className="text-sm">
+                        {recipient.name} {recipient.surname}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setRecipients(
+                            recipients.filter(r => r.id !== recipient.id)
+                          )
+                        }
+                        className="ml-1 text-blue-600 hover:text-blue-800"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
                   ))}
-                </select>
+                </div>
+
+                {/* Search Input and Results */}
+                <div className="relative" ref={searchInputRef}>
+                  <input
+                    type="text"
+                    placeholder="Rechercher des destinataires..."
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    disabled={loadingRecipients}
+                  />
+
+                  {showSuggestions && searchQuery && !loadingRecipients && (
+                    <div className="absolute z-10 w-full mt-1 bg-white shadow-lg rounded-md border border-gray-300 max-h-60 overflow-y-auto">
+                      {availableRecipients
+                        .filter(
+                          user =>
+                            !recipients.some(r => r.id === user.id) && // Filter out already selected recipients
+                            (user.name
+                              .toLowerCase()
+                              .includes(searchQuery.toLowerCase()) ||
+                              user.surname
+                                .toLowerCase()
+                                .includes(searchQuery.toLowerCase()))
+                        )
+                        .map(user => (
+                          <div
+                            key={user.id}
+                            className="p-2 hover:bg-gray-100 cursor-pointer"
+                            onClick={() => {
+                              handleRecipientSelect(user.id);
+                              setSearchQuery('');
+                            }}
+                          >
+                            <div className="font-medium">
+                              {user.name} {user.surname}
+                            </div>
+                          </div>
+                        ))}
+
+                      {availableRecipients.filter(
+                        user =>
+                          !recipients.some(r => r.id === user.id) &&
+                          (user.name
+                            .toLowerCase()
+                            .includes(searchQuery.toLowerCase()) ||
+                            user.surname
+                              .toLowerCase()
+                              .includes(searchQuery.toLowerCase()))
+                      ).length === 0 && (
+                        <div className="p-2 text-gray-500">
+                          Aucun destinataire trouvé
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -672,6 +816,7 @@ const Mailbox = ({ authToken, role, onClose }) => {
                 <li>
                   <button
                     onClick={() => {
+                      setLoading(true);
                       setView('inbox');
                       setSelectedMessage(null);
                       setPagination({ ...pagination, currentPage: 1 });
@@ -689,6 +834,7 @@ const Mailbox = ({ authToken, role, onClose }) => {
                 <li>
                   <button
                     onClick={() => {
+                      setLoading(true);
                       setView('sent');
                       setSelectedMessage(null);
                       setPagination({ ...pagination, currentPage: 1 });
@@ -706,6 +852,7 @@ const Mailbox = ({ authToken, role, onClose }) => {
                 <li>
                   <button
                     onClick={() => {
+                      setLoading(true);
                       setView('trash');
                       setSelectedMessage(null);
                       setPagination({ ...pagination, currentPage: 1 });
@@ -803,7 +950,7 @@ const Mailbox = ({ authToken, role, onClose }) => {
 
               {/* Messages List */}
               <div className="flex-1 overflow-y-auto">
-                {loading && messages.length === 0 ? (
+                {loading ? (
                   <div className="flex items-center justify-center h-full">
                     <div className="flex flex-col items-center">
                       <svg
@@ -939,25 +1086,48 @@ const Mailbox = ({ authToken, role, onClose }) => {
             {selectedMessage ? (
               <div className="flex-1 flex flex-col bg-white">
                 {/* Message Header */}
-                <div className="p-4 border-b border-gray-200 flex justify-between items-start">
+                <div className="p-4 border-b border-gray-200 flex justify-between items-start relative">
+                  {loadingMessageDetails && (
+                    <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10">
+                      <svg
+                        className="animate-spin h-8 w-8 text-blue-600"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                    </div>
+                  )}
+
                   <div>
                     <h2 className="text-xl font-medium text-gray-900">
                       {selectedMessage.subject}
                     </h2>
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2">
+                    <div className="flex flex-col flex-wrap gap-x-4 gap-y-1 mt-2">
                       <div className="flex items-center text-sm text-gray-500">
                         <span className="font-medium text-gray-800 mr-1">
                           De :
                         </span>
-                        {selectedMessage.sender?.name} (
-                        {selectedMessage.sender?.email})
+                        {selectedMessage.sender?.name}
                       </div>
                       <div className="flex items-center text-sm text-gray-500">
                         <span className="font-medium text-gray-800 mr-1">
                           À :
                         </span>
-                        {selectedMessage.recipient?.name} (
-                        {selectedMessage.recipient?.email})
+                        {selectedMessage.recipient?.name}
                       </div>
                       <div className="flex items-center text-sm text-gray-500">
                         <Clock size={14} className="mr-1" />
@@ -974,10 +1144,36 @@ const Mailbox = ({ authToken, role, onClose }) => {
                     </button>
                     <button
                       onClick={() => deleteMessage(selectedMessage.id)}
-                      className="p-2 text-gray-500 hover:text-red-600"
+                      className={`p-2 text-gray-500 hover:text-red-600 ${
+                        deletingMessage ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
+                      disabled={deletingMessage}
                       title="Supprimer"
                     >
-                      <Trash2 size={20} />
+                      {deletingMessage ? (
+                        <svg
+                          className="animate-spin h-5 w-5 text-gray-500"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                      ) : (
+                        <Trash2 size={20} />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -1045,7 +1241,11 @@ const Mailbox = ({ authToken, role, onClose }) => {
                                 />
                                 <div className="ml-3">
                                   <p
-                                    className={`text-sm font-medium ${attachment.scanStatus === 'infected' ? 'text-red-700' : 'text-gray-900'}`}
+                                    className={`text-sm font-medium ${
+                                      attachment.scanStatus === 'infected'
+                                        ? 'text-red-700'
+                                        : 'text-gray-900'
+                                    }`}
                                   >
                                     {attachment.originalFilename}
                                   </p>
@@ -1063,36 +1263,49 @@ const Mailbox = ({ authToken, role, onClose }) => {
                                       attachment.originalFilename
                                     )
                                   }
-                                  className="ml-3 p-1.5 text-blue-700 hover:bg-blue-50 rounded-md flex items-center"
+                                  className={`ml-3 p-1.5 text-blue-700 hover:bg-blue-50 rounded-md flex items-center ${
+                                    downloadingAttachments?.[attachment.id]
+                                      ? 'cursor-wait opacity-70'
+                                      : ''
+                                  }`}
+                                  disabled={
+                                    downloadingAttachments?.[attachment.id]
+                                  }
                                 >
-                                  <Download size={18} />
+                                  {downloadingAttachments?.[attachment.id] ? (
+                                    <svg
+                                      className="animate-spin h-5 w-5"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <circle
+                                        className="opacity-25"
+                                        cx="12"
+                                        cy="12"
+                                        r="10"
+                                        stroke="currentColor"
+                                        strokeWidth="4"
+                                      ></circle>
+                                      <path
+                                        className="opacity-75"
+                                        fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                      ></path>
+                                    </svg>
+                                  ) : (
+                                    <Download size={18} />
+                                  )}
                                 </button>
                               ) : attachment.scanStatus === 'infected' ? (
-                                <span className="px-2 py-0.5 bg-red-100 text-red-800 text-xs font-medium rounded-full">
-                                  Malveillant
+                                <span className="ml-3 px-2 py-1 rounded bg-red-100 text-red-700 text-xs flex items-center gap-1">
+                                  <AlertTriangle size={14} className="mr-1" />
+                                  Infecté
                                 </span>
                               ) : (
-                                <span className="px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full flex items-center">
-                                  <svg
-                                    className="animate-spin h-3 w-3 mr-1"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <circle
-                                      className="opacity-25"
-                                      cx="12"
-                                      cy="12"
-                                      r="10"
-                                      stroke="currentColor"
-                                      strokeWidth="4"
-                                      fill="none"
-                                    />
-                                    <path
-                                      className="opacity-75"
-                                      fill="currentColor"
-                                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                    />
-                                  </svg>
-                                  Analyse en cours
+                                <span className="ml-3 px-2 py-1 rounded bg-yellow-100 text-yellow-800 text-xs flex items-center gap-1">
+                                  <Clock size={14} className="mr-1" />
+                                  Analyse en cours...
                                 </span>
                               )}
                             </div>
@@ -1101,8 +1314,6 @@ const Mailbox = ({ authToken, role, onClose }) => {
                       </div>
                     )}
                 </div>
-
-                {/* Reply Action */}
                 <div className="p-4 border-t border-gray-200">
                   <button
                     onClick={() => {
@@ -1122,13 +1333,10 @@ const Mailbox = ({ authToken, role, onClose }) => {
                 </div>
               </div>
             ) : (
-              <div className="hidden md:flex flex-1 items-center justify-center bg-gray-50">
-                <div className="text-center">
-                  <Inbox className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-xl font-medium text-gray-400">
-                    Sélectionnez un message pour le consulter
-                  </h3>
-                </div>
+              <div className="flex-1 flex items-center justify-center bg-white">
+                <p className="text-gray-500">
+                  Sélectionnez un message pour le lire
+                </p>
               </div>
             )}
           </div>

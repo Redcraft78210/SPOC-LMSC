@@ -174,8 +174,8 @@ const Dashboard = ({ content, token, role }) => {
       <aside className="flex-shrink-0">
         <NavigationBar
           page={content}
-          isAdmin={role === 'admin'}
-          isProf={role === 'prof'}
+          isAdmin={role === 'Administrateur'}
+          isProf={role === 'Professeur'}
         />
       </aside>
 
@@ -186,6 +186,7 @@ const Dashboard = ({ content, token, role }) => {
           onClose={() => {
             setShowMailModal(false);
           }}
+          authToken={token}
         />
       )}
 
