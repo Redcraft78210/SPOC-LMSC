@@ -2,7 +2,7 @@ import axios from 'axios';
 import Cookies from 'js-cookie';
 import PropTypes from 'prop-types';
 const api = axios.create({
-  baseURL: 'http://localhost:8000/api/video',
+  baseURL: 'https://192.168.36.10:443/api/video',
   headers: {
     'Content-Type': 'application/json',
     'X-CSRFToken': Cookies.get('csrftoken'),

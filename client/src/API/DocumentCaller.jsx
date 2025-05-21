@@ -3,7 +3,7 @@ import Cookies from 'js-cookie';
 import PropTypes from 'prop-types';
 
 const api = axios.create({
-  baseURL: 'http://localhost:8000/api/document',
+  baseURL: 'https://192.168.36.10:443/api/document',
   headers: {
     'Content-Type': 'application/json',
     'X-CSRFToken': Cookies.get('csrftoken'),
