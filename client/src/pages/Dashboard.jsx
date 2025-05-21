@@ -15,11 +15,14 @@ import ProfCoursesLibrary from './Professeur/CoursesLibrary';
 import AdminCoursesLibrary from './Admin/CoursesLibrary';
 import CoursesLibrary from './Eleve/CoursesLibrary';
 
+import CoursesManagement from '../components/ProfComp/CoursesManagment';
+import DocumentManager from '../components/ProfComp/DocumentMng';
+import VideoManager from '../components/ProfComp/VideoMng';
+
 import CourseReader from './CourseReader';
 import LiveViewer from './Eleve/LiveViewer';
 import Forum from './Forum';
 import UserManagement from './Admin/UserManagement';
-import CoursesManagment from './Professeur/CoursesManagment';
 import ClassManagement from './Admin/ClassManagement';
 import ThemeSettings from './Public/Theme';
 import Settings from './Settings';
@@ -109,6 +112,7 @@ const Dashboard = ({ content, token, role }) => {
     role: decodedToken.role,
   };
 
+  console.log('Decoded token:', decodedToken);
   const contentMap = {
     CoursesLibrary: <CoursesLibrary authToken={token} />,
     CourseReader: <CourseReader authToken={token} />,
@@ -129,7 +133,10 @@ const Dashboard = ({ content, token, role }) => {
           Home: <ProfDashboardHome authToken={token} />,
           CoursesLibrary: <ProfCoursesLibrary authToken={token} />,
           // LiveManager: <LiveManager authToken={token} />,
-          CoursesManagment: <CoursesManagment authToken={token} />,
+          CoursesManagement: <CoursesManagement authToken={token} />,
+          // CourseManager: <CourseManager authToken={token} />,
+          VideoManager: <VideoManager authToken={token} />,
+          DocumentManager: <DocumentManager authToken={token} />,
         }
       : {}),
     ...(user.role === 'Etudiant'
@@ -155,7 +162,7 @@ const Dashboard = ({ content, token, role }) => {
   const renderContent = () => {
     return contentMap[content] || <NotFound />;
   };
-
+  console.log(role);
   return showProfilepictureModal ? (
     <PictureModal
       setShowProfilepictureModal={setShowProfilepictureModal}
