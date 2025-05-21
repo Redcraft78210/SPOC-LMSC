@@ -25,6 +25,8 @@ const errorMessages = {
   default: 'Une erreur est survenue. Veuillez réessayer.',
 };
 
+const API_URL = 'https://172.16.84.19:443/api';
+
 const Sign = ({ setAuth, unsetLoggedOut }) => {
   const navigate = useNavigate();
   const [error, setError] = useState(null);
@@ -91,7 +93,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
     const refresh2FASetup = async () => {
       try {
         const { data } = await axios.post(
-          'https://localhost:8443/api/auth/refresh-2fa-setup',
+          `${API_URL}/auth/refresh-2fa-setup`,
           {
             tempToken: tempToken?.value,
             twoFASetup: { qrCode: qrCodeData, manualSecret },
@@ -177,8 +179,8 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
 
     try {
       const endpoint = isSignUpForm
-        ? 'https://localhost:8443/api/auth/register'
-        : 'https://localhost:8443/api/auth/login';
+        ? `${API_URL}/auth/register`
+        : `${API_URL}/auth/login`;
 
       const body = isSignUpForm
         ? {
@@ -198,7 +200,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
         let validRegisterCode = false;
         try {
           const res = await axios.post(
-            'https://localhost:8443/api/auth/check-register-code',
+            `${API_URL}/auth/check-register-code`,
             { code }
           );
 
@@ -362,7 +364,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
     }
 
     try {
-      const endpoint = 'https://localhost:8443/api/auth/verify-2fa';
+      const endpoint = `${API_URL}/auth/verify-2fa`;
 
       const { data } = await axios.post(endpoint, {
         tempToken: tempToken?.value,
@@ -403,7 +405,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
     }
 
     try {
-      await axios.post('https://localhost:8443/api/auth/forgot-password', {
+      await axios.post(`${API_URL}/auth/forgot-password`, {
         email,
       });
       setError(

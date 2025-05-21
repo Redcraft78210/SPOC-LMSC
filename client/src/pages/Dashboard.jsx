@@ -19,6 +19,7 @@ import CourseReader from './CourseReader';
 import LiveViewer from './Eleve/LiveViewer';
 import Forum from './Forum';
 import UserManagement from './Admin/UserManagement';
+import CoursesManagment from './Professeur/CoursesManagment';
 import ClassManagement from './Admin/ClassManagement';
 import ThemeSettings from './Public/Theme';
 import Settings from './Settings';
@@ -128,7 +129,7 @@ const Dashboard = ({ content, token, role }) => {
           Home: <ProfDashboardHome authToken={token} />,
           CoursesLibrary: <ProfCoursesLibrary authToken={token} />,
           // LiveManager: <LiveManager authToken={token} />,
-          // CourseManager: <CourseManager authToken={token} />,
+          CoursesManagment: <CoursesManagment authToken={token} />,
         }
       : {}),
     ...(user.role === 'Etudiant'
