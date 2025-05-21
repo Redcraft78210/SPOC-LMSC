@@ -1,126 +1,187 @@
-import { useEffect, useState } from 'react';
-import Checkbox from './Checkbox';
-import { UpdateVideo } from '../../API/VideoCaller';
+import { useState, useEffect } from 'react';
+import { updateVideo, DeleteVideo } from '../../API/VideoCaller';
+import { GetCourses } from '../../API/ProfGestion';
 import PropTypes from 'prop-types';
+import { toast } from 'react-hot-toast';
 
-const VideoUpdater = ({ videoData }) => {
-  const [titre, setTitre] = useState('');
+const VideoUpdater = ({ videoData, onUpdate }) => {
   const [description, setDescription] = useState('');
-  const [matiere, setMatiere] = useState('');
-  const [chapitre, setChapitre] = useState('');
   const [isMain, setIsMain] = useState(false);
-  const [isPublished, setIsPublished] = useState(false);
+  const [courseId, setCourseId] = useState('');
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    // Charger la liste des cours
+    const fetchCourses = async () => {
+      try {
+        const result = await GetCourses();
+        if (result?.status === 200) {
+          setCourses(result.data);
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des cours:', error);
+      }
+    };
+    fetchCourses();
+  }, []);
 
   useEffect(() => {
     if (videoData) {
-      setTitre(videoData.titre || '');
-      setDescription(videoData.description || '');
-      setMatiere(videoData.Matière || '');
-      setChapitre(videoData.chapitre || '');
+      setDescription(videoData.commit_msg || '');
       setIsMain(videoData.is_main || false);
-      setIsPublished(videoData.is_published || false);
+      setCourseId(videoData.courseId || '');
     }
   }, [videoData]);
 
-  const handleUpdate = async () => {
-    const updatedData = {
-      titre,
-      description,
-      Matière: matiere,
-      chapitre,
-      is_main: isMain,
-      is_published: isPublished,
-    };
+  const handleSubmit = async e => {
+    e.preventDefault();
+    setLoading(true);
 
     try {
-      const res = await UpdateVideo({
-        video_id: videoData.video.video_id,
-        updatedData,
-      });
+      const updateData = {
+        commit_msg: description,
+        is_main: isMain,
+        cours_id: courseId,
+      };
 
-      console.log('Vidéo mise à jour avec succès :', res);
-      alert('Vidéo mise à jour avec succès !');
+      await updateVideo(videoData.id, updateData);
+      onUpdate();
     } catch (error) {
-      console.error('Erreur lors de la mise à jour :', error);
-      alert('Une erreur est survenue.');
+      console.error('Erreur mise à jour:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
+  const handleDelete = async () => {
+    try {
+      if (!videoData?.id) {
+        toast.error('Aucune vidéo sélectionnée');
+        return;
+      }
+
+      // Créer une promesse pour la confirmation
+      const confirmed = await new Promise(resolve => {
+        toast(
+          t => (
+            <div className="flex flex-col gap-2">
+              <p className="font-semibold">Confirmer la suppression ?</p>
+              <p className="text-sm text-gray-600">
+                Cette action est irréversible.
+              </p>
+              <div className="flex justify-end gap-2 mt-2">
+                <button
+                  className="px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded-md"
+                  onClick={() => {
+                    toast.dismiss(t.id);
+                    resolve(false);
+                  }}
+                >
+                  Annuler
+                </button>
+                <button
+                  className="px-3 py-1 text-sm text-white bg-red-500 hover:bg-red-600 rounded-md"
+                  onClick={() => {
+                    toast.dismiss(t.id);
+                    resolve(true);
+                  }}
+                >
+                  Supprimer
+                </button>
+              </div>
+            </div>
+          ),
+          {
+            duration: Infinity,
+            position: 'top-center',
+          }
+        );
+      });
+
+      if (confirmed) {
+        const response = await DeleteVideo(videoData.id);
+        if (response.status === 200) {
+          onUpdate();
+          toast.success('Vidéo supprimée avec succès');
+        }
+      }
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error);
+      toast.error('Erreur lors de la suppression de la vidéo');
+    }
+  };
+
+  if (!videoData) return null;
+
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-      <h2 className="text-xl font-semibold text-blue-600 mb-4">
-        Modifier les informations de la vidéo
-      </h2>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Sélectionner un cours
+        </label>
+        <select
+          value={courseId}
+          onChange={e => setCourseId(e.target.value)}
+          className="w-full px-3 py-2 border rounded-md"
+        >
+          <option value="">Choisir un cours...</option>
+          {courses.map(course => (
+            <option key={course.id} value={course.id}>
+              {course.matiere} | {course.chapitre} | {course.titre}
+            </option>
+          ))}
+        </select>
+      </div>
 
-      <input
-        type="text"
-        value={titre}
-        readOnly
-        placeholder="Titre de la vidéo"
-        className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-3 bg-gray-100 text-gray-500"
-      />
-
-      <input
-        type="text"
-        value={description}
-        onChange={e => setDescription(e.target.value)}
-        placeholder="Description"
-        className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-3"
-      />
-
-      <input
-        type="text"
-        value={matiere}
-        onChange={e => setMatiere(e.target.value)}
-        placeholder="Matière"
-        className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-3"
-      />
-
-      <input
-        type="text"
-        value={chapitre}
-        onChange={e => setChapitre(e.target.value)}
-        placeholder="Chapitre"
-        className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-3"
-      />
-
-      <Checkbox
-        label="Vidéo principale"
-        setIsMain={setIsMain}
-        isMain={isMain}
-        text={'Ceci est la vidéo principale du cours.'}
-      />
-      <br />
-      <Checkbox
-        label="Vidéo publiée"
-        isMain={isPublished}
-        setIsMain={setIsPublished}
-        text={'Publier la video pour les élèves'}
-      />
-
-      <button
-        onClick={handleUpdate}
-        className="w-full mt-6 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition"
-      >
-        Mettre à jour
-      </button>
-    </div>
+      <div>
+        <textarea
+          value={description}
+          onChange={e => setDescription(e.target.value)}
+          className="w-full px-3 py-2 border rounded"
+          placeholder="Description"
+        />
+      </div>
+      <label className="flex items-center space-x-2">
+        <input
+          type="checkbox"
+          checked={isMain}
+          onChange={e => setIsMain(e.target.checked)}
+        />
+        <span>Vidéo principale</span>
+      </label>
+      <div className="flex space-x-2">
+        <button
+          type="submit"
+          disabled={loading}
+          className="flex-1 bg-blue-600 text-white py-2 px-4 rounded disabled:bg-gray-400"
+        >
+          {loading ? 'Mise à jour...' : 'Mettre à jour'}
+        </button>
+        <button
+          onClick={handleDelete}
+          disabled={loading}
+          className="flex-1 bg-red-600 text-white py-2 px-4 rounded disabled:bg-gray-400"
+        >
+          {loading ? 'Suppression...' : 'Supprimer'}
+        </button>
+      </div>
+    </form>
   );
 };
 
 VideoUpdater.propTypes = {
   videoData: PropTypes.shape({
-    titre: PropTypes.string,
-    description: PropTypes.string,
-    Matière: PropTypes.string,
-    chapitre: PropTypes.string,
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    commit_msg: PropTypes.string,
     is_main: PropTypes.bool,
-    is_published: PropTypes.bool,
-    video: PropTypes.shape({
-      video_id: PropTypes.oneOfType([PropTypes.string, PropTypes.number])
-        .isRequired,
-    }).isRequired,
-  }).isRequired,
+    courseId: PropTypes.string,
+  }),
+  onUpdate: PropTypes.func.isRequired,
+};
+
+VideoUpdater.defaultProps = {
+  videoData: null,
 };
 
 export default VideoUpdater;

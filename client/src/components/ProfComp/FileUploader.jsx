@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react';
-import { SendDocument } from '../../API/DocumentCaller'; // Changé de uploadDocument à SendDocument
+import { uploadVideo } from '../../API/VideoCaller';
 import { GetCourses } from '../../API/ProfGestion';
 import PropTypes from 'prop-types';
 import { toast } from 'react-hot-toast';
 
-const DocumentUploader = ({ onUploadSuccess }) => {
+const FileUploader = ({ onUploadSuccess }) => {
   const [file, setFile] = useState(null);
   const [description, setDescription] = useState('');
   const [isMain, setIsMain] = useState(false);
   const [courseId, setCourseId] = useState('');
-  const [loading, setLoading] = useState(false);
   const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const fetchCourses = async () => {
@@ -21,7 +21,6 @@ const DocumentUploader = ({ onUploadSuccess }) => {
         }
       } catch (error) {
         console.error('Erreur lors du chargement des cours:', error);
-        toast.error('Erreur lors du chargement des cours');
       }
     };
     fetchCourses();
@@ -36,42 +35,57 @@ const DocumentUploader = ({ onUploadSuccess }) => {
 
     setLoading(true);
     try {
-      const response = await SendDocument({
-        file,
-        title: description || 'No description',
-        authToken: localStorage.getItem('authToken'),
-      });
+      const formData = new FormData();
+      formData.append('video', file);
+
+      // Add metadata as JSON string
+      const metadata = {
+        cours_id: courseId,
+        description: description,
+        is_main: isMain,
+        commit_msg: description,
+      };
+
+      formData.append('metadata', JSON.stringify(metadata));
+
+      const response = await uploadVideo(formData);
 
       if (response?.status === 201) {
+        // Reset form
         setFile(null);
         setDescription('');
         setIsMain(false);
         setCourseId('');
+        // Show success toast instead of alert
+        toast.success('Vidéo téléversée avec succès');
         onUploadSuccess();
-        toast.success('Document téléversé avec succès');
       }
     } catch (error) {
       console.error('Erreur upload:', error);
-      toast.error('Erreur lors du téléversement du document');
+      toast.error('Erreur lors du téléversement de la vidéo');
     } finally {
       setLoading(false);
     }
   };
 
+  const getSelectedCourse = () => {
+    return courses.find(c => c.id === courseId);
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <h2 className="text-xl font-semibold text-blue-600 mb-4">
-        Téléverser un document
+        Téléverser une vidéo
       </h2>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Fichier document
+            Fichier vidéo
           </label>
           <input
             type="file"
-            accept=".pdf,.doc,.docx"
+            accept="video/*"
             onChange={e => setFile(e.target.files[0])}
             className="w-full"
             required
@@ -98,7 +112,7 @@ const DocumentUploader = ({ onUploadSuccess }) => {
             className="mr-2"
           />
           <span className="text-sm text-gray-700">
-            Définir comme document principal
+            Définir comme vidéo principale
           </span>
         </label>
 
@@ -121,20 +135,44 @@ const DocumentUploader = ({ onUploadSuccess }) => {
           </select>
         </div>
 
+        {courseId && getSelectedCourse() && (
+          <div className="bg-gray-50 p-3 rounded-md">
+            <h3 className="font-medium mb-2">Cours sélectionné :</h3>
+            <div className="text-sm text-gray-600 space-y-1">
+              <p>
+                <span className="font-medium">Matière :</span>{' '}
+                {getSelectedCourse().matiere}
+              </p>
+              <p>
+                <span className="font-medium">Chapitre :</span>{' '}
+                {getSelectedCourse().chapitre}
+              </p>
+              <p>
+                <span className="font-medium">Titre :</span>{' '}
+                {getSelectedCourse().titre}
+              </p>
+            </div>
+          </div>
+        )}
+
         <button
           type="submit"
           disabled={loading || !file || !courseId}
           className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:bg-gray-400"
         >
-          {loading ? 'Téléversement...' : 'Téléverser le document'}
+          {loading ? 'Téléversement...' : 'Téléverser la vidéo'}
         </button>
       </form>
     </div>
   );
 };
 
-DocumentUploader.propTypes = {
-  onUploadSuccess: PropTypes.func.isRequired,
+FileUploader.propTypes = {
+  onUploadSuccess: PropTypes.func,
 };
 
-export default DocumentUploader;
+FileUploader.defaultProps = {
+  onUploadSuccess: () => {},
+};
+
+export default FileUploader;
