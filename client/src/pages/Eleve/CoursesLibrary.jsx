@@ -332,7 +332,7 @@ const ContentCard = ({ item }) => {
       <div className="flex flex-col h-full">
         <div className="aspect-video bg-gray-200 relative">
           {item.type === 'cours' && item.video ? (
-            item.video.cover_image && item.video.preview_image !== null ? (
+            !item.video.cover_image && item.video.preview_image !== null ? (
               <>
                 {isHovered ? (
                   <img

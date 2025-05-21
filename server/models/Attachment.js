@@ -8,11 +8,15 @@ const Attachment = sequelize.define('Attachment', {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
     },
-    filename: {  // UUID-based filename in the filesystem
-        type: DataTypes.STRING,
+    MessageId: {  // Foreign key to Message model
+        type: DataTypes.UUID,
         allowNull: false,
+        references: {
+            model: 'Message',  // Assuming the table name is 'Messages'
+            key: 'id',
+        },
     },
-    originalFilename: {  // Original filename for display and download
+    filename: {  // UUID-based filename in the filesystem
         type: DataTypes.STRING,
         allowNull: false,
     },
