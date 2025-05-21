@@ -18,6 +18,7 @@ import MaintenanceBanner from './pages/Public/Maintenance';
 import NotFound from './pages/Public/NotFound';
 import Sign from './pages/Public/Sign';
 
+
 let APP_STATUS = '';
 // Uncomment the following line to enable maintenance mode
 // APP_STATUS = 'MAINTENANCE'; // Set to "MAINTENANCE" for maintenance mode

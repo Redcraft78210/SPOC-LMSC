@@ -4,8 +4,7 @@ import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import Proptypes from 'prop-types';
 
-console.log(pdfjs.version);
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.mjs`;
 
 const API_URL = 'https://localhost:8443/api';
 
