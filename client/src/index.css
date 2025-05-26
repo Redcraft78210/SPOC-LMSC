@@ -1,76 +1,32 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
+:root[data-bs-theme="dark"] {
+  --bs-body-bg: rgb(0% 0% 0%);
+  --luxury-100: rgb(0% 0% 0%);
+  --luxury-200: rgb(13.3% 13.3% 13.3%);
+  --luxury-300: rgb(20% 20% 20%);
+}
 
-/* Import Bootstrap styles */
-@import 'bootstrap/dist/css/bootstrap.min.css';
+:root[data-bs-theme="light"] {
+  --bs-body-bg: rgb(255, 255, 255);
+  --luxury-100: rgb(255, 255, 255);
+  --luxury-200: rgb(255, 240, 219);
+  --luxury-300: rgb(255, 222, 176);
+}
 
-/* Add your custom global styles below */
 body {
-  font-family: 'Arial', sans-serif;
+  font-family: "Arial", sans-serif;
+  background-color: var(--luxury-200);
 }
 
-
-
-.navbar-square-first {
-  width: 150px;
-  height: 100px;
-  position: absolute;
-  z-index: 10;
-  border-bottom-left-radius: 100%;
+@keyframes progress {
+  0% {
+    width: 0;
+  }
+  100% {
+    width: 100%;
+  }
 }
-
-.navbar-square-second {
-  width: 150px;
-  height: 100px;
-  background-color: rgba(0, 0, 250, 1); /* Fixed alpha value to be in the valid range (0 to 1) */
-}
-
-.n_simple {
-  width: 300px;
-  height: 1300px;
-  background-color: rgba(0, 0, 250, 1); /* Fixed alpha value */
-  border-top-right-radius: 150px;
-  border-bottom-right-radius: 150px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.n_links-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 100px; /* Space between buttons */
-  position: relative;
-  top: 50px
-}
-
-.n_link-button {
-  width: 100px;
-  height: 100px;
-  padding: 10px;
-  /* color: rgba(0, 0, 250, 1); */
-  font-size: 16px;
-  transition: background-color 0.3s, color 0.3s;
-}
-
-.n_link-button:hover {
-  background-color: rgba(0, 0, 250, 1);
-  color: white;
-}
-
-.navbar-square-third {
-  width: 150px;
-  height: 100px;
-  position: absolute;
-  z-index: 10;
-  border-top-left-radius: 100%;
-}
-
-.navbar-square-last {
-  width: 150px;
-  height: 100px;
-  background-color: rgba(0, 0, 250, 1); /* Fixed alpha value to be in the valid range (0 to 1) */
+.animate-progress {
+  animation: progress 2s ease-in-out infinite;
 }

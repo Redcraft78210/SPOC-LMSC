@@ -1,59 +1,34 @@
 // server/routes/authRoutes.js
 
 const express = require('express');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const { User } = require('../models');
-const authMiddleware = require('../middlewares/authMiddleware');
-const validateUser = require('../middlewares/userValidation'); // Validation middleware for user registration
+const validateUser = require('../middlewares/userValidation.js'); // Validation middleware for user registration
+const authMiddleware = require('../middlewares/authMiddleware.js');
+const { checkRegisterCode, register, manualRegister, firstLogin, login, activate2FA, verify2FA, refresh2FASetup } = require('../controllers/authController.js'); // Import the register and login functions from the controller module
+
 const router = express.Router();
 
+// Registration code check route
+router.post('/check-register-code', checkRegisterCode);
+
 // Register route with validation middleware
-router.post('/register', validateUser, async (req, res) => {
-  const { email, password, name } = req.body;
-  
-  try {
-    const existingUser = await User.findOne({ where: { email } });
-    if (existingUser) {
-      return res.status(400).json({ message: 'User already exists' });
-    }
+router.post('/register', validateUser, register);
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({
-      email,
-      password: hashedPassword,
-      name
-    });
+// Register route with validation middleware. Registration from teacher/admin panel
+router.post('/manual-register', validateUser, manualRegister);
 
-    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    return res.status(201).json({ token });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Server error' });
-  }
-});
+// First login route
+router.post('/first-login', authMiddleware, firstLogin);
 
-// Login route with validation (no additional validation middleware required for login)
-router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
+// Login route with validation
+router.post('/login', login);
 
-  try {
-    const user = await User.findOne({ where: { email } });
-    if (!user) {
-      return res.status(400).json({ message: 'Invalid credentials' });
-    }
+// 2FA setup route
+router.post('/activate-2fa', authMiddleware, activate2FA);
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid credentials' });
-    }
+// 2FA verification route
+router.post('/verify-2fa', verify2FA)
 
-    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    return res.status(200).json({ token });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Server error' });
-  }
-});
+// 2FA refresh setup temp token route
+router.post('/refresh-2fa-setup', refresh2FASetup);
 
-module.exports = router;
+module.exports = { route: router };
