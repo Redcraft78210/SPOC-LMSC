@@ -1,0 +1,24 @@
+body,
+head,
+footer {
+  background-color: var(--luxury-100);
+}
+
+.dashboard-container {
+  background-color: var(--luxury-300);
+  border-radius: 1.5rem;
+  padding: 1rem;
+  padding-left: 0;
+}
+#title {
+  margin-top: 0.5rem;
+  margin-left: 9rem;
+  color: #0022ff;
+  font-size: 2rem;
+}
+
+.Dcontent {
+  margin-left: 6rem;
+  height: 100%;
+  width: auto;
+}

@@ -1,12 +1,15 @@
-version: '3.8'
 
 services:
   main:
     build:
       context: ..
       dockerfile: ./docker/Dockerfile
+      args:
+        REGISTRY: ${REGISTRY:-}
+        NAMESPACE: ${NAMESPACE:-}
     ports:
       - "5000:5000"
+      - "8443:8443"
     environment:
       - DB_HOST=database
       - DB_PORT=5432
@@ -17,7 +20,7 @@ services:
       - database
 
   database:
-    image: postgres:15
+    image: ${REGISTRY:-}postgres:15
     container_name: spoc_db
     restart: always
     environment:
@@ -27,7 +30,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ../db/init.sql:/docker-entrypoint-initdb.d/init.sql
 
 
 volumes:

@@ -4,17 +4,21 @@
   "description": "SPOC (Small Private Online Course) application with Node.js, React, PostgreSQL, Bootstrap, and Tailwind CSS",
   "scripts": {
     "start": "npm run build && npm run server",
+    "client": "cd client && npm run start",
     "server": "cd server && npm run server",
     "build": "cd client && npx tailwindcss -i src/index.css -o public/styles/output.css && npm run build",
     "install-root": "npm install",
     "install-client": "cd client && npm install",
     "install-server": "cp server && npm install",
     "setup": "npm run install-client && npm run install-server",
-    "docker-build": "cd docker && docker-compose build",
+    "docker-build": "clear && npm run docker-clear && REGISTRY=${REGISTRY:-10.42.12.1:5000} NAMESPACE=${NAMESPACE:-} docker-compose -f docker/docker-compose.yml build --build-arg REGISTRY=$REGISTRY --build-arg NAMESPACE=$NAMESPACE",
     "docker-start": "cd docker && docker-compose up",
-    "docker-clear": "cd docker && docker-compose down --rmi all"
+    "docker-stop": "cd docker && docker-compose down --volumes",
+    "docker-clear": "cd docker && docker-compose down -v --remove-orphans"
   },
   "author": "SPOC TEAM",
-  "license": "GPL-3.0"
+  "license": "GPL-3.0",
+  "dependencies": {
+    "bcrypt": "^5.1.1"
+  }
 }
-

@@ -1,35 +1,40 @@
-
 .NavigationBar-container {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    height: 90vh;
-    width: 5rem;
-   
+  align-items: flex-start;
+  flex-direction: column;
+  padding: 1rem;
+  width: -webkit-fit-content;
+  width: fit-content;
+  align-items: center;
+  position: absolute;
 }
 
 .NavigationBar-container ul {
-    list-style-type: none;
+  list-style-type: none;
+  margin: 0; /* Supprime les marges par défaut */
+  padding: 0; /* Supprime les paddings par défaut */
 }
 
 .NavigationBar-container li {
-    margin-bottom: 4rem;
+  margin-bottom: 4rem;
 }
+
 .NavigationBar-container li a {
-    color: rgb(255, 255, 255);
-    cursor: pointer;
-   
+  color: rgb(255, 255, 255);
+  cursor: pointer;
+  text-decoration: none; /* Supprime le soulignement */
 }
+
 .NavigationBar-container li a:hover {
-    color: #0022FF;
+  color: #0022ff;
 }
 
 #toggle {
-    color: rgb(255, 255, 255);
-    cursor: pointer;
-    margin-left: 0px;
-    margin-bottom: 3.5rem;
+  color: rgb(255, 255, 255);
+  cursor: pointer;
+  margin: 0; /* Ajustez selon vos préférences */
+  margin-bottom: 3.5rem;
 }
+
 #toggle:hover {
-    color: #0022FF;
+  color: #0022ff;
 }
