@@ -260,7 +260,7 @@ const Dashboard = ({ content, token, role }) => {
                         className="relative left-46 top-20 cursor-pointer border border-blue-400 p-1 rounded-full bg-black w-fit"
                         onClick={() => setShowProfilepictureModal(true)}
                       >
-                        <Pencil className="h-4 w-4" />
+                        <Pencil className="h-4 w-4 text-blue-500" />
                       </p>
 
                       {loadingAvatar ? (

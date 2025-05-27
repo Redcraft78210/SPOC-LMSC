@@ -25,7 +25,7 @@ const errorMessages = {
   default: 'Une erreur est survenue. Veuillez réessayer.',
 };
 
-const API_URL = 'https://172.16.84.19:443/api';
+const API_URL = 'https://localhost:8443/api';
 
 const Sign = ({ setAuth, unsetLoggedOut }) => {
   const navigate = useNavigate();
