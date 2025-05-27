@@ -84,7 +84,8 @@ const DEFAULTS = {
 // En production, il faut ajouter le nom de domaine de l'application
 // const allowedOrigins = ["https://localhost:5173", "https://localhost:8443", "https://your-production-domain.com"];
 
-const allowedOrigins = ["https://192.168.36.150"];
+const allowedOrigins = ["https://192.168.36.150",
+  "https://localhost"];
 
 // Middleware
 app.use(cors({
