@@ -1,9 +1,16 @@
-import { useState, useEffect, useRef } from 'react'; // Add useRef
-import PropTypes from 'prop-types'; // Import prop-types
-import axios from 'axios'; // Import axios pour les requêtes API
+import { useState, useEffect, useRef } from 'react'; 
+import PropTypes from 'prop-types';
+import {
+  getUserProfile,
+  updateUserProfile,
+  changePassword,
+  setup2FA,
+  verify2FASetup,
+  disable2FA,
+} from '../API/ProfileCaller';
+
 import { toast, Toaster } from 'react-hot-toast';
 import zxcvbn from 'zxcvbn';
-import { jwtDecode } from 'jwt-decode';
 
 import {
   Globe,
@@ -21,8 +28,6 @@ import {
   loadCaptchaEnginge as loadCaptchaEngine,
   validateCaptcha,
 } from 'react-simple-captcha';
-
-const API_URL = 'https://localhost:8443/api';
 
 const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
   const [activeTab, setActiveTab] = useState('general');
@@ -130,23 +135,26 @@ const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
   });
 
   useEffect(() => {
-    const fetchUser = async () => {
-      setLoading(true); // Début du chargement
+    const fetchUserProfile = async () => {
       try {
-        const response = await axios.get(`${API_URL}/users/profile`, {
-          headers: { Authorization: `Bearer ${authToken}` },
-        });
-        const userFromDb = response.data;
-        setUser(userFromDb);
-        setTwoFactorAuth(userFromDb.twoFAEnabled);
+        const response = await getUserProfile();
+        
+        if (response.status === 200) {
+          setUser({
+            name: response.data.name,
+            surname: response.data.surname,
+            username: response.data.username,
+            email: response.data.email,
+            twoFAEnabled: response.data.twoFAEnabled,
+          });
+          setTwoFactorAuth(response.data.twoFAEnabled);
+        }
       } catch (error) {
-        console.error('Error fetching user profile:', error);
-        toast.error('Erreur lors de la récupération du profil utilisateur');
-      } finally {
-        setLoading(false); // Fin du chargement
+        console.error("Erreur lors du chargement du profil:", error);
       }
     };
-    fetchUser();
+    
+    fetchUserProfile();
   }, [authToken]);
 
   const validateForm = () => {
@@ -161,51 +169,31 @@ const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const updateUserProfile = async () => {
-    if (!validateForm()) return;
-
-    setLoading(true); // Début du chargement
-    setErrors({}); // Clear previous errors
+  const updateUserProfileHandler = async () => {
     try {
-      await axios.put(
-        `${API_URL}/users/profile`,
-        {
-          name: user.name,
-          surname: user.surname,
-          email: user.email,
-          username: user.username,
-        },
-        {
-          headers: { Authorization: `Bearer ${authToken}` },
-        }
-      );
-
-      toast.success('Profil mis à jour avec succès.');
-      setHasUnsavedChanges(false);
-    } catch (error) {
-      if (error.response) {
-        console.error('Erreur serveur:', error.response.data);
-        setErrors({
-          server:
-            error.response.data.message || 'Une erreur serveur est survenue.',
-        });
-      } else if (error.request) {
-        console.error('Erreur réseau:', error.request);
-        setErrors({
-          network:
-            'Impossible de contacter le serveur. Veuillez vérifier votre connexion réseau.',
-        });
-      } else {
-        console.error('Erreur inconnue:', error.message);
-        setErrors({
-          unknown: 'Une erreur inconnue est survenue. Veuillez réessayer.',
-        });
+      if (!validateForm()) {
+        return;
       }
-      toast.error(
-        'Une erreur est survenue. Veuillez vérifier les messages d’erreur.'
-      );
+      
+      setLoading(true);
+      const response = await updateUserProfile({
+        name: user.name,
+        surname: user.surname,
+        username: user.username,
+        email: user.email
+      });
+      
+      if (response.status === 200) {
+        setHasUnsavedChanges(false);
+        toast.success('Profil mis à jour avec succès.');
+      } else {
+        toast.error('Erreur lors de la mise à jour du profil');
+      }
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour du profil:", error);
+      toast.error('Une erreur est survenue. Veuillez vérifier les messages d’erreur.');
     } finally {
-      setLoading(false); // Fin du chargement
+      setLoading(false);
     }
   };
 
@@ -307,11 +295,7 @@ const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
 
     setLoading(true); // Début du chargement
     try {
-      const { data } = await axios.post(
-        'https://localhost:8443/api/auth/verify-2fa',
-        { code: fullCode, tempToken, setup: true },
-        { headers: { Authorization: `Bearer ${authToken}` } }
-      );
+      const { data } = await verify2FASetup(fullCode, tempToken);
 
       if (data.token) {
         setTwoFactorAuth(true);
@@ -335,22 +319,20 @@ const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
 
   const handle2FASetup = async e => {
     e.preventDefault();
+    setLoading(true);
+    
     try {
-      const { data } = await axios.post(
-        'https://localhost:8443/api/auth/activate-2fa',
-        {},
-        { headers: { Authorization: `Bearer ${authToken}` } }
-      );
-      setQrCodeData(data.twoFASetup.qrCode);
-      setManualSecret(data.twoFASetup.manualSecret);
-      setTempToken(data.tempToken);
-      setAuthStep('2fa-setup');
+      const response = await setup2FA();
+      
+      if (response.status === 200) {
+        setQrCodeData(response.data.qrCodeUrl);
+        setManualSecret(response.data.manualSetupKey);
+        setAuthStep('setup');
+      }
     } catch (error) {
-      setCountEchec2FACode(prev => prev + 1);
-      console.error('Erreur lors de la vérification 2FA:', error);
-      toast.error(
-        "Impossible d'activer l'authentification 2FA.\n Veuillez réessayer plus tard."
-      );
+      console.error("Erreur lors de la configuration 2FA:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -407,18 +389,7 @@ const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
     setErrors({}); // Clear previous errors
 
     try {
-      const userId = jwtDecode(authToken).id;
-
-      await axios.put(
-        `${API_URL}/users/${userId}`,
-        {
-          currentPassword,
-          newPassword,
-        },
-        {
-          headers: { Authorization: `Bearer ${authToken}` },
-        }
-      );
+      await changePassword(currentPassword, newPassword);
 
       toast.success('Mot de passe mis à jour avec succès.');
       setHasUnsavedChanges(false);
@@ -442,7 +413,7 @@ const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
           'Impossible de contacter le serveur. Veuillez vérifier votre connexion réseau.'
         );
       } else {
-        console.error('Erreur inconnue:', error.message);
+        console.error('Erreur inconnue:', error.data.message);
         setErrors({
           unknown: 'Une erreur inconnue est survenue. Veuillez réessayer.',
         });
@@ -456,11 +427,9 @@ const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
     }
   };
 
-  const disable2FA = async () => {
+  const disable2FAHandler = async () => {
     try {
-      const response = await axios.delete(`${API_URL}/users/2fa`, {
-        headers: { Authorization: `Bearer ${authToken}` },
-      });
+      const response = await disable2FA();
       if (response.status === 200) {
         setTwoFactorAuth(!twoFactorAuth);
         toast.success("l'authentification 2FA a été desactivé avec succès.");
@@ -485,7 +454,7 @@ const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
           'Impossible de contacter le serveur. Veuillez vérifier votre connexion réseau.'
         );
       } else {
-        console.error('Erreur inconnue:', error.message);
+        console.error('Erreur inconnue:', error.data.message);
         setErrors({
           unknown: 'Une erreur inconnue est survenue. Veuillez réessayer.',
         });
@@ -583,7 +552,7 @@ const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
             <div className="flex items-center space-x-4">
               <Switch
                 checked={twoFactorAuth}
-                onChange={disable2FA}
+                onChange={disable2FAHandler}
                 className={`${
                   twoFactorAuth ? 'bg-blue-600' : 'bg-gray-200'
                 } relative inline-flex h-6 w-11 items-center rounded-full transition-colors`}
@@ -683,10 +652,10 @@ const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
               <div className="relative ml-5 mr-15">
                 <div className="text-center mb-4">
                   <button
-                    className="absolute top-15 -right-0 cursor-pointer border border-blue-400 p-1 rounded-full bg-black text-white"
+                    className="absolute top-18 -right-0 cursor-pointer border border-blue-400 p-1 rounded-full bg-black text-white"
                     onClick={() => setShowProfilepictureModal(true)}
                   >
-                    <CogIcon className="h-4 w-4" />
+                    <CogIcon className="h-6 w-6" />
                   </button>
 
                   {/* User avatar or placeholder */}
@@ -704,7 +673,7 @@ const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
                     <img
                       src={userAvatar}
                       alt="Avatar"
-                      className="h-20 w-20 rounded-full object-cover"
+                      className="h-25 w-25 rounded-full object-cover border-4 border-black-300 mx-auto"
                       onError={() => refreshAvatar()} // En cas d'erreur, demandez au parent de rafraîchir
                     />
                   )}
@@ -993,7 +962,7 @@ const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
                   ? 'bg-gray-400 cursor-not-allowed'
                   : 'bg-blue-600 hover:bg-blue-700'
               }`}
-              onClick={updateUserProfile}
+              onClick={updateUserProfileHandler}
               disabled={loading}
             >
               {loading ? 'Enregistrement...' : 'Enregistrer les modifications'}

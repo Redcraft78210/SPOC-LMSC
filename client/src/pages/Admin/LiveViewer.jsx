@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { StreamReader } from '../../components/StreamReader';
 import process from 'process';
@@ -6,8 +6,14 @@ import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 // Import react-mentions
 import { MentionsInput, Mention } from 'react-mentions';
+import {
+  getLiveById,
+  getLiveMessages,
+  sendLiveMessage,
+  logViewEngagement,
+  getLiveParticipants
+} from '../../API/LiveCaller';
 
-const API_URL = 'https://localhost:8443/api';
 const INACTIVITY_THRESHOLD = 60000; // 1 minute in ms
 const TEN_MINUTES = 600; // 600 seconds
 
@@ -121,114 +127,98 @@ const LiveViewer = ({ authToken }) => {
     let lastUpdateTime = Date.now();
 
     const handleUserActivity = () => {
-      lastUpdateTime = Date.now();
+      // Reset inactivity timer
       if (userActivityTimeout.current) {
         clearTimeout(userActivityTimeout.current);
       }
+      userActivityTimeout.current = setTimeout(() => {
+        logEngagement('inactive');
+      }, INACTIVITY_THRESHOLD);
     };
 
     const handleVisibilityChange = () => {
-      const visible = !document.hidden;
-      setIsPageVisible(visible);
-      if (visible) lastUpdateTime = Date.now();
+      setIsPageVisible(document.visibilityState === 'visible');
+      if (document.visibilityState === 'visible') {
+        logEngagement('visibility_return');
+      } else {
+        logEngagement('visibility_lost');
+      }
     };
 
     const startTracking = () => {
       timer = setInterval(() => {
-        const now = Date.now();
-        const isActive = now - lastUpdateTime <= INACTIVITY_THRESHOLD;
-
-        if (isPageVisible && isActive) {
-          setActiveViewTime(prev => {
-            const newTime = prev + 1;
-            if (newTime >= TEN_MINUTES && !hasReachedTenMinutes) {
+        if (isPageVisible && !hasReachedTenMinutes) {
+          const now = Date.now();
+          // Calculate time since last update
+          const deltaTime = (now - lastUpdateTime) / 1000;
+          lastUpdateTime = now;
+          
+          // Increment active view time
+          setActiveViewTime(prevTime => {
+            const newTime = prevTime + deltaTime;
+            
+            // Check if we've reached 10 minutes
+            if (prevTime < TEN_MINUTES && newTime >= TEN_MINUTES) {
+              logEngagement('ten_minutes_reached');
               setHasReachedTenMinutes(true);
-              logEngagement('active_ten_minute_view');
             }
+            
             return newTime;
           });
         }
       }, 1000);
     };
 
-    // Event listeners
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    document.addEventListener('mousemove', handleUserActivity);
-    document.addEventListener('keydown', handleUserActivity);
-    document.addEventListener('scroll', handleUserActivity);
-
+    // Initial engagement log
+    logEngagement('start_view');
+    handleUserActivity();
     startTracking();
 
     return () => {
       clearInterval(timer);
+      if (userActivityTimeout.current) {
+        clearTimeout(userActivityTimeout.current);
+      }
+      logEngagement('end_view');
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       document.removeEventListener('mousemove', handleUserActivity);
       document.removeEventListener('keydown', handleUserActivity);
       document.removeEventListener('scroll', handleUserActivity);
     };
-  }, [streamData, isPageVisible, hasReachedTenMinutes, authToken, streamId]);
+  }, [streamData, isPageVisible, hasReachedTenMinutes, authToken, streamId, logEngagement]);
 
-  const logEngagement = useCallback(
-    type => {
-      fetch(`${API_URL}/streams/engagement`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`,
-        },
-        body: JSON.stringify({
-          streamId,
-          engagementType: type,
-          timestamp: new Date().toISOString(),
-        }),
-      }).catch(console.error);
-    },
-    [authToken, streamId]
-  );
+  const logEngagement = useCallback(type => {
+    try {
+      logViewEngagement({ 
+        streamId, 
+        eventType: type, 
+        activeViewTime: Math.round(activeViewTime) 
+      });
+    } catch (error) {
+      console.error("Failed to log engagement:", error);
+    }
+  }, [authToken, streamId, activeViewTime]);
 
-  const fetchStreamData = useCallback(
-    async signal => {
-      try {
-        // const response = await fetch(`${API_URL}/streams/${streamId}`, {
-        //   headers: { Authorization: `Bearer ${authToken}` },
-        //   signal,
-        // });
-
-        // if (!response.ok) {
-        //   throw new Error(
-        //     response.status === 404
-        //       ? 'Stream non trouvé'
-        //       : 'Échec de la récupération des données'
-        //   );
-        // }
-
-        // const data = await response.json();
-        const data = {
-          auteur: 'Prof. Jean Dupont',
-          titre: 'Introduction à la physique quantique',
-          description:
-            "Ce live couvre les bases de la physique quantique, y compris les principes d'incertitude et la dualité onde-particule.",
-          date_heure_lancement: '2025-05-15 14:00:00',
-          est_programe: false,
-          chat_enabled: true,
-          matiere: 'Physique',
-        };
-        if (!signal.aborted) {
-          setStreamData(data);
-          setError(null);
-        }
-      } catch (err) {
-        if (!signal.aborted) {
-          setError(err.message);
-        }
-      } finally {
-        if (!signal.aborted) {
-          setLoading(false);
-        }
+  const fetchStreamData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await getLiveById({ liveId: streamId });
+      
+      if (response.status === 200) {
+        setStreamData(response.data);
+        setError(null);
+      } else if (response.status === 404) {
+        setError('Stream non trouvé');
+      } else {
+        setError(response.message || 'Erreur lors du chargement du stream');
       }
-    },
-    [authToken, streamId]
-  );
+    } catch (error) {
+      console.error("Erreur lors du chargement du stream:", error);
+      setError(error.data.message || 'Erreur lors du chargement du stream');
+    } finally {
+      setLoading(false);
+    }
+  }, [streamId]);
 
   useEffect(() => {
     if (!streamId) return;
@@ -418,37 +408,27 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled }) => {
   // Fetch chat history on component mount
   useEffect(() => {
     const fetchChatHistory = async () => {
-      if (!streamId || !authToken) return;
-
-      setLoadingMessages(true);
+      if (!streamId || !chatEnabled || isScheduled) return;
+      
       try {
-        const response = await fetch(`${API_URL}/streams/${streamId}/chat`, {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error("Échec de la récupération de l'historique du chat");
+        setLoadingMessages(true);
+        const response = await getLiveMessages({ liveId: streamId });
+        
+        if (response.status === 200) {
+          setMessages(response.data.messages || []);
+        } else {
+          setError(response.message || "Erreur lors du chargement des messages");
         }
-
-        const chatHistory = await response.json();
-        setMessages(chatHistory.messages);
-        setError(null);
-      } catch (err) {
-        console.error(
-          "Erreur lors de la récupération de l'historique du chat:",
-          err
-        );
-        setError('Impossible de charger les messages précédents.');
+      } catch (error) {
+        console.error("Erreur lors du chargement des messages:", error);
+        setError("Erreur lors du chargement du chat");
       } finally {
         setLoadingMessages(false);
       }
     };
-
+    
     fetchChatHistory();
-  }, [streamId, authToken]);
+  }, [streamId, authToken, chatEnabled, isScheduled]);
 
   // WebSocket management
   useEffect(() => {
@@ -462,14 +442,14 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled }) => {
       }
 
       ws.onopen = () => {
-        console.log('WebSocket connection established successfully');
+        
         setError(null);
       };
 
       ws.onmessage = event => {
         try {
           const data = JSON.parse(event.data);
-          console.log('Message WebSocket reçu:', data); // Pour débugger
+           // Pour débugger
 
           switch (data.type) {
             case 'new_message':
@@ -498,7 +478,7 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled }) => {
               break;
 
             default:
-              console.log('Type de message non géré:', data.type);
+              
           }
         } catch (err) {
           console.error('Erreur lors du traitement du message WebSocket:', err);
@@ -506,7 +486,7 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled }) => {
       };
 
       ws.onclose = () => {
-        console.log('WebSocket connection closed');
+        
       };
 
       ws.onerror = error => {
@@ -532,28 +512,13 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled }) => {
       if (!streamId || !authToken) return;
 
       try {
-        // In a real implementation, fetch participants from your API
-        // For now, using placeholder data
-        // const response = await fetch(
-        //   `${API_URL}/streams/${streamId}/participants`,
-        //   {
-        //     headers: { Authorization: `Bearer ${authToken}` },
-        //   }
-        // );
-
-        // if (!response.ok) {
-        //   throw new Error('Échec de la récupération des participants');
-        // }
-
-        // const data = await response.json();
-        // Using mock data for demonstration
-        const data = [
-          { id: '1', display: 'Professeur Dupont' },
-          { id: '2', display: 'Jean Martin' },
-          { id: '3', display: 'Marie Robert' },
-          // Add more users as needed
-        ];
-        setParticipants(data);
+        const response = await getLiveParticipants({ liveId: streamId });
+        
+        if (response.status === 200) {
+          setParticipants(response.data || []);
+        } else {
+          console.error("Erreur lors de la récupération des participants:", response.message);
+        }
       } catch (err) {
         console.error('Erreur lors de la récupération des participants:', err);
       }
@@ -575,44 +540,29 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled }) => {
   const handleSend = async e => {
     e.preventDefault();
     if (!input.trim() || sending) return;
-
+    
     setSending(true);
-    const tempId = Date.now().toString();
-
-    // Optimistic update with tempId
-    setMessages(prev => [
-      ...prev,
-      {
-        tempId,
-        content: input.trim(),
-        user_id: userId,
-        createdAt: new Date().toISOString(),
-        User: { name: 'Vous' },
-      },
-    ]);
-
+    setError(null);
+    
     try {
-      const message = input.trim();
-      setInput(''); // Clear input right away
-
-      // Instead of using HTTP, send message via WebSocket
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(
-          JSON.stringify({
-            type: 'chat_message',
-            liveId: streamId,
-            message: message,
-            tempId: tempId,
-          })
-        );
+      const response = await sendLiveMessage({ 
+        liveId: streamId, 
+        message: input.trim() 
+      });
+      
+      if (response.status === 201) {
+        setInput('');
       } else {
-        throw new Error('WebSocket not connected');
+        if (response.message?.includes('forbidden words')) {
+          setShowDisciplinaryWarning(true);
+          setDisciplinaryWarning(response.message);
+        } else {
+          setError(response.message || "Erreur lors de l'envoi du message");
+        }
       }
-    } catch (err) {
-      console.error("Erreur lors de l'envoi du message:", err);
-      setError("Impossible d'envoyer le message.");
-      // Rollback optimistic update
-      setMessages(prev => prev.filter(msg => msg.tempId !== tempId));
+    } catch (error) {
+      console.error("Erreur lors de l'envoi du message:", error);
+      setError("Erreur lors de l'envoi du message");
     } finally {
       setSending(false);
     }

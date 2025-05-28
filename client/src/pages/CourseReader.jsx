@@ -4,8 +4,13 @@ import PropTypes from 'prop-types';
 import SecureVideoPlayer from '../components/SecureVideoPlayer';
 import SecureDocumentViewer from '../components/SecureDocumentViewer';
 import { toast, Toaster } from 'react-hot-toast';
-
-const API_URL = 'https://localhost:8443/api';
+import {
+  getCourseById,
+  markCourseAsInProgress,
+  markCourseAsCompleted,
+  getCourseProgress,
+} from '../API/CourseCaller';
+import { Get_special_Document } from '../API/DocumentCaller';
 
 const CourseReader = ({ authToken }) => {
   const navigate = useNavigate();
@@ -19,57 +24,39 @@ const CourseReader = ({ authToken }) => {
   useEffect(() => {
     const fetchCourseData = async () => {
       try {
-        const response = await fetch(`${API_URL}/courses/${courseId}/main`, {
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-          },
-        });
+        const response = await getCourseById({ courseId });
 
-        if (!response.ok) throw new Error('Cours non trouvé');
-        const data = await response.json();
-
-        // Marquer le cours comme commencé
-        try {
-          const progressResponse = await fetch(
-            `${API_URL}/progress/course-progress/${courseId}`,
-            {
-              method: 'POST',
-              headers: {
-                Authorization: `Bearer ${authToken}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                status: 'in_progress',
-              }),
-            }
-          );
-
-          if (!progressResponse.ok) {
-            const errorData = await progressResponse.json();
-            if (
-              progressResponse.status === 400 &&
-              errorData.message ===
-                'Cannot mark as in progress, already completed'
-            ) {
-              setCompleted(true);
-              toast.success(
-                'Vous avez déjà terminé ce cours.\nVous pouvez le revoir à tout moment.'
-              );
-            } else {
-              throw new Error(
-                errorData.message || 'Erreur lors de la validation'
-              );
-            }
-          }
-        } catch (err) {
-          console.error('Error marking course as in progress:', err);
-          throw err;
+        if (response.status !== 200) {
+          setError('Cours non trouvé');
+          return;
         }
 
-        // Extraction de la première entrée du cours
-        const { ...content } = data;
+        // Marquer le cours comme commencé
 
-        setCourseData(content);
+        if (!completed) {
+          try {
+            const progressResponse = await markCourseAsInProgress({ courseId });
+
+            if (progressResponse.status !== 200) {
+              if (
+                progressResponse.status === 400 &&
+                progressResponse.message ===
+                'Cannot mark as in progress, already completed'
+              ) {
+                toast.success(
+                  'Vous avez déjà terminé ce cours.\nVous pouvez le revoir à tout moment.'
+                );
+              } else {
+                throw new Error(
+                  progressResponse.message || 'Erreur lors de la validation'
+                );
+              }
+            }
+          } catch (err) {
+            console.error('Error marking course as in progress:', err);
+          }
+        }
+        setCourseData(response.data);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -83,31 +70,20 @@ const CourseReader = ({ authToken }) => {
   useEffect(() => {
     const checkCourseCompletion = async () => {
       try {
-        const response = await fetch(
-          `${API_URL}/progress/course-progress/${courseId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${authToken}`,
-            },
-          }
-        );
-        if (!response.ok) {
-          if (response.status === 404) {
-            setCompleted(false);
-            return;
-          }
-          const errorData = await response.json();
-          throw new Error(
-            errorData.message || 'Erreur lors de la vérification'
-          );
+        const response = await getCourseProgress({ courseId });
+
+        if (response.status === 200) {
+          setCompleted(response.data.status === 'completed');
+        } else if (response.status !== 404) {
+          // 404 expected if no progress record exists
+          throw new Error(response.message || 'Erreur lors de la vérification');
         }
-        const data = await response.json();
-        setCompleted(data.completed);
       } catch (err) {
         console.error('Completion check error:', err);
         setError(err.message || 'Erreur lors de la vérification');
       }
     };
+
     if (courseId) {
       checkCourseCompletion();
     }
@@ -115,23 +91,10 @@ const CourseReader = ({ authToken }) => {
 
   const handleCompleteCourse = async () => {
     try {
-      const response = await fetch(
-        `${API_URL}/progress/course-progress/${courseId}`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            status: 'completed',
-          }),
-        }
-      );
+      const response = await markCourseAsCompleted({ courseId });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erreur lors de la validation');
+      if (response.status !== 200) {
+        throw new Error(response.message || 'Erreur lors de la validation');
       }
 
       toast.success('Cours terminé !');
@@ -142,20 +105,16 @@ const CourseReader = ({ authToken }) => {
     }
   };
 
-  const handleDownloadDocument = async documentId => {
+  const handleDownloadDocument = async document_id => {
     try {
-      const response = await fetch(`${API_URL}/documents/${documentId}`, {
-        headers: {
-          Authorization: `Bearer ${authToken}`, // Make sure authToken is in scope
-        },
-      });
+      const response = await Get_special_Document({ document_id });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erreur lors du téléchargement');
+      if (response.status !== 200) {
+        throw new Error(response.message || 'Erreur lors du téléchargement');
       }
 
-      const blob = await response.blob();
+      // Traitement du blob retourné
+      const blob = response.data;
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -197,9 +156,37 @@ const CourseReader = ({ authToken }) => {
     );
   }
 
+  if (!courseData) {
+    return (
+      <div className="text-center p-8">
+        <p className="text-red-600 mb-4">Cours non trouvé</p>
+        <button
+          type="button"
+          onClick={() => navigate('/courses-library')}
+          className="inline-block px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+        >
+          Retour à la bibliothèque des cours
+        </button>
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="text-center p-8">
+        <p className="text-red-600 mb-4">{error}</p>
+        <button
+          type="button"
+          onClick={() => navigate('/courses-library')}
+          className="inline-block px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+        >
+          Retour à la bibliothèque des cours
+        </button>
+      </div>
+    );
+  }
   return (
     <div className="max-w-6xl mx-auto p-4">
-      <Toaster />
+      <Toaster position="top-center" />
       {/* En-tête du cours */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">{courseData.titre}</h1>

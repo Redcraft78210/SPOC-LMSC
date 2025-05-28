@@ -57,8 +57,8 @@ const DashboardProf = ({ token }) => {
           courses={Object.values(data)}
           classes={classeList}
           onSave={(courseId, classIds) => {
-            console.log('Cours sélectionné :', courseId);
-            console.log('Classes autorisées :', classIds);
+            console.log(`Course ${courseId} visibility updated for classes:`, classIds);
+            
           }}
         />
       </section>

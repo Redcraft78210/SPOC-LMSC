@@ -3,10 +3,13 @@ import PropTypes from 'prop-types';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast, Toaster } from 'react-hot-toast';
-
 import { ArrowLeft, User, Clock, MessageSquareText } from 'lucide-react';
-
-const API_URL = 'https://localhost:8443/api';
+import {
+  getThreads,
+  getThreadById,
+  createThread,
+  addComment
+} from '../API/ForumCaller';
 
 const Forum = ({ authToken }) => {
   const [threads, setThreads] = useState([]);
@@ -29,134 +32,123 @@ const Forum = ({ authToken }) => {
 
   const fetchThreads = async () => {
     try {
-      const response = await fetch(
-        `${API_URL}/forum/threads?page=${pagination.currentPage}&limit=10`,
-        {
-          headers: { Authorization: `Bearer ${authToken}` },
-        }
-      );
-      if (!response.ok) throw new Error('Erreur de chargement des discussions');
-      const data = await response.json();
-      setThreads(data.threads);
-      setPagination({
-        currentPage: data.currentPage,
-        totalPages: data.totalPages,
+      setLoading(true);
+      const response = await getThreads({ 
+        page: pagination.currentPage, 
+        limit: 10 
       });
+      
+      if (response.status === 200) {
+        setThreads(response.data.threads);
+        setPagination({
+          currentPage: response.data.currentPage,
+          totalPages: response.data.totalPages
+        });
+        setError('');
+      } else {
+        setError(response.message || "Erreur lors du chargement des discussions");
+      }
     } catch (error) {
-      setError(error.message);
-      toast.error(error.message);
+      console.error("Erreur lors du chargement des discussions:", error);
+      setError("Erreur lors du chargement des discussions");
+    } finally {
+      setLoading(false);
     }
   };
 
   const fetchThreadDetails = async threadId => {
     try {
-      const response = await fetch(`${API_URL}/forum/threads/${threadId}`, {
-        headers: { Authorization: `Bearer ${authToken}` },
-      });
-      if (!response.ok)
-        throw new Error('Erreur de chargement des détails de la discussion');
-      const data = await response.json();
-      setSelectedThread(data);
+      setLoading(true);
+      const response = await getThreadById({ threadId });
+      
+      if (response.status === 200) {
+        setSelectedThread(response.data);
+        setError('');
+      } else {
+        setError(response.message || "Erreur lors du chargement de la discussion");
+      }
     } catch (error) {
-      setError(error.message);
-      toast.error(error.message);
+      console.error("Erreur lors du chargement de la discussion:", error);
+      setError("Erreur lors du chargement de la discussion");
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleCreateThread = async () => {
-    if (!newThreadTitle.trim() || !newThreadContent.trim()) {
-      setError('Veuillez remplir tous les champs');
-      toast.error('Veuillez remplir tous les champs');
-      return;
-    }
-
-    setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/forum/threads`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`,
-        },
-        body: JSON.stringify({
-          title: newThreadTitle.trim(),
-          content: newThreadContent.trim(),
-        }),
+      if (!newThreadTitle.trim() || !newThreadContent.trim()) {
+        setError('Veuillez remplir tous les champs');
+        toast.error('Veuillez remplir tous les champs');
+        return;
+      }
+      
+      setLoading(true);
+      const response = await createThread({
+        title: newThreadTitle.trim(),
+        content: newThreadContent.trim()
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erreur de création');
-      }
-
-      const threadId = (await response.json()).id; // Récupérer l'ID du thread créé
-      console.log('threadId:', threadId);
-
-      await fetchThreads(); // Mettre à jour la liste des threads
-      await fetchThreadDetails(threadId); // Charger les détails du thread créé
-      setNewThreadTitle('');
-      setNewThreadContent('');
-      setError('');
-      toast.success('Discussion créée avec succès');
-    } catch (error) {
-      setError(error.message);
-      if (error.message.includes('forbidden words')) {
-        setShowDisciplinaryWarning(true);
-        setDisciplinaryWarning(error.message);
-        toast('Avertissement !', {
-          icon: '⚠️',
-        });
+      
+      if (response.status === 201) {
+        const threadId = response.data.id;
+        await fetchThreads();
+        await fetchThreadDetails(threadId);
+        setNewThreadTitle('');
+        setNewThreadContent('');
+        setError('');
+        toast.success('Discussion créée avec succès');
       } else {
-        toast.error(error.message);
+        if (response.message?.includes('forbidden words')) {
+          setShowDisciplinaryWarning(true);
+          setDisciplinaryWarning(response.message);
+          toast('Avertissement !', { icon: '⚠️' });
+        } else {
+          setError(response.message || "Erreur lors de la création de la discussion");
+          toast.error(response.message || "Erreur lors de la création de la discussion");
+        }
       }
+    } catch (error) {
+      console.error("Erreur lors de la création de la discussion:", error);
+      setError("Erreur lors de la création de la discussion");
+      toast.error("Erreur lors de la création de la discussion");
     } finally {
       setLoading(false);
     }
   };
 
   const handleCreateComment = async () => {
-    if (!newComment.trim()) {
-      setError('Veuillez écrire un commentaire');
-      toast.error('Veuillez écrire un commentaire');
-      return;
-    }
-
-    setLoading(true);
     try {
-      const response = await fetch(
-        `${API_URL}/forum/threads/${selectedThread.id}/comments`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${authToken}`,
-          },
-          body: JSON.stringify({
-            content: newComment.trim(),
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erreur de création');
+      if (!newComment.trim() || !selectedThread) {
+        setError('Veuillez écrire un commentaire');
+        toast.error('Veuillez écrire un commentaire');
+        return;
       }
-
-      await fetchThreadDetails(selectedThread.id);
-      setNewComment('');
-      setError('');
-      toast.success('Commentaire publié avec succès');
-    } catch (error) {
-      setError(error.message);
-      if (error.message.includes('forbidden words')) {
-        setShowDisciplinaryWarning(true);
-        setDisciplinaryWarning(error.message);
-        toast('Avertissement !', {
-          icon: '⚠️',
-        });
+      
+      setLoading(true);
+      const response = await addComment({
+        threadId: selectedThread.id,
+        content: newComment.trim()
+      });
+      
+      if (response.status === 201) {
+        await fetchThreadDetails(selectedThread.id);
+        setNewComment('');
+        setError('');
+        toast.success('Commentaire publié avec succès');
       } else {
-        toast.error(error.message);
+        if (response.message?.includes('forbidden words')) {
+          setShowDisciplinaryWarning(true);
+          setDisciplinaryWarning(response.message);
+          toast('Avertissement !', { icon: '⚠️' });
+        } else {
+          setError(response.message || "Erreur lors de l'ajout du commentaire");
+          toast.error(response.message || "Erreur lors de l'ajout du commentaire");
+        }
       }
+    } catch (error) {
+      console.error("Erreur lors de l'ajout du commentaire:", error);
+      setError("Erreur lors de l'ajout du commentaire");
+      toast.error("Erreur lors de l'ajout du commentaire");
     } finally {
       setLoading(false);
     }

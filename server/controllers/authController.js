@@ -177,7 +177,7 @@ const login = async (req, res) => {
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) return res.status(401).json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS });
 
-    const isAccountLocked = user.status === 'inactif';
+    const isAccountLocked = user.statut === 'inactif';
     if (isAccountLocked) {
       return res.status(403).json({ message: 'Account is locked. Please contact support using contact form.' });
     }

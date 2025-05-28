@@ -111,7 +111,7 @@ const StreamReader = ({ authToken, controls }) => {
       function () {
         if (audioContext.state === 'suspended') {
           audioContext.resume();
-          console.log('AudioContext resumed after user interaction');
+          
         }
       },
       { once: true }
@@ -157,12 +157,12 @@ const StreamReader = ({ authToken, controls }) => {
     wsRef.current = ws;
 
     ws.onopen = function () {
-      console.log('WebSocket connection opened');
+      
       setConnectionStatus('connected');
     };
 
     ws.onclose = function () {
-      console.log('WebSocket connection closed');
+      
       setConnectionStatus('disconnected');
     };
 
