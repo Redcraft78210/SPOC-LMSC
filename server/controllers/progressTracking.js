@@ -15,10 +15,10 @@ const getUserCourseProgress = async (req, res) => {
         if (!courseId) {
             return res.status(400).json({ message: 'Course ID is required' });
         }
-        const progress = await CourseProgress.findAll({
+        const progress = await CourseProgress.findOne({
             where: { user_id: userId, course_id: courseId },
         });
-        if (!progress.length) {
+        if (!progress) {
             return res.status(404).json({ message: 'No progress found for this course' });
         }
         return res.status(200).json(progress);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Navigate,
   BrowserRouter as Router,
@@ -10,6 +10,8 @@ import { jwtDecode } from 'jwt-decode';
 
 import About from './pages/Public/About';
 import Contact from './pages/Public/Contact';
+import Terms from './pages/Public/TermsOfUse';
+import Legal from './pages/Public/LegalNotice';
 import FirstLogin from './pages/FirstLogin';
 import Dashboard from './pages/Dashboard'; // Utilisation du composant fusionné
 import Home from './pages/Public/Home';
@@ -60,6 +62,8 @@ const publicRouteConfig = [
   { path: '/about', content: 'About' },
   { path: '/sign', content: 'Sign' },
   { path: '/contact', content: 'Contact' },
+  { path: '/terms', content: 'Terms' },
+  { path: '/legal', content: 'Legal' },
 ];
 
 function AppWrapper() {
@@ -77,14 +81,15 @@ function App() {
   const location = useLocation();
 
   useEffect(() => {
-    if (!auth && !loading && localStorage.getItem('authToken')) {
+    if (!auth && !loading && (sessionStorage.getItem('authToken') || localStorage.getItem('authToken'))) {
       handleLogout();
     }
   }, [auth, loading]);
 
   useEffect(() => {
     const checkAuth = () => {
-      const token = localStorage.getItem('authToken');
+      const token =
+        sessionStorage.getItem('authToken') || localStorage.getItem('authToken');
       if (token) {
         try {
           const decodedToken = jwtDecode(token);
@@ -112,7 +117,7 @@ function App() {
       const decodedToken = jwtDecode(token);
       setAuth(decodedToken);
       setRole(decodedToken.role);
-      localStorage.setItem('authToken', token);
+      // Ne rien stocker ici, c'est handleAuthSuccess qui gère le stockage
     } catch (error) {
       console.error('Error decoding token:', error);
       handleLogout();
@@ -123,6 +128,7 @@ function App() {
     setAuth(null);
     setRole(null);
     localStorage.removeItem('authToken');
+    sessionStorage.removeItem('authToken');
   };
 
   const Loader = () => (
@@ -156,7 +162,7 @@ function App() {
           path="*"
           element={
             <FirstLogin
-              token={localStorage.getItem('authToken')}
+              token={sessionStorage.getItem('authToken') || localStorage.getItem('authToken')}
               setAuth={handleSetAuth}
             />
           }
@@ -167,37 +173,33 @@ function App() {
 
   return (
     <Routes>
-      {auth && auth.firstLogin && (
-        <Route
-          path="*"
-          element={
-            <FirstLogin
-              token={localStorage.getItem('authToken')}
-              setAuth={handleSetAuth}
-            />
-          }
-        />
-      )}
       {publicRouteConfig.map(route => (
         <Route
           key={route.path}
           path={route.path}
           element={
-            route.path === '/sign' ? (
-              auth ? (
-                <Navigate to="/dashboard" replace />
-              ) : (
-                <Sign setAuth={handleSetAuth} />
-              )
-            ) : (
-              React.createElement(
-                route.content === 'Home'
-                  ? Home
-                  : route.content === 'About'
-                    ? About
-                    : Contact
-              )
-            )
+            (() => {
+              switch (route.content) {
+                case 'Home':
+                  return <Home />;
+                case 'About':
+                  return <About />;
+                case 'Sign':
+                  return auth ? (
+                    <Navigate to="/dashboard" replace />
+                  ) : (
+                    <Sign setAuth={handleSetAuth} />
+                  );
+                case 'Contact':
+                  return <Contact />;
+                case 'Terms':
+                  return <Terms />;
+                case 'Legal':
+                  return <Legal />;
+                default:
+                  return <NotFound />;
+              }
+            })()
           }
         />
       ))}
@@ -209,7 +211,7 @@ function App() {
               element={
                 <Dashboard
                   content={route.content}
-                  token={localStorage.getItem('authToken')}
+                  token={sessionStorage.getItem('authToken') || localStorage.getItem('authToken')}
                   role={role}
                 />
               }

@@ -12,17 +12,19 @@ import {
 import { jwtDecode } from 'jwt-decode';
 
 import { useState, useEffect } from 'react';
-import axios from 'axios';
 import PropTypes from 'prop-types';
 import Logo from '../Logo';
 import clsx from 'clsx';
 
 import { Toaster, toast } from 'react-hot-toast';
+import { 
+  getAvatar, 
+  uploadAvatar, 
+  deleteAvatar, 
+  uploadIllustrationAvatar 
+} from '../API/ProfileCaller';
 
-// Configuration de l'URL de base pour les appels API
-const API_BASE_URL = 'https://localhost:8443/api';
-
-const ProfilePhotoSelector = ({ onUploadSuccess, token, onClose }) => {
+const ProfilePhotoSelector = ({ onUploadSuccess, onClose }) => {
   const tabs = [
     { id: 'illustrations', label: 'Illustrations', icon: ImageIcon },
     { id: 'computer', label: "Depuis l'ordinateur", icon: LaptopMinimal },
@@ -64,23 +66,18 @@ const ProfilePhotoSelector = ({ onUploadSuccess, token, onClose }) => {
     setError(null);
 
     try {
-      const formData = new FormData();
-      formData.append('avatar', file);
+      const response = await uploadAvatar({ file });
 
-      const response = await axios.post(`${API_BASE_URL}/avatars`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      // Appeler le callback pour informer le parent qu'un nouvel avatar a été téléchargé
-      onUploadSuccess(response.data);
+      if (response.status >= 200 && response.status < 400) {
+        // Appeler le callback pour informer le parent qu'un nouvel avatar a été téléchargé
+        onUploadSuccess(response.data);
+      } else {
+        throw new Error(response.message || "Erreur lors du téléchargement de l'avatar");
+      }
     } catch (err) {
       console.error("Erreur lors du téléchargement de l'avatar:", err);
       setError(
-        err.response?.data?.message ||
-          "Erreur lors du téléchargement de l'avatar"
+        err.message || "Erreur lors du téléchargement de l'avatar"
       );
     } finally {
       setIsLoading(false);
@@ -92,16 +89,18 @@ const ProfilePhotoSelector = ({ onUploadSuccess, token, onClose }) => {
     setError(null);
 
     try {
-      // Convertir l'image sélectionnée en fichier
-      const response = await fetch(imagePath);
-      const blob = await response.blob();
-      const file = new File([blob], 'illustration.jpg', { type: 'image/jpeg' });
-
-      // Utiliser la même logique que pour l'upload de fichier
-      await handleFileUpload(file);
+      // Utiliser le caller au lieu de fetch direct
+      const response = await uploadIllustrationAvatar({ imagePath });
+      
+      if (response.status >= 200 && response.status < 400) {
+        // Appeler le callback pour informer le parent qu'un nouvel avatar a été téléchargé
+        onUploadSuccess(response.data);
+      } else {
+        throw new Error(response.message || "Erreur lors du téléchargement de l'illustration");
+      }
     } catch (err) {
       console.error("Erreur lors de la sélection de l'illustration:", err);
-      setError("Erreur lors de la sélection de l'illustration");
+      setError(err.message || "Erreur lors de la sélection de l'illustration");
     } finally {
       setIsLoading(false);
     }
@@ -508,19 +507,18 @@ const PictureModal = ({
       try {
         setIsLoading(true);
 
-        const response = await fetch(`${API_BASE_URL}/avatars`, {
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch avatar');
+        if (avatarUrl) {
+          URL.revokeObjectURL(avatarUrl);
         }
 
-        const blob = await response.blob();
-        const imageUrl = URL.createObjectURL(blob);
-        setAvatarUrl(imageUrl);
+        const response = await getAvatar();
+        
+        if (response.status >= 200 && response.status < 400) {
+          const imageUrl = URL.createObjectURL(response.data);
+          setAvatarUrl(imageUrl);
+        } else {
+          throw new Error(response.message || 'Failed to fetch avatar');
+        }
       } catch (error) {
         console.error('Error fetching avatar:', error);
         setAvatarUrl(null);
@@ -553,25 +551,24 @@ const PictureModal = ({
     setError(null);
 
     try {
-      await axios.delete(`${API_BASE_URL}/avatars`, {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
-      });
+      const response = await deleteAvatar();
 
-      // Réinitialiser l'avatar local
-      setAvatarUrl(null);
+      if (response.status >= 200 && response.status < 400) {
+        // Réinitialiser l'avatar local
+        setAvatarUrl(null);
 
-      // Informer le parent de rafraîchir l'avatar
-      refreshAvatar();
+        // Informer le parent de rafraîchir l'avatar
+        refreshAvatar();
 
-      // Notification de succès
-      toast.success('Votre photo de profil a été supprimée avec succès.');
+        // Notification de succès
+        toast.success('Votre photo de profil a été supprimée avec succès.');
+      } else {
+        throw new Error(response.message || "Erreur lors de la suppression de l'avatar");
+      }
     } catch (err) {
       console.error("Erreur lors de la suppression de l'avatar:", err);
       setError(
-        err.response?.data?.message ||
-          "Erreur lors de la suppression de l'avatar"
+        err.message || "Erreur lors de la suppression de l'avatar"
       );
     } finally {
       setIsLoading(false);
@@ -586,23 +583,17 @@ const PictureModal = ({
   const handleAvatarUploadSuccess = async () => {
     try {
       // Mettre à jour l'avatar local immédiatement
-      const response = await fetch(
-        `${API_BASE_URL}/avatars?t=${new Date().getTime()}`,
-        {
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-          },
-        }
-      );
+      const response = await getAvatar();
 
-      if (response.ok) {
-        const blob = await response.blob();
+      if (response.status >= 200 && response.status < 400) {
         // Révoquer l'ancienne URL avant de la remplacer
         if (avatarUrl) {
           URL.revokeObjectURL(avatarUrl);
         }
-        const newAvatarUrl = URL.createObjectURL(blob);
+        const newAvatarUrl = URL.createObjectURL(response.data);
         setAvatarUrl(newAvatarUrl);
+      } else {
+        throw new Error(response.message || 'Failed to update avatar');
       }
 
       // Informer le parent (Dashboard) de rafraîchir l'avatar
@@ -636,7 +627,7 @@ const PictureModal = ({
 
   return (
     <div className="fixed inset-0 bg-gray-900/75 backdrop-blur-md flex items-center justify-center z-50">
-      <Toaster />
+    <Toaster position="top-center" />
       {/* Carte principale */}
       <div className="bg-gray-800 text-gray-100 w-full max-w-sm rounded-xl shadow-lg p-4 md:p-6 relative">
         {/* Bouton de fermeture */}
