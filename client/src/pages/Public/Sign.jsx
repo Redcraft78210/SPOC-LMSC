@@ -38,23 +38,23 @@ const AccountDisabledModal = ({ open, onClose }) => {
   if (!open) return null;
 
   return (
-   <div className="fixed inset-0 z-50 backdrop-blur-sm bg-black/30 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 backdrop-blur-sm bg-black/30 flex items-center justify-center p-4">
       <div className="bg-white max-w-md w-full rounded-xl shadow-lg overflow-hidden">
         <div className="p-6 sm:p-8 text-center">
           <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100">
-            <TriangleAlert 
-              className="h-8 w-8 text-red-600" 
+            <TriangleAlert
+              className="h-8 w-8 text-red-600"
               aria-hidden="true"
             />
           </div>
-          
+
           <h3 className="mt-6 text-xl font-semibold text-gray-900">
             Compte désactivé
           </h3>
-          
+
           <p className="mt-4 text-gray-600">
-            Votre compte a été désactivé. Pour contester cette décision ou obtenir 
-            des informations supplémentaires, veuillez contacter l&apos;équipe de modération 
+            Votre compte a été désactivé. Pour contester cette décision ou obtenir
+            des informations supplémentaires, veuillez contacter l&apos;équipe de modération
             via notre formulaire de contact.
           </p>
 
@@ -65,7 +65,7 @@ const AccountDisabledModal = ({ open, onClose }) => {
             >
               Accéder au formulaire
             </a>
-            
+
             <button
               onClick={onClose}
               type="button"
@@ -113,7 +113,7 @@ const Sign = ({ setAuth }) => {
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
-    setIsSignUpForm(searchParams.get('reister'));
+    setIsSignUpForm(searchParams.get('register'));
   }, []);
 
   useEffect(() => {
@@ -171,7 +171,7 @@ const Sign = ({ setAuth }) => {
         setManualSecret(response.data.twoFASetup.manualSecret);
         setError(null);
       } catch (error) {
-        setError(error.data.message || errorMessages.default);
+        setError(errorMessages[error.data?.message] || error.data?.message || errorMessages.default);
         setAuthStep('initial');
         setTempToken(null);
       }
@@ -206,6 +206,32 @@ const Sign = ({ setAuth }) => {
 
   const validatePassword = pw => {
     return /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{12,}$/.test(pw);
+  };
+
+  const handleError = error => {
+    // Gestion de l'erreur 403 côté catch (au cas où)
+    if (error?.response?.status === 403 || error?.status === 403) {
+      setShowAccountDisabledModal(true);
+      return false;
+    }
+    setError(() => {
+      // Find if any errorMessages key is included in error.data?.message
+      if (error.message) {
+        const matchingKey = Object.keys(errorMessages).find(key =>
+          key !== 'default' && error.message.includes(key)
+        );
+
+        if (matchingKey) {
+          return errorMessages[matchingKey];
+        }
+      }
+
+      // Fall back to original behavior if no matching key found
+      return errorMessages[error.data?.message] ||
+        error.data?.message ||
+        errorMessages.default;
+    });
+    return false;
   };
 
   const handleSubmit = async e => {
@@ -314,14 +340,7 @@ const Sign = ({ setAuth }) => {
       }
       return true;
     } catch (error) {
-      // Gestion de l’erreur 403 côté catch (au cas où)
-      if (error?.response?.status === 403 || error?.status === 403) {
-        setShowAccountDisabledModal(true);
-        return false;
-      }
-      const errorMessage = error.data?.message || error.message || errorMessages.default;
-      setError(errorMessage);
-      return false;
+      return handleError(error);
     }
   };
 
@@ -452,14 +471,8 @@ const Sign = ({ setAuth }) => {
       }
       return true;
     } catch (error) {
-      if (error?.response?.status === 403 || error?.status === 403) {
-        setShowAccountDisabledModal(true);
-        return false;
-      }
       setCountEchec2FACode(prev => prev + 1);
-      const errorMessage = error.data?.message || error.message || errorMessages.default;
-      setError(errorMessage);
-      return false;
+      return handleError(error);
     }
   };
 
@@ -494,8 +507,7 @@ const Sign = ({ setAuth }) => {
       setError(response.message);
       setAuthStep('initial');
     } catch (error) {
-      const errorMessage = error.data.message || errorMessages.default;
-      setError(errorMessage);
+      return handleError(error);
     }
   };
 

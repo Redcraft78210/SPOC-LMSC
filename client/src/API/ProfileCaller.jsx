@@ -34,7 +34,7 @@ const handleError = (error) => {
 // Récupérer le profil de l'utilisateur connecté
 const getUserProfile = async () => {
   try {
-    const response = await api.get('/profile/');
+    const response = await api.get('/users/profile');
     return {
       status: response.status,
       data: response.data,
@@ -48,7 +48,7 @@ const getUserProfile = async () => {
 // Mettre à jour le profil utilisateur
 const updateUserProfile = async (profileData) => {
   try {
-    const response = await api.put('/profile/', profileData);
+    const response = await api.put('/users/profile/', profileData);
     return {
       status: response.status,
       data: response.data,
@@ -62,7 +62,7 @@ const updateUserProfile = async (profileData) => {
 // Changer le mot de passe
 const changePassword = async ({ oldPassword, newPassword }) => {
   try {
-    const response = await api.put('/profile/password', { oldPassword, newPassword });
+    const response = await api.put('/users/profile/password', { oldPassword, newPassword });
     return {
       status: response.status,
       data: response.data,
@@ -169,7 +169,7 @@ const disable2FA = async ({ code }) => {
 // Récupérer les préférences de notification
 const getNotificationPreferences = async () => {
   try {
-    const response = await api.get('/profile/notifications');
+    const response = await api.get('/users/profile/notifications');
     return {
       status: response.status,
       data: response.data,
@@ -183,7 +183,7 @@ const getNotificationPreferences = async () => {
 // Mettre à jour les préférences de notification
 const updateNotificationPreferences = async (preferences) => {
   try {
-    const response = await api.put('/profile/notifications', preferences);
+    const response = await api.put('/users/profile/notifications', preferences);
     return {
       status: response.status,
       data: response.data,
