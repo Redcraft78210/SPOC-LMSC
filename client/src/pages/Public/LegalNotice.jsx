@@ -40,7 +40,7 @@ const LegalNotice = () => {
                 </div>
                 <div>
                   <p className="font-semibold text-gray-800">Directeur de la publication :</p>
-                  <p className="text-gray-700">[Nom du responsable]</p>
+                  <p className="text-gray-700">Mr Eric Maquer</p>
                 </div>
                 <div>
                   <p className="font-semibold text-gray-800">Développement et conception :</p>
@@ -53,9 +53,9 @@ const LegalNotice = () => {
               <h3 className="text-2xl font-bold text-gray-800 mb-4">2. Hébergement</h3>
               <div className="pl-6">
                 <p className="text-gray-700">Le site SPOC-LMSC est hébergé par :</p>
-                <p className="text-gray-700">[Nom de l&apos;hébergeur]</p>
-                <p className="text-gray-700">[Adresse de l&apos;hébergeur]</p>
-                <p className="text-gray-700">[Contact de l&apos;hébergeur]</p>
+                <p className="text-gray-700">Lycée Militaire de Saint-Cyr</p>
+                <p className="text-gray-700">2 avenue Jean Jaurès, 78210 Saint-Cyr-l&apos;École</p>
+                <p className="text-gray-700">Téléphone : +33 1 23 45 67 89</p>
               </div>
             </div>
 

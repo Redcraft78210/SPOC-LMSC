@@ -2,7 +2,7 @@ import { useState } from 'react';
 import PublicNavbar from '../../components/PublicComp/PublicNavbar';
 import Footer from '../../components/PublicComp/Footer';
 
-const API_URL = 'https://localhost:8443/api';
+const BASE_URL = 'https://localhost:8443/api';
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -28,7 +28,7 @@ const Contact = () => {
     setStatus('loading');
 
     try {
-      const response = await fetch(`${API_URL}/contact`, {
+      const response = await fetch(`${BASE_URL}/contact`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

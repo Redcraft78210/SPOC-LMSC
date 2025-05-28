@@ -12,6 +12,7 @@ import About from './pages/Public/About';
 import Contact from './pages/Public/Contact';
 import Terms from './pages/Public/TermsOfUse';
 import Legal from './pages/Public/LegalNotice';
+import Privacy from './pages/Public/PrivacyPolicy';
 import FirstLogin from './pages/FirstLogin';
 import Dashboard from './pages/Dashboard'; // Utilisation du composant fusionné
 import Home from './pages/Public/Home';
@@ -64,6 +65,7 @@ const publicRouteConfig = [
   { path: '/contact', content: 'Contact' },
   { path: '/terms', content: 'Terms' },
   { path: '/legal', content: 'Legal' },
+  { path: '/privacy', content: 'Privacy' },
 ];
 
 function AppWrapper() {
@@ -196,6 +198,8 @@ function App() {
                   return <Terms />;
                 case 'Legal':
                   return <Legal />;
+                case 'Privacy':
+                  return <Privacy />;
                 default:
                   return <NotFound />;
               }
