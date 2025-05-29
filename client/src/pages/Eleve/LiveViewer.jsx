@@ -16,6 +16,8 @@ import {
 const INACTIVITY_THRESHOLD = 60000; // 1 minute in ms
 const TEN_MINUTES = 600; // 600 seconds
 
+const WSS_BASE_URL = "wss://localhost:8443/api"
+
 // Extracted loading spinner component
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center h-screen" role="status">
@@ -429,7 +431,7 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled }) => {
   // WebSocket management
   useEffect(() => {
     const connectWebSocket = () => {
-      const ws = new WebSocket(`wss://localhost:8443/chat?token=${authToken}`);
+      const ws = new WebSocket(`${WSS_BASE_URL}/chat?token=${authToken}`);
       wsRef.current = ws;
 
       // Si on a déjà une connexion, on n'en crée pas une deuxième
