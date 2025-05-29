@@ -296,7 +296,7 @@ H264bsdCanvas.prototype.drawNextOutputPictureGL = function(width, height, croppi
 /**
  * Draw next output picture using ARGB data on a 2d canvas.
  */
-H264bsdCanvas.prototype.drawNextOuptutPictureRGBA = function(width, height, croppingParams, data) {
+H264bsdCanvas.prototype.drawNextOutputPictureRGBA = function(width, height, croppingParams, data) {
     var canvas = this.canvasElement;
 
     var croppingParams = null;
