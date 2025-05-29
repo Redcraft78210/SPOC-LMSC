@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 
 function NotFound() {
-  const authToken = localStorage.getItem('authToken');
+  const authToken = sessionStorage.getItem('authToken') || localStorage.getItem('authToken');
   const navigate = useNavigate();
 
   return (

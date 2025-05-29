@@ -6,8 +6,13 @@ import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 // Import react-mentions
 import { MentionsInput, Mention } from 'react-mentions';
+import {
+  getLiveById,
+  getLiveMessages,
+  sendLiveMessage,
+  logViewEngagement,
+} from '../../API/LiveCaller';
 
-const API_URL = 'https://localhost:8443/api';
 const INACTIVITY_THRESHOLD = 60000; // 1 minute in ms
 const TEN_MINUTES = 600; // 600 seconds
 
@@ -130,7 +135,12 @@ const LiveViewer = ({ authToken }) => {
     const handleVisibilityChange = () => {
       const visible = !document.hidden;
       setIsPageVisible(visible);
-      if (visible) lastUpdateTime = Date.now();
+      if (visible) {
+        logEngagement('visibility_return');
+        lastUpdateTime = Date.now();
+      } else {
+        logEngagement('visibility_lost');
+      }
     };
 
     const startTracking = () => {
@@ -168,67 +178,40 @@ const LiveViewer = ({ authToken }) => {
     };
   }, [streamData, isPageVisible, hasReachedTenMinutes, authToken, streamId]);
 
-  const logEngagement = useCallback(
-    type => {
-      fetch(`${API_URL}/streams/engagement`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`,
-        },
-        body: JSON.stringify({
-          streamId,
-          engagementType: type,
-          timestamp: new Date().toISOString(),
-        }),
-      }).catch(console.error);
-    },
-    [authToken, streamId]
-  );
+  const logEngagement = useCallback(() => {
+    try {
+      logViewEngagement({
+        streamId,
+        activeViewTime: Math.round(activeViewTime)
+      });
+    } catch (error) {
+      console.error("Failed to log engagement:", error);
+    }
+  }, [authToken, streamId, activeViewTime]);
 
-  const fetchStreamData = useCallback(
-    async signal => {
-      try {
-        // const response = await fetch(`${API_URL}/streams/${streamId}`, {
-        //   headers: { Authorization: `Bearer ${authToken}` },
-        //   signal,
-        // });
+  const fetchStreamData = useCallback(async signal => {
+    try {
+      setLoading(true);
+      const response = await getLiveById({ liveId: streamId });
 
-        // if (!response.ok) {
-        //   throw new Error(
-        //     response.status === 404
-        //       ? 'Stream non trouvé'
-        //       : 'Échec de la récupération des données'
-        //   );
-        // }
-
-        // const data = await response.json();
-        const data = {
-          auteur: 'Prof. Jean Dupont',
-          titre: 'Introduction à la physique quantique',
-          description:
-            "Ce live couvre les bases de la physique quantique, y compris les principes d'incertitude et la dualité onde-particule.",
-          date_heure_lancement: '2025-05-15 14:00:00',
-          est_programe: false,
-          chat_enabled: true,
-          matiere: 'Physique',
-        };
-        if (!signal.aborted) {
-          setStreamData(data);
-          setError(null);
-        }
-      } catch (err) {
-        if (!signal.aborted) {
-          setError(err.message);
-        }
-      } finally {
-        if (!signal.aborted) {
-          setLoading(false);
-        }
+      if (response.status === 200) {
+        setStreamData(response.data);
+        setError(null);
+      } else if (response.status === 404) {
+        setError('Stream non trouvé');
+      } else {
+        setError(response.message || 'Erreur lors du chargement du stream');
       }
-    },
-    [authToken, streamId]
-  );
+    } catch (err) {
+      if (!signal.aborted) {
+        setError(err.message || 'Erreur lors du chargement du stream');
+      }
+    } finally {
+      if (!signal.aborted) {
+        setLoading(false);
+      }
+    }
+  }, [streamId]);
 
   useEffect(() => {
     if (!streamId) return;
@@ -289,9 +272,9 @@ const LiveViewer = ({ authToken }) => {
     );
   if (!streamData) return null;
 
-  const isScheduled = streamData.est_programe;
-  const scheduledDate = isScheduled ? formatScheduledDate(streamData.date_heure_lancement) : null;
-  const timeRemaining = isScheduled ? calculateTimeRemaining(streamData.date_heure_lancement) : null;
+  const isScheduled = streamData.status === 'scheduled';
+  const scheduledDate = isScheduled ? formatScheduledDate(streamData.start_time) : null;
+  const timeRemaining = isScheduled ? calculateTimeRemaining(streamData.start_time) : null;
 
   return (
     <div className="space-y-6 p-4 max-w-7xl mx-auto">
@@ -305,13 +288,13 @@ const LiveViewer = ({ authToken }) => {
       <div className="mb-6 p-6 bg-white rounded-xl shadow-lg space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <span className="text-sm text-blue-700 font-semibold bg-blue-100 px-3 py-1 rounded-full">
-            {streamData.matiere}
+            {streamData.subject}
           </span>
           <time
             className="text-xs text-gray-500"
-            dateTime={streamData.date_heure_lancement}
+            dateTime={streamData.start_time}
           >
-            {new Date(streamData.date_heure_lancement).toLocaleDateString(
+            {new Date(streamData.start_time).toLocaleDateString(
               'fr-FR',
               {
                 weekday: 'long',
@@ -327,12 +310,12 @@ const LiveViewer = ({ authToken }) => {
         </div>
 
         <h1 className="text-2xl font-bold text-gray-900 leading-tight">
-          {streamData.titre}
+          {streamData.title}
         </h1>
 
         <div className="flex items-center gap-2 text-sm">
           <span className="text-gray-600">Par</span>
-          <span className="font-medium text-gray-800">{streamData.auteur}</span>
+          <span className="font-medium text-red-800 ">Professeur {streamData.professor}</span>
         </div>
 
         <p className="text-gray-700 text-base leading-relaxed">
@@ -347,7 +330,7 @@ const LiveViewer = ({ authToken }) => {
             streamId={streamId}
             controls={true}
           />
-          
+
           {isScheduled && (
             <div className="absolute inset-0 bg-gray-900/80 backdrop-blur-sm flex flex-col items-center justify-center text-white z-10">
               <div className="bg-gray-800/90 p-6 rounded-xl max-w-md text-center space-y-4">
@@ -360,7 +343,7 @@ const LiveViewer = ({ authToken }) => {
                 <p className="text-gray-300">Ce live commencera le</p>
                 <div className="font-medium text-xl">{scheduledDate?.day}</div>
                 <div className="text-2xl font-bold text-blue-400">{scheduledDate?.time}</div>
-                
+
                 {timeRemaining && (
                   <div className="mt-6 grid grid-cols-3 gap-2">
                     <div className="bg-gray-700 p-3 rounded-lg">
@@ -377,7 +360,7 @@ const LiveViewer = ({ authToken }) => {
                     </div>
                   </div>
                 )}
-                
+
                 <p className="text-sm text-gray-400 mt-4">
                   Revenez à l&apos;heure indiquée pour regarder ce live.
                 </p>
@@ -422,33 +405,26 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled }) => {
 
       setLoadingMessages(true);
       try {
-        const response = await fetch(`${API_URL}/streams/${streamId}/chat`, {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-          },
-        });
+        const response = await getLiveMessages({ liveId: streamId });
 
-        if (!response.ok) {
-          throw new Error("Échec de la récupération de l'historique du chat");
+        if (response.status === 200) {
+          setMessages(response.data.messages || []);
+          setError(null);
+        } else {
+          setError(response.message || "Erreur lors du chargement des messages");
         }
-
-        const chatHistory = await response.json();
-        setMessages(chatHistory.messages);
-        setError(null);
       } catch (err) {
-        console.error(
-          "Erreur lors de la récupération de l'historique du chat:",
-          err
-        );
+        console.error("Erreur lors de la récupération de l'historique du chat:", err);
         setError('Impossible de charger les messages précédents.');
       } finally {
         setLoadingMessages(false);
       }
     };
 
-    fetchChatHistory();
-  }, [streamId, authToken]);
+    if (chatEnabled && !isScheduled) {
+      fetchChatHistory();
+    }
+  }, [streamId, authToken, chatEnabled, isScheduled]);
 
   // WebSocket management
   useEffect(() => {
@@ -462,14 +438,14 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled }) => {
       }
 
       ws.onopen = () => {
-        console.log('WebSocket connection established successfully');
+        
         setError(null);
       };
 
       ws.onmessage = event => {
         try {
           const data = JSON.parse(event.data);
-          console.log('Message WebSocket reçu:', data); // Pour débugger
+           // Pour débugger
 
           switch (data.type) {
             case 'new_message':
@@ -498,7 +474,7 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled }) => {
               break;
 
             default:
-              console.log('Type de message non géré:', data.type);
+              
           }
         } catch (err) {
           console.error('Erreur lors du traitement du message WebSocket:', err);
@@ -506,7 +482,7 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled }) => {
       };
 
       ws.onclose = () => {
-        console.log('WebSocket connection closed');
+        
       };
 
       ws.onerror = error => {
@@ -532,27 +508,20 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled }) => {
       if (!streamId || !authToken) return;
 
       try {
-        // In a real implementation, fetch participants from your API
-        // For now, using placeholder data
-        // const response = await fetch(
-        //   `${API_URL}/streams/${streamId}/participants`,
-        //   {
-        //     headers: { Authorization: `Bearer ${authToken}` },
-        //   }
-        // );
+        // const response = await getLiveParticipants({ liveId: streamId });
 
-        // if (!response.ok) {
-        //   throw new Error('Échec de la récupération des participants');
+        // if (response.status === 200) {
+        //   setParticipants(response.data || []);
+        // } else {
+        //   console.error("Erreur lors de la récupération des participants:", response.message);
         // }
 
-        // const data = await response.json();
-        // Using mock data for demonstration
         const data = [
-          { id: '1', display: 'Professeur Dupont' },
-          { id: '2', display: 'Jean Martin' },
-          { id: '3', display: 'Marie Robert' },
-          // Add more users as needed
+          { id: '1', display: 'Alice Dupont' },
+          { id: '2', display: 'Bob Martin' },
+          { id: '3', display: 'Charlie Dupont' },
         ];
+
         setParticipants(data);
       } catch (err) {
         console.error('Erreur lors de la récupération des participants:', err);
@@ -595,22 +564,25 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled }) => {
       const message = input.trim();
       setInput(''); // Clear input right away
 
-      // Instead of using HTTP, send message via WebSocket
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(
-          JSON.stringify({
-            type: 'chat_message',
-            liveId: streamId,
-            message: message,
-            tempId: tempId,
-          })
-        );
-      } else {
-        throw new Error('WebSocket not connected');
+      const response = await sendLiveMessage({
+        liveId: streamId,
+        message: message,
+        tempId: tempId
+      });
+
+      if (response.status !== 201) {
+        if (response.message?.includes('forbidden words')) {
+          setShowDisciplinaryWarning(true);
+          setDisciplinaryWarning(response.message);
+        } else {
+          setError(response.message || "Erreur lors de l'envoi du message");
+        }
+        // Rollback optimistic update
+        setMessages(prev => prev.filter(msg => msg.tempId !== tempId));
       }
-    } catch (err) {
-      console.error("Erreur lors de l'envoi du message:", err);
-      setError("Impossible d'envoyer le message.");
+    } catch (error) {
+      console.error("Erreur lors de l'envoi du message:", error);
+      setError("Erreur lors de l'envoi du message");
       // Rollback optimistic update
       setMessages(prev => prev.filter(msg => msg.tempId !== tempId));
     } finally {
@@ -760,35 +732,33 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled }) => {
             >
               <div className="flex items-baseline gap-2">
                 <span
-                  className={`text-sm font-medium ${
-                    isScheduled ? 'text-gray-400' : 
-                    msg.User?.name?.includes('Professeur')
-                      ? 'text-red-600 font-semibold'
-                      : 'text-blue-600'
-                  }`}
+                  className={`text-sm font-medium ${isScheduled ? 'text-gray-400' :
+                      msg.User?.name?.includes('Professeur')
+                        ? 'text-red-600 font-semibold'
+                        : 'text-blue-600'
+                    }`}
                 >
-                  {isScheduled 
-                    ? '••••••••' 
+                  {isScheduled
+                    ? '••••••••'
                     : userId === msg.user_id
                       ? 'Vous'
                       : msg.User?.name || 'Anonyme'}
                 </span>
                 <time className="text-[0.7rem] text-gray-400 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                  {isScheduled 
-                    ? '••:••' 
+                  {isScheduled
+                    ? '••:••'
                     : new Date(msg.createdAt).toLocaleTimeString('fr-FR', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
                 </time>
               </div>
               <div
-                className={`p-2 text-sm ${isScheduled ? 'text-gray-400' : 'text-gray-700'} bg-gray-50 rounded-lg border border-gray-100 shadow-sm max-w-[85%] ${
-                  msg.user_id === userId ? 'mr-auto' : ''
-                }`}
+                className={`p-2 text-sm ${isScheduled ? 'text-gray-400' : 'text-gray-700'} bg-gray-50 rounded-lg border border-gray-100 shadow-sm max-w-[85%] ${msg.user_id === userId ? 'mr-auto' : ''
+                  }`}
               >
-                {isScheduled 
-                  ? '•••••••••••••••••••••••••••••••••' 
+                {isScheduled
+                  ? '•••••••••••••••••••••••••••••••••'
                   : renderMessageContent(msg.content)}
               </div>
             </div>

@@ -5,15 +5,15 @@
 
 // const Lives = () => {
 //     const [lives, setLives] = useState([]);
-//     const studentId = jwtDecode(localStorage.getItem('authToken')).id;
-//     const classId = jwtDecode(localStorage.getItem('authToken')).classId;
+//     const studentId = jwtDecode(sessionStorage.getItem('authToken') || localStorage.getItem('authToken')).id;
+//     const classId = jwtDecode(sessionStorage.getItem('authToken') || localStorage.getItem('authToken')).classId;
 
 //     useEffect(() => {
 //         const fetchLives = async () => {
 //             try {
 //                 const response = await axios.get(`/api/lives/class/${classId}`, {
 //                     headers: {
-//                         Authorization: `Bearer ${localStorage.getItem('authToken')}`,
+//                         Authorization: `Bearer ${sessionStorage.getItem('authToken') || localStorage.getItem('authToken')}`,
 //                     },
 //                 });
 //                 // check if response.data is an array and setLives to response.data

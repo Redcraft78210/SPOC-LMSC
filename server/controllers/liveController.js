@@ -8,7 +8,12 @@ const getLive = async (req, res) => {
     try {
         const { id } = req.params;
         const live = await Lives.findByPk(id);
+
         if (live) {
+            const teacher = await Teacher.findByPk(live.teacher_id, { attributes: ['surname'] });
+            if (teacher) {
+                live.dataValues.professor = teacher.surname;
+            }
             res.json(live);
         } else {
             res.status(404).json({ message: 'Live data not found' });
