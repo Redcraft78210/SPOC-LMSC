@@ -239,16 +239,16 @@ H264bsdCanvas.prototype.drawNextOutputPicture = function(width, height, cropping
     var gl = this.contextGL;
 
     if(gl) {
-        this.drawNextOuptutPictureGL(width, height, croppingParams, data);
+        this.drawNextOutputPictureGL(width, height, croppingParams, data);
     } else {
-        this.drawNextOuptutPictureRGBA(width, height, croppingParams, data);
+        this.drawNextOutputPictureRGBA(width, height, croppingParams, data);
     }
 };
 
 /**
  * Draw the next output picture using WebGL
  */
-H264bsdCanvas.prototype.drawNextOuptutPictureGL = function(width, height, croppingParams, data) {
+H264bsdCanvas.prototype.drawNextOutputPictureGL = function(width, height, croppingParams, data) {
     var gl = this.contextGL;
     var texturePosBuffer = this.texturePosBuffer;
     var yTextureRef = this.yTextureRef;
