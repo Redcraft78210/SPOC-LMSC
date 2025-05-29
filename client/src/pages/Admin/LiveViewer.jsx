@@ -14,7 +14,7 @@ import {
   getLiveParticipants
 } from '../../API/LiveCaller';
 
-const WSS_BASE_URL = "wss://localhost:8443/api";
+const WSS_BASE_URL = "wss://172.20.10.3/api";
 
 const INACTIVITY_THRESHOLD = 60000; // 1 minute in ms
 const TEN_MINUTES = 600; // 600 seconds

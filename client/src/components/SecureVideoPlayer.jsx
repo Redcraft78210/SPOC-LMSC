@@ -6,7 +6,7 @@ import "./style/plyr.css";
 import Logo from "../Logo";
 import { Play } from "lucide-react";
 
-const BASE_URL = "https://localhost:8443";
+const BASE_URL = "";
 
 const SecureVideoPlayer = ({ videoId, authToken, posterUrl, onError }) => {
   const videoRef = useRef(null);
