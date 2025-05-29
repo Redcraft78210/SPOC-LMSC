@@ -10,6 +10,8 @@ import {
   Shrink,
 } from 'lucide-react';
 
+const WSS_BASE_URL = 'wss://localhost:8443';
+
 const StreamReader = ({ authToken, controls }) => {
   const containerRef = useRef();
   const playerRef = useRef();
@@ -75,7 +77,7 @@ const StreamReader = ({ authToken, controls }) => {
 
   useEffect(() => {
     // Constants
-    const WSURL = 'wss://localhost:8443/stream?token=' + authToken;
+    const WSURL = `${WSS_BASE_URL}/stream?token=${authToken}`;
 
     // Create the Broadway player
     const player = new Player({
@@ -111,7 +113,7 @@ const StreamReader = ({ authToken, controls }) => {
       function () {
         if (audioContext.state === 'suspended') {
           audioContext.resume();
-          console.log('AudioContext resumed after user interaction');
+          
         }
       },
       { once: true }
@@ -157,12 +159,12 @@ const StreamReader = ({ authToken, controls }) => {
     wsRef.current = ws;
 
     ws.onopen = function () {
-      console.log('WebSocket connection opened');
+      
       setConnectionStatus('connected');
     };
 
     ws.onclose = function () {
-      console.log('WebSocket connection closed');
+      
       setConnectionStatus('disconnected');
     };
 

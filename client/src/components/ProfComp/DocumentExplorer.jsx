@@ -43,8 +43,7 @@ export default function DocumentExplorer({ onDocumentSelect }) {
   }, [selectedCourseId, courses]);
 
   const handleDocumentClick = async documentId => {
-    console.log('Document clicked with ID:', documentId);
-    const authToken = localStorage.getItem('authToken');
+    
 
     if (!documentId) {
       console.error('No document ID provided');
@@ -60,10 +59,9 @@ export default function DocumentExplorer({ onDocumentSelect }) {
     try {
       const detailsResponse = await Get_Document_Information({
         document_id: documentId,
-        authToken,
       });
 
-      console.log('Details response:', detailsResponse);
+      
 
       if (detailsResponse?.status === 200) {
         const documentDetails = detailsResponse.data;

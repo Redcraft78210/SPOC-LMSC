@@ -1,5 +1,4 @@
-import { Eye, EyeOff } from 'lucide-react';
-import axios from 'axios';
+import { Eye, EyeOff, TriangleAlert } from 'lucide-react';
 import { jwtDecode } from 'jwt-decode';
 import {
   LoadCanvasTemplate,
@@ -7,10 +6,20 @@ import {
   validateCaptcha,
 } from 'react-simple-captcha';
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect, useRef } from 'react'; // Add useRef import
+import { useState, useEffect, useRef } from 'react';
 import Logo from '../../Logo';
 import SubmitButton from '../../components/SubmitButton';
 import PropTypes from 'prop-types';
+
+// Importer les fonctions du AuthCaller
+import {
+  login,
+  register,
+  checkRegisterCode,
+  verifyTwoFA,
+  refreshTwoFASetup,
+  forgotPassword
+} from '../../API/AuthCaller';
 
 const errorMessages = {
   'auth/invalid-credentials': 'Identifiants incorrects',
@@ -25,9 +34,59 @@ const errorMessages = {
   default: 'Une erreur est survenue. Veuillez réessayer.',
 };
 
-const API_URL = 'https://172.16.84.19:443/api';
+const AccountDisabledModal = ({ open, onClose }) => {
+  if (!open) return null;
 
-const Sign = ({ setAuth, unsetLoggedOut }) => {
+  return (
+    <div className="fixed inset-0 z-50 backdrop-blur-sm bg-black/30 flex items-center justify-center p-4">
+      <div className="bg-white max-w-md w-full rounded-xl shadow-lg overflow-hidden">
+        <div className="p-6 sm:p-8 text-center">
+          <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100">
+            <TriangleAlert
+              className="h-8 w-8 text-red-600"
+              aria-hidden="true"
+            />
+          </div>
+
+          <h3 className="mt-6 text-xl font-semibold text-gray-900">
+            Compte désactivé
+          </h3>
+
+          <p className="mt-4 text-gray-600">
+            Votre compte a été désactivé. Pour contester cette décision ou obtenir
+            des informations supplémentaires, veuillez contacter l&apos;équipe de modération
+            via notre formulaire de contact.
+          </p>
+
+          <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
+            <a
+              href="/contact"
+              className="inline-flex justify-center items-center px-5 py-2.5 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 transition-colors"
+            >
+              Accéder au formulaire
+            </a>
+
+            <button
+              onClick={onClose}
+              type="button"
+              className="inline-flex justify-center items-center px-5 py-2.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+            >
+              Fermer
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+AccountDisabledModal.propTypes = {
+  open: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+};
+
+const Sign = ({ setAuth }) => {
   const navigate = useNavigate();
   const [error, setError] = useState(null);
   const [isSignUpForm, setIsSignUpForm] = useState(false);
@@ -44,16 +103,17 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
   const [name, setName] = useState('');
   const [surname, setSurname] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true);
+  const [rememberMe, setRememberMe] = useState(false);
   const [qrCodeData, setQrCodeData] = useState('');
   const [manualSecret, setManualSecret] = useState('');
   const [captchaValue, setCaptchaValue] = useState('');
   const [lastSubmit, setLastSubmit] = useState(0);
   const [code, setCode] = useState('');
+  const [showAccountDisabledModal, setShowAccountDisabledModal] = useState(false);
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
-    setIsSignUpForm(searchParams.get('reister'));
+    setIsSignUpForm(searchParams.get('register'));
   }, []);
 
   useEffect(() => {
@@ -92,23 +152,26 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
 
     const refresh2FASetup = async () => {
       try {
-        const { data } = await axios.post(
-          `${API_URL}/auth/refresh-2fa-setup`,
-          {
-            tempToken: tempToken?.value,
-            twoFASetup: { qrCode: qrCodeData, manualSecret },
-          }
-        );
-        const decodedToken = jwtDecode(data.tempToken);
+        // Utiliser le AuthCaller au lieu d'axios
+        const response = await refreshTwoFASetup({
+          tempToken: tempToken?.value,
+          twoFASetup: { qrCode: qrCodeData, manualSecret }
+        });
+
+        if (response.status !== 200) {
+          throw new Error(response.message || errorMessages.default);
+        }
+
+        const decodedToken = jwtDecode(response.data.tempToken);
         setTempToken({
-          value: data.tempToken,
+          value: response.data.tempToken,
           expiresAt: decodedToken.exp * 1000,
         });
-        setQrCodeData(data.twoFASetup.qrCode);
-        setManualSecret(data.twoFASetup.manualSecret);
+        setQrCodeData(response.data.twoFASetup.qrCode);
+        setManualSecret(response.data.twoFASetup.manualSecret);
         setError(null);
       } catch (error) {
-        setError(error.response.data.message || errorMessages.default);
+        setError(errorMessages[error.data?.message] || error.data?.message || errorMessages.default);
         setAuthStep('initial');
         setTempToken(null);
       }
@@ -145,6 +208,32 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
     return /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{12,}$/.test(pw);
   };
 
+  const handleError = error => {
+    // Gestion de l'erreur 403 côté catch (au cas où)
+    if (error?.response?.status === 403 || error?.status === 403) {
+      setShowAccountDisabledModal(true);
+      return false;
+    }
+    setError(() => {
+      // Find if any errorMessages key is included in error.data?.message
+      if (error.message) {
+        const matchingKey = Object.keys(errorMessages).find(key =>
+          key !== 'default' && error.message.includes(key)
+        );
+
+        if (matchingKey) {
+          return errorMessages[matchingKey];
+        }
+      }
+
+      // Fall back to original behavior if no matching key found
+      return errorMessages[error.data?.message] ||
+        error.data?.message ||
+        errorMessages.default;
+    });
+    return false;
+  };
+
   const handleSubmit = async e => {
     e.preventDefault();
     if (Date.now() - lastSubmit < 2000) return;
@@ -163,7 +252,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
         return setError("Veuillez entrer le code d'inscription");
       }
       if (!validatePassword(password)) {
-        console.log('password', password);
+
         return setError(errorMessages['auth/weak-password']);
       }
     }
@@ -178,63 +267,30 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
     }
 
     try {
-      const endpoint = isSignUpForm
-        ? `${API_URL}/auth/register`
-        : `${API_URL}/auth/login`;
-
-      const body = isSignUpForm
-        ? {
-            email: email.trim(),
-            username: username.trim(),
-            password: password.trim(),
-            name: name.trim(),
-            surname: surname.trim(),
-            registerCode: code.trim(),
-          }
-        : {
-            email: email.trim(),
-            password: password.trim(),
-          };
-
       if (isSignUpForm) {
-        let validRegisterCode = false;
-        try {
-          const res = await axios.post(
-            `${API_URL}/auth/check-register-code`,
-            { code }
-          );
+        // Vérifier le code d'inscription
+        const codeCheckResponse = await checkRegisterCode({ code });
 
-          if (res.data.error) {
-            throw new Error(res.data.error);
-          }
-
-          validRegisterCode = res.data.isValid;
-        } catch (error) {
-          const errorCode = error.response?.data?.message || 'default';
-          return setError(errorMessages[errorCode] || errorMessages.default);
+        if (!codeCheckResponse.data.isValid) {
+          throw new Error(codeCheckResponse.message || errorMessages['auth/invalid-register-code']);
         }
 
-        if (validRegisterCode) {
-          const { data } = await axios.post(endpoint, body);
+        // Enregistrer l'utilisateur
+        const registerResponse = await register({
+          email: email.trim(),
+          username: username.trim(),
+          password: password.trim(),
+          name: name.trim(),
+          surname: surname.trim(),
+          registerCode: code.trim(),
+        });
 
-          if (data.requires2FA || data.twoFASetup) {
-            setAuthStep(data.twoFASetup ? '2fa-setup' : '2fa-verification');
-            const decodedToken = jwtDecode(data.tempToken);
-            setTempToken({
-              value: data.tempToken,
-              expiresAt: decodedToken.exp * 1000,
-            });
-            if (data.twoFASetup) {
-              setQrCodeData(data.twoFASetup.qrCode);
-              setManualSecret(data.twoFASetup.manualSecret);
-            }
-          } else if (data.token) {
-            handleAuthSuccess(data.token);
-            return true; // Important pour le SubmitButton
-          }
+        if (registerResponse.status !== 200 && registerResponse.status !== 201) {
+          throw new Error(registerResponse.message || errorMessages.default);
         }
-      } else {
-        const { data } = await axios.post(endpoint, body);
+
+        const data = registerResponse.data;
+
         if (data.requires2FA || data.twoFASetup) {
           setAuthStep(data.twoFASetup ? '2fa-setup' : '2fa-verification');
           const decodedToken = jwtDecode(data.tempToken);
@@ -248,14 +304,43 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
           }
         } else if (data.token) {
           handleAuthSuccess(data.token);
-          return true; // Important pour le SubmitButton
+        }
+      } else {
+        // Connexion
+        const loginResponse = await login({
+          email: email.trim(),
+          password: password.trim(),
+        });
+
+        if (loginResponse.status === 403) {
+          setShowAccountDisabledModal(true);
+          return false;
+        }
+
+        if (loginResponse.status !== 200) {
+          throw new Error(loginResponse.message || errorMessages.default);
+        }
+
+        const data = loginResponse.data;
+
+        if (data.requires2FA || data.twoFASetup) {
+          setAuthStep(data.twoFASetup ? '2fa-setup' : '2fa-verification');
+          const decodedToken = jwtDecode(data.tempToken);
+          setTempToken({
+            value: data.tempToken,
+            expiresAt: decodedToken.exp * 1000,
+          });
+          if (data.twoFASetup) {
+            setQrCodeData(data.twoFASetup.qrCode);
+            setManualSecret(data.twoFASetup.manualSecret);
+          }
+        } else if (data.token) {
+          handleAuthSuccess(data.token);
         }
       }
       return true;
     } catch (error) {
-      const errorCode = error.response?.data?.message || 'default';
-      setError(errorMessages[errorCode] || errorMessages.default);
-      return false;
+      return handleError(error);
     }
   };
 
@@ -364,34 +449,41 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
     }
 
     try {
-      const endpoint = `${API_URL}/auth/verify-2fa`;
-
-      const { data } = await axios.post(endpoint, {
+      // Utiliser le AuthCaller au lieu d'axios
+      const response = await verifyTwoFA({
         tempToken: tempToken?.value,
-        code: fullCode, // Use the joined digits
+        code: fullCode,
         setup: authStep === '2fa-setup',
       });
 
-      if (data.token) {
-        handleAuthSuccess(data.token);
-        return true; // Important pour le SubmitButton
+      if (response.status === 403) {
+        setShowAccountDisabledModal(true);
+        return false;
+      }
+
+      if (response.status !== 200) {
+        throw new Error(response.message || errorMessages.default);
+      }
+
+      if (response.data.token) {
+        handleAuthSuccess(response.data.token);
+        return true;
       }
       return true;
     } catch (error) {
       setCountEchec2FACode(prev => prev + 1);
-      const errorCode = error.response?.data?.message || 'default';
-      setError(errorMessages[errorCode] || errorMessages.default);
-      return false;
+      return handleError(error);
     }
   };
 
   const handleAuthSuccess = token => {
     setAuth(token);
-    unsetLoggedOut(false);
     if (rememberMe) {
       localStorage.setItem('authToken', token);
+      sessionStorage.removeItem('authToken'); // Nettoie sessionStorage si besoin
     } else {
       sessionStorage.setItem('authToken', token);
+      localStorage.removeItem('authToken'); // Nettoie localStorage si besoin
     }
     navigate('/dashboard');
   };
@@ -405,19 +497,21 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
     }
 
     try {
-      await axios.post(`${API_URL}/auth/forgot-password`, {
-        email,
-      });
-      setError(
-        'Un email de réinitialisation a été envoyé. Veuillez vérifier votre boîte de réception.'
-      );
+      // Utiliser le AuthCaller au lieu d'axios
+      const response = await forgotPassword({ email: email.trim() });
+
+      if (response.status !== 200) {
+        throw new Error(response.message || errorMessages.default);
+      }
+
+      setError(response.message);
       setAuthStep('initial');
     } catch (error) {
-      const errorCode = error.response?.data?.message || 'default';
-      setError(errorMessages[errorCode] || errorMessages.default);
+      return handleError(error);
     }
   };
 
+  // Le reste du composant reste inchangé
   const toggleAuthMode = () => {
     setIsSignUpForm(!isSignUpForm);
     setError(null);
@@ -428,6 +522,7 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
     }
   };
 
+  // Le reste du composant reste inchangé (render2FAContent, renderForgotPasswordForm, renderInitialForm)
   const render2FAContent = () => (
     <form onSubmit={handle2FASubmit} className="w-full space-y-8">
       {authStep === '2fa-setup' && (
@@ -760,12 +855,17 @@ const Sign = ({ setAuth, unsetLoggedOut }) => {
               : renderInitialForm()}
         </section>
       </div>
+      {/* MODALE COMPTE DÉSACTIVÉ */}
+      <AccountDisabledModal
+        open={showAccountDisabledModal}
+        onClose={() => setShowAccountDisabledModal(false)}
+      />
     </section>
   );
 };
 
 Sign.propTypes = {
-  unsetLoggedOut: PropTypes.func,
   setAuth: PropTypes.func,
 };
+
 export default Sign;

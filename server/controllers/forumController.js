@@ -1,4 +1,5 @@
 const { Thread, Comment, User, sequelize } = require('../models');
+const { Op } = require('sequelize');
 
 const leoProfanity = require('leo-profanity');
 const frenchBadwordsList = require('french-badwords-list');
@@ -22,6 +23,7 @@ const containsForbiddenWords = (text) => {
 const getSortOrder = (sortBy) => {
     const sortOptions = {
         newest: [['createdAt', 'DESC']],
+        oldest: [['createdAt', 'ASC']], // Ajout de l'option oldest
         popular: [[sequelize.literal('"commentsCount"'), 'DESC']],
         trending: [
             [sequelize.literal('(commentsCount / (EXTRACT(EPOCH FROM NOW() - "Thread"."createdAt") / 3600))'), 'DESC']
@@ -34,22 +36,47 @@ const getSortOrder = (sortBy) => {
 const getThreads = async (req, res) => {
     try {
         // 1. Validation des paramètres
-        const { page = 1, limit = 10, sortBy = 'newest', search } = req.query;
+        const { 
+            page = 1, 
+            limit = 10, 
+            sortBy = 'newest', 
+            search = '', 
+            category = '', 
+            author = '' 
+        } = req.query;
+        
         const pageNumber = Math.max(1, parseInt(page, 10));
         const limitNumber = Math.min(Math.max(1, parseInt(limit, 10)), 100);
 
-        // 2. Construction dynamique des includes
+        // 2. Construction des conditions de recherche
+        const whereConditions = {};
+        
+        // Filtre par catégorie si spécifié
+        if (category && category !== 'all') {
+            whereConditions.category = category;
+        }
+        
+        // Recherche dans le titre et le contenu
+        if (search) {
+            whereConditions[Op.or] = [
+                { title: { [Op.iLike]: `%${search}%` } },
+                { content: { [Op.iLike]: `%${search}%` } }
+            ];
+        }
+
+        // 3. Construction dynamique des includes
         const userInclude = {
             model: User,
             attributes: ['id', 'username'],
-            required: false // toujours inclure le thread même sans user correspondant
+            required: false
         };
-        if (search) {
+        
+        // Filtre par auteur si spécifié
+        if (author) {
             userInclude.where = {
-                username: {
-                    [Op.iLike]: `%${search}%`
-                }
+                username: { [Op.iLike]: `%${author}%` }
             };
+            userInclude.required = true; // Rendons-le requis pour filtrer par auteur
         }
 
         const commentInclude = {
@@ -57,14 +84,16 @@ const getThreads = async (req, res) => {
             attributes: []
         };
 
-        // 3. Compter le total des threads (pour pagination)
+        // 4. Compter le total des threads (pour pagination)
         const totalItems = await Thread.count({
+            where: whereConditions,
             include: [userInclude],
             distinct: true
         });
 
-        // 4. Récupération des threads paginés avec le nombre de commentaires
+        // 5. Récupération des threads paginés avec le nombre de commentaires
         const threads = await Thread.findAll({
+            where: whereConditions,
             include: [
                 userInclude,
                 commentInclude
@@ -81,15 +110,15 @@ const getThreads = async (req, res) => {
             offset: (pageNumber - 1) * limitNumber
         });
 
-        // 5. Calcul de la pagination
+        // 6. Calcul de la pagination
         const totalPages = Math.ceil(totalItems / limitNumber);
         if (pageNumber > totalPages && totalPages > 0) {
             return res.status(400).json({
-                message: `Page invalide. Nombre maximum de pages : ${totalPages}`
+                message: `Page invalide. Nombre maximum de pages : ${totalPages}`
             });
         }
 
-        // 6. Formatage de la réponse
+        // 7. Formatage de la réponse
         return res.json({
             threads,
             totalItems,

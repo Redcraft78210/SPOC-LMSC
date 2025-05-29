@@ -13,9 +13,6 @@ const DocumentViewer = ({ url }) => {
   const [pageNumber, setPageNumber] = useState(1);
   const [error, setError] = useState(null);
 
-  console.log('PDF.js version:', pdfjs.version); // Debug version
-  console.log('Loading PDF from URL:', url); // Debug URL
-
   const onDocumentLoadSuccess = ({ numPages }) => {
     setNumPages(numPages);
     setError(null);
@@ -44,7 +41,7 @@ const DocumentViewer = ({ url }) => {
           onLoadSuccess={onDocumentLoadSuccess}
           onLoadError={error => {
             console.error('Error loading PDF:', error);
-            setError(error.message);
+            setError(error.data.message);
           }}
           loading={
             <div className="flex items-center justify-center h-[600px]">

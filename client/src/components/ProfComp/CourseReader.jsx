@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
-import SecureVideoPlayer from '../../components/SecureVideoPlayer';
-import SecureDocumentViewer from '../../components/SecureDocumentViewer';
+import SecureVideoPlayer from '../components/SecureVideoPlayer';
+import SecureDocumentViewer from '../components/SecureDocumentViewer';
 import { toast, Toaster } from 'react-hot-toast';
-
-const API_URL = 'https://localhost:8443/api';
+import { getCourseById, markCourseAsInProgress, markCourseAsCompleted } from '../../API/CourseCaller';
+import { downloadDocument } from '../../API/DocumentCaller';
 
 const CourseReader = ({ authToken }) => {
   const navigate = useNavigate();
@@ -14,76 +14,34 @@ const CourseReader = ({ authToken }) => {
   const [error, setError] = useState(null);
   const [documentError, setDocumentError] = useState(null);
   const courseId = new URLSearchParams(window.location.search).get('courseId');
+  const [completed, setCompleted] = useState(false);
 
   useEffect(() => {
     const fetchCourseData = async () => {
       try {
-        // const response = await fetch(`/api/cours/${courseId}`, {
-        //   headers: {
-        //     Authorization: `Bearer ${authToken}`,
-        //   },
-        // });
+        const response = await getCourseById({ courseId });
+        
+        if (response.status !== 200) throw new Error('Cours non trouvé');
+        
+        // Marquer le cours comme commencé
+        try {
+          const progressResponse = await markCourseAsInProgress({ courseId });
+          
+          if (progressResponse.status !== 200) {
+            if (progressResponse.status === 400 && 
+                progressResponse.message === 'Cannot mark as in progress, already completed') {
+              setCompleted(true);
+              toast.success('Vous avez déjà terminé ce cours.\nVous pouvez le revoir à tout moment.');
+            } else {
+              throw new Error(progressResponse.message || 'Erreur lors de la validation');
+            }
+          }
+        } catch (err) {
+          console.error('Error marking course as in progress:', err);
+          throw err;
+        }
 
-        // if (!response.ok) throw new Error("Cours non trouvé");
-        // const data = await response.json();
-        const data = {
-          Matière: 'math_info', // La matière : Mathématiques et Informatique
-          chapitre: 'nombres_complexes', // Chapitre sur les nombres complexes
-          titre: 'Introduction aux Nombres Imaginaires', // Titre du cours
-          date_creation: '2025-03-15T10:30:00Z', // Date de création en format ISO
-          description:
-            "Ce cours présente les bases des nombres imaginaires et leur utilité dans la résolution d'équations quadratiques.", // Brève description
-          'Date de création': '2025-03-15T10:30:00Z', // Date de création en format ISO
-          ID_cours: 'cours_123456', // Identifiant unique du cours
-          video: {
-            video_id: '3f4b538504facde3c881b73844f52f24-1742237522', // ID unique de la vidéo
-            date_mise_en_ligne: '2025-03-20T14:00:00Z', // Date de mise en ligne de la vidéo
-          },
-          documents: [
-            {
-              document_id: '3f4b538504facde3c881b73844f52f24-1742237522', // Premier document associé
-              title: 'Introduction aux Nombres Imaginaires',
-              description: 'Description du premier document',
-              date_mise_en_ligne: '2025-03-18T08:45:00Z', // Date de mise en ligne
-            },
-            {
-              document_id: 'doc_002', // Deuxième document associé
-              title: 'Explication des Nombres Imaginaires',
-              description: 'Description du deuxième document',
-              date_mise_en_ligne: '2025-03-19T09:15:00Z', // Date de mise en ligne
-            },
-          ],
-        };
-
-        // const data = {
-        //   Matière: 'math_info', // La matière : Mathématiques et Informatique
-        //   chapitre: 'nombres_complexes', // Chapitre sur les nombres complexes
-        //   titre: 'Introduction aux Nombres Imaginaires', // Titre du cours
-        //   date_creation: '2025-03-15T10:30:00Z', // Date de création en format ISO
-        //   description:
-        //     "Ce cours présente les bases des nombres imaginaires et leur utilité dans la résolution d'équations quadratiques.", // Brève description
-        //   'Date de création': '2025-03-15T10:30:00Z', // Date de création en format ISO
-        //   ID_cours: 'cours_123456', // Identifiant unique du cours
-        //   documents: [
-        //     {
-        //       document_id: '3f4b538504facde3c881b73844f52f24-1742237522', // Premier document associé
-        //       title: 'Introduction aux Nombres Imaginaires',
-        //       description: 'Description du premier document',
-        //       date_mise_en_ligne: '2025-03-18T08:45:00Z', // Date de mise en ligne
-        //     },
-        //     // {
-        //     //   document_id: '3f4b538504facde3c881b73844f52f24-1742237522', // Deuxième document associé
-        //     //   title: 'Explication des Nombres Imaginaires',
-        //     //   description: 'Description du deuxième document',
-        //     //   date_mise_en_ligne: '2025-03-19T09:15:00Z', // Date de mise en ligne
-        //     // },
-        //   ],
-        // };
-
-        // Extraction de la première entrée du cours
-        const { ...content } = data;
-
-        setCourseData(content);
+        setCourseData(response.data);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -94,27 +52,36 @@ const CourseReader = ({ authToken }) => {
     fetchCourseData();
   }, [courseId, authToken]);
 
-  const handleDownloadDocument = async documentId => {
+  const handleCompleteCourse = async () => {
     try {
-      const response = await fetch(
-        `${API_URL}/documents/download/${documentId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${authToken}`, // Make sure authToken is in scope
-          },
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erreur lors du téléchargement');
+      const response = await markCourseAsCompleted({ courseId });
+      
+      if (response.status !== 200) {
+        throw new Error(response.message || 'Erreur lors de la validation');
       }
 
-      const blob = await response.blob();
+      toast.success('Cours terminé !');
+      setCompleted(true);
+    } catch (err) {
+      console.error('Completion error:', err);
+      toast.error(err.message || 'Erreur lors de la validation');
+    }
+  };
+
+  const handleDownloadDocument = async documentId => {
+    try {
+      const response = await downloadDocument({ documentId });
+      
+      if (response.status !== 200) {
+        throw new Error(response.message || 'Erreur lors du téléchargement');
+      }
+
+      // Traitement du blob retourné
+      const blob = response.data;
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `${documentId}.pdf`);
+      link.setAttribute('download', `${courseData.titre.replace(/[^a-z0-9]/gi, '_')}.pdf`);
       document.body.appendChild(link);
       link.click();
 
@@ -224,14 +191,16 @@ const CourseReader = ({ authToken }) => {
       )}
 
       {/* Bouton "Cours terminé" */}
-      <div className="text-center mt-8">
-        <button
-          onClick={() => toast.success('Cours terminé !')}
-          className="bg-blue-600 text-white px-6 py-3 rounded-md text-lg hover:bg-green-700 transition-colors"
-        >
-          Cours terminé
-        </button>
-      </div>
+      {!completed && (
+        <div className="text-center mt-8">
+          <button
+            onClick={handleCompleteCourse}
+            className="bg-blue-600 text-white px-6 py-3 rounded-md text-lg hover:bg-green-700 transition-colors"
+          >
+            Marquer comme terminé
+          </button>
+        </div>
+      )}
     </div>
   );
 };

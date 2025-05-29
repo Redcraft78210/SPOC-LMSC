@@ -44,7 +44,7 @@ export default function FileExplorer({ setIdVideo, onVideoSelect }) {
 
   const handleVideoClick = async videoId => {
     // Debug log for video ID
-    console.log('Video clicked with ID:', videoId);
+    
 
     if (!videoId) {
       console.error('No video ID provided');
@@ -54,7 +54,7 @@ export default function FileExplorer({ setIdVideo, onVideoSelect }) {
     setLoading(true);
     try {
       const detailsResponse = await getVideoDetails(videoId);
-      console.log('Details response:', detailsResponse);
+      
 
       if (detailsResponse?.status === 200) {
         const videoDetails = detailsResponse.data;
