@@ -7,11 +7,7 @@ const Footer = () => {
     { name: 'Contact', href: '/contact' },
   ];
 
-  const footerPages = [
-    { name: 'Politique de Confidentialité', href: '/privacy' },
-    { name: 'Conditions d\'Utilisation', href: '/terms' },
-    { name: 'Mentions Légales', href: '/legal' },
-  ];
+  const footerPages = ['privacy', 'terms', 'cookies'];
 
   const navigate = useNavigate();
 
@@ -47,17 +43,17 @@ const Footer = () => {
           <div>
             <h4 className="text-lg font-semibold mb-4">Légal</h4>
             <ul className="space-y-2 text-gray-400">
-              {footerPages.map(({ name, href }) => (
-                <li key={href}>
+              {footerPages.map(page => (
+                <li key={page}>
                   <a
                     href="#"
                     onClick={e => {
                       e.preventDefault();
-                      navigate(href);
+                      navigate(`/${page}`);
                     }}
                     className="hover:text-white transition-colors"
                   >
-                    {name}
+                    {page.charAt(0).toUpperCase() + page.slice(1)}
                   </a>
                 </li>
               ))}

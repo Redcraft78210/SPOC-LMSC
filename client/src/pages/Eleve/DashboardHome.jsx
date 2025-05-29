@@ -1,21 +1,24 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
-import { getStudentProgress } from '../../API/CourseCaller'; // Ajout de cette fonction dans CourseCaller
+
+const API_URL = 'https://localhost:8443/api';
 
 const DashboardHome = ({ authToken }) => {
   const navigate = useNavigate();
   const [stats, setStats] = useState({ completedCourses: 0, liveSessions: 0 });
 
   useEffect(() => {
+    // Simuler un appel API pour récupérer les données
     const fetchData = async () => {
       try {
-        const response = await getStudentProgress();
-        if (response.status === 200) {
-          setStats(response.data);
-        } else {
-          console.error('Erreur:', response.message);
-        }
+        const statsData = await fetch(`${API_URL}/progress/stats`, {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+        }).then(res => res.json());
+
+        setStats(statsData);
       } catch (error) {
         console.error('Erreur lors de la récupération des données:', error);
       }

@@ -26,7 +26,7 @@ const CreateStream = () => {
     e.preventDefault();
     const title = e.target[0].value;
     const description = e.target[1].value;
-    
+    console.log("titre", title, "desc", description, "class", selectedClass);
   };
 
   return (

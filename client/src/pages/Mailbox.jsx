@@ -1,18 +1,4 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import PropTypes from 'prop-types';
-import {
-  getInboxMessages,
-  getSentMessages,
-  getTrashMessages,
-  getMessage,
-  markAsRead,
-  moveToTrash,
-  downloadAttachment,
-  sendMessage,
-  // restoreFromTrash,
-  deleteMessage as permanentlyDeleteMessage,
-  getAvailableRecipients
-} from '../API/MailboxCaller';
 import {
   Inbox,
   Send,
@@ -32,8 +18,12 @@ import {
   Users,
 } from 'lucide-react';
 import { toast, Toaster } from 'react-hot-toast';
+import axios from 'axios';
+import PropTypes from 'prop-types';
 
-const Mailbox = ({ role, onClose }) => {
+const API_URL = 'https://localhost:8443/api';
+
+const Mailbox = ({ authToken, role, onClose }) => {
   const [view, setView] = useState('inbox');
   const [messages, setMessages] = useState([]);
   const [selectedMessage, setSelectedMessage] = useState(null);
@@ -64,42 +54,46 @@ const Mailbox = ({ role, onClose }) => {
   const getEndpointForView = useCallback(() => {
     switch (view) {
       case 'inbox':
-        return getInboxMessages;
+        return 'inbox';
       case 'sent':
-        return getSentMessages;
+        return 'sent';
       case 'trash':
-        return getTrashMessages;
+        return 'trash';
       default:
-        return getInboxMessages;
+        return 'inbox';
     }
   }, [view]);
 
   const fetchMessages = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const fetchFunction = getEndpointForView();
-      const response = await fetchFunction({ 
-        page: pagination.currentPage, 
-        limit: 20,
-        filters
+      const endpoint = getEndpointForView();
+
+      // Using axios consistently for all API calls
+      const response = await axios.get(`${API_URL}/messages/${endpoint}`, {
+        params: {
+          page: pagination.currentPage,
+          unread: filters.unread,
+          hasAttachments: filters.hasAttachments,
+          fromContact: filters.fromContact,
+        },
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
       });
-      
-      if (response.status === 200) {
-        setMessages(response.data.messages);
-        setPagination({
-          currentPage: response.data.currentPage,
-          totalPages: response.data.totalPages,
-          totalMessages: response.data.total
-        });
-      } else {
-        console.error("Error fetching messages:", response.message);
-      }
+
+      setMessages(response.data.messages);
+      setPagination({
+        currentPage: response.data.currentPage,
+        totalPages: response.data.totalPages,
+        totalMessages: response.data.total,
+      });
     } catch (error) {
-      console.error("Erreur lors du chargement des messages:", error);
+      toast.error(`Error: ${error.response?.data?.message || error.message}`);
     } finally {
       setLoading(false);
     }
-  }, [filters, pagination.currentPage, getEndpointForView]);
+  }, [filters, pagination.currentPage, authToken, getEndpointForView]);
 
   useEffect(() => {
     fetchMessages();
@@ -108,75 +102,108 @@ const Mailbox = ({ role, onClose }) => {
   const handleMessageSelect = async messageId => {
     try {
       setLoadingMessageDetails(true);
-      const response = await getMessage({ messageId });
-      
-      if (response.status === 200) {
-        setSelectedMessage(response.data);
-        if (!response.data.read && view === 'inbox') {
-          await markAsRead({ messageId });
-          fetchMessages(); // Recharger pour mettre à jour les badges non lus
-        }
-      } else {
-        console.error("Error fetching message details:", response.message);
+      const response = await axios.get(`${API_URL}/messages/${messageId}`, {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+
+      const messageData = response.data;
+      setSelectedMessage(messageData);
+
+      // Mark as read if it's unread
+      if (!messageData.read && view === 'inbox') {
+        markAsRead(messageId);
       }
     } catch (error) {
-      console.error("Erreur lors du chargement du message:", error);
+      toast.error(`Error: ${error.response?.data?.message || error.message}`);
     } finally {
       setLoadingMessageDetails(false);
     }
   };
 
-  const deleteMessageHandler = async messageId => {
+  const markAsRead = async messageId => {
+    try {
+      await axios.put(
+        `${API_URL}/messages/${messageId}/read`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+        }
+      );
+
+      // Update the local messages array
+      setMessages(
+        messages.map(msg =>
+          msg.id === messageId ? { ...msg, read: true } : msg
+        )
+      );
+    } catch (error) {
+      console.error('Failed to mark message as read:', error);
+    }
+  };
+
+  const deleteMessage = async messageId => {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce message ?')) {
+      return;
+    }
+
     try {
       setDeletingMessage(true);
-      let response;
-      
-      if (view === 'trash') {
-        response = await permanentlyDeleteMessage({ messageId });
-      } else {
-        response = await moveToTrash({ messageId });
+      await axios.delete(`${API_URL}/messages/${messageId}`, {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+
+      toast.success('Message supprimé avec succès');
+
+      if (selectedMessage?.id === messageId) {
+        setSelectedMessage(null);
       }
-      
-      if (response.status === 200) {
-        if (selectedMessage && selectedMessage.id === messageId) {
-          setSelectedMessage(null);
-        }
-        fetchMessages();
-      } else {
-        console.error("Error deleting message:", response.message);
-      }
+
+      fetchMessages();
     } catch (error) {
-      console.error("Erreur lors de la suppression du message:", error);
+      toast.error(`Error: ${error.response?.data?.message || error.message}`);
     } finally {
       setDeletingMessage(false);
     }
   };
 
-  const downloadAttachmentHandler = async (attachmentId, filename) => {
+  const downloadAttachment = async (attachmentId, filename) => {
     try {
       setDownloadingAttachments(prev => ({ ...prev, [attachmentId]: true }));
-      const response = await downloadAttachment({ attachmentId });
-      
-      if (response.status === 200) {
-        // Téléchargement du fichier
-        const blob = response.data;
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', filename);
-        document.body.appendChild(link);
-        link.click();
-        
-        // Cleanup
-        setTimeout(() => {
-          document.body.removeChild(link);
-          window.URL.revokeObjectURL(url);
-        }, 100);
-      } else {
-        console.error("Error downloading attachment:", response.message);
-      }
+      const response = await axios.get(
+        `${API_URL}/messages/attachments/${attachmentId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+          responseType: 'blob',
+        }
+      );
+
+      // Create a download link
+      const url = window.URL.createObjectURL(response.data);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = filename;
+
+      // Append to the document and trigger download
+      document.body.appendChild(a);
+      a.click();
+
+      // Clean up
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast.success(`Téléchargement terminé: ${filename}`);
     } catch (error) {
-      console.error("Erreur lors du téléchargement de la pièce jointe:", error);
+      toast.error(
+        `Error downloading attachment: ${error.response?.data?.message || error.message}`
+      );
     } finally {
       setDownloadingAttachments(prev => ({ ...prev, [attachmentId]: false }));
     }
@@ -208,17 +235,22 @@ const Mailbox = ({ role, onClose }) => {
     const fetchAvailableRecipients = useCallback(async () => {
       try {
         setLoadingRecipients(true);
-        const response = await getAvailableRecipients({ 
-          type: recipientType 
+        let endpoint = 'users?mailboxrecipients=true';
+
+        const response = await fetch(`${API_URL}/${endpoint}`, {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
         });
-        
-        if (response.status === 200) {
-          setAvailableRecipients(response.data || []);
-        } else {
-          console.error("Error fetching recipients:", response.message);
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch recipients');
         }
+
+        const users = await response.json();
+        setAvailableRecipients(users);
       } catch (error) {
-        console.error("Erreur lors du chargement des destinataires:", error);
+        toast.error(`Error: ${error.message}`);
       } finally {
         setLoadingRecipients(false);
       }
@@ -302,7 +334,7 @@ const Mailbox = ({ role, onClose }) => {
         setRecipients(prevRecipients => {
           // Check if the user is already selected
           if (!prevRecipients.some(r => r.id === selectedUser.id)) {
-            
+            console.log('Selected user:', selectedUser);
             return [...prevRecipients, selectedUser];
           }
           return prevRecipients;
@@ -319,57 +351,72 @@ const Mailbox = ({ role, onClose }) => {
 
     const handleSubmit = async e => {
       e.preventDefault();
-      
-      if (recipients.length === 0) {
-        toast.error("Veuillez sélectionner au moins un destinataire");
-        return;
-      }
-      
+
       if (!subject.trim()) {
-        toast.error("Veuillez saisir un objet");
+        toast.error('Le sujet est requis');
         return;
       }
-      
+
       if (!content.trim()) {
-        toast.error("Veuillez saisir un message");
+        toast.error('Le message est vide');
         return;
       }
-      
+
+      if (recipientType === 'individual' && recipients.length === 0) {
+        toast.error('Veuillez sélectionner au moins un destinataire');
+        return;
+      }
+
       setSending(true);
-      
+
       try {
         const formData = new FormData();
-        
-        // Ajouter les destinataires
-        recipients.forEach(recipient => {
-          formData.append('recipients[]', recipient.id);
+        formData.append('subject', subject);
+        formData.append('content', content);
+        formData.append('recipientType', recipientType);
+
+        // Add recipients IDs if individual recipients
+        if (recipientType === 'individual') {
+          recipients.forEach(recipient => {
+            formData.append('recipients[]', recipient.id);
+          });
+        }
+
+        // Determine endpoint based on attachments
+        let endpoint = '/messages';
+        let content_type = 'application/json';
+
+        // Add attachments if any
+        if (attachments.length > 0) {
+          content_type = 'multipart/form-data';
+          attachments.forEach(file => {
+            formData.append('attachments', file);
+          });
+        } else {
+          endpoint = '/messages/no-attachments';
+        }
+
+        const response = await axios.post(`${API_URL}${endpoint}`, formData, {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+            'Content-Type': content_type,
+          },
         });
-        
-        formData.append('subject', subject.trim());
-        formData.append('content', content.trim());
-        
-        // Ajouter les pièces jointes
-        Array.from(attachments).forEach(file => {
-          formData.append('attachments', file);
-        });
-        
-        const response = await sendMessage(formData);
-        
+
         if (response.status === 201) {
-          toast.success("Message envoyé avec succès");
+          toast.success('Message envoyé avec succès');
           closeComposeModal();
           fetchMessages();
-        } else {
-          toast.error(response.message || "Erreur lors de l'envoi du message");
         }
       } catch (error) {
-        console.error("Erreur lors de l'envoi du message:", error);
-        toast.error("Erreur lors de l'envoi du message");
+        toast.error(
+          `Erreur d'envoi: ${error.response?.data?.message || error.message}`
+        );
       } finally {
         setSending(false);
       }
     };
-    
+
     return (
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
         <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[85vh] overflow-hidden mx-4">
@@ -1096,7 +1143,7 @@ const Mailbox = ({ role, onClose }) => {
                       <ChevronLeft size={20} />
                     </button>
                     <button
-                      onClick={() => deleteMessageHandler(selectedMessage.id)}
+                      onClick={() => deleteMessage(selectedMessage.id)}
                       className={`p-2 text-gray-500 hover:text-red-600 ${
                         deletingMessage ? 'opacity-50 cursor-not-allowed' : ''
                       }`}
@@ -1211,7 +1258,7 @@ const Mailbox = ({ role, onClose }) => {
                               {attachment.scanStatus === 'clean' ? (
                                 <button
                                   onClick={() =>
-                                    downloadAttachmentHandler(
+                                    downloadAttachment(
                                       attachment.id,
                                       attachment.originalFilename
                                     )
@@ -1303,6 +1350,7 @@ const Mailbox = ({ role, onClose }) => {
 };
 
 Mailbox.propTypes = {
+  authToken: PropTypes.string.isRequired,
   user: PropTypes.shape({
     id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     name: PropTypes.string,

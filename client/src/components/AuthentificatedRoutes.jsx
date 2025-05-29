@@ -23,12 +23,13 @@ const routeConfig = [
 
 function AuthenticatedRoutes({ auth, role, handleLogout }) {
   useEffect(() => {
-    const token = sessionStorage.getItem('authToken') || localStorage.getItem('authToken');
+    const token = localStorage.getItem('authToken');
     if (!token || (auth && auth.exp * 1000 < Date.now())) {
       handleLogout();
     }
   }, [auth]);
 
+  console.log('rer');
   let DashboardComponent;
   switch (role) {
     case 'Professeur':
@@ -50,7 +51,7 @@ function AuthenticatedRoutes({ auth, role, handleLogout }) {
           element={
             <DashboardComponent
               content={route.content}
-              token={sessionStorage.getItem('authToken') || localStorage.getItem('authToken')}
+              token={localStorage.getItem('authToken')}
             />
           }
         />

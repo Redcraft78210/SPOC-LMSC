@@ -25,6 +25,7 @@ const NavigationBar = ({ isAdmin = false, isProf = false }) => {
   React.useEffect(() => {
     // Ignore query parameters when setting the active route
     const currentPath = location.pathname;
+    console.log(currentPath);
     setActiveRoute(currentPath);
   }, [location.pathname]);
 

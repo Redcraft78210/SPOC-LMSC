@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
+
 import { FileText, SquarePlay, Radio } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { getAllCourses } from '../../API/CourseCaller';
-import { getAllLives } from '../../API/LiveCaller';
+
+const API_URL = 'https://localhost:8443/api';
 
 const Courses = ({ authToken }) => {
   const [selectedProfessor, setSelectedProfessor] = useState('Tous');
@@ -31,19 +32,36 @@ const Courses = ({ authToken }) => {
       try {
         setLoading(true);
 
-        const [coursesResponse, livesResponse] = await Promise.all([
-          getAllCourses(),
-          getAllLives()
+        // Fetch courses from the API
+        const fetchCourses = async () => {
+          const response = await fetch(`${API_URL}/courses/all`, {
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+            },
+          });
+          if (!response.ok) {
+            throw new Error('Failed to fetch courses');
+          }
+          return await response.json();
+        };
+
+        // Fetch lives from the API
+        const fetchLives = async () => {
+          const response = await fetch(`${API_URL}/lives/all`, {
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+            },
+          });
+          if (!response.ok) {
+            throw new Error('Failed to fetch lives');
+          }
+          return await response.json();
+        };
+
+        const [coursesData, livesData] = await Promise.all([
+          fetchCourses(),
+          fetchLives(),
         ]);
-
-        if (coursesResponse.status !== 200) {
-          throw new Error('Failed to fetch courses: ' + coursesResponse.message);
-        }
-
-        if (livesResponse.status !== 200) {
-          throw new Error('Failed to fetch lives: ' + livesResponse.message);
-        }
-
         // Transformation des données en tableau plat
         const transformData = (data, type) => {
           if (!data || typeof data !== 'object') {
@@ -69,8 +87,8 @@ const Courses = ({ authToken }) => {
         };
 
         setContent([
-          ...transformData(coursesResponse.data, 'cours'),
-          ...transformData(livesResponse.data, 'live'),
+          ...transformData(coursesData, 'cours'),
+          ...transformData(livesData, 'live'),
         ]);
 
         setError(null);

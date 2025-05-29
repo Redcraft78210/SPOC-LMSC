@@ -39,7 +39,7 @@ const DocumentUploader = ({ onUploadSuccess }) => {
       const response = await SendDocument({
         file,
         title: description || 'No description',
-        authToken: sessionStorage.getItem('authToken') || localStorage.getItem('authToken'),
+        authToken: localStorage.getItem('authToken'),
       });
 
       if (response?.status === 201) {

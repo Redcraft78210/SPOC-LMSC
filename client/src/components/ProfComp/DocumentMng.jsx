@@ -10,7 +10,7 @@ const DocumentMng = () => {
   const [documentUrl, setDocumentUrl] = useState(null);
 
   const handleDocumentSelect = documentDetails => {
-    
+    console.log('Document selected:', documentDetails);
     setDocumentUrl(documentDetails.downloadUrl);
     setDocumentData(documentDetails);
   };

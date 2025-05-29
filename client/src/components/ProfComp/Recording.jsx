@@ -19,7 +19,7 @@ const Recording = () => {
 
   useEffect(() => {
     // Récupérer le token depuis le localStorage
-    const token = sessionStorage.getItem('authToken') || localStorage.getItem('authToken');
+    const token = localStorage.getItem('authToken');
     if (token) {
       setAuthToken(token);
     }

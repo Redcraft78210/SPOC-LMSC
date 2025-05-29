@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { toast, Toaster } from 'react-hot-toast';
+import PropTypes from 'prop-types';
 import {
   Edit,
   Trash2,
@@ -9,46 +9,64 @@ import {
   Grid,
   Search,
 } from 'lucide-react';
-import {
-  getAllClasses,
-  createClass,
-  updateClass,
-  deleteClass,
-} from '../../API/ClassCaller';
-import { getAllUsers } from '../../API/UserCaller';
+import { Toaster, toast } from 'react-hot-toast';
 
-const ClasseManagement = () => {
+const API_URL = 'https://localhost:8443/api';
+
+const ClasseManagement = ({ authToken }) => {
+  const token = authToken;
 
   const fetchClasses = async () => {
     try {
-      const response = await getAllClasses();
-      if (response.status === 200) {
-        setClasses(response.data);
-      } else {
-        toast.error(response.message || 'Erreur lors du chargement des classes');
-      }
+      ClasseManagement.PropTypes;
+
+      const response = await fetch(`${API_URL}/classes`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      setClasses(data.sort((a, b) => a.name.localeCompare(b.name)));
     } catch (error) {
-      console.error('Erreur lors du chargement des classes:', error);
-      toast.error('Erreur lors du chargement des classes');
+      toast.error('Erreur de chargement des Classes');
+      console.error(error);
     }
   };
 
   const fetchUsers = async () => {
     try {
-      const response = await getAllUsers();
-      if (response.status === 200) {
-        // Séparer les étudiants et les enseignants
-        const students = response.data.filter(user => user.role === 'Etudiant');
-        const teachers = response.data.filter(user => user.role === 'Professeur');
+      const response = await fetch(`${API_URL}/users`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      setStudentUsers(
+        data
+          .filter(user => user.role === 'Etudiant')
+          .sort((a, b) => {
+            const nameA = a.name.toLowerCase();
+            const nameB = b.name.toLowerCase();
+            return nameA.localeCompare(nameB, undefined, {
+              numeric: true,
+            });
+          })
+      );
 
-        setStudentUsers(students);
-        setTeachersUsers(teachers);
-      } else {
-        toast.error(response.message || 'Erreur lors du chargement des utilisateurs');
-      }
+      setTeachersUsers(
+        data
+          .filter(user => user.role === 'Professeur')
+          .sort((a, b) => {
+            const nameA = a.name.toLowerCase();
+            const nameB = b.name.toLowerCase();
+            return nameA.localeCompare(nameB, undefined, {
+              numeric: true,
+            });
+          })
+      );
     } catch (error) {
-      console.error('Erreur lors du chargement des utilisateurs:', error);
-      toast.error('Erreur lors du chargement des utilisateurs');
+      toast.error('Erreur de chargement des utilisateurs');
+      console.error(error);
     }
   };
 
@@ -99,41 +117,42 @@ const ClasseManagement = () => {
   const bulkDelete = async () => {
     if (window.confirm(`Supprimer ${selectedClasses.length} Classe(s) ?`)) {
       try {
-        // Utilisation d'une boucle pour supprimer chaque classe individuellement
-        for (const classId of selectedClasses) {
-          await deleteClass({ classId });
-        }
-        toast.success(`${selectedClasses.length} classe(s) supprimée(s)`);
-        setSelectedClasses([]);
+        await Promise.all(
+          selectedClasses.map(id =>
+            fetch(`${API_URL}/classes/${id}`, {
+              method: 'DELETE',
+              headers: { Authorization: `Bearer ${token}` },
+            })
+          )
+        );
         fetchClasses();
+        setSelectedClasses([]);
       } catch (error) {
-        console.error('Erreur lors de la suppression:', error);
-        toast.error('Erreur lors de la suppression des classes');
+        toast.error('Erreur de suppression');
+        console.error(error);
       }
     }
   };
 
   // Suppression individuelle
-  const deleteClasseHandler = async classId => {
+  const deleteClasse = async ClasseId => {
     if (window.confirm('Supprimer cette Classe ?')) {
       try {
-        const response = await deleteClass({ classId });
-        if (response.status === 200) {
-          toast.success('Classe supprimée avec succès');
-          fetchClasses();
-        } else {
-          toast.error(response.message || 'Erreur lors de la suppression');
-        }
+        await fetch(`${API_URL}/classes/${ClasseId}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        fetchClasses();
       } catch (error) {
-        console.error('Erreur lors de la suppression:', error);
-        toast.error('Erreur lors de la suppression de la classe');
+        toast.error('Erreur de suppression');
+        console.error(error);
       }
     }
   };
 
   // Gestion formulaire
   const handleSubmitClasse = async formData => {
-    const classData = {
+    const ClasseData = {
       name: formData.name,
       description: formData.description,
       main_teacher_id: formData.main_teacher_id,
@@ -141,28 +160,26 @@ const ClasseManagement = () => {
     };
 
     try {
-      let response;
+      const url = selectedClasse
+        ? `${API_URL}/classes/${selectedClasse.id}`
+        : `${API_URL}/classes`;
 
-      if (selectedClasse) {
-        response = await updateClass({
-          classId: selectedClasse.id,
-          classData,
-        });
-      } else {
-        response = await createClass(classData);
-      }
+      const response = await fetch(url, {
+        method: selectedClasse ? 'PUT' : 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(ClasseData),
+      });
 
-      if (response.status === 200 || response.status === 201) {
-        toast.success(selectedClasse ? 'Classe mise à jour' : 'Classe créée');
-        setShowCreateModal(false);
-        setSelectedClasse(null);
-        fetchClasses();
-      } else {
-        toast.error(response.message || "Erreur lors de l'opération");
-      }
+      if (!response.ok) throw new Error('Erreur de sauvegarde');
+
+      fetchClasses();
+      setShowCreateModal(false);
+      setSelectedClasse(null);
     } catch (error) {
-      console.error('Erreur:', error);
-      toast.error('Une erreur est survenue');
+      toast.error(error.message);
     }
   };
 
@@ -300,7 +317,7 @@ const ClasseManagement = () => {
                   <Edit className="w-5 h-5" />
                 </button>
                 <button
-                  onClick={() => deleteClasseHandler(Classe.id)}
+                  onClick={() => deleteClasse(Classe.id)}
                   className="text-red-600 hover:text-red-800"
                 >
                   <Trash2 className="w-5 h-5" />
@@ -335,7 +352,7 @@ const ClasseManagement = () => {
                 <Edit className="w-5 h-5" />
               </button>
               <button
-                onClick={() => deleteClasseHandler(Classe.id)}
+                onClick={() => deleteClasse(Classe.id)}
                 className="text-red-600 hover:text-red-800"
               >
                 <Trash2 className="w-5 h-5" />
@@ -437,7 +454,7 @@ const ClasseManagement = () => {
 
       setIsLoading(true);
       try {
-        
+        console.log(formData);
         await handleSubmitClasse(formData);
         if (isMounted) {
           setIsSuccess(true);
@@ -763,6 +780,10 @@ const ClasseManagement = () => {
       <Toaster position="bottom-right" />
     </div>
   );
+};
+
+ClasseManagement.propTypes = {
+  authToken: PropTypes.string.isRequired,
 };
 
 export default ClasseManagement;

@@ -249,7 +249,7 @@ const CourseDeleteModal = ({ setDeleteModalOpen }) => {
   };
 
   const handleDelete = () => {
-    
+    console.log('Deleting course...');
     setDeleteModalOpen(false);
     window.location.reload();
     // Implement course deletion logic here

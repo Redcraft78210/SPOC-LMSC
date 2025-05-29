@@ -27,8 +27,7 @@ async function createCode(req, res) {
   try {
     const savedCode = await newCode.save();
     res.status(201).json(savedCode);
-  } catch (error) {
-    console.error(error);
+  } catch {
     res.status(400).json({ message: 'Bad request' });
   }
 }

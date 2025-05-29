@@ -6,8 +6,6 @@ import "./style/plyr.css";
 import Logo from "../Logo";
 import { Play } from "lucide-react";
 
-const BASE_URL = "https://localhost:8443";
-
 const SecureVideoPlayer = ({ videoId, authToken, posterUrl, onError }) => {
   const videoRef = useRef(null);
   const wrapperRef = useRef(null);
@@ -17,7 +15,7 @@ const SecureVideoPlayer = ({ videoId, authToken, posterUrl, onError }) => {
   useEffect(() => {
     if (!videoRef.current) return;
 
-    const src = `${BASE_URL}/api/videos/${videoId}?authToken=${encodeURIComponent(
+    const src = `https://localhost:8443/api/videos/${videoId}?authToken=${encodeURIComponent(
       authToken
     )}`;
 

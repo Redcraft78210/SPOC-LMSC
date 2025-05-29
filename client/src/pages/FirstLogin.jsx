@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import PropTypes from 'prop-types';
-import { verifyTwoFA, refreshTwoFASetup, firstLogin, check2FAStatus } from '../API/AuthCaller';
+import axios from 'axios';
 
 const errorMessages = {
   'auth/invalid-credentials': 'Identifiants incorrects',
@@ -19,6 +19,8 @@ const errorMessages = {
   'auth/invalid-token': 'Session expirée',
   default: 'Une erreur est survenue. Veuillez réessayer.',
 };
+
+const API_URL = 'https://localhost:8443/api';
 
 const FirstLogin = ({ token, setAuth }) => {
   const [username, setUsername] = useState('');
@@ -53,10 +55,6 @@ const FirstLogin = ({ token, setAuth }) => {
   const [is2FARefreshing, setIs2FARefreshing] = useState(false);
   const navigate = useNavigate();
 
-  const [rememberMe, setRememberMe] = useState(
-    !!localStorage.getItem('authToken')
-  );
-
   const validatePassword = pw => {
     return /^(?=.*[A-Z])(?=.*[!@#$%^&*])(?=.{12,})/.test(pw);
   };
@@ -68,26 +66,20 @@ const FirstLogin = ({ token, setAuth }) => {
     const refresh2FASetup = async () => {
       setIs2FARefreshing(true);
       try {
-        const response = await refreshTwoFASetup({
+        const { data } = await axios.post(`${API_URL}/auth/refresh-2fa-setup`, {
           tempToken: tempToken,
-          twoFASetup: {} // Add any required setup data
         });
-
-        if (response.status === 200) {
-          setTempToken(response.data.tempToken);
-          setError(null);
-        } else {
-          throw { response: { data: { message: response.message } } };
-        }
+        setTempToken(data.tempToken);
+        setError(null);
       } catch (error) {
         setError(error.response?.data?.message || errorMessages.default);
-        if (error.response?.data?.message === 'auth/invalid-token') {
+        if (error.data.message === 'auth/invalid-token') {
           setIs2FASetup(false);
           setTempToken(null);
-          localStorage.removeItem('is2FASetup');
-          localStorage.removeItem('tempToken');
-          localStorage.removeItem('QrCodeData');
-          localStorage.removeItem('manualSecret');
+          localStorage.removeItem('is2FASetup'); // Remove 2FA setup state
+          localStorage.removeItem('tempToken'); // Remove temp token
+          localStorage.removeItem('QrCodeData'); // Remove QR code data
+          localStorage.removeItem('manualSecret'); // Remove manual secret
         }
       } finally {
         setIs2FARefreshing(false);
@@ -112,10 +104,10 @@ const FirstLogin = ({ token, setAuth }) => {
         setError('Token invalide. Veuillez réessayer.');
         setIs2FASetup(false);
         setTempToken(null);
-        localStorage.removeItem('is2FASetup');
-        localStorage.removeItem('tempToken');
-        localStorage.removeItem('QrCodeData');
-        localStorage.removeItem('manualSecret');
+        localStorage.removeItem('is2FASetup'); // Remove 2FA setup state
+        localStorage.removeItem('tempToken'); // Remove temp token
+        localStorage.removeItem('QrCodeData'); // Remove QR code data
+        localStorage.removeItem('manualSecret'); // Remove manual secret
       }
     }
 
@@ -127,20 +119,20 @@ const FirstLogin = ({ token, setAuth }) => {
 
   useEffect(() => {
     // Check if 2FA is already configured for the user
-    const check2FAStatusForUser = async () => {
+    const check2FAStatus = async () => {
       try {
-        const response = await check2FAStatus({ token });
-        if (response.status === 200) {
-          setIs2FAAlreadySetup(response.data.is2FAEnabled);
-        } else {
-          console.error('Error checking 2FA status:', response.message);
-        }
+        const { data } = await axios.get(`${API_URL}/users/2fa`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        setIs2FAAlreadySetup(data.is2FAEnabled);
       } catch (error) {
         console.error('Error checking 2FA status:', error);
       }
     };
 
-    check2FAStatusForUser();
+    check2FAStatus();
   }, [token]);
 
   const handleSubmit = async e => {
@@ -162,48 +154,45 @@ const FirstLogin = ({ token, setAuth }) => {
     setIsLoading(true);
 
     try {
-      const response = await firstLogin({ username, password, token });
-
-      if (response.status === 200) {
-        // Si 2FA déjà configuré, stocke le token selon rememberMe
-        if (is2FAAlreadySetup) {
-          if (rememberMe) {
-            localStorage.setItem('authToken', response.data.token);
-            sessionStorage.removeItem('authToken');
-          } else {
-            sessionStorage.setItem('authToken', response.data.token);
-            localStorage.removeItem('authToken');
-          }
-          setAuth(response.data.token);
-          navigate('/dashboard');
-          return;
+      const { data } = await axios.post(
+        'https://localhost:8443/api/auth/first-login',
+        { username, password },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
+      );
 
-        localStorage.setItem('token', response.data.tempToken);
-        localStorage.setItem('QrCodeData', response.data.twoFASetup.qrCode);
-        localStorage.setItem('manualSecret', response.data.twoFASetup.manualSecret);
-        localStorage.setItem('tempToken', response.data.tempToken);
-        localStorage.setItem('is2FASetup', true);
-
-        setQrCodeData(response.data.twoFASetup.qrCode);
-        setManualSecret(response.data.twoFASetup.manualSecret);
-        setTempToken(response.data.tempToken);
-        setIs2FASetup(true);
-      } else {
-        throw { response: { data: { message: response.message } } };
+      // If 2FA is already setup, skip the 2FA setup process
+      if (is2FAAlreadySetup) {
+        setAuth(data.token);
+        navigate('/dashboard');
+        return;
       }
+
+      localStorage.setItem('token', data.tempToken);
+      localStorage.setItem('QrCodeData', data.twoFASetup.qrCode);
+      localStorage.setItem('manualSecret', data.twoFASetup.manualSecret);
+      localStorage.setItem('tempToken', data.tempToken);
+      localStorage.setItem('is2FASetup', true);
+
+      setQrCodeData(data.twoFASetup.qrCode);
+      setManualSecret(data.twoFASetup.manualSecret);
+      setTempToken(data.tempToken);
+      setIs2FASetup(true);
     } catch (err) {
       const errorCode = err.response?.data?.message || 'default';
       if (errorCode === 'auth/invalid-credentials') {
         navigate('/logout');
-        localStorage.removeItem('token');
+        localStorage.removeItem('token'); // Remove token on logout
       }
       if (errorCode === 'auth/invalid-token') {
         setTempToken(null);
-        localStorage.removeItem('is2FASetup');
-        localStorage.removeItem('tempToken');
-        localStorage.removeItem('QrCodeData');
-        localStorage.removeItem('manualSecret');
+        localStorage.removeItem('is2FASetup'); // Remove 2FA setup state
+        localStorage.removeItem('tempToken'); // Remove temp token
+        localStorage.removeItem('QrCodeData'); // Remove QR code data
+        localStorage.removeItem('manualSecret'); // Remove manual secret
         navigate('/sign');
       }
       setError(errorMessages[errorCode] || errorMessages.default);
@@ -302,23 +291,23 @@ const FirstLogin = ({ token, setAuth }) => {
     }
 
     try {
-      const response = await verifyTwoFA({
-        code: fullCode,
-        tempToken,
-        setup: true
-      });
+      const { data } = await axios.post(
+        'https://localhost:8443/api/auth/verify-2fa',
+        { code: fullCode, tempToken, setup: true },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-      if (response.status === 200) {
-        localStorage.removeItem('is2FASetup');
-        localStorage.removeItem('tempToken');
-        localStorage.removeItem('QrCodeData');
-        localStorage.removeItem('manualSecret');
+      localStorage.removeItem('is2FASetup');
+      localStorage.removeItem('tempToken');
+      localStorage.removeItem('QrCodeData');
+      localStorage.removeItem('manualSecret');
 
-        setAuth(response.data.token);
-        navigate('/dashboard');
-      } else {
-        throw { response: { data: { message: response.message } } };
-      }
+      setAuth(data.token);
+      navigate('/dashboard');
     } catch (err) {
       const errorCode = err.response?.data?.message || 'default';
       if (errorCode === 'auth/session-expired') {
@@ -472,18 +461,6 @@ const FirstLogin = ({ token, setAuth }) => {
               placeholder="Confirmez le mot de passe"
               required
             />
-          </div>
-          <div className="flex items-center space-x-2">
-            <input
-              id="rememberMe"
-              type="checkbox"
-              checked={rememberMe}
-              onChange={e => setRememberMe(e.target.checked)}
-              className="w-5 h-5 text-blue-600 rounded"
-            />
-            <label htmlFor="rememberMe" className="text-sm text-gray-700">
-              Se souvenir de moi
-            </label>
           </div>
           <button
             type="submit"

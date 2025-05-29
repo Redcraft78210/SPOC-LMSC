@@ -239,16 +239,16 @@ H264bsdCanvas.prototype.drawNextOutputPicture = function(width, height, cropping
     var gl = this.contextGL;
 
     if(gl) {
-        this.drawNextOutputPictureGL(width, height, croppingParams, data);
+        this.drawNextOuptutPictureGL(width, height, croppingParams, data);
     } else {
-        this.drawNextOutputPictureRGBA(width, height, croppingParams, data);
+        this.drawNextOuptutPictureRGBA(width, height, croppingParams, data);
     }
 };
 
 /**
  * Draw the next output picture using WebGL
  */
-H264bsdCanvas.prototype.drawNextOutputPictureGL = function(width, height, croppingParams, data) {
+H264bsdCanvas.prototype.drawNextOuptutPictureGL = function(width, height, croppingParams, data) {
     var gl = this.contextGL;
     var texturePosBuffer = this.texturePosBuffer;
     var yTextureRef = this.yTextureRef;
@@ -296,7 +296,7 @@ H264bsdCanvas.prototype.drawNextOutputPictureGL = function(width, height, croppi
 /**
  * Draw next output picture using ARGB data on a 2d canvas.
  */
-H264bsdCanvas.prototype.drawNextOutputPictureRGBA = function(width, height, croppingParams, data) {
+H264bsdCanvas.prototype.drawNextOuptutPictureRGBA = function(width, height, croppingParams, data) {
     var canvas = this.canvasElement;
 
     var croppingParams = null;

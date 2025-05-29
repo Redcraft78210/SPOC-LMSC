@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getAvatar } from '../API/ProfileCaller';
+import PropTypes from 'prop-types';
 import { jwtDecode } from 'jwt-decode';
 import { X, Pencil, Loader2, Mail, Bell } from 'lucide-react';
-import PropTypes from 'prop-types';
 
 import NavigationBar from '../components/Navbar';
 import PictureModal from '../components/PictureModal';
@@ -30,6 +29,8 @@ import Settings from './Settings';
 import NotFound from './Public/NotFound';
 import Mailbox from './Mailbox';
 
+const API_URL = 'https://localhost:8443/api';
+
 const Dashboard = ({ content, token, role }) => {
   const navigate = useNavigate();
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -55,13 +56,17 @@ const Dashboard = ({ content, token, role }) => {
           URL.revokeObjectURL(avatarUrlRef.current);
         }
 
-        const response = await getAvatar();
+        const response = await fetch(`${API_URL}/avatars?t=${avatarVersion}`, {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store',
+        });
 
-        if (response.status === 200) {
-          const imageUrl = URL.createObjectURL(response.data);
-          avatarUrlRef.current = imageUrl;
-          setUserAvatar(imageUrl);
-        }
+        if (!response.ok) throw new Error('Failed to fetch avatar');
+
+        const blob = await response.blob();
+        const imageUrl = URL.createObjectURL(blob);
+        avatarUrlRef.current = imageUrl;
+        setUserAvatar(imageUrl);
       } catch (error) {
         console.error('Error fetching avatar:', error);
         setUserAvatar(null);
@@ -107,6 +112,7 @@ const Dashboard = ({ content, token, role }) => {
     role: decodedToken.role,
   };
 
+  console.log('Decoded token:', decodedToken);
   const contentMap = {
     CoursesLibrary: <CoursesLibrary authToken={token} />,
     CourseReader: <CourseReader authToken={token} />,
@@ -156,7 +162,7 @@ const Dashboard = ({ content, token, role }) => {
   const renderContent = () => {
     return contentMap[content] || <NotFound />;
   };
-  
+  console.log(role);
   return showProfilepictureModal ? (
     <PictureModal
       setShowProfilepictureModal={setShowProfilepictureModal}
@@ -254,7 +260,7 @@ const Dashboard = ({ content, token, role }) => {
                         className="relative left-46 top-20 cursor-pointer border border-blue-400 p-1 rounded-full bg-black w-fit"
                         onClick={() => setShowProfilepictureModal(true)}
                       >
-                        <Pencil className="h-4 w-4 text-blue-500" />
+                        <Pencil className="h-4 w-4" />
                       </p>
 
                       {loadingAvatar ? (
@@ -296,7 +302,7 @@ const Dashboard = ({ content, token, role }) => {
                           href="#"
                           onClick={e => {
                             e.preventDefault();
-                            navigate('/terms');
+                            navigate('/conditions-utilisation');
                           }}
                           className="text-blue-500"
                         >
@@ -308,7 +314,7 @@ const Dashboard = ({ content, token, role }) => {
                           href="#"
                           onClick={e => {
                             e.preventDefault();
-                            navigate('/legal');
+                            navigate('/mentions-legales');
                           }}
                           className="text-blue-500"
                         >

@@ -1,20 +1,4 @@
-import { useState, useEffect, useCallback, memo } from 'react';
-import PropTypes from 'prop-types';
-import { toast, Toaster } from 'react-hot-toast';
-import {
-  getAllUsers,
-  createUser,
-  updateUser,
-  deleteUser,
-  activateUser,
-  deactivateUser,
-  generateInviteCode,
-  getAllInviteCodes,
-  deleteInviteCode,
-  upgradeUserRole,
-  retrogradeUserRole
-} from '../../API/UserCaller';
-import { getAllClasses } from '../../API/ClassCaller';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Edit,
   Trash2,
@@ -35,6 +19,12 @@ import {
   XCircle,
 } from 'lucide-react';
 
+import PropTypes from 'prop-types';
+
+import { Toaster, toast } from 'react-hot-toast';
+
+const API_URL = 'https://localhost:8443/api';
+
 const errorMessages = {
   'auth/invalid-credentials': 'Identifiants incorrects',
   'auth/missing-fields': 'Veuillez remplir tous les champs',
@@ -49,56 +39,46 @@ const errorMessages = {
   default: 'Une erreur est survenue. Veuillez réessayer.',
 };
 
-// Définir SearchUser en dehors du composant principal
-const SearchUser = memo(function SearchUser({ value, onChange }) {
-  return (
-    <div className="relative flex-1 max-w-xl">
-      <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
-      <input
-        type="text"
-        placeholder="Rechercher un utilisateur..."
-        className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        value={value}
-        onChange={onChange}
-      />
-    </div>
-  );
-});
-
-SearchUser.propTypes = {
-  value: PropTypes.string.isRequired,
-  onChange: PropTypes.func.isRequired,
-};
-
-const UserManagement = () => {
+const UserManagement = ({ authToken }) => {
+  const token = authToken;
 
   const fetchClasses = useCallback(async () => {
     try {
-      const response = await getAllClasses();
-      if (response.status === 200) {
-        setClasses(response.data);
-      } else {
-        toast.error(response.message || "Erreur lors du chargement des classes");
-      }
+      const response = await fetch(`${API_URL}/classes`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      setClasses(data.sort((a, b) => a.name.localeCompare(b.name)));
     } catch (error) {
-      console.error("Erreur lors du chargement des classes:", error);
-      toast.error("Erreur lors du chargement des classes");
+      console.error(error);
+      toast.error('Erreur de chargement des Classes');
     }
-  }, []);
+  }, [token]);
 
   const fetchUsers = useCallback(async () => {
     try {
-      const response = await getAllUsers();
-      if (response.status === 200) {
-        setUsers(response.data);
-      } else {
-        toast.error(response.message || "Erreur lors du chargement des utilisateurs");
-      }
+      const response = await fetch(`${API_URL}/users`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      setUsers(
+        data.sort((a, b) => {
+          const nameA = a.name.toLowerCase();
+          const nameB = b.name.toLowerCase();
+          return nameA.localeCompare(nameB, undefined, {
+            numeric: true,
+          });
+        })
+      );
     } catch (error) {
-      console.error("Erreur lors du chargement des utilisateurs:", error);
-      toast.error("Erreur lors du chargement des utilisateurs");
+      console.error(error);
+      toast.error('Erreur de chargement des utilisateurs');
     }
-  }, []);
+  }, [token]);
 
   const [users, setUsers] = useState([]);
   const [classes, setClasses] = useState([]);
@@ -149,97 +129,70 @@ const UserManagement = () => {
   const bulkDelete = async () => {
     if (window.confirm(`Supprimer ${selectedUsers.length} utilisateur(s) ?`)) {
       try {
-        for (const userId of selectedUsers) {
-          await deleteUser({ userId });
-        }
-        toast.success(`${selectedUsers.length} utilisateur(s) supprimé(s)`);
-        setSelectedUsers([]);
+        const promises = selectedUsers.map(userId => {
+          return fetch(`${API_URL}/users/${userId}`, {
+            method: 'DELETE',
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+        });
+
+        await Promise.all(promises);
+        toast.success(
+          `${selectedUsers.length} utilisateur(s) supprimés avec succès`
+        );
         fetchUsers();
+        setSelectedUsers([]);
       } catch (error) {
-        console.error("Erreur lors de la suppression:", error);
-        toast.error("Erreur lors de la suppression des utilisateurs");
+        console.error(error);
+        toast.error('Erreur lors de la suppression des utilisateurs');
       }
     }
   };
 
   const bulkToggleStatus = async status => {
     try {
-      for (const userId of selectedUsers) {
-        if (status) {
-          const response = await activateUser({ userId });
-          if (response.status === 200) {
-            toast.success(`Utilisateur activé`);
-          } else {
-            toast.error(response.message || "Erreur lors de l'activation de l'utilisateur");
-          }
-        } else {
-          const response = await deactivateUser({ userId });
-          if (response.status === 200) {
-            toast.success(`Utilisateur désactivé`);
-          } else {
-            toast.error(response.message || "Erreur lors de la désactivation de certains utilisateurs");
-          }
-        }
-      }
-      toast.success(`${selectedUsers.length} utilisateur(s) ${status ? 'activé(s)' : 'désactivé(s)'}`);
+      const selectedIds = new Set(selectedUsers);
+      const promises = filteredUsers
+        .filter(user => selectedIds.has(user.id))
+        .map(user => {
+          return fetch(`${API_URL}/users/${user.id}`, {
+            method: 'PATCH',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ statut: status }),
+          });
+        });
+
+      await Promise.all(promises);
+      toast.success(
+        `Statut de ${selectedUsers.length} utilisateur(s) mis à jour avec succès`
+      );
       fetchUsers();
     } catch (error) {
-      console.error("Erreur lors de la modification du statut:", error);
-      toast.error("Erreur lors de la modification du statut");
+      console.error(error);
+      toast.error('Erreur lors de la mise à jour des statuts');
     }
   };
 
   const toggleStatus = async (userId, status) => {
     try {
-      if (status) {
-        const response = await activateUser({ userId });
-        if (response.status === 200) {
-          toast.success(`Utilisateur activé`);
-        } else {
-          toast.error(response.message || "Erreur lors de l'activation de l'utilisateur");
-        }
-      } else {
-        const response = await deactivateUser({ userId });
-        if (response.status === 200) {
-          toast.success(`Utilisateur désactivé`);
-        } else {
-          toast.error(response.message || "Erreur lors de la désactivation de l'utilisateur");
-        }
-      }
+      await fetch(`${API_URL}/users/${userId}`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ statut: status }),
+      });
+      toast.success('Statut utilisateur mis à jour');
       fetchUsers();
     } catch (error) {
-      console.error("Erreur lors de la modification du statut:", error);
-      toast.error("Erreur lors de la modification du statut");
-    }
-  };
-
-  const retrogradeUser = async userId => {
-    try {
-      const response = await retrogradeUserRole({ userId });
-
-      if (response.status === 200) {
-        toast.success(response.message || "Utilisateur rétrogradé avec succès");
-      } else {
-        toast.error(response.message || "Erreur lors de la rétrogradation");
-      }
-      fetchUsers();
-    } catch (error) {
-      toast.error(error.data.message || "Erreur lors de la rétrogradation");
-    }
-  };
-
-  const upgradeUser = async userId => {
-    try {
-      const response = await upgradeUserRole({ userId });
-
-      if (response.status === 200) {
-        toast.success(response.message || "Utilisateur promu avec succès");
-      } else {
-        toast.error(response.message || "Erreur lors de la promotion");
-      }
-      fetchUsers();
-    } catch (error) {
-      toast.error(error.data.message || "Erreur lors de la promotion");
+      console.error(error);
+      toast.error('Erreur de modification du statut');
     }
   };
 
@@ -247,31 +200,89 @@ const UserManagement = () => {
     setShowInviteCodeModal(true);
   };
 
-  const handleUserSubmit = async userData => {
-    try {
-      let response;
-
-      if (selectedUser) {
-        response = await updateUser({
-          userId: selectedUser.id,
-          userData
+  const deleteUser = async userId => {
+    if (
+      window.confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')
+    ) {
+      try {
+        await fetch(`${API_URL}/users/${userId}`, {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
-      } else {
-        response = await createUser(userData);
-      }
-
-      if (response.status === 200 || response.status === 201) {
-        toast.success(selectedUser ? "Utilisateur mis à jour" : "Utilisateur créé");
-        setShowCreateModal(false);
-        setSelectedUser(null);
+        toast.success('Utilisateur supprimé avec succès');
         fetchUsers();
-      } else {
-        toast.error(response.message || "Erreur lors de l'opération");
+      } catch (error) {
+        console.error(error);
+        toast.error("Erreur de suppression de l'utilisateur");
       }
-    } catch (error) {
-      console.error("Erreur:", error);
-      toast.error("Une erreur est survenue");
     }
+  };
+
+  const handleSubmitUser = async e => {
+    const formData = new FormData(e.target);
+    const userData = {
+      name: formData.get('name'),
+      surname: formData.get('surname'),
+      email: formData.get('email'),
+      role: formData.get('role'),
+      password:
+        formData.get('password') === '' ? null : formData.get('password'),
+    };
+
+    let response;
+    if (selectedUser) {
+      // Update user
+      response = await fetch(`${API_URL}/users/${selectedUser.id}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...userData,
+          isPasswordGeneratedByAdmin: userData.password ? true : undefined,
+        }),
+      });
+    } else {
+      // Create new user
+      response = await fetch(`${API_URL}/auth/manual-register`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData),
+      });
+    }
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'default');
+    }
+
+    toast.success(
+      selectedUser ? 'Utilisateur mis à jour' : 'Utilisateur créé avec succès'
+    );
+    fetchUsers();
+    setShowCreateModal(false);
+    setSelectedUser(null);
+  };
+
+  const SearchUser = () => {
+    return (
+      <div className="relative flex-1 max-w-xl">
+        <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Rechercher un utilisateur..."
+          className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+        />
+      </div>
+    );
   };
 
   const ToggleView = () => {
@@ -279,15 +290,17 @@ const UserManagement = () => {
       <div className="flex gap-2">
         <button
           onClick={() => setViewMode('list')}
-          className={`p-2 rounded-lg ${viewMode === 'list' ? 'bg-blue-100 text-blue-600' : 'text-gray-600'
-            }`}
+          className={`p-2 rounded-lg ${
+            viewMode === 'list' ? 'bg-blue-100 text-blue-600' : 'text-gray-600'
+          }`}
         >
           <List className="w-5 h-5" />
         </button>
         <button
           onClick={() => setViewMode('grid')}
-          className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-blue-100 text-blue-600' : 'text-gray-600'
-            }`}
+          className={`p-2 rounded-lg ${
+            viewMode === 'grid' ? 'bg-blue-100 text-blue-600' : 'text-gray-600'
+          }`}
         >
           <Grid className="w-5 h-5" />
         </button>
@@ -328,6 +341,46 @@ const UserManagement = () => {
         </div>
       )
     );
+  };
+
+  const retrogradeUser = async userId => {
+    try {
+      const response = await fetch(`${API_URL}/users/retrograde/${userId}`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message);
+      toast.success(data.message);
+      return data;
+    } catch (error) {
+      toast.error(error.message);
+      return null;
+    } finally {
+      fetchUsers();
+    }
+  };
+
+  const upgradeUser = async userId => {
+    try {
+      const response = await fetch(`${API_URL}/users/upgrade/${userId}`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message);
+      toast.success(data.message);
+      return data;
+    } catch (error) {
+      toast.error(error.message);
+      return null;
+    } finally {
+      fetchUsers();
+    }
   };
 
   const UserTable = () => {
@@ -385,20 +438,22 @@ const UserManagement = () => {
                 <td className="px-6 py-4 whitespace-nowrap">{user.email}</td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span
-                    className={`px-2 py-1 rounded-full text-xs text-white font-bold ${user.active === 'actif' ? 'bg-green-800' : 'bg-red-700'
-                      }`}
+                    className={`px-2 py-1 rounded-full text-xs text-white font-bold ${
+                      user.active === 'actif' ? 'bg-green-800' : 'bg-red-700'
+                    }`}
                   >
                     {user.active.charAt(0).toUpperCase() + user.active.slice(1)}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span
-                    className={`px-2 py-1 rounded-full text-xs text-white font-bold ${user.role === 'Administrateur'
+                    className={`px-2 py-1 rounded-full text-xs text-white font-bold ${
+                      user.role === 'Administrateur'
                         ? 'bg-amber-500'
                         : user.role === 'Professeur'
                           ? 'bg-sky-800'
                           : 'bg-green-800'
-                      }`}
+                    }`}
                   >
                     {user.role}
                   </span>
@@ -472,8 +527,9 @@ const UserManagement = () => {
         {filteredUsers.map(user => (
           <div
             key={user.id}
-            className={`bg-white p-4 rounded-lg shadow ${user.active !== 'actif' ? 'opacity-75' : ''
-              }`}
+            className={`bg-white p-4 rounded-lg shadow ${
+              user.active !== 'actif' ? 'opacity-75' : ''
+            }`}
           >
             <div className="flex justify-between items-start">
               <input
@@ -543,20 +599,22 @@ const UserManagement = () => {
               <p className="text-gray-600 text-sm mt-1">{user.email}</p>
               <div className="flex gap-2 mt-4">
                 <span
-                  className={`px-2 py-1 rounded-full text-xs ${user.active === 'actif'
+                  className={`px-2 py-1 rounded-full text-xs ${
+                    user.active === 'actif'
                       ? 'bg-green-100 text-green-800'
                       : 'bg-red-100 text-red-800'
-                    }`}
+                  }`}
                 >
                   {user.active.charAt(0).toUpperCase() + user.active.slice(1)}
                 </span>
                 <span
-                  className={`px-2 py-1 rounded-full text-xs ${user.role === 'Administrateur'
+                  className={`px-2 py-1 rounded-full text-xs ${
+                    user.role === 'Administrateur'
                       ? 'bg-red-100 text-red-800'
                       : user.role === 'Professeur'
                         ? 'bg-blue-100 text-blue-800'
                         : 'bg-green-100 text-green-800'
-                    }`}
+                  }`}
                 >
                   {user.role}
                 </span>
@@ -675,7 +733,7 @@ const UserManagement = () => {
       setIsLoading(true);
       setServerError(''); // Reset server error
       try {
-        await handleUserSubmit(e);
+        await handleSubmitUser(e);
         if (isMounted) {
           setIsSuccess(true);
           setTimeout(() => {
@@ -743,8 +801,9 @@ const UserManagement = () => {
         aria-labelledby="userModalTitle"
       >
         <div
-          className={`bg-white rounded-xl shadow-2xl p-8 w-full max-w-md transform transition-all duration-300 ease-in-out ${isMounted ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
-            }`}
+          className={`bg-white rounded-xl shadow-2xl p-8 w-full max-w-md transform transition-all duration-300 ease-in-out ${
+            isMounted ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
+          }`}
         >
           <h2
             id="userModalTitle"
@@ -774,10 +833,11 @@ const UserManagement = () => {
                     onChange={e =>
                       setFormData({ ...formData, name: e.target.value })
                     }
-                    className={`w-full px-4 py-2.5 rounded-lg border ${errors.name
+                    className={`w-full px-4 py-2.5 rounded-lg border ${
+                      errors.name
                         ? 'border-red-500 focus:ring-red-500'
                         : 'border-gray-200 focus:border-blue-500'
-                      } focus:ring-2 focus:ring-blue-200 outline-none transition-all`}
+                    } focus:ring-2 focus:ring-blue-200 outline-none transition-all`}
                     aria-invalid={!!errors.name}
                     aria-describedby="nameError"
                     disabled={isLoading}
@@ -804,10 +864,11 @@ const UserManagement = () => {
                     onChange={e =>
                       setFormData({ ...formData, surname: e.target.value })
                     }
-                    className={`w-full px-4 py-2.5 rounded-lg border ${errors.surname
+                    className={`w-full px-4 py-2.5 rounded-lg border ${
+                      errors.surname
                         ? 'border-red-500 focus:ring-red-500'
                         : 'border-gray-200 focus:border-blue-500'
-                      } focus:ring-2 focus:ring-blue-200 outline-none transition-all`}
+                    } focus:ring-2 focus:ring-blue-200 outline-none transition-all`}
                     aria-invalid={!!errors.surname}
                     aria-describedby="surnameError"
                     disabled={isLoading}
@@ -832,10 +893,11 @@ const UserManagement = () => {
                   onChange={e =>
                     setFormData({ ...formData, email: e.target.value })
                   }
-                  className={`w-full px-4 py-2.5 rounded-lg border ${errors.email
+                  className={`w-full px-4 py-2.5 rounded-lg border ${
+                    errors.email
                       ? 'border-red-500 focus:ring-red-500'
                       : 'border-gray-200 focus:border-blue-500'
-                    } focus:ring-2 focus:ring-blue-200 outline-none transition-all`}
+                  } focus:ring-2 focus:ring-blue-200 outline-none transition-all`}
                   aria-invalid={!!errors.email}
                   aria-describedby="emailError"
                   disabled={isLoading}
@@ -989,25 +1051,32 @@ const UserManagement = () => {
 
     // Fetch existing codes on mount
     useEffect(() => {
-      const fetchInviteCodes = async () => {
+      const fetchCodes = async () => {
         try {
           setLoading(true);
-          const response = await getAllInviteCodes();
+          console.log('token', token);
+          const response = await fetch(`${API_URL}/codes`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          const data = await response.json();
 
-          if (response.status === 200) {
-            setExistingCodes(response.data || []);
-          } else {
-            toast.error(response.message || "Erreur lors du chargement des codes");
-          }
+          setExistingCodes(
+            data.map(code => ({
+              ...code,
+              createdAt: new Date(code.createdAt),
+              expiresAt: new Date(code.expiresAt),
+            }))
+          );
         } catch (error) {
-          console.error("Erreur lors du chargement des codes:", error);
-          toast.error("Erreur lors du chargement des codes d'invitation");
+          console.error(error);
+          toast.error('Erreur de chargement des codes');
         } finally {
           setLoading(false);
         }
       };
-
-      fetchInviteCodes();
+      fetchCodes();
     }, []);
 
     const roleDetails = {
@@ -1026,61 +1095,66 @@ const UserManagement = () => {
 
     const handleGenerate = async () => {
       try {
-        setLoading(true);
-        const response = await generateInviteCode({
-          role: formData.role,
-          usageLimit: formData.usageLimit,
-          validityPeriod: formData.validityPeriod,
-          classId: assignClass ? formData.classId : null
+        const payload = { ...formData };
+        console.log(assignClass);
+        if (!assignClass) {
+          delete payload.classId;
+        }
+        console.log(payload);
+
+        const response = await fetch(`${API_URL}/codes`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
         });
 
-        if (response.status === 201) {
-          // Mettre à jour la liste des codes
-          const updatedCodesResponse = await getAllInviteCodes();
-          if (updatedCodesResponse.status === 200) {
-            setExistingCodes(updatedCodesResponse.data || []);
-          }
+        if (!response.ok) throw new Error('Erreur de génération');
 
-          toast.success("Code d'invitation généré avec succès");
-        } else {
-          toast.error(response.message || "Erreur lors de la génération du code");
-        }
+        const newCode = await response.json();
+        setExistingCodes([
+          ...existingCodes,
+          {
+            ...newCode,
+            createdAt: new Date(newCode.createdAt),
+            expiresAt: new Date(newCode.expiresAt),
+          },
+        ]);
+
+        toast.success('Code généré avec succès');
+        setFormData({
+          role: 'student',
+          usageLimit: 1,
+          validityPeriod: 24,
+          classId: null,
+        });
+        setAssignClass(false); // Reset checkbox
       } catch (error) {
-        console.error("Erreur lors de la génération du code:", error);
-        toast.error("Erreur lors de la génération du code d'invitation");
-      } finally {
-        setLoading(false);
+        toast.error(error.message || 'Erreur de génération');
       }
     };
 
-    const handleDelete = async (codeId = null) => {
+    const handleDelete = async (selectedCode = null) => {
       try {
-        setLoading(true);
-        const codeToDelete = codeId || showConfirm;
+        const headers = {
+          Authorization: `Bearer ${token}`,
+        };
+        const response = await fetch(`${API_URL}/codes/${selectedCode}`, {
+          method: 'DELETE',
+          headers,
+        });
 
-        if (!codeToDelete) {
-          throw new Error("ID de code manquant");
-        }
+        if (!response.ok) throw new Error('Erreur de suppression');
 
-        const response = await deleteInviteCode({ codeId: codeToDelete });
-
-        if (response.status === 200) {
-          // Mettre à jour la liste des codes
-          const updatedCodesResponse = await getAllInviteCodes();
-          if (updatedCodesResponse.status === 200) {
-            setExistingCodes(updatedCodesResponse.data || []);
-          }
-
-          setShowConfirm(false);
-          toast.success("Code d'invitation supprimé avec succès");
-        } else {
-          toast.error(response.message || "Erreur lors de la suppression du code");
-        }
+        setExistingCodes(
+          existingCodes.filter(code => code.value !== selectedCode)
+        );
+        toast.success('Code supprimé');
+        setShowConfirm(false);
       } catch (error) {
-        console.error("Erreur lors de la suppression du code:", error);
-        toast.error("Erreur lors de la suppression du code d'invitation");
-      } finally {
-        setLoading(false);
+        toast.error(error.message || 'Erreur de suppression');
       }
     };
 
@@ -1315,12 +1389,13 @@ const UserManagement = () => {
                               {icon} {code.role}
                             </span>
                             <span
-                              className={`text-xs px-2 py-1 rounded ${status === 'Actif'
+                              className={`text-xs px-2 py-1 rounded ${
+                                status === 'Actif'
                                   ? 'bg-green-100 text-green-800'
                                   : status === 'Expiré'
                                     ? 'bg-red-100 text-red-800'
                                     : 'bg-yellow-100 text-yellow-800'
-                                }`}
+                              }`}
                             >
                               {status}
                             </span>
@@ -1331,7 +1406,7 @@ const UserManagement = () => {
                                 <Clock className="inline w-4 h-4 mr-1" />
                                 {Math.ceil(
                                   (code.expiresAt - new Date()) /
-                                  (1000 * 60 * 60)
+                                    (1000 * 60 * 60)
                                 )}
                                 h restantes
                               </span>
@@ -1441,7 +1516,7 @@ const UserManagement = () => {
           </div>
         </div>
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
-          <SearchUser value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+          <SearchUser />
           <ToggleView />
         </div>
         <BulkActions />

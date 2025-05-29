@@ -3,15 +3,17 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import Proptypes from 'prop-types';
-import { Get_special_Document } from '../API/DocumentCaller';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.mjs`;
+
+const API_URL = 'https://localhost:8443/api';
 
 const SecureDocumentViewer = ({ authToken, documentId }) => {
   const [pdfData, setPdfData] = useState(null);
   const [numPages, setNumPages] = useState(null);
   const [width, setWidth] = useState(0);
   const containerRef = useRef(null);
+
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -29,14 +31,22 @@ const SecureDocumentViewer = ({ authToken, documentId }) => {
 
   useEffect(() => {
     const fetchPDF = async () => {
-      try {
-        const response = await Get_special_Document({ document_id: documentId });
+      const controller = new AbortController();
 
-        if (response.status !== 200) {
-          throw new Error(response.message || 'Failed to load document');
+      try {
+        const response = await fetch(`${API_URL}/documents/${documentId}`, {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(text || 'Failed to load document');
         }
 
-        const blob = response.data;
+        const blob = await response.blob();
 
         // Validation renforcée du PDF
         if (!blob.type.includes('pdf')) {

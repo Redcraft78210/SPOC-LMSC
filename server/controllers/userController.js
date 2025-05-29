@@ -58,12 +58,7 @@ const updateProfile = async (req, res) => {
 const changeStatus = async (req, res) => {
     try {
         const user = await User.findByPk(req.params.id);
-        const newStatus = user.statut === 'actif' ? 'inactif' : 'actif';
-        // Check if the user is trying to change their own status
-        if (req.user.id === user.id) {
-            return res.status(403).json({ message: 'You cannot change your own status' });
-        }
-
+        const newStatus = req.body.statut ? 'actif' : 'inactif';
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }

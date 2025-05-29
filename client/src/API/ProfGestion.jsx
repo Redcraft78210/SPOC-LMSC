@@ -1,39 +1,19 @@
-import api from './api';
+import axios from 'axios';
 import PropTypes from 'prop-types';
 
-/**
- * Fonction générique de gestion des erreurs
- * @param {Error} error - L'erreur à traiter
- * @returns {Object} - Objet d'erreur formaté
- */
-const handleError = (error) => {
-  // Si l'API a répondu avec une erreur
-  if (error.response) {
-    return {
-      status: error.response.status,
-      data: error.response.data,
-      message: error.response.data?.message || error.message,
-    };
-  }
-  // Si l'erreur est liée à la configuration de la requête
-  if (error.request) {
-    return {
-      status: 500,
-      data: null,
-      message: 'Aucune réponse reçue du serveur',
-    };
-  }
-  // Pour les autres types d'erreurs
-  return {
-    status: 500,
-    data: null,
-    message: error.message,
-  };
+const createApi = authToken => {
+  return axios.create({
+    baseURL: 'http://localhost:8443/api',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${authToken}`,
+    },
+  });
 };
 
-// Récupérer toutes les classes
-const GetClasses = async () => {
+const GetClasses = async ({ authToken }) => {
   try {
+    const api = createApi(authToken);
     const response = await api.get('/classes/');
     return {
       status: response.status,
@@ -41,13 +21,17 @@ const GetClasses = async () => {
       message: 'Success',
     };
   } catch (error) {
-    return handleError(error);
+    return {
+      status: error.response?.status || 500,
+      data: null,
+      message: error.message,
+    };
   }
 };
 
-// Récupérer tous les cours
-const GetCourses = async () => {
+const GetCourses = async ({ authToken }) => {
   try {
+    const api = createApi(authToken);
     const response = await api.get('/all/');
     return {
       status: response.status,
@@ -55,13 +39,17 @@ const GetCourses = async () => {
       message: 'Success',
     };
   } catch (error) {
-    return handleError(error);
+    return {
+      status: error.response?.status || 500,
+      data: null,
+      message: error.message,
+    };
   }
 };
 
-// Créer un cours
-const CreateCourse = async ({ courseData }) => {
+const CreateCourse = async ({ courseData, authToken }) => {
   try {
+    const api = createApi(authToken);
     const response = await api.post('/create/', courseData);
     return {
       status: response.status,
@@ -69,13 +57,17 @@ const CreateCourse = async ({ courseData }) => {
       message: 'Course created successfully',
     };
   } catch (error) {
-    return handleError(error);
+    return {
+      status: error.response?.status || 500,
+      data: null,
+      message: error.message,
+    };
   }
 };
 
-// Mettre à jour un cours
-const UpdateCourse = async ({ courseId, courseData }) => {
+const UpdateCourse = async ({ courseId, courseData, authToken }) => {
   try {
+    const api = createApi(authToken);
     const response = await api.put(`/cours/${courseId}/`, courseData);
     return {
       status: response.status,
@@ -83,13 +75,17 @@ const UpdateCourse = async ({ courseId, courseData }) => {
       message: 'Course updated successfully',
     };
   } catch (error) {
-    return handleError(error);
+    return {
+      status: error.response?.status || 500,
+      data: null,
+      message: error.message,
+    };
   }
 };
 
-// Détails d'un cours
-const GetCourseDetails = async ({ courseId }) => {
+const GetCourseDetails = async ({ courseId, authToken }) => {
   try {
+    const api = createApi(authToken);
     const response = await api.get(`/cours/${courseId}/`);
     return {
       status: response.status,
@@ -97,13 +93,17 @@ const GetCourseDetails = async ({ courseId }) => {
       message: 'Course details retrieved successfully',
     };
   } catch (error) {
-    return handleError(error);
+    return {
+      status: error.response?.status || 500,
+      data: null,
+      message: error.message,
+    };
   }
 };
 
-// Supprimer un cours
-const DeleteCourse = async ({ courseId }) => {
+const DeleteCourse = async ({ courseId, authToken }) => {
   try {
+    const api = createApi(authToken);
     const response = await api.delete(`/delete/${courseId}`);
     return {
       status: response.status,
@@ -111,14 +111,22 @@ const DeleteCourse = async ({ courseId }) => {
       message: 'Course deleted successfully',
     };
   } catch (error) {
-    return handleError(error);
+    return {
+      status: error.response?.status || 500,
+      data: null,
+      message: error.message,
+    };
   }
 };
 
 // PropTypes
-GetClasses.propTypes = {};
+GetClasses.propTypes = {
+  authToken: PropTypes.string.isRequired,
+};
 
-GetCourses.propTypes = {};
+GetCourses.propTypes = {
+  authToken: PropTypes.string.isRequired,
+};
 
 CreateCourse.propTypes = {
   courseData: PropTypes.shape({
@@ -135,6 +143,7 @@ CreateCourse.propTypes = {
       PropTypes.string,
     ]),
   }).isRequired,
+  authToken: PropTypes.string.isRequired,
 };
 
 UpdateCourse.propTypes = {
@@ -153,14 +162,17 @@ UpdateCourse.propTypes = {
       PropTypes.string,
     ]),
   }).isRequired,
+  authToken: PropTypes.string.isRequired,
 };
 
 GetCourseDetails.propTypes = {
   courseId: PropTypes.string.isRequired,
+  authToken: PropTypes.string.isRequired,
 };
 
 DeleteCourse.propTypes = {
   courseId: PropTypes.string.isRequired,
+  authToken: PropTypes.string.isRequired,
 };
 
 export {

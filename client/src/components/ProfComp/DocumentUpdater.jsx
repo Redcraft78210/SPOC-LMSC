@@ -10,6 +10,7 @@ const DocumentUpdater = ({ documentData, onUpdate }) => {
 
   useEffect(() => {
     if (documentData) {
+      console.log('Document data received:', documentData);
       setDescription(documentData.commit_msg || '');
       setIsMain(documentData.is_main || false);
     }
@@ -28,6 +29,7 @@ const DocumentUpdater = ({ documentData, onUpdate }) => {
         cours: documentData.cours,
       };
 
+      console.log('Sending update with data:', updatedData);
       const response = await UpdateDocument(documentData.id, updatedData);
 
       if (response.status === 200) {

@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import Logo from '../../Logo';
 
 const PublicNavbar = () => {
-  const authToken = sessionStorage.getItem('authToken') || localStorage.getItem('authToken');
+  const authToken = localStorage.getItem('authToken');
   const handleLogout = () => {
     window.location.href = '/logout';
   };
