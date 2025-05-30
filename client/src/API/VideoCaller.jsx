@@ -1,7 +1,7 @@
 import api from './api';
 import PropTypes from 'prop-types';
 
-const baseURL = 'https://localhost:8443/api';
+const baseURL = '/api';
 
 /**
  * Fonction générique de gestion des erreurs
