@@ -1,5 +1,6 @@
 const { User, sequelize } = require('../models');
 const bcrypt = require('bcrypt');
+const zxcvbn = require('zxcvbn');
 
 // Get the authenticated user's profile
 const getProfile = async (req, res) => {
@@ -126,6 +127,16 @@ const changePassword = async (req, res) => {
         const isMatch = await bcrypt.compare(oldPassword, user.password);
         if (!isMatch) {
             return res.status(400).json({ message: 'Old password is incorrect' });
+        }
+
+        // Check password strength
+        const passwordStrength = zxcvbn(newPassword);
+        if (passwordStrength.score < 3) {
+            return res.status(400).json({ 
+                message: 'Password is too weak', 
+                feedback: passwordStrength.feedback.suggestions,
+                score: passwordStrength.score
+            });
         }
 
         user.password = await bcrypt.hash(newPassword, 10);
