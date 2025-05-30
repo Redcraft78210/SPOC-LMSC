@@ -18,7 +18,7 @@ const setupWebSocketHandlers = (server, chatWSS, streamWSS) => {
 
     // Parse URL to determine which WebSocket server should handle this connection
     try {
-      const pathname = new URL(request.url, `http://${request.headers.host}`).pathname;
+      const pathname = new URL(request.url, `https://${request.headers.host}`).pathname;
       
       // Mark socket as being handled
       upgradedSockets.add(socket);

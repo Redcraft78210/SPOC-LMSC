@@ -36,7 +36,7 @@ const updateVideoCoverImages = async () => {
   }
 };
 
-updateVideoCoverImages();
+//updateVideoCoverImages();
 
 const getAllCourses = async (req, res) => {
   try {
