@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, Suspense, lazy } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAvatar } from '../API/ProfileCaller';
 import { jwtDecode } from 'jwt-decode';
@@ -6,29 +6,35 @@ import { X, Pencil, Loader2, Mail, Bell } from 'lucide-react';
 import PropTypes from 'prop-types';
 
 import NavigationBar from '../components/Navbar';
-import PictureModal from '../components/PictureModal';
 import Logo from '../Logo';
 
-import AdminDashboardHome from './Admin/DashboardHome';
-import ProfDashboardHome from './Professeur/DashboardHome';
-import EleveDashboardHome from './Eleve/DashboardHome';
-import ProfCoursesLibrary from './Professeur/CoursesLibrary';
-import AdminCoursesLibrary from './Admin/CoursesLibrary';
-import CoursesLibrary from './Eleve/CoursesLibrary';
+// Lazy load components
+const PictureModal = lazy(() => import('../components/PictureModal'));
+const AdminDashboardHome = lazy(() => import('./Admin/DashboardHome'));
+const ProfDashboardHome = lazy(() => import('./Professeur/DashboardHome'));
+const EleveDashboardHome = lazy(() => import('./Eleve/DashboardHome'));
+const ProfCoursesLibrary = lazy(() => import('./Professeur/CoursesLibrary'));
+const AdminCoursesLibrary = lazy(() => import('./Admin/CoursesLibrary'));
+const CoursesLibrary = lazy(() => import('./Eleve/CoursesLibrary'));
+const CoursesManagement = lazy(() => import('../components/ProfComp/CoursesManagment'));
+const DocumentManager = lazy(() => import('../components/ProfComp/DocumentMng'));
+const VideoManager = lazy(() => import('../components/ProfComp/VideoMng'));
+const CourseReader = lazy(() => import('./CourseReader'));
+const LiveViewer = lazy(() => import('./Eleve/LiveViewer'));
+const Forum = lazy(() => import('./Forum'));
+const UserManagement = lazy(() => import('./Admin/UserManagement'));
+const ClassManagement = lazy(() => import('./Admin/ClassManagement'));
+const ThemeSettings = lazy(() => import('./Public/Theme'));
+const Settings = lazy(() => import('./Settings'));
+const NotFound = lazy(() => import('./Public/NotFound'));
+const Mailbox = lazy(() => import('./Mailbox'));
 
-import CoursesManagement from '../components/ProfComp/CoursesManagment';
-import DocumentManager from '../components/ProfComp/DocumentMng';
-import VideoManager from '../components/ProfComp/VideoMng';
-
-import CourseReader from './CourseReader';
-import LiveViewer from './Eleve/LiveViewer';
-import Forum from './Forum';
-import UserManagement from './Admin/UserManagement';
-import ClassManagement from './Admin/ClassManagement';
-import ThemeSettings from './Public/Theme';
-import Settings from './Settings';
-import NotFound from './Public/NotFound';
-import Mailbox from './Mailbox';
+// Add a loading component
+const LoadingComponent = () => (
+  <div className="flex items-center justify-center h-full w-full">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+  </div>
+);
 
 const Dashboard = ({ content, token, role }) => {
   const navigate = useNavigate();
@@ -108,6 +114,19 @@ const Dashboard = ({ content, token, role }) => {
   };
 
   const contentMap = {
+    Home: user.role === 'Admin' ? (
+      <Suspense fallback={<LoadingComponent />}>
+        <AdminDashboardHome />
+      </Suspense>
+    ) : user.role === 'Professeur' ? (
+      <Suspense fallback={<LoadingComponent />}>
+        <ProfDashboardHome authToken={token} />
+      </Suspense>
+    ) : (
+      <Suspense fallback={<LoadingComponent />}>
+        <EleveDashboardHome authToken={token} />
+      </Suspense>
+    ),
     CoursesLibrary: <CoursesLibrary authToken={token} />,
     CourseReader: <CourseReader authToken={token} />,
     ...(user.role === 'Administrateur'

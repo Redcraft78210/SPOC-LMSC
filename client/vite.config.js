@@ -16,8 +16,8 @@ export default defineConfig({
   tailwindcss()],
   server: {
     https: {
-      key: fs.readFileSync('../server/certs2/selfsigned.key'),
-      cert: fs.readFileSync('../server/certs2/selfsigned.crt')
+      key: fs.readFileSync('../server/certs/selfsigned.key'),
+      cert: fs.readFileSync('../server/certs/selfsigned.crt')
     },
     port: 443,
     host: '0.0.0.0'

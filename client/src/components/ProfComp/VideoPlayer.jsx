@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import ReactPlayer from 'react-player';
+import FilePlayer from 'react-player/file';
 
 const VideoPlayer = ({ url }) => {
   if (!url) {
@@ -12,7 +12,7 @@ const VideoPlayer = ({ url }) => {
 
   return (
     <div className="aspect-video relative">
-      <ReactPlayer
+      <FilePlayer
         url={url}
         controls={true}
         width="100%"
@@ -20,7 +20,7 @@ const VideoPlayer = ({ url }) => {
         config={{
           file: {
             attributes: {
-              crossOrigin: 'anonymous', // Fixed property name
+              crossOrigin: 'anonymous',
               controlsList: 'nodownload',
             },
             forceVideo: true,

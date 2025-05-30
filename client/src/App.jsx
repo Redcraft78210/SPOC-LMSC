@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import {
   Navigate,
   BrowserRouter as Router,
@@ -8,18 +8,29 @@ import {
 } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 
-import About from './pages/Public/About';
-import Contact from './pages/Public/Contact';
-import Terms from './pages/Public/TermsOfUse';
-import Legal from './pages/Public/LegalNotice';
-import Privacy from './pages/Public/PrivacyPolicy';
-import FirstLogin from './pages/FirstLogin';
-import Dashboard from './pages/Dashboard'; // Utilisation du composant fusionné
-import Home from './pages/Public/Home';
-import Logout from './components/Logout';
-import MaintenanceBanner from './pages/Public/Maintenance';
-import NotFound from './pages/Public/NotFound';
-import Sign from './pages/Public/Sign';
+// Replace static imports with lazy imports
+const About = React.lazy(() => import('./pages/Public/About'));
+const Contact = React.lazy(() => import('./pages/Public/Contact'));
+const Terms = React.lazy(() => import('./pages/Public/TermsOfUse'));
+const Legal = React.lazy(() => import('./pages/Public/LegalNotice'));
+const Privacy = React.lazy(() => import('./pages/Public/PrivacyPolicy'));
+const FirstLogin = React.lazy(() => import('./pages/FirstLogin'));
+const Dashboard = React.lazy(() => import('./pages/Dashboard'));
+const Home = React.lazy(() => import('./pages/Public/Home'));
+const Logout = React.lazy(() => import('./components/Logout'));
+const MaintenanceBanner = React.lazy(() => import('./pages/Public/Maintenance'));
+const NotFound = React.lazy(() => import('./pages/Public/NotFound'));
+const Sign = React.lazy(() => import('./pages/Public/Sign'));
+
+// Add a loading fallback component
+const LoadingFallback = () => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-white bg-opacity-50 backdrop-blur-sm">
+    <div className="flex flex-col items-center space-y-4">
+      <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+      <p className="animate-pulse text-gray-600">Chargement...</p>
+    </div>
+  </div>
+);
 
 
 let APP_STATUS = '';
@@ -133,15 +144,6 @@ function App() {
     sessionStorage.removeItem('authToken');
   };
 
-  const Loader = () => (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-white bg-opacity-50 backdrop-blur-sm">
-      <div className="flex flex-col items-center space-y-4">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
-        <p className="animate-pulse text-gray-600">Chargement...</p>
-      </div>
-    </div>
-  );
-
   if (APP_STATUS === 'MAINTENANCE') {
     return (
       <MaintenanceBanner
@@ -153,7 +155,7 @@ function App() {
   }
 
   if (loading) {
-    return <Loader />;
+    return <LoadingFallback />;
   }
 
   if (auth && auth.firstLogin) {
@@ -180,30 +182,32 @@ function App() {
           key={route.path}
           path={route.path}
           element={
-            (() => {
-              switch (route.content) {
-                case 'Home':
-                  return <Home />;
-                case 'About':
-                  return <About />;
-                case 'Sign':
-                  return auth ? (
-                    <Navigate to="/dashboard" replace />
-                  ) : (
-                    <Sign setAuth={handleSetAuth} />
-                  );
-                case 'Contact':
-                  return <Contact />;
-                case 'Terms':
-                  return <Terms />;
-                case 'Legal':
-                  return <Legal />;
-                case 'Privacy':
-                  return <Privacy />;
-                default:
-                  return <NotFound />;
-              }
-            })()
+            <Suspense fallback={<LoadingFallback />}>
+              {(() => {
+                switch (route.content) {
+                  case 'Home':
+                    return <Home />;
+                  case 'About':
+                    return <About />;
+                  case 'Sign':
+                    return auth ? (
+                      <Navigate to="/dashboard" replace />
+                    ) : (
+                      <Sign setAuth={handleSetAuth} />
+                    );
+                  case 'Contact':
+                    return <Contact />;
+                  case 'Terms':
+                    return <Terms />;
+                  case 'Legal':
+                    return <Legal />;
+                  case 'Privacy':
+                    return <Privacy />;
+                  default:
+                    return <NotFound />;
+                }
+              })()}
+            </Suspense>
           }
         />
       ))}
