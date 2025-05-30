@@ -164,14 +164,23 @@ const manualRegister = async (req, res) => {
 };
 
 const login = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, username, password } = req.body;
 
-  if (!email || !password) {
+  // Vérifier qu'au moins un identifiant et le mot de passe sont fournis
+  if ((!email && !username) || !password) {
     return res.status(400).json({ message: ERROR_MESSAGES.MISSING_FIELDS });
   }
 
   try {
-    const user = await User.findOne({ where: { email } });
+    let user;
+    
+    // Rechercher l'utilisateur soit par email, soit par username
+    if (email) {
+      user = await User.findOne({ where: { email } });
+    } else {
+      user = await User.findOne({ where: { username } });
+    }
+    
     if (!user) return res.status(401).json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS });
 
     const isPasswordValid = await bcrypt.compare(password, user.password);

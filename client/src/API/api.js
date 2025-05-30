@@ -1,7 +1,7 @@
 // api.js
 import axios from 'axios';
 
-const baseURL = '/api';
+const baseURL = 'https://172.20.10.5:8443/api';
 
 // Create an Axios instance
 const api = axios.create({

@@ -97,9 +97,10 @@ const Sign = ({ setAuth }) => {
   const digitsRefs = useRef([]);
   const [countEchec2FACode, setCountEchec2FACode] = useState(0);
   const [username, setUsername] = useState('');
+  const [emailOrUsername, setEmailOrUsername] = useState(''); // Renamed from email for login form
+  const [email, setEmail] = useState(''); // Keep this for registration form
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [surname, setSurname] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -115,7 +116,7 @@ const Sign = ({ setAuth }) => {
     const searchParams = new URLSearchParams(window.location.search);
     setIsSignUpForm(searchParams.get('register'));
   }, []);
-
+  
   useEffect(() => {
     const timeout = setTimeout(() => {
       loadCaptchaEngine(6, '#f9fafb');
@@ -240,20 +241,27 @@ const Sign = ({ setAuth }) => {
     setLastSubmit(Date.now());
     setError(null);
 
-    if (!email.trim() || !password.trim()) {
-      return setError('Veuillez remplir tous les champs requis');
-    }
-
     if (isSignUpForm) {
+      // Pour l'inscription
+      if (!email.trim() || !password.trim() || !username.trim()) {
+        return setError('Veuillez remplir tous les champs requis');
+      }
+      
       if (password !== confirmPassword) {
         return setError('Les mots de passe ne correspondent pas');
       }
+      
       if (code.trim() === '') {
         return setError("Veuillez entrer le code d'inscription");
       }
+      
       if (!validatePassword(password)) {
-
         return setError(errorMessages['auth/weak-password']);
+      }
+    } else {
+      // Pour la connexion
+      if (!emailOrUsername.trim() || !password.trim()) {
+        return setError('Veuillez remplir tous les champs requis');
       }
     }
 
@@ -306,9 +314,12 @@ const Sign = ({ setAuth }) => {
           handleAuthSuccess(data.token);
         }
       } else {
-        // Connexion
+        // Connexion avec email ou username
+        const isEmail = emailOrUsername.includes('@');
+        
         const loginResponse = await login({
-          email: email.trim(),
+          // Si c'est un email, envoyez-le comme email, sinon comme username
+          ...(isEmail ? { email: emailOrUsername.trim() } : { username: emailOrUsername.trim() }),
           password: password.trim(),
         });
 
@@ -317,7 +328,7 @@ const Sign = ({ setAuth }) => {
           return false;
         }
 
-        if (loginResponse.status !== 200) {
+        if (![200, 201, 202].includes(loginResponse.status)) {
           throw new Error(loginResponse.message || errorMessages.default);
         }
 
@@ -492,13 +503,17 @@ const Sign = ({ setAuth }) => {
     e.preventDefault();
     setError(null);
 
-    if (!email.trim()) {
-      return setError('Veuillez entrer votre email');
+    if (!emailOrUsername.trim()) {
+      return setError('Veuillez entrer votre email ou nom d\'utilisateur');
     }
 
     try {
-      // Utiliser le AuthCaller au lieu d'axios
-      const response = await forgotPassword({ email: email.trim() });
+      // Vérifier si c'est un email ou un nom d'utilisateur
+      const isEmail = emailOrUsername.includes('@');
+      
+      const response = await forgotPassword({
+        ...(isEmail ? { email: emailOrUsername.trim() } : { username: emailOrUsername.trim() })
+      });
 
       if (response.status !== 200) {
         throw new Error(response.message || errorMessages.default);
@@ -511,18 +526,22 @@ const Sign = ({ setAuth }) => {
     }
   };
 
-  // Le reste du composant reste inchangé
   const toggleAuthMode = () => {
     setIsSignUpForm(!isSignUpForm);
     setError(null);
     if (isSignUpForm) {
       setUsername('');
       setName('');
+      setSurname('');
       setConfirmPassword('');
+      // Réinitialiser le champ email/username pour connexion
+      setEmailOrUsername(email); // Conserver l'email s'il a déjà été saisi
+    } else {
+      setEmail(emailOrUsername); // Conserver le email/username comme email pour inscription
+      setEmailOrUsername('');
     }
   };
 
-  // Le reste du composant reste inchangé (render2FAContent, renderForgotPasswordForm, renderInitialForm)
   const render2FAContent = () => (
     <form onSubmit={handle2FASubmit} className="w-full space-y-8">
       {authStep === '2fa-setup' && (
@@ -620,11 +639,11 @@ const Sign = ({ setAuth }) => {
     <form onSubmit={handleForgotPasswordSubmit} className="w-full space-y-8">
       <div className="relative">
         <input
-          id="email"
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
+          id="emailOrUsername"
+          type="text"
+          placeholder="Email ou nom d'utilisateur"
+          value={emailOrUsername}
+          onChange={e => setEmailOrUsername(e.target.value)}
           className="w-full h-14 px-6 py-3 text-base md:text-lg bg-white border-2 rounded-lg"
           required
           autoFocus
@@ -687,21 +706,35 @@ const Sign = ({ setAuth }) => {
               required
             />
           </div>
+          <div className="relative">
+            <input
+              id="email"
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              className="w-full h-14 px-6 py-3 text-base md:text-lg bg-white border-2 rounded-lg"
+              required
+              autoFocus
+            />
+          </div>
         </>
       )}
 
-      <div className="relative">
-        <input
-          id="email"
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          className="w-full h-14 px-6 py-3 text-base md:text-lg bg-white border-2 rounded-lg"
-          required
-          autoFocus
-        />
-      </div>
+      {!isSignUpForm && (
+        <div className="relative">
+          <input
+            id="emailOrUsername"
+            type="text"
+            placeholder="Email ou nom d'utilisateur"
+            value={emailOrUsername}
+            onChange={e => setEmailOrUsername(e.target.value)}
+            className="w-full h-14 px-6 py-3 text-base md:text-lg bg-white border-2 rounded-lg"
+            required
+            autoFocus
+          />
+        </div>
+      )}
 
       {isSignUpForm && (
         // code d'inscription

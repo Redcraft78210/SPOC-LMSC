@@ -59,20 +59,6 @@ const updateUserProfile = async (profileData) => {
   }
 };
 
-// Changer le mot de passe
-const changePassword = async ({ oldPassword, newPassword }) => {
-  try {
-    const response = await api.put('/users/profile/password', { oldPassword, newPassword });
-    return {
-      status: response.status,
-      data: response.data,
-      message: 'Password changed successfully',
-    };
-  } catch (error) {
-    return handleError(error);
-  }
-};
-
 // Télécharger un avatar
 const uploadAvatar = async ({ file }) => {
   try {
@@ -118,48 +104,6 @@ const deleteAvatar = async () => {
       status: response.status,
       data: response.data,
       message: 'Avatar deleted successfully',
-    };
-  } catch (error) {
-    return handleError(error);
-  }
-};
-
-// Configurer l'authentification à deux facteurs
-const setup2FA = async () => {
-  try {
-    const response = await api.post('/users/2fa/setup');
-    return {
-      status: response.status,
-      data: response.data,
-      message: 'Success',
-    };
-  } catch (error) {
-    return handleError(error);
-  }
-};
-
-// Vérifier un code 2FA lors de la configuration
-const verify2FASetup = async ({ code }) => {
-  try {
-    const response = await api.post('/users/2fa/verify', { code });
-    return {
-      status: response.status,
-      data: response.data,
-      message: '2FA setup verified successfully',
-    };
-  } catch (error) {
-    return handleError(error);
-  }
-};
-
-// Désactiver l'authentification à deux facteurs
-const disable2FA = async ({ code }) => {
-  try {
-    const response = await api.post('/users/2fa/disable', { code });
-    return {
-      status: response.status,
-      data: response.data,
-      message: '2FA disabled successfully',
     };
   } catch (error) {
     return handleError(error);
@@ -224,10 +168,6 @@ updateUserProfile.propTypes = {
   }).isRequired,
 };
 
-changePassword.propTypes = {
-  oldPassword: PropTypes.string.isRequired,
-  newPassword: PropTypes.string.isRequired,
-};
 
 uploadAvatar.propTypes = {
   file: PropTypes.oneOfType([PropTypes.instanceOf(File), PropTypes.string]).isRequired,
@@ -236,16 +176,6 @@ uploadAvatar.propTypes = {
 getAvatar.propTypes = {};
 
 deleteAvatar.propTypes = {};
-
-setup2FA.propTypes = {};
-
-verify2FASetup.propTypes = {
-  code: PropTypes.string.isRequired,
-};
-
-disable2FA.propTypes = {
-  code: PropTypes.string.isRequired,
-};
 
 getNotificationPreferences.propTypes = {};
 
@@ -256,13 +186,9 @@ updateNotificationPreferences.propTypes = {
 export {
   getUserProfile,
   updateUserProfile,
-  changePassword,
   uploadAvatar,
   getAvatar,
   deleteAvatar,
-  setup2FA,
-  verify2FASetup,
-  disable2FA,
   getNotificationPreferences,
   updateNotificationPreferences,
 };

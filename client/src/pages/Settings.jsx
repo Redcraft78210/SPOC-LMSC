@@ -157,11 +157,11 @@ const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
 
                   {/* User avatar or placeholder */}
                   {loadingAvatar ? (
-                    <div className="h-20 w-20 rounded-full border-2 bg-gray-200 mx-auto flex items-center justify-center">
+                    <div className="h-25 w-25 rounded-full border-2 bg-gray-200 mx-auto flex items-center justify-center">
                       <Loader2 className="h-8 w-8 text-gray-400 animate-spin" />
                     </div>
                   ) : !userAvatar ? (
-                    <div className="h-20 w-20 rounded-full border-2 bg-yellow-500 mx-auto flex items-center justify-center">
+                    <div className="h-25 w-25 rounded-full border-2 bg-yellow-500 mx-auto flex items-center justify-center">
                       <span className="text-2xl font-bold text-gray-800">
                         {user.name ? user.name.charAt(0).toUpperCase() : ''}
                       </span>

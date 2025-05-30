@@ -204,11 +204,45 @@ const upgradeUserRole = async ({ userId }) => {
   }
 };
 
+
+// Changer le mot de passe
+const changePassword = async ({ oldPassword, newPassword }) => {
+  try {
+    const response = await api.put('/users/change-password', { oldPassword, newPassword });
+    return {
+      status: response.status,
+      data: response.data,
+      message: 'Password changed successfully',
+    };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+// Désactiver l'authentification à deux facteurs d'un utilisateur
+const disable2FA = async () => {
+  try {
+    const response = await api.delete('/auth/2fa');
+    return {
+      status: response.status,
+      data: response.data,
+      message: 'Success',
+    };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
 // PropTypes
 getAllUsers.propTypes = {};
 
 getUserById.propTypes = {
   userId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+};
+
+changePassword.propTypes = {
+  oldPassword: PropTypes.string.isRequired,
+  newPassword: PropTypes.string.isRequired,
 };
 
 createUser.propTypes = {
@@ -261,7 +295,9 @@ export {
   getAllUsers,
   getUserById,
   createUser,
+  changePassword,
   updateUser,
+  disable2FA,
   deleteUser,
   activateUser,
   deactivateUser,

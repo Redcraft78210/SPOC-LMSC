@@ -2,7 +2,7 @@ import { useState } from 'react';
 import PublicNavbar from '../../components/PublicComp/PublicNavbar';
 import Footer from '../../components/PublicComp/Footer';
 
-const BASE_URL = "/api";
+const BASE_URL = "https://172.20.10.5:8443/api";
 
 const Contact = () => {
   const [formData, setFormData] = useState({
