@@ -145,23 +145,23 @@ const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
               <span>Profil</span>
             </h2>
 
-            <div className="flex items-center">
-              <div className="relative ml-5 mr-15">
+            <div className="flex flex-col items-center">
+              <div className="relative">
                 <div className="text-center mb-4">
                   <button
-                    className="absolute top-18 -right-0 cursor-pointer border border-blue-400 p-1 rounded-full bg-black text-white"
+                    className="absolute -top-1 -right-1 z-10 cursor-pointer border border-blue-400 p-1 rounded-full bg-black text-white"
                     onClick={() => setShowProfilepictureModal(true)}
                   >
-                    <CogIcon className="h-6 w-6" />
+                    <CogIcon className="h-5 w-5" />
                   </button>
 
                   {/* User avatar or placeholder */}
                   {loadingAvatar ? (
-                    <div className="h-25 w-25 rounded-full border-2 bg-gray-200 mx-auto flex items-center justify-center">
-                      <Loader2 className="h-8 w-8 text-gray-400 animate-spin" />
+                    <div className="h-20 w-20 md:h-24 md:w-24 rounded-full border-2 bg-gray-200 mx-auto flex items-center justify-center">
+                      <Loader2 className="h-6 w-6 text-gray-400 animate-spin" />
                     </div>
                   ) : !userAvatar ? (
-                    <div className="h-25 w-25 rounded-full border-2 bg-yellow-500 mx-auto flex items-center justify-center">
+                    <div className="h-20 w-20 md:h-24 md:w-24 rounded-full border-2 bg-yellow-500 mx-auto flex items-center justify-center">
                       <span className="text-2xl font-bold text-gray-800">
                         {user.name ? user.name.charAt(0).toUpperCase() : ''}
                       </span>
@@ -170,14 +170,14 @@ const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
                     <img
                       src={userAvatar}
                       alt="Avatar"
-                      className="h-25 w-25 rounded-full object-cover border-4 border-black-300 mx-auto"
-                      onError={() => refreshAvatar()} // En cas d'erreur, demandez au parent de rafraîchir
+                      className="h-20 w-20 md:h-24 md:w-24 rounded-full object-cover border-2 md:border-4 border-black-300 mx-auto"
+                      onError={() => refreshAvatar()}
                     />
                   )}
                 </div>
               </div>
-              <p className="text-sm text-gray-600 text-center mt-2">
-                Cliquez sur l’icône pour modifier votre photo de profil.
+              <p className="text-sm text-gray-600 text-center mt-1">
+                Cliquez sur l&apos;icône pour modifier votre photo de profil.
               </p>
             </div>
 

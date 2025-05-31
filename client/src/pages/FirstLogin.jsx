@@ -73,7 +73,7 @@ const FirstLogin = ({ token, setAuth }) => {
           twoFASetup: {} // Add any required setup data
         });
 
-        if (response.status === 200) {
+        if (response.status === 201) {
           setTempToken(response.data.tempToken);
           setError(null);
         } else {
@@ -130,7 +130,7 @@ const FirstLogin = ({ token, setAuth }) => {
     const check2FAStatusForUser = async () => {
       try {
         const response = await check2FAStatus({ token });
-        if (response.status === 200) {
+        if (response.status === 201) {
           setIs2FAAlreadySetup(response.data.is2FAEnabled);
         } else {
           console.error('Error checking 2FA status:', response.message);
@@ -164,7 +164,7 @@ const FirstLogin = ({ token, setAuth }) => {
     try {
       const response = await firstLogin({ username, password, token });
 
-      if (response.status === 200) {
+      if (response.status === 201) {
         // Si 2FA déjà configuré, stocke le token selon rememberMe
         if (is2FAAlreadySetup) {
           if (rememberMe) {

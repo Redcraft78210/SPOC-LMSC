@@ -32,7 +32,7 @@ api.interceptors.response.use(
   response => response,
   error => {
     // Handle errors globally (e.g., unauthorized, server errors)
-    if (error.response && error.response.data && error.response.data.message.includes("invalid") && error.response.data.message.includes("token")) {
+    if (error.response?.data?.message?.includes("invalid") && error.response?.data?.message?.includes("token")) {
       // Handle unauthorized access
       console.warn('Unauthorized. Redirecting to login...');
 

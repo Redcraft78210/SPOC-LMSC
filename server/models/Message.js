@@ -13,6 +13,10 @@ const Message = sequelize.define('Message', {
         type: DataTypes.STRING,
         allowNull: false,
     },
+    recipientType: {
+        type: DataTypes.ENUM('individual', 'all-admins', 'all-users'),
+        allowNull: false,
+    },
     content: {
         type: DataTypes.TEXT,
         allowNull: false,
@@ -25,10 +29,6 @@ const Message = sequelize.define('Message', {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
     },
-    deleted: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false,
-    }
 }, {
     tableName: 'messages',
     timestamps: true,

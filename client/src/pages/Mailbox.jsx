@@ -30,6 +30,12 @@ import {
   UserCheck,
   ShieldAlert,
   Users,
+  Menu,
+  File,
+  FileText,
+  Image,
+  Music,
+  Video,
 } from 'lucide-react';
 import { toast, Toaster } from 'react-hot-toast';
 
@@ -51,6 +57,7 @@ const Mailbox = ({ role, onClose }) => {
   const [downloadingAttachments, setDownloadingAttachments] = useState({});
   const [loadingMessageDetails, setLoadingMessageDetails] = useState(false);
   const [deletingMessage, setDeletingMessage] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Filter options
   const [filters, setFilters] = useState({
@@ -78,12 +85,12 @@ const Mailbox = ({ role, onClose }) => {
     try {
       setLoading(true);
       const fetchFunction = getEndpointForView();
-      const response = await fetchFunction({ 
-        page: pagination.currentPage, 
+      const response = await fetchFunction({
+        page: pagination.currentPage,
         limit: 20,
         filters
       });
-      
+
       if (response.status === 200) {
         setMessages(response.data.messages);
         setPagination({
@@ -109,7 +116,7 @@ const Mailbox = ({ role, onClose }) => {
     try {
       setLoadingMessageDetails(true);
       const response = await getMessage({ messageId });
-      
+
       if (response.status === 200) {
         setSelectedMessage(response.data);
         if (!response.data.read && view === 'inbox') {
@@ -123,6 +130,8 @@ const Mailbox = ({ role, onClose }) => {
       console.error("Erreur lors du chargement du message:", error);
     } finally {
       setLoadingMessageDetails(false);
+      // Fermer le menu mobile automatiquement lorsqu'un message est sélectionné
+      setMobileMenuOpen(false);
     }
   };
 
@@ -130,13 +139,13 @@ const Mailbox = ({ role, onClose }) => {
     try {
       setDeletingMessage(true);
       let response;
-      
+
       if (view === 'trash') {
         response = await permanentlyDeleteMessage({ messageId });
       } else {
         response = await moveToTrash({ messageId });
       }
-      
+
       if (response.status === 200) {
         if (selectedMessage && selectedMessage.id === messageId) {
           setSelectedMessage(null);
@@ -156,8 +165,8 @@ const Mailbox = ({ role, onClose }) => {
     try {
       setDownloadingAttachments(prev => ({ ...prev, [attachmentId]: true }));
       const response = await downloadAttachment({ attachmentId });
-      
-      if (response.status === 200) {
+
+      if (response && response.status === 200) {
         // Téléchargement du fichier
         const blob = response.data;
         const url = window.URL.createObjectURL(blob);
@@ -166,14 +175,16 @@ const Mailbox = ({ role, onClose }) => {
         link.setAttribute('download', filename);
         document.body.appendChild(link);
         link.click();
-        
+
         // Cleanup
         setTimeout(() => {
           document.body.removeChild(link);
           window.URL.revokeObjectURL(url);
         }, 100);
       } else {
-        console.error("Error downloading attachment:", response.message);
+        // Safe access to response message with fallback
+        const errorMessage = response?.message || "Unknown error";
+        console.error("Error downloading attachment:", errorMessage);
       }
     } catch (error) {
       console.error("Erreur lors du téléchargement de la pièce jointe:", error);
@@ -200,18 +211,45 @@ const Mailbox = ({ role, onClose }) => {
     const [sending, setSending] = useState(false);
     const [recipientType, setRecipientType] = useState('individual'); // individual, all-admins, all-teachers, all-students
     const [searchQuery, setSearchQuery] = useState('');
-    const [showSuggestions, setShowSuggestions] = useState(false); // New state for suggestions visibility
+    const [showSuggestions, setShowSuggestions] = useState(false);
     const recipientsInitialized = useRef(false);
     const [loadingRecipients, setLoadingRecipients] = useState(false);
-    const searchInputRef = useRef(null); // Ref for the search input
+    const searchInputRef = useRef(null);
+
+    // Expressions régulières pour détecter les mentions de pièces jointes
+    const attachmentRegexList = [
+      /ci-joint/i,
+      /pièce[s]? jointe[s]?/i,
+      /fichier[s]? joint[s]?/i,
+      /attachement[s]?/i,
+      /en annexe/i,
+      /joint[s]? à ce mail/i,
+      /joint[s]? à ce message/i,
+      /joint[s]? à cet email/i,
+      /veuillez trouver/i,
+      /vous trouverez.*joint/i,
+      /je vous envoie.*fichier/i,
+      /document[s]? joint[s]?/i,
+      /photo[s]? jointe[s]?/i,
+      /image[s]? jointe[s]?/i,
+      /pdf joint/i,
+      /joint.*pdf/i,
+      /joint.*excel/i,
+      /joint.*document/i,
+    ];
+
+    // Fonction pour vérifier si le contenu mentionne des pièces jointes
+    const checkForAttachmentMention = (text) => {
+      return attachmentRegexList.some(regex => regex.test(text));
+    };
 
     const fetchAvailableRecipients = useCallback(async () => {
       try {
         setLoadingRecipients(true);
-        const response = await getAvailableRecipients({ 
-          type: recipientType 
+        const response = await getAvailableRecipients({
+          type: recipientType
         });
-        
+
         if (response.status === 200) {
           setAvailableRecipients(response.data || []);
         } else {
@@ -302,7 +340,7 @@ const Mailbox = ({ role, onClose }) => {
         setRecipients(prevRecipients => {
           // Check if the user is already selected
           if (!prevRecipients.some(r => r.id === selectedUser.id)) {
-            
+
             return [...prevRecipients, selectedUser];
           }
           return prevRecipients;
@@ -319,42 +357,75 @@ const Mailbox = ({ role, onClose }) => {
 
     const handleSubmit = async e => {
       e.preventDefault();
-      
-      if (recipients.length === 0) {
+
+      if (recipients.length === 0 && recipientType === 'individual') {
         toast.error("Veuillez sélectionner au moins un destinataire");
         return;
       }
-      
+
       if (!subject.trim()) {
         toast.error("Veuillez saisir un objet");
         return;
       }
-      
+
       if (!content.trim()) {
         toast.error("Veuillez saisir un message");
         return;
       }
-      
+
+      // Vérifier si l'utilisateur mentionne des pièces jointes mais n'en a pas ajouté
+      if (attachments.length === 0 && checkForAttachmentMention(content)) {
+        const confirmSend = window.confirm(
+          "Vous semblez mentionner des pièces jointes dans votre message, mais aucun fichier n'a été ajouté. Souhaitez-vous quand même envoyer le message sans pièces jointes?"
+        );
+
+        if (!confirmSend) {
+          return;
+        }
+      }
+
       setSending(true);
-      
+
       try {
         const formData = new FormData();
-        
+
         // Ajouter les destinataires
         recipients.forEach(recipient => {
           formData.append('recipients[]', recipient.id);
         });
-        
+
+        console.log("FormData recipients:", recipients.map(r => r.id));
+        console.log("FormData subject:", subject.trim());
+        console.log("FormData content:", content.trim());
+        console.log("FormData attachments:", attachments);
+
         formData.append('subject', subject.trim());
         formData.append('content', content.trim());
-        
+
+        // Si c'est une réponse, ajouter l'ID du message auquel on répond
+        if (replyData) {
+          formData.append('replyTo', replyData.id);
+        }
+        // Si le type de destinataire est individuel, ajouter le type
+        if (recipientType === 'individual') {
+          formData.append('recipientType', 'individual');
+        }
+        // Sinon, ajouter le type de destinataire spécial
+        if (recipientType === 'all-students') {
+          formData.append('recipientType', 'all-students');
+        } else if (recipientType === 'all-teachers') {
+          formData.append('recipientType', 'all-teachers');
+        } else if (recipientType === 'all-admins') {
+          formData.append('recipientType', 'all-admins');
+        }
+
         // Ajouter les pièces jointes
         Array.from(attachments).forEach(file => {
           formData.append('attachments', file);
         });
-        
+
         const response = await sendMessage(formData);
-        
+
         if (response.status === 201) {
           toast.success("Message envoyé avec succès");
           closeComposeModal();
@@ -369,27 +440,27 @@ const Mailbox = ({ role, onClose }) => {
         setSending(false);
       }
     };
-    
+
     return (
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[85vh] overflow-hidden mx-4">
-          <div className="p-6 border-b">
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-9940 p-2 sm:p-4">
+        <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
+          <div className="p-3 sm:p-6 border-b">
             <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-gray-800">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-800">
                 Nouveau Message
               </h2>
               <button
                 onClick={closeComposeModal}
                 className="text-gray-400 hover:text-gray-500"
               >
-                <X className="h-6 w-6" />
+                <X className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
             </div>
           </div>
 
           <form
             onSubmit={handleSubmit}
-            className="p-6 overflow-y-auto max-h-[calc(85vh-130px)]"
+            className="p-3 sm:p-6 overflow-y-auto max-h-[calc(90vh-80px)]"
           >
             {/* Recipient Type Selection */}
             <div className="mb-4">
@@ -400,13 +471,12 @@ const Mailbox = ({ role, onClose }) => {
                 <button
                   type="button"
                   onClick={() => handleSpecialRecipientSelect('individual')}
-                  className={`px-3 py-2 rounded-md text-sm flex items-center gap-1 ${
-                    recipientType === 'individual'
-                      ? 'bg-blue-100 text-blue-800 border border-blue-300'
-                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                  }`}
+                  className={`px-2 py-1.5 sm:px-3 sm:py-2 rounded-md text-xs sm:text-sm flex items-center gap-1 ${recipientType === 'individual'
+                    ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                    }`}
                 >
-                  <User size={16} />
+                  <User size={14} className="sm:size-6" />
                   Individuel
                 </button>
 
@@ -417,13 +487,12 @@ const Mailbox = ({ role, onClose }) => {
                       onClick={() =>
                         handleSpecialRecipientSelect('all-students')
                       }
-                      className={`px-3 py-2 rounded-md text-sm flex items-center gap-1 ${
-                        recipientType === 'all-students'
-                          ? 'bg-blue-100 text-blue-800 border border-blue-300'
-                          : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                      }`}
+                      className={`px-2 py-1.5 sm:px-3 sm:py-2 rounded-md text-xs sm:text-sm flex items-center gap-1 ${recipientType === 'all-students'
+                        ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                        }`}
                     >
-                      <Users size={16} />
+                      <Users size={14} className="sm:size-6" />
                       Tous les étudiants
                     </button>
 
@@ -432,13 +501,12 @@ const Mailbox = ({ role, onClose }) => {
                       onClick={() =>
                         handleSpecialRecipientSelect('all-teachers')
                       }
-                      className={`px-3 py-2 rounded-md text-sm flex items-center gap-1 ${
-                        recipientType === 'all-teachers'
-                          ? 'bg-blue-100 text-blue-800 border border-blue-300'
-                          : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                      }`}
+                      className={`px-2 py-1.5 sm:px-3 sm:py-2 rounded-md text-xs sm:text-sm flex items-center gap-1 ${recipientType === 'all-teachers'
+                        ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                        }`}
                     >
-                      <UserCheck size={16} />
+                      <UserCheck size={14} className="sm:size-6" />
                       Tous les professeurs
                     </button>
                   </>
@@ -446,13 +514,12 @@ const Mailbox = ({ role, onClose }) => {
                   <button
                     type="button"
                     onClick={() => handleSpecialRecipientSelect('all-admins')}
-                    className={`px-3 py-2 rounded-md text-sm flex items-center gap-1 ${
-                      recipientType === 'all-admins'
-                        ? 'bg-blue-100 text-blue-800 border border-blue-300'
-                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                    }`}
+                    className={`px-2 py-1.5 sm:px-3 sm:py-2 rounded-md text-xs sm:text-sm flex items-center gap-1 ${recipientType === 'all-admins'
+                      ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                      }`}
                   >
-                    <ShieldAlert size={16} />
+                    <ShieldAlert size={14} className="sm:size-6" />
                     Tous les administrateurs
                   </button>
                 )}
@@ -509,7 +576,7 @@ const Mailbox = ({ role, onClose }) => {
                       key={recipient.id}
                       className="flex items-center bg-blue-100 text-blue-800 px-2 py-1 rounded-md"
                     >
-                      <span className="text-sm">
+                      <span className="text-xs sm:text-sm">
                         {recipient.name} {recipient.surname}
                       </span>
                       <button
@@ -576,10 +643,10 @@ const Mailbox = ({ role, onClose }) => {
                               .toLowerCase()
                               .includes(searchQuery.toLowerCase()))
                       ).length === 0 && (
-                        <div className="p-2 text-gray-500">
-                          Aucun destinataire trouvé
-                        </div>
-                      )}
+                          <div className="p-2 text-gray-500">
+                            Aucun destinataire trouvé
+                          </div>
+                        )}
                     </div>
                   )}
                 </div>
@@ -616,7 +683,7 @@ const Mailbox = ({ role, onClose }) => {
                 id="content"
                 value={content}
                 onChange={e => setContent(e.target.value)}
-                rows={8}
+                rows={6}
                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                 required
               />
@@ -637,7 +704,7 @@ const Mailbox = ({ role, onClose }) => {
               <button
                 type="button"
                 onClick={() => fileInputRef.current.click()}
-                className="px-4 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-200 flex items-center gap-2"
+                className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-200 flex items-center gap-2 text-sm"
               >
                 <Paperclip size={16} />
                 Ajouter des pièces jointes
@@ -651,19 +718,19 @@ const Mailbox = ({ role, onClose }) => {
                       key={index}
                       className="flex items-center justify-between bg-gray-50 p-2 rounded-md"
                     >
-                      <div className="flex items-center gap-2">
-                        <Paperclip size={16} className="text-gray-500" />
-                        <span className="text-sm text-gray-700 truncate max-w-xs">
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        <Paperclip size={16} className="text-gray-500 flex-shrink-0" />
+                        <span className="text-xs sm:text-sm text-gray-700 truncate">
                           {file.name}
                         </span>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-gray-500 whitespace-nowrap">
                           ({(file.size / 1024).toFixed(1)} KB)
                         </span>
                       </div>
                       <button
                         type="button"
                         onClick={() => removeAttachment(index)}
-                        className="text-gray-400 hover:text-red-500"
+                        className="text-gray-400 hover:text-red-500 flex-shrink-0 ml-2"
                       >
                         <X size={16} />
                       </button>
@@ -678,20 +745,20 @@ const Mailbox = ({ role, onClose }) => {
               <button
                 type="button"
                 onClick={closeComposeModal}
-                className="px-4 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-200"
+                className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-200 text-sm"
                 disabled={sending}
               >
                 Annuler
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50"
+                className="px-3 py-1.5 sm:px-4 sm:py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50 text-sm"
                 disabled={sending}
               >
                 {sending ? (
                   <>
                     <svg
-                      className="animate-spin h-5 w-5 text-white"
+                      className="animate-spin h-4 w-4 text-white"
                       xmlns="http://www.w3.org/2000/svg"
                       fill="none"
                       viewBox="0 0 24 24"
@@ -732,31 +799,57 @@ const Mailbox = ({ role, onClose }) => {
     setReplyData(null);
   };
 
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-7xl max-h-[95vh] overflow-hidden mx-4">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-9950">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-7xl max-h-[60vh] h-[95vh] overflow-hidden mx-2 sm:mx-4 flex flex-col">
         <Toaster position="top-center" reverseOrder={false} />
         {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-800">Messagerie</h1>
+        <div className="bg-white border-b border-gray-200 px-3 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <button
+              className="md:hidden text-gray-600"
+              onClick={toggleMobileMenu}
+            >
+              <Menu size={20} />
+            </button>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Messagerie</h1>
+          </div>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-500"
             title="Fermer"
           >
-            <X className="h-6 w-6" />
+            <X className="h-5 w-5 sm:h-6 sm:w-6" />
           </button>
         </div>
 
         {/* Main Content */}
         <div className="flex flex-1 overflow-hidden">
-          {/* Sidebar */}
-          <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
+          {/* Sidebar - Hidden on mobile by default */}
+          <div className={`${mobileMenuOpen ? 'absolute inset-0 z-30 bg-white' : 'hidden md:flex'
+            } w-full md:w-64 md:static bg-white border-r border-gray-200 flex-col`}>
+            {/* Mobile Menu Header */}
+            {mobileMenuOpen && (
+              <div className="flex justify-between items-center p-3 border-b border-gray-200">
+                <h2 className="font-medium">Menu</h2>
+                <button onClick={() => setMobileMenuOpen(false)}>
+                  <X size={20} />
+                </button>
+              </div>
+            )}
+
             {/* Compose Button */}
-            <div className="p-4">
+            <div className="p-3 sm:p-4">
               <button
-                onClick={() => setShowComposeModal(true)}
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 flex items-center justify-center gap-2"
+                onClick={() => {
+                  setShowComposeModal(true);
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full bg-blue-600 text-white py-2 px-3 sm:px-4 rounded-md hover:bg-blue-700 flex items-center justify-center gap-2 text-sm"
               >
                 <Plus size={16} />
                 Nouveau Message
@@ -773,12 +866,12 @@ const Mailbox = ({ role, onClose }) => {
                       setView('inbox');
                       setSelectedMessage(null);
                       setPagination({ ...pagination, currentPage: 1 });
+                      setMobileMenuOpen(false);
                     }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 text-left ${
-                      view === 'inbox'
-                        ? 'bg-blue-50 text-blue-600'
-                        : 'hover:bg-gray-50'
-                    }`}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-left ${view === 'inbox'
+                      ? 'bg-blue-50 text-blue-600'
+                      : 'hover:bg-gray-50'
+                      }`}
                   >
                     <Inbox size={18} />
                     <span>Boîte de réception</span>
@@ -791,12 +884,12 @@ const Mailbox = ({ role, onClose }) => {
                       setView('sent');
                       setSelectedMessage(null);
                       setPagination({ ...pagination, currentPage: 1 });
+                      setMobileMenuOpen(false);
                     }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 text-left ${
-                      view === 'sent'
-                        ? 'bg-blue-50 text-blue-600'
-                        : 'hover:bg-gray-50'
-                    }`}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-left ${view === 'sent'
+                      ? 'bg-blue-50 text-blue-600'
+                      : 'hover:bg-gray-50'
+                      }`}
                   >
                     <Send size={18} />
                     <span>Messages envoyés</span>
@@ -809,12 +902,12 @@ const Mailbox = ({ role, onClose }) => {
                       setView('trash');
                       setSelectedMessage(null);
                       setPagination({ ...pagination, currentPage: 1 });
+                      setMobileMenuOpen(false);
                     }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 text-left ${
-                      view === 'trash'
-                        ? 'bg-blue-50 text-blue-600'
-                        : 'hover:bg-gray-50'
-                    }`}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-left ${view === 'trash'
+                      ? 'bg-blue-50 text-blue-600'
+                      : 'hover:bg-gray-50'
+                      }`}
                   >
                     <Trash2 size={18} />
                     <span>Corbeille</span>
@@ -824,7 +917,7 @@ const Mailbox = ({ role, onClose }) => {
             </nav>
 
             {/* Filters */}
-            <div className="p-4 border-t border-gray-200">
+            <div className="p-3 sm:p-4 border-t border-gray-200">
               <h3 className="text-sm font-medium text-gray-500 mb-3">
                 Filtres
               </h3>
@@ -833,9 +926,10 @@ const Mailbox = ({ role, onClose }) => {
                   <input
                     type="checkbox"
                     checked={filters.unread}
-                    onChange={() =>
-                      setFilters({ ...filters, unread: !filters.unread })
-                    }
+                    onChange={() => {
+                      setFilters({ ...filters, unread: !filters.unread });
+                      setMobileMenuOpen(false);
+                    }}
                     className="rounded text-blue-600 mr-2"
                   />
                   <span className="text-sm text-gray-700">Non lus</span>
@@ -844,12 +938,13 @@ const Mailbox = ({ role, onClose }) => {
                   <input
                     type="checkbox"
                     checked={filters.hasAttachments}
-                    onChange={() =>
+                    onChange={() => {
                       setFilters({
                         ...filters,
                         hasAttachments: !filters.hasAttachments,
-                      })
-                    }
+                      });
+                      setMobileMenuOpen(false);
+                    }}
                     className="rounded text-blue-600 mr-2"
                   />
                   <span className="text-sm text-gray-700">
@@ -860,12 +955,13 @@ const Mailbox = ({ role, onClose }) => {
                   <input
                     type="checkbox"
                     checked={filters.fromContact}
-                    onChange={() =>
+                    onChange={() => {
                       setFilters({
                         ...filters,
                         fromContact: !filters.fromContact,
-                      })
-                    }
+                      });
+                      setMobileMenuOpen(false);
+                    }}
                     className="rounded text-blue-600 mr-2"
                   />
                   <span className="text-sm text-gray-700">
@@ -880,23 +976,22 @@ const Mailbox = ({ role, onClose }) => {
           <div className="flex-1 flex overflow-hidden">
             {/* Messages List */}
             <div
-              className={`${
-                selectedMessage ? 'hidden md:flex' : 'flex'
-              } flex-col w-full md:w-1/2 lg:w-2/5 bg-white border-r border-gray-200`}
+              className={`${selectedMessage ? 'hidden md:flex' : 'flex'
+                } flex-col w-full md:w-1/2 lg:w-2/5 bg-white border-r border-gray-200`}
             >
               {/* Search Bar */}
-              <div className="p-4 border-b border-gray-200">
+              <div className="p-3 sm:p-4 border-b border-gray-200">
                 <div className="relative">
                   <input
                     type="text"
                     placeholder="Rechercher des messages..."
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
-                    className="w-full p-2 pl-10 pr-4 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full p-2 pl-8 sm:pl-10 pr-2 sm:pr-4 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
                   />
                   <Search
-                    className="absolute left-3 top-2.5 text-gray-400"
-                    size={18}
+                    className="absolute left-2 sm:left-3 top-2.5 text-gray-400"
+                    size={16}
                   />
                 </div>
               </div>
@@ -926,7 +1021,7 @@ const Mailbox = ({ role, onClose }) => {
                           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                         ></path>
                       </svg>
-                      <p className="mt-2 text-gray-600">
+                      <p className="mt-2 text-gray-600 text-sm">
                         Chargement des messages...
                       </p>
                     </div>
@@ -934,8 +1029,8 @@ const Mailbox = ({ role, onClose }) => {
                 ) : filteredMessages.length === 0 ? (
                   <div className="flex items-center justify-center h-full">
                     <div className="text-center">
-                      <Inbox className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                      <p className="text-gray-600">Aucun message trouvé</p>
+                      <Inbox className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-2" />
+                      <p className="text-gray-600 text-sm">Aucun message trouvé</p>
                     </div>
                   </div>
                 ) : (
@@ -943,47 +1038,45 @@ const Mailbox = ({ role, onClose }) => {
                     <button
                       key={message.id}
                       onClick={() => handleMessageSelect(message.id)}
-                      className={`w-full text-left p-4 border-b border-gray-100 hover:bg-gray-50 ${
-                        !message.read && view === 'inbox' ? 'bg-blue-50' : ''
-                      } ${selectedMessage?.id === message.id ? 'bg-blue-100' : ''}`}
+                      className={`w-full text-left p-3 sm:p-4 border-b border-gray-100 hover:bg-gray-50 ${!message.read && view === 'inbox' ? 'bg-blue-50' : ''
+                        } ${selectedMessage?.id === message.id ? 'bg-blue-100' : ''}`}
                     >
                       <div className="flex items-start justify-between mb-1">
                         <h3
-                          className={`text-sm font-medium ${
-                            !message.read && view === 'inbox'
-                              ? 'text-blue-700 font-semibold'
-                              : 'text-gray-800'
-                          }`}
+                          className={`text-xs sm:text-sm font-medium ${!message.read && view === 'inbox'
+                            ? 'text-blue-700 font-semibold'
+                            : 'text-gray-800'
+                            }`}
                         >
                           {view === 'sent'
                             ? message.recipient?.name
                             : message.sender?.name}
                         </h3>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-gray-500 ml-1 whitespace-nowrap">
                           {new Date(message.createdAt).toLocaleDateString()}
                         </span>
                       </div>
-                      <h4 className="text-sm font-medium text-gray-800 truncate">
+                      <h4 className="text-xs sm:text-sm font-medium text-gray-800 truncate">
                         {message.subject}
                       </h4>
                       <p className="text-xs text-gray-500 truncate mt-1">
                         {message.content}
                       </p>
-                      <div className="flex items-center gap-2 mt-2">
+                      <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-2">
                         {message.fromContactForm && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
                             Contact
                           </span>
                         )}
                         {message.attachments &&
                           message.attachments.length > 0 && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                               <Paperclip size={10} className="mr-1" />
                               {message.attachments.length}
                             </span>
                           )}
                         {!message.read && view === 'inbox' && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                             Non lu
                           </span>
                         )}
@@ -994,8 +1087,8 @@ const Mailbox = ({ role, onClose }) => {
               </div>
 
               {/* Pagination */}
-              <div className="flex items-center justify-between p-4 border-t border-gray-200">
-                <span className="text-sm text-gray-500">
+              <div className="flex items-center justify-between p-3 sm:p-4 border-t border-gray-200">
+                <span className="text-xs sm:text-sm text-gray-500">
                   {pagination.totalMessages} message
                   {pagination.totalMessages !== 1 ? 's' : ''}
                 </span>
@@ -1010,9 +1103,9 @@ const Mailbox = ({ role, onClose }) => {
                     disabled={pagination.currentPage === 1}
                     className="p-1 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <ChevronLeft size={18} />
+                    <ChevronLeft size={16} className="sm:size-8" />
                   </button>
-                  <span className="mx-2 text-sm text-gray-600">
+                  <span className="mx-2 text-xs sm:text-sm text-gray-600">
                     Page {pagination.currentPage} sur{' '}
                     {pagination.totalPages || 1}
                   </span>
@@ -1029,7 +1122,7 @@ const Mailbox = ({ role, onClose }) => {
                     disabled={pagination.currentPage >= pagination.totalPages}
                     className="p-1 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <ChevronRight size={18} />
+                    <ChevronRight size={16} className="sm:size-8" />
                   </button>
                 </div>
               </div>
@@ -1037,9 +1130,9 @@ const Mailbox = ({ role, onClose }) => {
 
             {/* Message Detail View */}
             {selectedMessage ? (
-              <div className="flex-1 flex flex-col bg-white">
+              <div className={`flex-1 flex flex-col bg-white ${selectedMessage ? 'block md:flex' : 'hidden md:flex'}`}>
                 {/* Message Header */}
-                <div className="p-4 border-b border-gray-200 flex justify-between items-start relative">
+                <div className="p-3 sm:p-4 border-b border-gray-200 flex justify-between items-start relative">
                   {loadingMessageDetails && (
                     <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10">
                       <svg
@@ -1065,30 +1158,30 @@ const Mailbox = ({ role, onClose }) => {
                     </div>
                   )}
 
-                  <div>
-                    <h2 className="text-xl font-medium text-gray-900">
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-lg sm:text-xl font-medium text-gray-900 truncate">
                       {selectedMessage.subject}
                     </h2>
                     <div className="flex flex-col flex-wrap gap-x-4 gap-y-1 mt-2">
-                      <div className="flex items-center text-sm text-gray-500">
+                      <div className="flex items-center text-xs sm:text-sm text-gray-500">
                         <span className="font-medium text-gray-800 mr-1">
                           De :
                         </span>
-                        {selectedMessage.sender?.name}
+                        {selectedMessage.fromContactForm ? <span className="truncate">Formulaire de contact</span> : <span className="truncate">{selectedMessage.sender?.name}</span>}
                       </div>
-                      <div className="flex items-center text-sm text-gray-500">
+                      <div className="flex items-center text-xs sm:text-sm text-gray-500">
                         <span className="font-medium text-gray-800 mr-1">
                           À :
                         </span>
-                        {selectedMessage.recipient?.name}
+                        <span className="truncate">{selectedMessage.recipient?.name}</span>
                       </div>
-                      <div className="flex items-center text-sm text-gray-500">
-                        <Clock size={14} className="mr-1" />
-                        {new Date(selectedMessage.createdAt).toLocaleString()}
+                      <div className="flex items-center text-xs sm:text-sm text-gray-500">
+                        <Clock size={12} className="mr-1 flex-shrink-0" />
+                        <span className="truncate">{new Date(selectedMessage.createdAt).toLocaleString()}</span>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center">
+                  <div className="flex items-center ml-2">
                     <button
                       onClick={() => setSelectedMessage(null)}
                       className="md:hidden p-2 text-gray-500 hover:text-gray-700"
@@ -1097,9 +1190,8 @@ const Mailbox = ({ role, onClose }) => {
                     </button>
                     <button
                       onClick={() => deleteMessageHandler(selectedMessage.id)}
-                      className={`p-2 text-gray-500 hover:text-red-600 ${
-                        deletingMessage ? 'opacity-50 cursor-not-allowed' : ''
-                      }`}
+                      className={`p-2 text-gray-500 hover:text-red-600 ${deletingMessage ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
                       disabled={deletingMessage}
                       title="Supprimer"
                     >
@@ -1132,23 +1224,23 @@ const Mailbox = ({ role, onClose }) => {
                 </div>
 
                 {/* Message Content */}
-                <div className="flex-1 overflow-y-auto p-6">
+                <div className="flex-1 overflow-y-auto p-3 sm:p-6">
                   {/* Alert for virus scan results */}
                   {selectedMessage.attachments &&
                     selectedMessage.attachments.some(
                       att => att.scanStatus === 'infected'
                     ) && (
-                      <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-md flex items-start">
+                      <div className="mb-4 sm:mb-6 p-2 sm:p-3 bg-red-50 border border-red-200 rounded-md flex items-start">
                         <AlertTriangle
-                          className="text-red-500 mr-3 flex-shrink-0 mt-0.5"
-                          size={20}
+                          className="text-red-500 mr-2 sm:mr-3 flex-shrink-0 mt-0.5"
+                          size={18}
                         />
                         <div>
-                          <p className="text-red-800 font-medium">
+                          <p className="text-sm text-red-800 font-medium">
                             Attention : Fichiers potentiellement dangereux
                             détectés
                           </p>
-                          <p className="text-sm text-red-600 mt-1">
+                          <p className="text-xs sm:text-sm text-red-600 mt-1">
                             Certaines pièces jointes ont été identifiées comme
                             potentiellement malveillantes et ont été mises en
                             quarantaine.
@@ -1158,7 +1250,7 @@ const Mailbox = ({ role, onClose }) => {
                     )}
 
                   {/* Message Body */}
-                  <div className="prose max-w-none">
+                  <div className="prose max-w-none text-sm sm:text-base">
                     {selectedMessage.content
                       .split('\n')
                       .map((paragraph, index) => (
@@ -1167,42 +1259,70 @@ const Mailbox = ({ role, onClose }) => {
                   </div>
 
                   {/* Attachments */}
-                  {selectedMessage.attachments &&
-                    selectedMessage.attachments.length > 0 && (
-                      <div className="mt-8 pt-6 border-t border-gray-200">
-                        <h3 className="text-base font-medium text-gray-900 mb-3">
-                          Pièces jointes ({selectedMessage.attachments.length})
+                  {selectedMessage.Attachments &&
+                    selectedMessage.Attachments.length > 0 && (
+                      <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200">
+                        <h3 className="text-sm sm:text-base font-medium text-gray-900 mb-3">
+                          Pièces jointes ({selectedMessage.Attachments.length})
                         </h3>
-                        <div className="space-y-3">
-                          {selectedMessage.attachments.map(attachment => (
+                        <div className="space-y-2 sm:space-y-3">
+                          {selectedMessage.Attachments.map(attachment => (
                             <div
                               key={attachment.id}
-                              className={`flex items-center justify-between p-3 rounded-md ${
-                                attachment.scanStatus === 'infected'
-                                  ? 'bg-red-50 border border-red-200'
-                                  : 'bg-gray-50 border border-gray-200'
-                              }`}
+                              className={`flex items-center justify-between p-2 sm:p-3 rounded-md ${attachment.scanStatus === 'infected'
+                                ? 'bg-red-50 border border-red-200'
+                                : 'bg-gray-50 border border-gray-200'
+                                }`}
                             >
-                              <div className="flex items-center">
+                              <div className="flex items-center min-w-0">
                                 <Paperclip
-                                  size={18}
-                                  className={
-                                    attachment.scanStatus === 'infected'
-                                      ? 'text-red-500'
-                                      : 'text-gray-500'
-                                  }
-                                />
-                                <div className="ml-3">
-                                  <p
-                                    className={`text-sm font-medium ${
-                                      attachment.scanStatus === 'infected'
-                                        ? 'text-red-700'
-                                        : 'text-gray-900'
+                                  size={16}
+                                  className={`flex-shrink-0 ${attachment.scanStatus === 'infected'
+                                    ? 'text-red-500'
+                                    : 'text-gray-500'
                                     }`}
+                                />
+                                <div className="ml-2 sm:ml-3 overflow-hidden">
+                                  <p
+                                    className={`text-xs sm:text-sm font-medium truncate ${attachment.scanStatus === 'infected'
+                                      ? 'text-red-700'
+                                      : 'text-gray-900'
+                                      }`}
                                   >
-                                    {attachment.originalFilename}
+                                    {attachment.filename}
                                   </p>
-                                  <p className="text-xs text-gray-500 mt-0.5">
+                                  <p className="text-xs text-gray-500 mt-0.5 flex items-center">
+                                    <span className="text-gray-700 px-1.5 py-0.5 rounded text-xs mr-2">
+                                      {(() => {
+                                        switch (attachment.mimeType.split('/')[0]) {
+                                          case "application":
+                                            return (
+                                              <File size={15} className="mr-1" />
+                                            );
+
+                                          case "audio":
+                                            return (
+                                              <Music size={15} className="mr-1" />
+                                            );
+                                          case "video":
+                                            return (
+                                              <Video size={15} className="mr-1" />
+                                            );
+                                          case "text":
+                                            return (
+                                              <FileText size={15} className="mr-1" />
+                                            );
+                                          case "image":
+                                            return (
+                                              <Image size={15} className="mr-1" />
+                                            );
+                                          default:
+                                            return (
+                                              <Paperclip size={15} className="mr-1" />
+                                            );
+                                        }
+                                      })()}
+                                    </span>
                                     {(attachment.fileSize / 1024).toFixed(1)} KB
                                   </p>
                                 </div>
@@ -1213,21 +1333,20 @@ const Mailbox = ({ role, onClose }) => {
                                   onClick={() =>
                                     downloadAttachmentHandler(
                                       attachment.id,
-                                      attachment.originalFilename
+                                      attachment.filename
                                     )
                                   }
-                                  className={`ml-3 p-1.5 text-blue-700 hover:bg-blue-50 rounded-md flex items-center ${
-                                    downloadingAttachments?.[attachment.id]
-                                      ? 'cursor-wait opacity-70'
-                                      : ''
-                                  }`}
+                                  className={`ml-2 sm:ml-3 p-1.5 text-blue-700 hover:bg-blue-50 rounded-md flex items-center flex-shrink-0 ${downloadingAttachments?.[attachment.id]
+                                    ? 'cursor-wait opacity-70'
+                                    : ''
+                                    }`}
                                   disabled={
                                     downloadingAttachments?.[attachment.id]
                                   }
                                 >
                                   {downloadingAttachments?.[attachment.id] ? (
                                     <svg
-                                      className="animate-spin h-5 w-5"
+                                      className="animate-spin h-4 w-4 sm:h-5 sm:w-5"
                                       xmlns="http://www.w3.org/2000/svg"
                                       fill="none"
                                       viewBox="0 0 24 24"
@@ -1247,18 +1366,18 @@ const Mailbox = ({ role, onClose }) => {
                                       ></path>
                                     </svg>
                                   ) : (
-                                    <Download size={18} />
+                                    <Download size={16} />
                                   )}
                                 </button>
                               ) : attachment.scanStatus === 'infected' ? (
-                                <span className="ml-3 px-2 py-1 rounded bg-red-100 text-red-700 text-xs flex items-center gap-1">
-                                  <AlertTriangle size={14} className="mr-1" />
+                                <span className="ml-2 sm:ml-3 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded bg-red-100 text-red-700 text-xs flex items-center gap-1 flex-shrink-0">
+                                  <AlertTriangle size={12} className="mr-0.5" />
                                   Infecté
                                 </span>
                               ) : (
-                                <span className="ml-3 px-2 py-1 rounded bg-yellow-100 text-yellow-800 text-xs flex items-center gap-1">
-                                  <Clock size={14} className="mr-1" />
-                                  Analyse en cours...
+                                <span className="ml-2 sm:ml-3 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded bg-yellow-100 text-yellow-800 text-xs flex items-center gap-1 flex-shrink-0">
+                                  <Clock size={12} className="mr-0.5" />
+                                  Analyse...
                                 </span>
                               )}
                             </div>
@@ -1267,7 +1386,7 @@ const Mailbox = ({ role, onClose }) => {
                       </div>
                     )}
                 </div>
-                <div className="p-4 border-t border-gray-200">
+                <div className="p-3 sm:p-4 border-t border-gray-200">
                   <button
                     onClick={() => {
                       // Set the reply data that will be used by ComposeMail
@@ -1278,16 +1397,16 @@ const Mailbox = ({ role, onClose }) => {
                       });
                       setShowComposeModal(true);
                     }}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2"
+                    className="px-3 py-1.5 sm:px-4 sm:py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2 text-sm"
                   >
-                    <Send size={16} />
+                    <Send size={14} className="sm:size-6" />
                     Répondre
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="flex-1 flex items-center justify-center bg-white">
-                <p className="text-gray-500">
+              <div className="flex-1 items-center justify-center bg-white hidden md:flex">
+                <p className="text-gray-500 text-sm sm:text-base">
                   Sélectionnez un message pour le lire
                 </p>
               </div>

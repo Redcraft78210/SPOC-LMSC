@@ -326,55 +326,57 @@ const LiveViewer = ({ authToken }) => {
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
-        <div className="flex-1 rounded-xl overflow-hidden relative">
-          <StreamReader
+        {/* Container du player */}
+        <div className="flex-1 rounded-xl overflow-visible relative">
+          {!isScheduled && <StreamReader
             authToken={authToken}
             streamId={streamId}
             controls={true}
-          />
+          />}
 
           {isScheduled && (
-            <div className="absolute inset-0 bg-gray-900/80 backdrop-blur-sm flex flex-col items-center justify-center text-white z-10">
-              <div className="bg-gray-800/90 p-6 rounded-xl max-w-md text-center space-y-4">
-                <div className="inline-block p-3 bg-blue-600 rounded-full mb-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <h2 className="text-2xl font-bold">Live programmé</h2>
-                <p className="text-gray-300">Ce live commencera le</p>
-                <div className="font-medium text-xl">{scheduledDate?.day}</div>
-                <div className="text-2xl font-bold text-blue-400">{scheduledDate?.time}</div>
-
-                {timeRemaining && (
-                  <div className="mt-6 grid grid-cols-3 gap-2">
-                    <div className="bg-gray-700 p-3 rounded-lg">
-                      <div className="text-2xl font-bold">{timeRemaining.days}</div>
-                      <div className="text-xs text-gray-400">jours</div>
-                    </div>
-                    <div className="bg-gray-700 p-3 rounded-lg">
-                      <div className="text-2xl font-bold">{timeRemaining.hours}</div>
-                      <div className="text-xs text-gray-400">heures</div>
-                    </div>
-                    <div className="bg-gray-700 p-3 rounded-lg">
-                      <div className="text-2xl font-bold">{timeRemaining.minutes}</div>
-                      <div className="text-xs text-gray-400">minutes</div>
-                    </div>
-                  </div>
-                )}
-
-                <p className="text-sm text-gray-400 mt-4">
-                  Revenez à l&apos;heure indiquée pour regarder ce live.
-                </p>
+            <div className="bg-gray-900/80 backdrop-blur-sm flex flex-col items-center justify-center text-white w-full p-6 rounded-xl">
+              <div className="inline-block p-3 bg-blue-600 rounded-full mb-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               </div>
+              <h2 className="text-2xl font-bold">Live programmé</h2>
+              <p className="text-gray-300">Ce live commencera le</p>
+              <div className="font-medium text-xl">{scheduledDate?.day}</div>
+              <div className="text-2xl font-bold text-blue-400">{scheduledDate?.time}</div>
+
+              {timeRemaining && (
+                <div className="mt-6 grid grid-cols-3 gap-2">
+                  <div className="bg-gray-700 p-3 rounded-lg">
+                    <div className="text-2xl font-bold">{timeRemaining.days}</div>
+                    <div className="text-xs text-gray-400">jours</div>
+                  </div>
+                  <div className="bg-gray-700 p-3 rounded-lg">
+                    <div className="text-2xl font-bold">{timeRemaining.hours}</div>
+                    <div className="text-xs text-gray-400">heures</div>
+                  </div>
+                  <div className="bg-gray-700 p-3 rounded-lg">
+                    <div className="text-2xl font-bold">{timeRemaining.minutes}</div>
+                    <div className="text-xs text-gray-400">minutes</div>
+                  </div>
+                </div>
+              )}
+
+              <p className="text-sm text-gray-400 mt-4">
+                Revenez à l&apos;heure indiquée pour regarder ce live.
+              </p>
             </div>
           )}
         </div>
+
+        {/* Container du chat */}
         <div className="lg:w-96 w-full">
           <ChatBox
             streamId={streamId}
             authToken={authToken}
-            chatEnabled={isScheduled ? false : streamData.chat_enabled}
+            chatEnabled={!isScheduled && streamData.chat_enabled}
             userId={userId}
             isScheduled={isScheduled}
           />
@@ -440,14 +442,14 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled }) => {
       }
 
       ws.onopen = () => {
-        
+
         setError(null);
       };
 
       ws.onmessage = event => {
         try {
           const data = JSON.parse(event.data);
-           // Pour débugger
+          // Pour débugger
 
           switch (data.type) {
             case 'new_message':
@@ -476,7 +478,7 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled }) => {
               break;
 
             default:
-              
+
           }
         } catch (err) {
           console.error('Erreur lors du traitement du message WebSocket:', err);
@@ -484,7 +486,7 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled }) => {
       };
 
       ws.onclose = () => {
-        
+
       };
 
       ws.onerror = error => {
@@ -510,7 +512,7 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled }) => {
       if (!streamId || !authToken) return;
 
       try {
-        // const response = await getLiveParticipants({ liveId: streamId });
+        // const response = await getLiveParticipants({liveId: streamId });
 
         // if (response.status === 200) {
         //   setParticipants(response.data || []);
@@ -735,9 +737,9 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled }) => {
               <div className="flex items-baseline gap-2">
                 <span
                   className={`text-sm font-medium ${isScheduled ? 'text-gray-400' :
-                      msg.User?.name?.includes('Professeur')
-                        ? 'text-red-600 font-semibold'
-                        : 'text-blue-600'
+                    msg.User?.name?.includes('Professeur')
+                      ? 'text-red-600 font-semibold'
+                      : 'text-blue-600'
                     }`}
                 >
                   {isScheduled

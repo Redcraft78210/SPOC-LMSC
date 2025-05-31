@@ -7,7 +7,9 @@ const { getInboxMessages,
   getMessage,
   sendMessage,
   markMessageAsRead,
-  deleteMessage,
+  deleteMessage: moveToTrash,
+  permanentlyDeleteMessage,
+  restoreMessage: restoreFromTrash,
   downloadAttachment,
   createContactMessage } = require('../controllers/messageController');
 const authMiddleware = require('../middlewares/authMiddleware');
@@ -42,8 +44,11 @@ router.post('/no-attachments', sendMessage);
 router.post('/contact/no-attachments', createContactMessage);
 
 // Message actions
-router.put('/:messageId/read', markMessageAsRead);
-router.delete('/:messageId', deleteMessage);
+router.patch('/:messageId/trash', moveToTrash);
+router.patch('/:messageId/restore', restoreFromTrash);
+router.patch('/:messageId/read', markMessageAsRead);
+
+router.delete('/:messageId', permanentlyDeleteMessage);
 
 // Attachments
 router.get('/attachments/:attachmentId', downloadAttachment);

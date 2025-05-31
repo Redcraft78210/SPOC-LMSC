@@ -24,6 +24,7 @@ const CourseDocument = require('./CourseDocument');
 const CourseVideo = require('./CourseVideo');
 const Attachment = require('./Attachment');
 const Message = require('./Message');
+const TrashMessage = require('./TrashMessage');
 
 // Define associations
 Course.belongsToMany(Student, { through: 'Enrollments' });
@@ -120,6 +121,15 @@ Message.belongsTo(User, { as: 'recipient', foreignKey: 'recipientId' });
 
 Message.hasMany(Attachment);
 
+Message.hasOne(TrashMessage, {
+  foreignKey: 'originalMessageId',
+});
+TrashMessage.belongsTo(Message, {
+  foreignKey: 'originalMessageId',
+});
+
+TrashMessage.belongsTo(User, { as: 'deletedByUser', foreignKey: 'deletedBy' });
+
 Attachment.belongsTo(Message);
 
 // Association User-Avatar (One-to-One)
@@ -148,6 +158,7 @@ module.exports = {
   UserAvatar,
   Document,
   Video,
+  TrashMessage,  // Add TrashMessage to exports
   CourseDocument,  // Add CourseDocument to exports
   CourseVideo,     // Add CourseVideo to exports
   sequelize,

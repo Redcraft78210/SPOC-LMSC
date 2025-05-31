@@ -136,11 +136,9 @@ CREATE TABLE messages (
     subject VARCHAR(255) NOT NULL,
     content TEXT NOT NULL,
     read BOOLEAN DEFAULT FALSE,
-    deleted BOOLEAN DEFAULT FALSE,
     "senderId" UUID REFERENCES users(id) ON DELETE CASCADE,
-    "recipientId" UUID REFERENCES users(id) ON DELETE CASCADE,
+    "recipientType" VARCHAR(50) NOT NULL CHECK ("recipientType" IN ('individual', 'all-admins', 'all-users')),
     "fromContactForm" BOOLEAN DEFAULT FALSE,
-    "deletedAt" TIMESTAMP,
     "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -237,6 +235,17 @@ CREATE TABLE message_recipients (
     deleted BOOLEAN DEFAULT FALSE,
     "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE trash_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "originalMessageId" UUID,
+  "deletedBy" UUID NOT NULL,
+  "deletedAt" TIMESTAMP NOT NULL,
+  "scheduledPurgeDate" TIMESTAMP,
+  "permanentlyDeleted" BOOLEAN DEFAULT FALSE,
+  "createdAt" TIMESTAMP NOT NULL,
+  "updatedAt" TIMESTAMP NOT NULL
 );
 
 -- ============================================================
@@ -531,7 +540,6 @@ CREATE INDEX idx_course_videos_course_id ON course_videos(course_id);
 CREATE INDEX idx_course_videos_video_id ON course_videos(video_id);
 
 -- Create indexes for better performance
-CREATE INDEX "idx_messages_senderId" ON messages("senderId");
 CREATE INDEX idx_messages_contact_form ON messages("fromContactForm");
 CREATE INDEX idx_message_recipients_message_id ON message_recipients(message_id);
 CREATE INDEX idx_message_recipients_read ON message_recipients(read);
@@ -875,7 +883,7 @@ VALUES
 -- Insert some sample messages
 INSERT INTO messages (id, subject, content, "senderId", "recipientId", "fromContactForm")
 VALUES
-    ('33333333-aaaa-bbbb-cccc-000000000001', 'Bienvenue sur la plateforme', 'Bonjour et bienvenue sur notre plateforme d''apprentissage. N''hésitez pas à contacter l''équipe administrative si vous avez des questions.', 'a6fa5fc1-1234-4321-0000-000000000003', 'a6fa5fc1-1234-4321-0000-000000000007', FALSE),
+    ('33333333-aaaa-bbbb-cccc-000000000001', 'Bienvenue sur la plateforme', 'Bonjour et bienvenue sur notre plateforme d''apprentissage. N''hésitez pas à contacter l''équipe administrative si vous avez des questions.', 'a6fa5fc1-1234-4321-0000-000000000007', FALSE),
     ('33333333-aaaa-bbbb-cccc-000000000002', 'Question sur le cours de JavaScript', 'Bonjour, j''ai une question concernant le dernier cours sur les closures en JavaScript. Pourriez-vous préciser leur utilité dans un contexte réel ?', 'a6fa5fc1-1234-4321-0000-000000000007', 'a6fa5fc1-1234-4321-0000-000000000005', FALSE),
     ('33333333-aaaa-bbbb-cccc-000000000003', 'Demande de contact via formulaire', 'Bonjour, je suis intéressé par vos formations en ligne. Pouvez-vous me donner plus d''informations sur les prérequis pour la formation en développement web ?', NULL, 'a6fa5fc1-1234-4321-0000-000000000006', TRUE);
 

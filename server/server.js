@@ -72,7 +72,7 @@ app.use((request, response, next) => {
 
 const DEFAULTS = {
   imageName: 'quarantine-image',
-  containerName: 'quarantine',
+  containerName: 'quarantine_container',
   dockerfile: 'Quarantine.Dockerfile',
   buildTimeoutMs: 5 * 60 * 1000,   // 5 minutes
   runTimeoutMs: 30 * 1000,         // 30 seconds
@@ -234,9 +234,9 @@ const createQuarantineContainer = () => {
 
   async function buildAndRun() {
     try {
-      const imageName = 'quarantine-image';
-      const containerName = 'quarantine';
-      const dockerfile = 'Quarantine.Dockerfile';
+      const imageName = DEFAULTS.imageName || 'quarantine-image';
+      const containerName = DEFAULTS.containerName || 'quarantine';
+      const dockerfile = DEFAULTS.dockerfile || 'Quarantine.Dockerfile';
       console.log('🔨 Building image…');
 
       // Check if the image already exists

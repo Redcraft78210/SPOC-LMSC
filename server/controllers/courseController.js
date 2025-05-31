@@ -69,8 +69,6 @@ const getAllCourses = async (req, res) => {
       ]
     });
 
-    console.log('Courses:', JSON.stringify(courses, null, 2));
-
     // Transformation des données en structure imbriquée
     const structuredData = {};
 

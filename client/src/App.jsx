@@ -44,7 +44,7 @@ const routeConfig = [
   // Course-related routes
   { path: '/course-reader', content: 'CourseReader' },
   { path: '/courses-library', content: 'CoursesLibrary' },
-  { path: '/courses-managment', content: 'CoursesManagment' },
+  { path: '/courses-managment', content: 'CoursesManagement' },
 
   // Class-related routes
   { path: '/classes-management', content: 'ClassManagement' },
@@ -56,6 +56,7 @@ const routeConfig = [
   // Media-related routes
   { path: '/video-manager', content: 'VideoManager' },
   { path: '/document-manager', content: 'DocumentManager' },
+  { path: '/video-recording', content: 'VideoRecording' },
 
   // Communication-related routes
   { path: '/forum', content: 'Forum' },
