@@ -147,6 +147,7 @@ const getInboxMessages = async (req, res) => {
 
     const { count, rows } = await Message.findAndCountAll({
       where: whereClause,
+      attributes: ['id', 'subject', 'senderId', 'recipientType', 'createdAt'],
       include: includes,
       order: [['createdAt', 'DESC']],
       limit,
@@ -426,7 +427,7 @@ const sendMessage = async (req, res) => {
   const attachmentsToScan = [];
 
   try {
-    const { subject, content, recipients, recipientType } = req.body;
+    const { subject, recipients, recipientType, content } = req.body;
 
     // Validate required fields
     if (!recipientType) {
@@ -436,6 +437,16 @@ const sendMessage = async (req, res) => {
     // Ensure subject and content are provided
     if (!subject || !content) {
       return res.status(400).json({ message: 'Subject and content are required' });
+    }
+
+    // Validate subject length
+    if (subject.length > 255) {
+      return res.status(400).json({ message: 'Subject must be less than 255 characters' });
+    }
+
+    // Validate content length to 250MB
+    if (content.length > 250 * 1024 * 1024) { // 250MB
+      return res.status(400).json({ message: 'Content must be less than 250MB' });
     }
 
     // Validate recipientType against model's enum values

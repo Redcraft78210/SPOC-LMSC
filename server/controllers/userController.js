@@ -195,18 +195,9 @@ const getAllUsers = async (req, res) => {
             return res.status(404).json({ message: 'No users found' });
         }
 
-        // Centralize role→label mapping (tous en français)
-        const ROLE_LABELS = {
-            Administrateur: 'Administrateur',
-            Professeur: 'Professeur',
-            Etudiant: 'Étudiant',
-        };
-
-        const result = users.map(({ id, name, surname, email, statut, role: rawRole }) => {
-            const label = ROLE_LABELS[rawRole] || rawRole;
-
+        const result = users.map(({ id, name, surname, email, statut, role }) => {
             // Always include id/name/surname/role
-            const output = { id, surname, role: label };
+            const output = { id, surname, role };
 
             // If not for mailbox recipients, also include email + active status
             if (!mailboxrecipients) {
@@ -214,7 +205,7 @@ const getAllUsers = async (req, res) => {
                 output.email = email;
                 output.active = statut;
             } else {
-                output.name = rawRole === "Professeur" ? "Professeur" : name;
+                output.name = role === "Professeur" ? "Professeur" : name;
             }
 
             return output;

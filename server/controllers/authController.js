@@ -1,4 +1,5 @@
-const { User, Code, Classe, StudentClass } = require('../models');
+const { User, Code, StudentClass } = require('../models');
+const { Op } = require('sequelize');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { authenticator } = require('otplib');
@@ -334,7 +335,7 @@ const firstLogin = async (req, res) => {
       return res.status(400).json({ message: 'User has already completed first login.' });
     }
 
-    const existingUser = await User.findOne({ where: { username } });
+    const existingUser = await User.findOne({ where: { username, id: { [Op.ne]: userId } } });
     if (existingUser) {
       return res.status(409).json({ message: ERROR_MESSAGES.USERNAME_EXISTS });
     }

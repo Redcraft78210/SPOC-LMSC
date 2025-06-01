@@ -143,12 +143,21 @@ const sendMessage = async (formData) => {
     throw new Error('formData must contain either individual recipients or a recipient type');
   }
 
+  let endpoint = '/messages/';
+  let contentType = 'multipart/form-data';
+
+  if (formData.has('attachments') || formData.getAll('attachments').length === 0) {
+    // If no attachments, use the endpoint for messages without attachments
+    endpoint = '/messages/no-attachments';
+    contentType = 'application/json';
+  }
+
   try {
     // Send the FormData object directly without extracting fields
-    const response = await api.post('/messages/', formData, {
+    const response = await api.post(endpoint, formData, {
       // Don't manually set Content-Type, axios will set it correctly with boundary
       headers: {
-        'Content-Type': 'multipart/form-data',
+        'Content-Type': contentType,
       },
     });
 

@@ -36,7 +36,7 @@ api.interceptors.response.use(
       // Handle unauthorized access
       console.warn('Unauthorized. Redirecting to login...');
 
-      window.location.href = '/sign'; // Redirect to login page
+      window.location.href = '/logout'; // Redirect to login page
     }
     return Promise.reject(error);
   }

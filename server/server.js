@@ -78,6 +78,9 @@ const DEFAULTS = {
   runTimeoutMs: 30 * 1000,         // 30 seconds
 };
 
+app.use(express.json({ limit: '300mb' }));
+app.use(express.urlencoded({ limit: '300mb', extended: true }));
+
 // CORS configuration
 // Allowed origins for CORS
 // En développement, attention à autoriser le certificat auto-signé

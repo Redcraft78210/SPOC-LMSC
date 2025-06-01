@@ -1,9 +1,14 @@
-import { useState, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import PublicNavbar from '../../components/PublicComp/PublicNavbar';
 import Footer from '../../components/PublicComp/Footer';
 import { Paperclip, X } from 'lucide-react';
 import { sendContactMessage } from '../../API/ContactCaller';
 import toast, { Toaster } from 'react-hot-toast';
+
+// Ajouter ces imports pour Toast UI Editor
+import { Editor } from '@toast-ui/react-editor';
+import '@toast-ui/editor/dist/toastui-editor.css';
+
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -13,6 +18,7 @@ const Contact = () => {
     objet: '',
     message: '',
   });
+  const editorRef = useRef(null);
 
   const [attachments, setAttachments] = useState([]);
   const [status, setStatus] = useState('');
@@ -88,6 +94,9 @@ const Contact = () => {
       }
     }
 
+    // Obtenir le contenu de l'éditeur au format markdown
+    const editorContent = editorRef.current?.getInstance().getMarkdown() || '';
+
     try {
       // Use the sendContactMessage function from ContactCaller
       const response = await sendContactMessage({
@@ -95,7 +104,7 @@ const Contact = () => {
         email: formData.email,
         motif: formData.motif,
         objet: formData.objet,
-        message: formData.message,
+        message: editorContent,
         attachments: attachments
       });
 
@@ -116,11 +125,80 @@ const Contact = () => {
     }
   };
 
+
+  // Configuration du hook pour le glisser-déposer
+  useEffect(() => {
+    if (editorRef.current) {
+      const editorInstance = editorRef.current.getInstance();
+
+      const dropZone = document.querySelector('.toastui-editor-defaultUI');
+      if (dropZone) {
+        dropZone.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          dropZone.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+          dropZone.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          dropZone.classList.remove('drag-over');
+
+          if (e.dataTransfer.files.length) {
+            const files = Array.from(e.dataTransfer.files);
+            // Filtrer uniquement les images et les autres fichiers
+            const validFiles = files.filter(file => file.size <= 10 * 1024 * 1024);
+
+            // Séparer les images des autres fichiers
+            const imageFiles = validFiles.filter(file => file.type.startsWith('image/'));
+            const otherFiles = validFiles.filter(file => !file.type.startsWith('image/'));
+
+            // Ajouter les fichiers non-image aux pièces jointes
+            if (otherFiles.length > 0) {
+              setAttachments(prev => [...prev, ...otherFiles]);
+              toast.success(`${otherFiles.length} fichier(s) ajouté(s) aux pièces jointes`);
+            }
+
+            // Insérer les images directement dans l'éditeur
+            if (imageFiles.length > 0) {
+              // Pour chaque image, l'insérer dans l'éditeur
+              imageFiles.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                  // Insérer l'image à la position du curseur
+                  editorInstance.insertImage({
+                    src: e.target.result,
+                    alt: file.name
+                  });
+                };
+                reader.readAsDataURL(file);
+              });
+
+              toast.success(`${imageFiles.length} image(s) insérée(s) dans l'éditeur`);
+            }
+          }
+        });
+      }
+
+      // Nettoyer les event listeners lors du démontage du composant
+      return () => {
+        if (dropZone) {
+          dropZone.removeEventListener('dragover', () => { });
+          dropZone.removeEventListener('dragleave', () => { });
+          dropZone.removeEventListener('drop', () => { });
+        }
+      };
+    }
+  }, [editorRef.current]);
+
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Add Toaster component */}
-      <Toaster 
-        position="top-right" 
+      <Toaster
+        position="top-right"
         toastOptions={{
           success: {
             style: {
@@ -140,7 +218,7 @@ const Contact = () => {
           },
         }}
       />
-      
+
       {/* Navigation */}
       <PublicNavbar />
 
@@ -230,15 +308,23 @@ const Contact = () => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Message
               </label>
-              <textarea
-                name="message"
-                value={formData.message}
-                onChange={handleChange}
-                rows="5"
-                placeholder="Votre message"
-                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required
-              ></textarea>
+              <div className="border border-gray-300 rounded-md">
+                <Editor
+                  ref={editorRef}
+                  initialValue="<p></p>"
+                  previewStyle="tab"
+                  height="300px"
+                  initialEditType="wysiwyg"
+                  useCommandShortcut={true}
+                  toolbarItems={[
+                    ['heading', 'bold', 'italic', 'strike'],
+                    ['hr', 'quote'],
+                    ['ul', 'ol', 'task', 'indent', 'outdent'],
+                    ['table', 'link'],
+                    ['code', 'codeblock']
+                  ]}
+                />
+              </div>
             </div>
 
             {/* Attachments Section */}

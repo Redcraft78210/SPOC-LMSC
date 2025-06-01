@@ -164,7 +164,7 @@ const FirstLogin = ({ token, setAuth }) => {
     try {
       const response = await firstLogin({ username, password, token });
 
-      if (response.status === 201) {
+      if (response.status === 200) {
         // Si 2FA déjà configuré, stocke le token selon rememberMe
         if (is2FAAlreadySetup) {
           if (rememberMe) {
@@ -174,6 +174,14 @@ const FirstLogin = ({ token, setAuth }) => {
             sessionStorage.setItem('authToken', response.data.token);
             localStorage.removeItem('authToken');
           }
+          
+          // Clean up all temporary tokens
+          localStorage.removeItem('token');
+          localStorage.removeItem('tempToken');
+          localStorage.removeItem('QrCodeData');
+          localStorage.removeItem('manualSecret');
+          localStorage.removeItem('is2FASetup');
+          
           setAuth(response.data.token);
           navigate('/dashboard');
           return;
@@ -204,7 +212,8 @@ const FirstLogin = ({ token, setAuth }) => {
         localStorage.removeItem('tempToken');
         localStorage.removeItem('QrCodeData');
         localStorage.removeItem('manualSecret');
-        navigate('/sign');
+        localStorage.removeItem('token');
+        navigate('/logout');
       }
       setError(errorMessages[errorCode] || errorMessages.default);
     } finally {
@@ -313,6 +322,7 @@ const FirstLogin = ({ token, setAuth }) => {
         localStorage.removeItem('tempToken');
         localStorage.removeItem('QrCodeData');
         localStorage.removeItem('manualSecret');
+        localStorage.removeItem('token');
 
         setAuth(response.data.token);
         navigate('/dashboard');
@@ -327,6 +337,8 @@ const FirstLogin = ({ token, setAuth }) => {
         localStorage.removeItem('tempToken');
         localStorage.removeItem('QrCodeData');
         localStorage.removeItem('manualSecret');
+        localStorage.removeItem('token');
+        navigate('/logout');
       }
       setError(errorMessages[errorCode] || errorMessages.default);
     }

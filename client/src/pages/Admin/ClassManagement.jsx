@@ -120,10 +120,10 @@ const ClasseManagement = () => {
         const response = await deleteClass({ classId });
         if (response.status === 200) {
           toast.success('Classe supprimée avec succès');
-          fetchClasses();
         } else {
           toast.error(response.message || 'Erreur lors de la suppression');
         }
+        fetchClasses();
       } catch (error) {
         console.error('Erreur lors de la suppression:', error);
         toast.error('Erreur lors de la suppression de la classe');
@@ -184,17 +184,15 @@ const ClasseManagement = () => {
     <div className="flex gap-2">
       <button
         onClick={() => setViewMode('list')}
-        className={`p-2 rounded-lg ${
-          viewMode === 'list' ? 'bg-blue-100 text-blue-600' : 'text-gray-600'
-        }`}
+        className={`p-2 rounded-lg ${viewMode === 'list' ? 'bg-blue-100 text-blue-600' : 'text-gray-600'
+          }`}
       >
         <List className="w-5 h-5" />
       </button>
       <button
         onClick={() => setViewMode('grid')}
-        className={`p-2 rounded-lg ${
-          viewMode === 'grid' ? 'bg-blue-100 text-blue-600' : 'text-gray-600'
-        }`}
+        className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-blue-100 text-blue-600' : 'text-gray-600'
+          }`}
       >
         <Grid className="w-5 h-5" />
       </button>
@@ -279,8 +277,8 @@ const ClasseManagement = () => {
               <td className="px-6 py-4 text-gray-600">
                 {Classe.description
                   ? `${Classe.description
-                      .charAt(0)
-                      .toUpperCase()}${Classe.description.slice(1)}`
+                    .charAt(0)
+                    .toUpperCase()}${Classe.description.slice(1)}`
                   : 'Aucune description'}
               </td>
               <td className="px-6 py-4">
@@ -437,7 +435,7 @@ const ClasseManagement = () => {
 
       setIsLoading(true);
       try {
-        
+
         await handleSubmitClasse(formData);
         if (isMounted) {
           setIsSuccess(true);
@@ -482,9 +480,8 @@ const ClasseManagement = () => {
         aria-labelledby="modalTitle"
       >
         <div
-          className={`bg-white rounded-xl shadow-2xl p-8 w-full max-w-md transform transition-all duration-300 ease-in-out ${
-            isMounted ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
-          }`}
+          className={`bg-white rounded-xl shadow-2xl p-8 w-full max-w-md transform transition-all duration-300 ease-in-out ${isMounted ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
+            }`}
         >
           <h2 id="modalTitle" className="text-2xl font-bold text-gray-900 mb-6">
             {selectedClasse ? 'Modifier la Classe' : 'Nouvelle Classe'}
@@ -508,11 +505,10 @@ const ClasseManagement = () => {
                     onChange={e =>
                       setFormData({ ...formData, name: e.target.value })
                     }
-                    className={`w-full px-4 py-2.5 rounded-lg border ${
-                      errors.name
+                    className={`w-full px-4 py-2.5 rounded-lg border ${errors.name
                         ? 'border-red-500 focus:ring-red-500'
                         : 'border-gray-200 focus:border-blue-500'
-                    } focus:ring-2 focus:ring-blue-200 outline-none transition-all`}
+                      } focus:ring-2 focus:ring-blue-200 outline-none transition-all`}
                     aria-invalid={!!errors.name}
                     aria-describedby="nameError"
                     disabled={isLoading}
@@ -544,11 +540,10 @@ const ClasseManagement = () => {
                     onChange={e =>
                       setFormData({ ...formData, description: e.target.value })
                     }
-                    className={`w-full px-4 py-2.5 rounded-lg border ${
-                      errors.description
+                    className={`w-full px-4 py-2.5 rounded-lg border ${errors.description
                         ? 'border-red-500 focus:ring-red-500'
                         : 'border-gray-200 focus:border-blue-500'
-                    } focus:ring-2 focus:ring-blue-200 outline-none transition-all`}
+                      } focus:ring-2 focus:ring-blue-200 outline-none transition-all`}
                     rows="3"
                     aria-invalid={!!errors.description}
                     aria-describedby="descError"
@@ -638,9 +633,8 @@ const ClasseManagement = () => {
                   {filteredUsers.map(user => (
                     <div
                       key={user.id}
-                      className={`flex items-center p-3 hover:bg-gray-50 cursor-pointer transition-colors ${
-                        formData.students.includes(user.id) ? 'bg-blue-50' : ''
-                      }`}
+                      className={`flex items-center p-3 hover:bg-gray-50 cursor-pointer transition-colors ${formData.students.includes(user.id) ? 'bg-blue-50' : ''
+                        }`}
                       onClick={() => toggleMember(user.id)}
                     >
                       <input

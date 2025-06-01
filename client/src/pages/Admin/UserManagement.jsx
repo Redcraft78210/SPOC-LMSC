@@ -880,7 +880,7 @@ const UserManagement = () => {
                 >
                   <option value="Administrateur">Administrateur</option>
                   <option value="Professeur">Professeur</option>
-                  <option value="Etudiant">Élève</option>
+                  <option value="Etudiant">Étudiant</option>
                 </select>
               </div>
               {

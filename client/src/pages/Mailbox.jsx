@@ -38,7 +38,10 @@ import {
   Video,
 } from 'lucide-react';
 import { toast, Toaster } from 'react-hot-toast';
-import ReactMarkdown from 'react-markdown';
+import { Editor } from '@toast-ui/react-editor';
+
+import Viewer from '@toast-ui/editor/dist/toastui-editor-viewer';
+import '@toast-ui/editor/dist/toastui-editor.css';
 
 const Mailbox = ({ role, onClose, user }) => {
   const [view, setView] = useState('inbox');
@@ -125,6 +128,24 @@ const Mailbox = ({ role, onClose, user }) => {
       // Clear the selected message first before loading the new one
       setSelectedMessage(null);
 
+      // Mark the message as read immediately if it's in inbox and unread
+      const messageToUpdate = messages.find(msg => msg.id === messageId);
+      if (messageToUpdate && !messageToUpdate.read && view === 'inbox') {
+        // Update UI immediately
+        startTransition(() => {
+          setMessages(prevMessages =>
+            prevMessages.map(msg =>
+              msg.id === messageId ? { ...msg, read: true } : msg
+            )
+          );
+        });
+        
+        // Send API request to mark as read (don't await)
+        markAsRead({ messageId }).catch(error => {
+          console.error("Erreur lors du marquage comme lu:", error);
+        });
+      }
+
       // Then start loading the new message
       startTransition(() => {
         setLoadingMessageDetails(true);
@@ -136,18 +157,6 @@ const Mailbox = ({ role, onClose, user }) => {
         startTransition(() => {
           setSelectedMessage(response.data);
         });
-
-        if (!response.data.read && view === 'inbox') {
-          await markAsRead({ messageId });
-          // Mettre à jour la liste des messages sans rechargement complet
-          startTransition(() => {
-            setMessages(prevMessages =>
-              prevMessages.map(msg =>
-                msg.id === messageId ? { ...msg, read: true } : msg
-              )
-            );
-          });
-        }
       } else {
         console.error("Error fetching message details:", response.message);
       }
@@ -232,7 +241,6 @@ const Mailbox = ({ role, onClose, user }) => {
     const [recipients, setRecipients] = useState([]);
     const [availableRecipients, setAvailableRecipients] = useState([]);
     const [subject, setSubject] = useState(replyData?.subject || '');
-    const [content, setContent] = useState('');
     const [attachments, setAttachments] = useState([]);
     const [sending, setSending] = useState(false);
     const [recipientType, setRecipientType] = useState('individual'); // individual, all-admins, all-teachers, all-students
@@ -241,6 +249,7 @@ const Mailbox = ({ role, onClose, user }) => {
     const recipientsInitialized = useRef(false);
     const [loadingRecipients, setLoadingRecipients] = useState(false);
     const searchInputRef = useRef(null);
+    const editorRef = useRef(null);
 
     // Add this useEffect near your other effects
     useEffect(() => {
@@ -394,6 +403,9 @@ const Mailbox = ({ role, onClose, user }) => {
     const handleSubmit = async e => {
       e.preventDefault();
 
+      // Obtenir le contenu de l'éditeur au format markdown
+      const editorContent = editorRef.current?.getInstance().getMarkdown() || '';
+
       if (recipients.length === 0 && recipientType === 'individual') {
         toast.error("Veuillez sélectionner au moins un destinataire");
         return;
@@ -404,13 +416,13 @@ const Mailbox = ({ role, onClose, user }) => {
         return;
       }
 
-      if (!content.trim()) {
+      if (!editorContent.trim()) {
         toast.error("Veuillez saisir un message");
         return;
       }
 
       // Vérifier si l'utilisateur mentionne des pièces jointes mais n'en a pas ajouté
-      if (attachments.length === 0 && checkForAttachmentMention(content)) {
+      if (attachments.length === 0 && checkForAttachmentMention(editorContent)) {
         const confirmSend = window.confirm(
           "Vous semblez mentionner des pièces jointes dans votre message, mais aucun fichier n'a été ajouté. Souhaitez-vous quand même envoyer le message sans pièces jointes?"
         );
@@ -432,18 +444,17 @@ const Mailbox = ({ role, onClose, user }) => {
 
         console.log("FormData recipients:", recipients.map(r => r.id));
         console.log("FormData subject:", subject.trim());
-        console.log("FormData content:", content.trim());
+        console.log("FormData content:", editorContent.trim());
         console.log("FormData attachments:", attachments);
 
+        formData.append('recipientType', recipientType);
         formData.append('subject', subject.trim());
-        formData.append('content', content.trim());
+        formData.append('content', editorContent.trim());
 
         // Si c'est une réponse, ajouter l'ID du message auquel on répond
         if (replyData) {
           formData.append('replyTo', replyData.id);
         }
-        // Si le type de destinataire est individuel, ajouter le type
-        formData.append('recipientType', recipientType);
 
         // Ajouter les pièces jointes
         Array.from(attachments).forEach(file => {
@@ -466,6 +477,90 @@ const Mailbox = ({ role, onClose, user }) => {
         setSending(false);
       }
     };
+
+    // Fonction pour initialiser l'éditeur avec un contenu initial (pour les réponses)
+    useEffect(() => {
+      if (replyData && editorRef.current) {
+        // Si nous avons des données de réponse, pré-remplir l'éditeur avec une citation
+        const originalContent = replyData.originalMessage?.content || '';
+        const quoteContent = originalContent
+          .split('\n')
+          .map(line => `> ${line}`)
+          .join('\n');
+
+        const replyTemplate = `\n\n---\n${quoteContent}`;
+
+        // Initialiser l'éditeur avec ce contenu
+        editorRef.current.getInstance().setMarkdown(replyTemplate);
+      }
+    }, [replyData]);
+
+    // Configuration du hook pour le glisser-déposer
+    useEffect(() => {
+      if (editorRef.current) {
+        const editorInstance = editorRef.current.getInstance();
+
+        const dropZone = document.querySelector('.toastui-editor-defaultUI');
+        if (dropZone) {
+          dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+          });
+
+          dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+          });
+
+          dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+
+            if (e.dataTransfer.files.length) {
+              const files = Array.from(e.dataTransfer.files);
+              // Filtrer uniquement les images et les autres fichiers
+              const validFiles = files.filter(file => file.size <= 10 * 1024 * 1024);
+
+              // Séparer les images des autres fichiers
+              const imageFiles = validFiles.filter(file => file.type.startsWith('image/'));
+              const otherFiles = validFiles.filter(file => !file.type.startsWith('image/'));
+
+              // Ajouter les fichiers non-image aux pièces jointes
+              if (otherFiles.length > 0) {
+                setAttachments(prev => [...prev, ...otherFiles]);
+                toast.success(`${otherFiles.length} fichier(s) ajouté(s) aux pièces jointes`);
+              }
+
+              // Insérer les images directement dans l'éditeur
+              if (imageFiles.length > 0) {
+                // Pour chaque image, l'insérer dans l'éditeur
+                imageFiles.forEach(file => {
+                  const reader = new FileReader();
+                  reader.onload = (e) => {
+                    // Insérer l'image à la position du curseur
+                    editorInstance.insertImage({
+                      src: e.target.result,
+                      alt: file.name
+                    });
+                  };
+                  reader.readAsDataURL(file);
+                });
+
+                toast.success(`${imageFiles.length} image(s) insérée(s) dans l'éditeur`);
+              }
+            }
+          });
+        }
+
+        // Nettoyer les event listeners lors du démontage du composant
+        return () => {
+          if (dropZone) {
+            dropZone.removeEventListener('dragover', () => { });
+            dropZone.removeEventListener('dragleave', () => { });
+            dropZone.removeEventListener('drop', () => { });
+          }
+        };
+      }
+    }, [editorRef.current]);
 
     return (
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-9940 p-2 sm:p-4">
@@ -709,7 +804,7 @@ const Mailbox = ({ role, onClose, user }) => {
               />
             </div>
 
-            {/* Content */}
+            {/* Remplacer le textarea par Toast UI Editor */}
             <div className="mb-4">
               <label
                 htmlFor="content"
@@ -717,14 +812,23 @@ const Mailbox = ({ role, onClose, user }) => {
               >
                 Message
               </label>
-              <textarea
-                id="content"
-                value={content}
-                onChange={e => setContent(e.target.value)}
-                rows={6}
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
+              <div className="border border-gray-300 rounded-md">
+                <Editor
+                  ref={editorRef}
+                  initialValue="<p></p>"
+                  previewStyle="tab"
+                  height="300px"
+                  initialEditType="wysiwyg"
+                  useCommandShortcut={true}
+                  toolbarItems={[
+                    ['heading', 'bold', 'italic', 'strike'],
+                    ['hr', 'quote'],
+                    ['ul', 'ol', 'task', 'indent', 'outdent'],
+                    ['table', 'link'],
+                    ['code', 'codeblock']
+                  ]}
+                />
+              </div>
             </div>
 
             {/* Attachments */}
@@ -860,7 +964,26 @@ const Mailbox = ({ role, onClose, user }) => {
     setMobileMenuOpen(false);
   };
 
+  const ToastViewer = ({ content }) => {
+    const viewerRef = useRef();
 
+    useEffect(() => {
+      const viewerInstance = new Viewer({
+        el: viewerRef.current,
+        initialValue: content,
+      });
+
+      return () => {
+        // Clean up
+        viewerInstance.destroy();
+      };
+    }, [content]);
+    return <div ref={viewerRef}></div>;
+  };
+
+  ToastViewer.propTypes = {
+    content: PropTypes.string.isRequired,
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-9950">
@@ -1084,11 +1207,6 @@ const Mailbox = ({ role, onClose, user }) => {
                       <h4 className="text-xs sm:text-sm font-medium text-gray-800 truncate">
                         {message.subject}
                       </h4>
-                      <p className="text-xs text-gray-500 truncate mt-1">
-                        <ReactMarkdown>
-                          {message.content.split('\n')[0]}
-                        </ReactMarkdown>
-                      </p>
                       <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-2">
                         {message.fromContactForm && (
                           <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
@@ -1177,7 +1295,6 @@ const Mailbox = ({ role, onClose, user }) => {
                           </>
                         )}
                       </div>
-                      {console.log(selectedMessage)}
                       <div className="flex items-center text-xs sm:text-sm text-gray-500">
                         {["all-students", "all-admins", "all-teachers"].includes(selectedMessage?.recipientType) ? (
                           <span className="font-medium text-gray-800 mr-1">
@@ -1316,9 +1433,7 @@ const Mailbox = ({ role, onClose, user }) => {
 
                   {/* Message Body */}
                   <div className="prose max-w-none text-sm sm:text-base">
-                    <ReactMarkdown>
-                      {selectedMessage.content}
-                    </ReactMarkdown>
+                    <ToastViewer content={selectedMessage.content} />
                   </div>
 
                   {/* Attachments */}
