@@ -121,7 +121,7 @@ const Dashboard = ({ content, token, role }) => {
   };
 
   const contentMap = {
-    Home: user.role === 'Admin' ? (
+    Home: user.role === 'Administrateur' ? (
       <Suspense fallback={<LoadingComponent />}>
         <AdminDashboardHome />
       </Suspense>

@@ -137,6 +137,7 @@ const manualRegister = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
+    // Ici, on suppose que le champ 'role' reçu est déjà en français
     const newUser = await User.create({
       email,
       password: hashedPassword,
@@ -151,7 +152,7 @@ const manualRegister = async (req, res) => {
       id: newUser.id,
       email: newUser.email,
       name: newUser.name,
-      role: newUser.role === 'admin' ? 'Administrateur' : newUser.role === 'teacher' ? 'Professeur' : 'Etudiant'
+      role: newUser.role // Toujours en français
     };
 
     const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '1h' });
@@ -166,21 +167,17 @@ const manualRegister = async (req, res) => {
 const login = async (req, res) => {
   const { email, username, password } = req.body;
 
-  // Vérifier qu'au moins un identifiant et le mot de passe sont fournis
   if ((!email && !username) || !password) {
     return res.status(400).json({ message: ERROR_MESSAGES.MISSING_FIELDS });
   }
 
   try {
     let user;
-    
-    // Rechercher l'utilisateur soit par email, soit par username
     if (email) {
       user = await User.findOne({ where: { email } });
     } else {
       user = await User.findOne({ where: { username } });
     }
-    
     if (!user) return res.status(401).json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS });
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -204,9 +201,7 @@ const login = async (req, res) => {
       id: user.id,
       email: user.email,
       name: user.name,
-      role: user.role === 'admin' ? 'Administrateur' :
-        user.role === 'teacher' ? 'Professeur' :
-          'Etudiant',
+      role: user.role, // Toujours en français
       ...(user.firstLogin && { firstLogin: true })
     };
 
@@ -247,9 +242,7 @@ const verify2FA = async (req, res) => {
       id: user.id,
       email: user.email,
       name: user.name,
-      role: user.role === 'admin' ? 'Administrateur' :
-        user.role === 'teacher' ? 'Professeur' :
-          'Etudiant',
+      role: user.role, // Toujours en français
       ...(user.firstLogin && { firstLogin: true })
     };
 
@@ -324,7 +317,6 @@ const refresh2FASetup = async (req, res) => {
 
 const firstLogin = async (req, res) => {
   const { username, password } = req.body;
-
   const userId = req.user.id;
 
   if (!password || !username) {
@@ -357,9 +349,7 @@ const firstLogin = async (req, res) => {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role === 'admin' ? 'Administrateur' :
-          user.role === 'teacher' ? 'Professeur' :
-            'Etudiant',
+        role: user.role, // Toujours en français
         ...(user.firstLogin && { firstLogin: true })
       };
 

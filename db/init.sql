@@ -3,7 +3,7 @@
 -- ============================================================
 CREATE TYPE statut_type AS ENUM ('actif', 'inactif');
 CREATE TYPE scan_status_type AS ENUM ('pending', 'clean', 'infected');
-CREATE TYPE user_role AS ENUM ('admin', 'teacher', 'student');
+CREATE TYPE user_role AS ENUM ('Administrateur', 'Professeur', 'Etudiant');
 CREATE TYPE live_status AS ENUM ('scheduled', 'ongoing', 'completed', 'cancelled');
 CREATE TYPE progress_status AS ENUM ('not_started', 'in_progress', 'completed');
 CREATE TYPE attendance_status AS ENUM ('attended', 'missed');
@@ -137,8 +137,18 @@ CREATE TABLE messages (
     content TEXT NOT NULL,
     read BOOLEAN DEFAULT FALSE,
     "senderId" UUID REFERENCES users(id) ON DELETE CASCADE,
-    "recipientType" VARCHAR(50) NOT NULL CHECK ("recipientType" IN ('individual', 'all-admins', 'all-users')),
+    "recipientType" VARCHAR(50) NOT NULL CHECK ("recipientType" IN ('individual', 'multiple', 'all-admins', 'all-teachers', 'all-students')),
     "fromContactForm" BOOLEAN DEFAULT FALSE,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE recipients (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "MessageId" UUID NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+    "recipientId" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    read BOOLEAN DEFAULT FALSE,
+    hidden BOOLEAN DEFAULT FALSE,
     "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -227,16 +237,6 @@ CREATE TABLE course_videos (
     PRIMARY KEY (course_id, video_id)
 );
 
-CREATE TABLE message_recipients (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    message_id UUID NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
-    recipient_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    read BOOLEAN DEFAULT FALSE,
-    deleted BOOLEAN DEFAULT FALSE,
-    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
 CREATE TABLE trash_messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   "originalMessageId" UUID,
@@ -266,7 +266,7 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION validate_teacher()
 RETURNS TRIGGER AS $$
 BEGIN
-    IF NOT validate_user_role(NEW.main_teacher_id, 'teacher') THEN
+    IF NOT validate_user_role(NEW.main_teacher_id, 'Professeur') THEN
         RAISE EXCEPTION 'User % is not a teacher', NEW.main_teacher_id;
     END IF;
     RETURN NEW;
@@ -316,7 +316,7 @@ CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_courses_teacher_id ON courses(teacher_id);
 CREATE INDEX idx_lives_teacher_id ON lives(teacher_id);
 CREATE INDEX idx_chat_messages_live_id ON chat_messages(live_id);
-CREATE INDEX idx_message_recipients_recipient_id ON message_recipients(recipient_id);
+CREATE INDEX idx_recipients_recipient_id ON recipients("recipientId");
 CREATE INDEX idx_user_avatars_user_id ON user_avatars(user_id);
 
 
@@ -325,11 +325,11 @@ CREATE INDEX idx_user_avatars_user_id ON user_avatars(user_id);
 -- ============================================================
 -- Admin
 INSERT INTO users (id, name, surname, role, username, email, password)
-VALUES ('a0000000-0000-0000-0000-000000000001', 'Admin', 'System', 'admin', 'admin', 'admin@spoc.lmsc', '$2b$10$1Tl7ARRSx3HHsS8nehhTF.asiDLQ7IOzCJ1EzCoMGQBFysfFCdQc2');
+VALUES ('a0000000-0000-0000-0000-000000000001', 'Admin', 'System', 'Administrateur', 'admin', 'admin@spoc.lmsc', '$2b$10$1Tl7ARRSx3HHsS8nehhTF.asiDLQ7IOzCJ1EzCoMGQBFysfFCdQc2');
 
 -- Code d'inscription initial
 INSERT INTO codes (id, value, role, "usageLimit", "remainingUses", "expiresAt")
-VALUES ('b0000000-0000-0000-0000-000000000001', 'ADMIN-INIT', 'admin', 10, 10, '2030-01-01 00:00:00');
+VALUES ('b0000000-0000-0000-0000-000000000001', 'ADMIN-INIT', 'Administrateur', 10, 10, '2030-01-01 00:00:00');
 
 -- Trigger Functions
 CREATE OR REPLACE FUNCTION validate_teacher_class()
@@ -338,7 +338,7 @@ BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM users 
         WHERE id = NEW.teacher_id 
-        AND role = 'teacher'
+        AND role = 'Professeur'
     ) THEN
         RAISE EXCEPTION 'User % is not a teacher', NEW.teacher_id;
     END IF;
@@ -352,7 +352,7 @@ BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM users 
         WHERE id = NEW.student_id 
-        AND role = 'student'
+        AND role = 'Etudiant'
     ) THEN
         RAISE EXCEPTION 'User % is not a student', NEW.student_id;
     END IF;
@@ -372,7 +372,7 @@ BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM users 
         WHERE id = NEW.teacher_id 
-        AND role = 'teacher'
+        AND role = 'Professeur'
     ) THEN
         RAISE EXCEPTION 'User % is not a teacher', NEW.teacher_id;
     END IF;
@@ -541,9 +541,9 @@ CREATE INDEX idx_course_videos_video_id ON course_videos(video_id);
 
 -- Create indexes for better performance
 CREATE INDEX idx_messages_contact_form ON messages("fromContactForm");
-CREATE INDEX idx_message_recipients_message_id ON message_recipients(message_id);
-CREATE INDEX idx_message_recipients_read ON message_recipients(read);
-CREATE INDEX idx_message_recipients_deleted ON message_recipients(deleted);
+CREATE INDEX idx_recipients_message_id ON recipients("MessageId");
+CREATE INDEX idx_recipients_read ON recipients(read);
+CREATE INDEX idx_recipients_hidden ON recipients(hidden);
 CREATE INDEX idx_attachments_message_id ON attachments("MessageId");
 CREATE INDEX idx_attachments_scan_status ON attachments("scanStatus");
 CREATE INDEX idx_registry_rgpd_user_email ON registry_rgpd(user_email);
@@ -554,15 +554,15 @@ RETURNS TRIGGER AS $$
 BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM users 
-        WHERE id = NEW.recipient_id
+        WHERE id = NEW."recipientId"
     ) THEN
-        RAISE EXCEPTION 'User % does not exist', NEW.recipient_id;
+        RAISE EXCEPTION 'User % does not exist', NEW."recipientId";
     END IF;
     IF NOT EXISTS (
         SELECT 1 FROM messages 
-        WHERE id = NEW.message_id
+        WHERE id = NEW."MessageId"
     ) THEN
-        RAISE EXCEPTION 'Message % does not exist', NEW.message_id;
+        RAISE EXCEPTION 'Message % does not exist', NEW."MessageId";
     END IF;
     RETURN NEW;
 END;
@@ -609,8 +609,8 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Apply validation triggers
-CREATE TRIGGER trg_message_recipients 
-BEFORE INSERT OR UPDATE ON message_recipients
+CREATE TRIGGER trg_recipients 
+BEFORE INSERT OR UPDATE ON recipients
 FOR EACH ROW EXECUTE FUNCTION validate_message_recipient();
 
 CREATE TRIGGER trg_messages_sender 
@@ -629,7 +629,7 @@ VALUES
         'a6fa5fc1-1234-4321-0000-000000000003',
         'John',
         'Doe',
-        'admin',
+        'Administrateur',
         'jdoe1_admin',
         'john.doeadmin@spoc.lmsc',
         '$2b$10$1Tl7ARRSx3HHsS8nehhTF.asiDLQ7IOzCJ1EzCoMGQBFysfFCdQc2'
@@ -638,7 +638,7 @@ VALUES
         'a6fa5fc1-1234-4321-0000-000000000009',
         'Jane',
         'Doe',
-        'admin',        
+        'Administrateur',        
         'jdoe2_admin',
         'jane.doeadmin@spoc.lmsc',
         '$2b$10$1Tl7ARRSx3HHsS8nehhTF.asiDLQ7IOzCJ1EzCoMGQBFysfFCdQc2'
@@ -647,7 +647,7 @@ VALUES
         'a6fa5fc1-1234-4321-0000-000000000005',
         'Bob',
         'Smith',
-        'teacher',
+        'Professeur',
         'bsmith_teacher',
         'bob.smithteacher@spoc.lmsc',
         '$2b$10$1Tl7ARRSx3HHsS8nehhTF.asiDLQ7IOzCJ1EzCoMGQBFysfFCdQc2'
@@ -656,7 +656,7 @@ VALUES
         'a6fa5fc1-1234-4321-0000-000000000006',
         'Ewe',
         'Willi',
-        'teacher',
+        'Professeur',
         'willi_teacher',
         'willi@spoc.lmsc',
         '$2b$05$eZDYdmMp4ZxVrl3um/hcp.G15wMNvB2/17OS7gBTtBnj4VtFIM6Z.'
@@ -665,7 +665,7 @@ VALUES
         'a6fa5fc1-1234-4321-0000-000000000007',
         'Charlie',
         'Brown',
-        'student',
+        'Etudiant',
         'cbrown_student',
         'charlie.brownstudent@spoc.lmsc',
         '$2b$10$1Tl7ARRSx3HHsS8nehhTF.asiDLQ7IOzCJ1EzCoMGQBFysfFCdQc2'
@@ -674,7 +674,7 @@ VALUES
         'a6fa5fc1-1234-4321-0000-000000000008',
         'Emily',
         'Davis',
-        'student',
+        'Etudiant',
         'edavis_student',
         'emily.disvstudent@spoc.lmsc',
         '$2b$10$1Tl7ARRSx3HHsS8nehhTF.asiDLQ7IOzCJ1EzCoMGQBFysfFCdQc2'
@@ -688,7 +688,7 @@ VALUES
     (
         '11111111-aaaa-bbbb-cccc-000000000001',
         'STU-FRESH-01',
-        'student',
+        'Etudiant',
         10,
         10,
         '2026-01-01 00:00:00'
@@ -697,7 +697,7 @@ VALUES
     (
         '11111111-aaaa-bbbb-cccc-000000000002',
         'STU-HALF-USED',
-        'student',
+        'Etudiant',
         10,
         4,
         '2025-05-15 00:00:00'
@@ -706,7 +706,7 @@ VALUES
     (
         '11111111-aaaa-bbbb-cccc-000000000003',
         'STU-EXPIRED',
-        'student',
+        'Etudiant',
         10,
         1,
         '2024-12-31 00:00:00'
@@ -715,7 +715,7 @@ VALUES
     (
         '11111111-aaaa-bbbb-cccc-000000000004',
         'TEACH-ACTIVE-01',
-        'teacher',
+        'Professeur',
         20,
         15,
         '2025-11-01 00:00:00'
@@ -724,7 +724,7 @@ VALUES
     (
         '11111111-aaaa-bbbb-cccc-000000000005',
         'TEACH-LIMITED',
-        'teacher',
+        'Professeur',
         20,
         2,
         '2025-04-30 00:00:00'
@@ -733,7 +733,7 @@ VALUES
     (
         '11111111-aaaa-bbbb-cccc-000000000006',
         'ADMIN-FULL',
-        'admin',
+        'Administrateur',
         100,
         100,
         '2030-01-01 00:00:00'
@@ -742,7 +742,7 @@ VALUES
     (
         '11111111-aaaa-bbbb-cccc-000000000007',
         'ADMIN-EXPIRED',
-        'admin',
+        'Administrateur',
         50,
         25,
         '2024-01-01 00:00:00'
@@ -881,14 +881,14 @@ VALUES
     ('a6fa5fc1-1234-4321-0000-000000000014', 'a6fa5fc1-1234-4321-0000-000000000021', TRUE);
 
 -- Insert some sample messages
-INSERT INTO messages (id, subject, content, "senderId", "recipientId", "fromContactForm")
+INSERT INTO messages (id, subject, content, "senderId", "recipientType", "fromContactForm")
 VALUES
-    ('33333333-aaaa-bbbb-cccc-000000000001', 'Bienvenue sur la plateforme', 'Bonjour et bienvenue sur notre plateforme d''apprentissage. N''hésitez pas à contacter l''équipe administrative si vous avez des questions.', 'a6fa5fc1-1234-4321-0000-000000000007', FALSE),
-    ('33333333-aaaa-bbbb-cccc-000000000002', 'Question sur le cours de JavaScript', 'Bonjour, j''ai une question concernant le dernier cours sur les closures en JavaScript. Pourriez-vous préciser leur utilité dans un contexte réel ?', 'a6fa5fc1-1234-4321-0000-000000000007', 'a6fa5fc1-1234-4321-0000-000000000005', FALSE),
-    ('33333333-aaaa-bbbb-cccc-000000000003', 'Demande de contact via formulaire', 'Bonjour, je suis intéressé par vos formations en ligne. Pouvez-vous me donner plus d''informations sur les prérequis pour la formation en développement web ?', NULL, 'a6fa5fc1-1234-4321-0000-000000000006', TRUE);
+    ('33333333-aaaa-bbbb-cccc-000000000001', 'Bienvenue sur la plateforme', 'Bonjour et bienvenue sur notre plateforme d''apprentissage. N''hésitez pas à contacter l''équipe administrative si vous avez des questions.', 'a6fa5fc1-1234-4321-0000-000000000007', 'multiple', FALSE),
+    ('33333333-aaaa-bbbb-cccc-000000000002', 'Question sur le cours de JavaScript', 'Bonjour, j''ai une question concernant le dernier cours sur les closures en JavaScript. Pourriez-vous préciser leur utilité dans un contexte réel ?', 'a6fa5fc1-1234-4321-0000-000000000007', 'individual', FALSE),
+    ('33333333-aaaa-bbbb-cccc-000000000003', 'Demande de contact via formulaire', 'Bonjour, je suis intéressé par vos formations en ligne. Pouvez-vous me donner plus d''informations sur les prérequis pour la formation en développement web ?', NULL, 'all-admins', TRUE);
 
 -- Insert message recipients
-INSERT INTO message_recipients (message_id, recipient_id, read)
+INSERT INTO recipients ("MessageId", "recipientId", read)
 VALUES
     ('33333333-aaaa-bbbb-cccc-000000000001', 'a6fa5fc1-1234-4321-0000-000000000007', TRUE),
     ('33333333-aaaa-bbbb-cccc-000000000001', 'a6fa5fc1-1234-4321-0000-000000000008', FALSE),

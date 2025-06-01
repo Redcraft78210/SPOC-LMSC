@@ -1,5 +1,5 @@
 // controllers/messageController.js
-const { Message, User, Attachment, sequelize, TrashMessage } = require('../models');
+const { Message, User, Attachment, sequelize, TrashMessage, Recipient } = require('../models');
 const { scanAttachment } = require('../services/virusScanService');
 const fs = require('fs');
 const path = require('path');
@@ -8,22 +8,49 @@ const { v4: uuidv4 } = require('uuid');
 const UPLOADS_DIR = path.join(__dirname, '../uploads');
 
 // Get inbox messages
+const { Op } = require('sequelize');
+
+// Helper pour construire le whereClause
+function buildWhereClause(role, recipientMessageIds) {
+  const baseOr = [
+    {
+      [Op.and]: [
+        { id: { [Op.in]: recipientMessageIds } },
+        { recipientType: { [Op.in]: ['individual', 'multiple'] } }
+      ]
+    }
+  ];
+
+  const roleRecipientMap = {
+    Etudiant: ['all-students'],
+    Professeur: ['all-teachers'],
+    Administrateur: ['all-admins']
+  };
+
+  const extraTypes = roleRecipientMap[role] || [];
+  extraTypes.forEach((type) => {
+    baseOr.push({
+      recipientType: type
+    });
+  });
+
+  return { [Op.or]: baseOr };
+}
+
 const getInboxMessages = async (req, res) => {
   try {
     const { page = 1, unread, hasAttachments, fromContact } = req.query;
     const limit = 20;
-    const offset = (page - 1) * limit;
-    
-    // Get user role for group message filtering
+    const offset = (parseInt(page, 10) - 1) * limit;
+
     const currentUser = await User.findByPk(req.user.id, {
       attributes: ['role']
     });
-    
     if (!currentUser) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // First, get the IDs of messages in trash
+    // Get trash message IDs
     const trashMessageIds = await TrashMessage.findAll({
       attributes: ['originalMessageId'],
       where: {
@@ -32,63 +59,134 @@ const getInboxMessages = async (req, res) => {
       raw: true
     }).then(records => records.map(r => r.originalMessageId));
 
-    // Build where clause to include both direct messages and group messages for the user's role
-    let whereClause = {
-      [sequelize.Op.or]: [
-        { recipientId: req.user.id },
-        { recipientType: `all-${currentUser.role}s` } // Match 'all-students', 'all-teachers', 'all-admins'
+    // Get recipient message IDs
+    const recipientMessageIds = await Recipient.findAll({
+      attributes: ['MessageId'],
+      where: {
+        recipientId: req.user.id
+      },
+      include: [
+        {
+          model: Message,
+          attributes: ['recipientType'],
+          where: {
+            recipientType: { [Op.in]: ['individual', 'multiple'] }
+          }
+        }
+      ],
+      raw: true
+    }).then(records => records.map(r => r.MessageId));
+
+    // Get unread message IDs if unread filter is active
+    let unreadMessageIds = [];
+    if (unread === 'true') {
+      unreadMessageIds = await Recipient.findAll({
+        attributes: ['MessageId'],
+        where: {
+          recipientId: req.user.id,
+          read: false
+        },
+        raw: true
+      }).then(records => records.map(r => r.MessageId));
+    }
+
+    // Start building base where clause from buildWhereClause function
+    const baseWhereClause = buildWhereClause(
+      currentUser.role,
+      recipientMessageIds,
+    );
+    
+    // Initialize an array to collect all filter conditions
+    const filterConditions = [];
+    
+    // Always exclude trash messages
+    if (trashMessageIds.length > 0) {
+      filterConditions.push({
+        id: { [Op.notIn]: trashMessageIds }
+      });
+    }
+    
+    // Apply unread filter strictly if active
+    if (unread === 'true') {
+      filterConditions.push({
+        id: { [Op.in]: unreadMessageIds }
+      });
+    }
+    
+    // Apply fromContact filter strictly if active
+    if (fromContact === 'true') {
+      filterConditions.push({
+        fromContactForm: true
+      });
+    }
+    
+    // Combine all filters with base where clause using AND
+    const whereClause = {
+      [Op.and]: [
+        baseWhereClause,
+        ...filterConditions
       ]
     };
 
-    if (unread === 'true') {
-      whereClause.read = false;
-    }
-
-    if (fromContact === 'true') {
-      whereClause.fromContactForm = true;
-    }
-
-    // Exclude messages in trash
-    if (trashMessageIds.length > 0) {
-      whereClause.id = {
-        [sequelize.Op.notIn]: trashMessageIds
-      };
+    // Build includes array
+    const includes = [
+      {
+        model: User,
+        as: 'sender',
+        attributes: ['id', 'name', 'email', 'role']
+      }
+    ];
+    
+    // Apply hasAttachments filter strictly if active
+    if (hasAttachments === 'true') {
+      includes.push({
+        model: Attachment,
+        required: true
+      });
     }
 
     const { count, rows } = await Message.findAndCountAll({
       where: whereClause,
-      include: [
-        {
-          model: User,
-          as: 'sender',
-          attributes: ['id', 'name', 'email', 'role']
-        },
-        {
-          model: User,
-          as: 'recipient',
-          attributes: ['id', 'name', 'email', 'role'],
-          required: false // Make this optional since group messages won't have a recipient
-        },
-        ...(hasAttachments === 'true' ? [{
-          model: Attachment,
-          required: true
-        }] : [])
-      ],
+      include: includes,
       order: [['createdAt', 'DESC']],
       limit,
       offset,
       distinct: true
     });
 
-    res.json({
-      messages: rows,
-      currentPage: parseInt(page),
+    const messageIds = rows.map((m) => m.id);
+    let recipientStatuses = [];
+    if (messageIds.length > 0) {
+      recipientStatuses = await Recipient.findAll({
+        where: {
+          MessageId: { [Op.in]: messageIds },
+          recipientId: req.user.id
+        },
+        attributes: ['MessageId', 'read'],
+        raw: true
+      });
+    }
+
+    const readMap = {};
+    recipientStatuses.forEach((r) => {
+      readMap[r.MessageId] = r.read;
+    });
+
+    const messagesWithStatus = rows.map((message) => {
+      const msgObj = message.toJSON();
+      msgObj.read = !!readMap[message.id];
+      return msgObj;
+    });
+
+    return res.json({
+      messages: messagesWithStatus,
+      currentPage: parseInt(page, 10),
       totalPages: Math.ceil(count / limit),
       total: count
     });
   } catch (error) {
     console.error('Error fetching inbox messages:', error);
-    res.status(500).json({ message: 'Failed to fetch messages' });
+    return res.status(500).json({ message: 'Failed to fetch messages' });
   }
 };
 
@@ -127,12 +225,6 @@ const getSentMessages = async (req, res) => {
           as: 'sender',
           attributes: ['id', 'name', 'email', 'role']
         },
-        {
-          model: User,
-          as: 'recipient',
-          attributes: ['id', 'name', 'email', 'role'],
-          required: false // Make this optional for group messages
-        },
         ...(hasAttachments === 'true' ? [{
           model: Attachment,
           required: true
@@ -144,8 +236,26 @@ const getSentMessages = async (req, res) => {
       distinct: true
     });
 
+    // For each message, get recipients
+    const messagesWithRecipients = await Promise.all(rows.map(async (message) => {
+      const messageObj = message.toJSON();
+
+      if (message.recipientType === 'individual' || message.recipientType === 'multiple') {
+        const recipients = await Recipient.findAll({
+          where: { MessageId: message.id },
+          include: [{
+            model: User,
+            attributes: ['id', 'name', 'email', 'role']
+          }]
+        });
+        messageObj.recipients = recipients.map(r => r.User);
+      }
+
+      return messageObj;
+    }));
+
     res.json({
-      messages: rows,
+      messages: messagesWithRecipients,
       currentPage: parseInt(page),
       totalPages: Math.ceil(count / limit),
       total: count
@@ -163,13 +273,30 @@ const getTrashMessages = async (req, res) => {
     const limit = 20;
     const offset = (page - 1) * limit;
 
+    // Get all messages in trash for this user
+    const trashMessages = await TrashMessage.findAll({
+      attributes: ['originalMessageId'],
+      where: {
+        deletedBy: req.user.id,
+        permanentlyDeleted: false
+      },
+      raw: true
+    });
+
+    const trashMessageIds = trashMessages.map(r => r.originalMessageId);
+
+    if (trashMessageIds.length === 0) {
+      return res.json({
+        messages: [],
+        currentPage: parseInt(page),
+        totalPages: 0,
+        total: 0
+      });
+    }
+
     const { count, rows } = await Message.findAndCountAll({
       where: {
-        [sequelize.Op.or]: [
-          { senderId: req.user.id },
-          { recipientId: req.user.id }
-        ]
-        // Removed deleted: true as this column doesn't exist
+        id: { [sequelize.Op.in]: trashMessageIds }
       },
       include: [
         {
@@ -178,20 +305,7 @@ const getTrashMessages = async (req, res) => {
           attributes: ['id', 'name', 'email', 'role']
         },
         {
-          model: User,
-          as: 'recipient',
-          attributes: ['id', 'name', 'email', 'role']
-        },
-        {
           model: Attachment
-        },
-        {
-          model: TrashMessage,
-          required: true, // Ensure there's an entry in TrashMessage
-          where: {
-            deletedBy: req.user.id, // Deleted by current user
-            permanentlyDeleted: false // Only get non-permanently deleted messages
-          }
         }
       ],
       order: [['updatedAt', 'DESC']],
@@ -200,8 +314,26 @@ const getTrashMessages = async (req, res) => {
       distinct: true
     });
 
+    // For each message, get recipients if needed
+    const messagesWithRecipients = await Promise.all(rows.map(async (message) => {
+      const messageObj = message.toJSON();
+
+      if (message.recipientType === 'individual' || message.recipientType === 'multiple') {
+        const recipients = await Recipient.findAll({
+          where: { MessageId: message.id },
+          include: [{
+            model: User,
+            attributes: ['id', 'name', 'email', 'role']
+          }]
+        });
+        messageObj.recipients = recipients.map(r => r.User);
+      }
+
+      return messageObj;
+    }));
+
     res.json({
-      messages: rows,
+      messages: messagesWithRecipients,
       currentPage: parseInt(page),
       totalPages: Math.ceil(count / limit),
       total: count
@@ -216,36 +348,24 @@ const getTrashMessages = async (req, res) => {
 const getMessage = async (req, res) => {
   try {
     const { messageId } = req.params;
-    
-    // Get user role for checking group message access
+
     const currentUser = await User.findByPk(req.user.id, {
       attributes: ['role']
     });
-    
+
     if (!currentUser) {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    let whereClause = { id: messageId };
+
     const message = await Message.findOne({
-      where: {
-        id: messageId,
-        [sequelize.Op.or]: [
-          { senderId: req.user.id },
-          { recipientId: req.user.id },
-          { recipientType: `all-${currentUser.role}s` } // Include group messages for user's role
-        ]
-      },
+      where: whereClause,
       include: [
         {
           model: User,
           as: 'sender',
           attributes: ['id', 'name', 'email', 'role']
-        },
-        {
-          model: User,
-          as: 'recipient',
-          attributes: ['id', 'name', 'email', 'role'],
-          required: false // Make this optional since group messages won't have a recipient
         },
         {
           model: Attachment
@@ -257,9 +377,45 @@ const getMessage = async (req, res) => {
       return res.status(404).json({ message: 'Message not found' });
     }
 
-    res.json(message);
+    const isRecipient = await Recipient.findOne({
+      where: {
+        MessageId: messageId,
+        recipientId: req.user.id
+      }
+    });
+
+    const isAllStudentsMessage = message.recipientType === 'all-students' && currentUser.role === 'Etudiant';
+    const isAllTeachersMessage = message.recipientType === 'all-teachers' && currentUser.role === 'Professeur';
+    const isGroupMessageForUser = isAllStudentsMessage || isAllTeachersMessage;
+    const isAllAdminsMessage = message.recipientType === 'all-admins' && currentUser.role === 'Administrateur';
+    const isSender = message.senderId === req.user.id;
+
+    if (!isRecipient && !isGroupMessageForUser && !isAllAdminsMessage && !isSender) {
+      return res.status(403).json({ message: 'You do not have permission to view this message' });
+    }
+
+    if (isRecipient) {
+      isRecipient.read = true;
+      await isRecipient.save();
+    }
+
+    let recipients = [];
+    if (message.recipientType === 'individual' || message.recipientType === 'multiple') {
+      recipients = await Recipient.findAll({
+        where: { MessageId: message.id },
+        include: [{
+          model: User,
+          attributes: ['id', 'name', 'email', 'role']
+        }]
+      });
+    }
+
+    const messageData = message.toJSON();
+    messageData.recipients = recipients.map(r => r.User);
+    messageData.read = isRecipient ? isRecipient.read : true;
+
+    res.json(messageData);
   } catch (error) {
-    console.error('Error fetching message:', error);
     res.status(500).json({ message: 'Failed to fetch message' });
   }
 };
@@ -276,105 +432,94 @@ const sendMessage = async (req, res) => {
     if (!recipientType) {
       return res.status(400).json({ message: 'Recipient type is required' });
     }
-    if (recipientType !== 'all-students' && recipientType !== 'all-teachers' && recipientType !== 'all-admins' && !recipients) {
-      return res.status(400).json({ message: 'Recipients are required for individual messages' });
-    }
+
     // Ensure subject and content are provided
     if (!subject || !content) {
       return res.status(400).json({ message: 'Subject and content are required' });
     }
-    // Ensure recipients is an array if provided for individual messages
-    if (recipientType === 'individual' && (!recipients || !Array.isArray(recipients))) {
-      return res.status(400).json({ message: 'Recipients must be an array for individual messages' });
+
+    // Validate recipientType against model's enum values
+    if (!['individual', 'multiple', 'all-admins', 'all-students', 'all-teachers'].includes(recipientType)) {
+      return res.status(400).json({ message: 'Invalid recipient type' });
     }
-    // Ensure files are provided
-    if (!req.files || !Array.isArray(req.files)) {
-      return res.status(400).json({ message: 'At least one file is required' });
+
+    // Validate recipients based on type
+    if (recipientType === 'individual') {
+      if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+        return res.status(400).json({ message: 'At least one recipient is required for individual messages' });
+      }
+    } else if (recipientType === 'multiple') {
+      if (!recipients || !Array.isArray(recipients) || recipients.length < 2) {
+        return res.status(400).json({ message: 'At least two recipients are required for multiple recipient messages' });
+      }
     }
 
     const files = req.files || [];
     const senderId = req.user.id;
-    const createdMessages = [];
 
-    // Handle group messages (single message with recipientType)
-    if (['all-students', 'all-teachers', 'all-admins'].includes(recipientType)) {
-      // Create just one message for the entire group
-      const message = await Message.create({
-        subject,
-        content,
-        senderId,
-        recipientType, // Store the group type instead of individual recipientId
-        recipientId: null, // No specific recipient for group messages
-        fromContactForm: false
+    // Create message
+    const createdMessage = await Message.create({
+      subject,
+      content,
+      senderId,
+      recipientType,
+      fromContactForm: false
+    }, { transaction });
+
+    // Handle recipients based on type
+    if (recipientType === 'individual' || recipientType === 'multiple') {
+      // Add entries to Recipients table for each recipient
+      for (const userId of recipients) {
+        await Recipient.create({
+          MessageId: createdMessage.id,
+          recipientId: userId,
+          read: false
+        }, { transaction });
+      }
+    } else if (recipientType === 'all-admins' || recipientType === 'all-students' || recipientType === 'all-teachers') {
+      // Determine which role to fetch
+      let targetRole;
+      if (recipientType === 'all-admins') targetRole = 'Administrateur';
+      else if (recipientType === 'all-teachers') targetRole = 'Professeur';
+      else if (recipientType === 'all-students') targetRole = 'Etudiant';
+
+      // Fetch all users with the target role
+      const targetUsers = await User.findAll({
+        where: { role: targetRole },
+        attributes: ['id']
       }, { transaction });
 
-      createdMessages.push(message);
-
-      // Process attachments for the group message
-      for (const file of files) {
-        const uuid = uuidv4();
-        const originalFilename = file.originalname;
-        const filePath = path.join(UPLOADS_DIR, uuid);
-
-        // Save file
-        fs.writeFileSync(filePath, file.buffer);
-
-        // Create attachment record
-        const attachment = await Attachment.create({
-          id: uuid,
-          MessageId: message.id,
-          filename: originalFilename,
-          fileSize: file.size,
-          mimeType: file.mimetype,
-          scanStatus: 'pending'
+      // Create a recipient entry for each user
+      for (const user of targetUsers) {
+        await Recipient.create({
+          MessageId: createdMessage.id,
+          recipientId: user.id,
+          read: false
         }, { transaction });
-
-        // Store for scanning after transaction commits
-        attachmentsToScan.push(attachment.id);
       }
-    } else {
-      // Individual recipients - create separate messages
-      if (!recipients || !recipients.length) {
-        return res.status(400).json({ message: 'At least one recipient is required' });
-      }
-      
-      const recipientIds = Array.isArray(recipients) ? recipients : [recipients];
+    }
 
-      for (const recipientId of recipientIds) {
-        const message = await Message.create({
-          subject,
-          content,
-          senderId,
-          recipientId,
-          recipientType: 'individual',
-          fromContactForm: false
-        }, { transaction });
+    // Process attachments
+    for (const file of files) {
+      const uuid = uuidv4();
+      const originalFilename = file.originalname;
+      const filePath = path.join(UPLOADS_DIR, uuid);
 
-        createdMessages.push(message);
+      // Save file
+      fs.writeFileSync(filePath, file.buffer);
 
-        // Process attachments
-        for (const file of files) {
-          const uuid = uuidv4();
-          const originalFilename = file.originalname;
-          const filePath = path.join(UPLOADS_DIR, uuid);
+      // Create attachment record
+      const attachment = await Attachment.create({
+        id: uuid,
+        MessageId: createdMessage.id,
+        filename: originalFilename,
+        fileSize: file.size,
+        mimeType: file.mimetype,
+        scanStatus: 'pending'
+      }, { transaction });
 
-          // Save file
-          fs.writeFileSync(filePath, file.buffer);
-
-          // Create attachment record
-          const attachment = await Attachment.create({
-            id: uuid,
-            MessageId: message.id,
-            filename: originalFilename,
-            fileSize: file.size,
-            mimeType: file.mimetype,
-            scanStatus: 'pending'
-          }, { transaction });
-
-          // Store for scanning after transaction commits
-          attachmentsToScan.push(attachment.id);
-        }
-      }
+      // Store for scanning after transaction commits
+      attachmentsToScan.push(attachment.id);
     }
 
     await transaction.commit();
@@ -386,7 +531,7 @@ const sendMessage = async (req, res) => {
 
     res.status(201).json({
       message: 'Message sent successfully',
-      messageIds: createdMessages.map(m => m.id)
+      messageId: createdMessage.id
     });
   } catch (error) {
     await transaction.rollback();
@@ -395,24 +540,24 @@ const sendMessage = async (req, res) => {
   }
 };
 
-// Mark message as read
+// Mark message as read - updated to use Recipient table
 const markMessageAsRead = async (req, res) => {
   try {
     const { messageId } = req.params;
 
-    const message = await Message.findOne({
+    const recipient = await Recipient.findOne({
       where: {
-        id: messageId,
+        MessageId: messageId,
         recipientId: req.user.id
       }
     });
 
-    if (!message) {
-      return res.status(404).json({ message: 'Message not found' });
+    if (!recipient) {
+      return res.status(404).json({ message: 'Message not found or you are not a recipient' });
     }
 
-    message.read = true;
-    await message.save();
+    recipient.read = true;
+    await recipient.save();
 
     res.json({ message: 'Message marked as read' });
   } catch (error) {
@@ -428,20 +573,34 @@ const deleteMessage = async (req, res) => {
   try {
     const { messageId } = req.params;
 
-    // Check if message exists and belongs to user
-    const message = await Message.findOne({
-      where: {
-        id: messageId,
-        [sequelize.Op.or]: [
-          { senderId: req.user.id },
-          { recipientId: req.user.id }
-        ]
-      }
-    }, { transaction });
+    // Check if message exists
+    const message = await Message.findByPk(messageId);
 
     if (!message) {
       await transaction.rollback();
       return res.status(404).json({ message: 'Message not found' });
+    }
+
+    let isRecipient = false;
+
+    if (message.recipientType === 'individual' || message.recipientType === 'multiple') {
+      isRecipient = await Recipient.findOne({
+        where: {
+          MessageId: messageId,
+          recipientId: req.user.id
+        }
+      }) !== null;
+    } else if (
+      (message.recipientType === 'all-students' && req.user.role === 'Etudiant') ||
+      (message.recipientType === 'all-admins' && req.user.role === 'Administrateur') ||
+      (message.recipientType === 'all-teachers' && req.user.role === 'Professeur')
+    ) {
+      isRecipient = true;
+    }
+
+    if (message.senderId !== req.user.id && !isRecipient) {
+      await transaction.rollback();
+      return res.status(403).json({ message: 'You do not have permission to delete this message' });
     }
 
     // Check if message is already in trash
@@ -461,9 +620,6 @@ const deleteMessage = async (req, res) => {
       deletedAt: new Date(),
       scheduledPurgeDate: new Date(Date.now() + (30 * 24 * 60 * 60 * 1000)), // 30 days from now
     }, { transaction });
-
-    // No need to mark original message as deleted since the column doesn't exist
-    // We only track deletion through the TrashMessage table
 
     await transaction.commit();
     res.json({ message: 'Message moved to trash' });
@@ -516,18 +672,25 @@ const downloadAttachment = async (req, res) => {
       where: { id: attachmentId },
       include: {
         model: Message,
-        where: {
-          [sequelize.Op.or]: [
-            { senderId: req.user.id },
-            { recipientId: req.user.id }
-          ]
-        },
         required: true
       }
     });
 
     if (!attachment) {
       return res.status(404).json({ message: 'Attachment not found' });
+    }
+
+    const message = attachment.Message;
+    const isSender = message.senderId === req.user.id;
+    const isRecipient = await Recipient.findOne({
+      where: {
+        MessageId: message.id,
+        recipientId: req.user.id
+      }
+    });
+
+    if (!isSender && !isRecipient) {
+      return res.status(403).json({ message: 'You do not have permission to download this attachment' });
     }
 
     // Don't allow download of infected files
@@ -564,7 +727,7 @@ const downloadAttachment = async (req, res) => {
 // Create message from contact form
 const createContactMessage = async (req, res) => {
   const transaction = await sequelize.transaction();
-  const attachmentsToScan = []; // Add this line
+  const attachmentsToScan = [];
 
   try {
     const { name, email, motif, objet, message } = req.body;
@@ -583,7 +746,7 @@ const createContactMessage = async (req, res) => {
 
     // Find admin users to send the message to
     const admins = await User.findAll({
-      where: { role: 'admin' },
+      where: { role: 'Administrateur' },
       attributes: ['id']
     }, { transaction });
 
@@ -594,52 +757,60 @@ const createContactMessage = async (req, res) => {
 
     // Create a formatted message content
     const formattedContent = `
-Message du formulaire de contact:
+📩 **Nouveau message de contact**
 
-De: ${name}
-Email: ${email}
-Motif: ${motif || 'Non spécifié'}
+👤 **Nom :** ${name}
 
-Message:
+📧 **Email :** ${email}
+
+📌 **Motif :** ${motif || 'Non spécifié'}
+
+
+📝 **Message :**
+
 ${message}
-    `;
+`;
 
     // Create messages for each admin
-    const createdMessages = [];
+    const adminMessage = await Message.create({
+      subject: `Contact: ${objet}`,
+      content: formattedContent,
+      recipientType: 'all-admins',
+      fromContactForm: true,
+    }, { transaction });
+
+    // Add entries in the Recipients table for each admin
+    // This allows tracking read status for each admin individually
     for (const admin of admins) {
-      const adminMessage = await Message.create({
-        subject: `Contact: ${objet}`,
-        content: formattedContent,
-        recipientType: 'individual',
-        fromContactForm: true,
-        senderEmail: email // Store sender's email for reference
+      await Recipient.create({
+        MessageId: adminMessage.id,
+        recipientId: admin.id,
+        read: false
+      }, { transaction });
+    }
+
+    // Process attachments for each message
+    for (const file of files) {
+      // Generate unique filename
+      const uuid = uuidv4();
+      const filename = file.originalname;
+      const filePath = path.join(UPLOADS_DIR, uuid);
+
+      // Save file to storage
+      fs.writeFileSync(filePath, file.buffer);
+
+      // Create attachment record
+      const attachment = await Attachment.create({
+        id: uuid,
+        MessageId: adminMessage.id,
+        filename,
+        fileSize: file.size,
+        mimeType: file.mimetype,
+        scanStatus: 'pending'
       }, { transaction });
 
-      createdMessages.push(adminMessage);
-
-      // Process attachments for each message
-      for (const file of files) {
-        // Generate unique filename
-        const uuid = uuidv4();
-        const filename = file.originalname;
-        const filePath = path.join(UPLOADS_DIR, uuid);
-
-        // Save file to storage
-        fs.writeFileSync(filePath, file.buffer);
-
-        // Create attachment record
-        const attachment = await Attachment.create({
-          id: uuid,
-          MessageId: adminMessage.id,
-          filename,
-          fileSize: file.size,
-          mimeType: file.mimetype,
-          scanStatus: 'pending'
-        }, { transaction });
-
-        // Store for scanning after transaction commits
-        attachmentsToScan.push(attachment.id);
-      }
+      // Store for scanning after transaction commits
+      attachmentsToScan.push(attachment.id);
     }
 
     await transaction.commit();
@@ -651,7 +822,7 @@ ${message}
 
     res.status(201).json({
       message: 'Message envoyé avec succès.',
-      messageIds: createdMessages.map(m => m.id)
+      id: adminMessage.id
     });
   } catch (error) {
     await transaction.rollback();
@@ -686,26 +857,30 @@ const restoreMessage = async (req, res) => {
       return res.status(404).json({ message: 'Message not found in trash' });
     }
 
-    // Verify message exists
-    const message = await Message.findOne({
-      where: {
-        id: messageId,
-        [sequelize.Op.or]: [
-          { senderId: req.user.id },
-          { recipientId: req.user.id }
-        ]
-      }
-    }, { transaction });
-
+    // Verify message exists and user is sender or recipient
+    const message = await Message.findByPk(messageId, { transaction });
     if (!message) {
       await transaction.rollback();
       return res.status(404).json({ message: 'Message not found' });
     }
 
+    // Check if user is sender or recipient
+    const isSender = message.senderId === req.user.id;
+    const isRecipient = await Recipient.findOne({
+      where: {
+        MessageId: message.id,
+        recipientId: req.user.id
+      },
+      transaction
+    });
+
+    if (!isSender && !isRecipient) {
+      await transaction.rollback();
+      return res.status(403).json({ message: 'You do not have permission to restore this message' });
+    }
+
     // Delete the trash record to restore the message
     await trashRecord.destroy({ transaction });
-
-    // No need to update message.deleted since the column doesn't exist
 
     await transaction.commit();
     res.json({ message: 'Message restored from trash' });

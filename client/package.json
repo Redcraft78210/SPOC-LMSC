@@ -14,6 +14,8 @@
     "@heroicons/react": "^2.2.0",
     "@react-pdf-viewer/core": "^3.12.0",
     "@react-pdf-viewer/default-layout": "^3.12.0",
+    "@toast-ui/editor": "^3.2.2",
+    "@toast-ui/react-editor": "^3.2.3",
     "axios": "^1.9.0",
     "bootstrap": "^5.3.5",
     "broadwayjs": "^0.0.2",

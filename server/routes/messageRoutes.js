@@ -24,6 +24,12 @@ const upload = multer({
   }
 });
 
+// Create a new message with contact form
+router.post('/contact', upload.array('attachments', 5), createContactMessage);
+
+// Create a new message without attachments and with contact form
+router.post('/contact/no-attachments', createContactMessage);
+
 // Protected routes
 router.use(authMiddleware);
 
@@ -36,12 +42,8 @@ router.get('/:messageId', getMessage);
 // Create a new message
 router.post('/', upload.array('attachments', 5), sendMessage);
 
-// Create a new message with contact form
-router.post('/contact', upload.array('attachments', 5), createContactMessage);
 // Create a new message without attachments
 router.post('/no-attachments', sendMessage);
-// Create a new message without attachments and with contact form
-router.post('/contact/no-attachments', createContactMessage);
 
 // Message actions
 router.patch('/:messageId/trash', moveToTrash);

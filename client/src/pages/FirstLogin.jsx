@@ -130,7 +130,7 @@ const FirstLogin = ({ token, setAuth }) => {
     const check2FAStatusForUser = async () => {
       try {
         const response = await check2FAStatus({ token });
-        if (response.status === 201) {
+        if (response.status === 200) {
           setIs2FAAlreadySetup(response.data.is2FAEnabled);
         } else {
           console.error('Error checking 2FA status:', response.message);

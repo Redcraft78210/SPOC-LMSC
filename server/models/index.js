@@ -24,6 +24,7 @@ const CourseDocument = require('./CourseDocument');
 const CourseVideo = require('./CourseVideo');
 const Attachment = require('./Attachment');
 const Message = require('./Message');
+const Recipient = require('./Recipient');
 const TrashMessage = require('./TrashMessage');
 
 // Define associations
@@ -117,7 +118,12 @@ Video.belongsToMany(Course, {
 
 Message.belongsTo(User, { as: 'sender', foreignKey: 'senderId' });
 
-Message.belongsTo(User, { as: 'recipient', foreignKey: 'recipientId' });
+Message.hasMany(Recipient, {
+  foreignKey: 'MessageId',
+});
+
+Recipient.belongsTo(User, { foreignKey: 'recipientId' });
+Recipient.belongsTo(Message, { foreignKey: 'MessageId' });
 
 Message.hasMany(Attachment);
 
@@ -138,28 +144,42 @@ UserAvatar.belongsTo(User, { foreignKey: 'user_id' });
 
 // Export models and sequelize instance
 module.exports = {
+  // User-related models
   User,
-  Admin,
-  Attachment,
-  Message,
   Student,
-  StudentClass,
-  Classe,
-  Lives,
   Teacher,
-  ClassLives,
-  Course,
-  Code,
-  Comment,
-  Thread,
-  ChatMessage,
-  CourseProgress,
-  LiveAttendance,
+  Admin,
   UserAvatar,
+  
+  // Course-related models
+  Course,
+  CourseProgress,
   Document,
   Video,
-  TrashMessage,  // Add TrashMessage to exports
-  CourseDocument,  // Add CourseDocument to exports
-  CourseVideo,     // Add CourseVideo to exports
+  CourseDocument,
+  CourseVideo,
+  
+  // Class and live session models
+  Classe,
+  Lives,
+  ClassLives,
+  LiveAttendance,
+  ChatMessage,
+  StudentClass,
+  
+  // Discussion models
+  Thread,
+  Comment,
+  
+  // Messaging models
+  Message,
+  Recipient,
+  Attachment,
+  TrashMessage,
+  
+  // Authentication
+  Code,
+  
+  // Database
   sequelize,
 };

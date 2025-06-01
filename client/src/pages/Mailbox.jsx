@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, useTransition } from 'react';
 import PropTypes from 'prop-types';
 import {
   getInboxMessages,
@@ -38,8 +38,9 @@ import {
   Video,
 } from 'lucide-react';
 import { toast, Toaster } from 'react-hot-toast';
+import ReactMarkdown from 'react-markdown';
 
-const Mailbox = ({ role, onClose }) => {
+const Mailbox = ({ role, onClose, user }) => {
   const [view, setView] = useState('inbox');
   const [messages, setMessages] = useState([]);
   const [selectedMessage, setSelectedMessage] = useState(null);
@@ -53,11 +54,15 @@ const Mailbox = ({ role, onClose }) => {
     totalMessages: 0,
   });
 
+  // Ajoutez useTransition pour gérer les transitions d'état
+  const [isPending, startTransition] = useTransition();
+
   // Add missing state variables
   const [downloadingAttachments, setDownloadingAttachments] = useState({});
   const [loadingMessageDetails, setLoadingMessageDetails] = useState(false);
   const [deletingMessage, setDeletingMessage] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Filter options
   const [filters, setFilters] = useState({
@@ -92,11 +97,14 @@ const Mailbox = ({ role, onClose }) => {
       });
 
       if (response.status === 200) {
-        setMessages(response.data.messages);
-        setPagination({
-          currentPage: response.data.currentPage,
-          totalPages: response.data.totalPages,
-          totalMessages: response.data.total
+        // Utilisation de startTransition pour éviter le flickering
+        startTransition(() => {
+          setMessages(response.data.messages);
+          setPagination({
+            currentPage: response.data.currentPage,
+            totalPages: response.data.totalPages,
+            totalMessages: response.data.total
+          });
         });
       } else {
         console.error("Error fetching messages:", response.message);
@@ -106,22 +114,39 @@ const Mailbox = ({ role, onClose }) => {
     } finally {
       setLoading(false);
     }
-  }, [filters, pagination.currentPage, getEndpointForView]);
+  }, [filters, pagination.currentPage, getEndpointForView, startTransition]);
 
   useEffect(() => {
     fetchMessages();
-  }, [fetchMessages]);
+  }, [fetchMessages, refreshKey]);
 
   const handleMessageSelect = async messageId => {
     try {
-      setLoadingMessageDetails(true);
+      // Clear the selected message first before loading the new one
+      setSelectedMessage(null);
+
+      // Then start loading the new message
+      startTransition(() => {
+        setLoadingMessageDetails(true);
+      });
+
       const response = await getMessage({ messageId });
 
       if (response.status === 200) {
-        setSelectedMessage(response.data);
+        startTransition(() => {
+          setSelectedMessage(response.data);
+        });
+
         if (!response.data.read && view === 'inbox') {
           await markAsRead({ messageId });
-          fetchMessages(); // Recharger pour mettre à jour les badges non lus
+          // Mettre à jour la liste des messages sans rechargement complet
+          startTransition(() => {
+            setMessages(prevMessages =>
+              prevMessages.map(msg =>
+                msg.id === messageId ? { ...msg, read: true } : msg
+              )
+            );
+          });
         }
       } else {
         console.error("Error fetching message details:", response.message);
@@ -129,9 +154,10 @@ const Mailbox = ({ role, onClose }) => {
     } catch (error) {
       console.error("Erreur lors du chargement du message:", error);
     } finally {
-      setLoadingMessageDetails(false);
-      // Fermer le menu mobile automatiquement lorsqu'un message est sélectionné
-      setMobileMenuOpen(false);
+      startTransition(() => {
+        setLoadingMessageDetails(false);
+        setMobileMenuOpen(false);
+      });
     }
   };
 
@@ -215,6 +241,13 @@ const Mailbox = ({ role, onClose }) => {
     const recipientsInitialized = useRef(false);
     const [loadingRecipients, setLoadingRecipients] = useState(false);
     const searchInputRef = useRef(null);
+
+    // Add this useEffect near your other effects
+    useEffect(() => {
+      if (recipients.length > 1 && recipientType !== 'multiple') {
+        setRecipientType('multiple');
+      }
+    }, [recipients, recipientType]);
 
     // Expressions régulières pour détecter les mentions de pièces jointes
     const attachmentRegexList = [
@@ -336,23 +369,26 @@ const Mailbox = ({ role, onClose }) => {
       const selectedUser = availableRecipients.find(
         user => user.id.toString() === userId
       );
+
       if (selectedUser) {
         setRecipients(prevRecipients => {
           // Check if the user is already selected
           if (!prevRecipients.some(r => r.id === selectedUser.id)) {
-
             return [...prevRecipients, selectedUser];
           }
           return prevRecipients;
         });
       }
-      setSearchQuery(''); // Clear search query after selection
-      setShowSuggestions(false); // Hide suggestions after selection
+
+      setSearchQuery('');
+      setShowSuggestions(false);
     };
 
     const handleSpecialRecipientSelect = type => {
-      setRecipientType(type);
-      setRecipients([]); // Clear individual recipients when selecting a special group
+      if (type !== recipientType) {
+        setRecipientType(type);
+        setRecipients([]); // Clear individual recipients when selecting a special group
+      }
     };
 
     const handleSubmit = async e => {
@@ -407,17 +443,7 @@ const Mailbox = ({ role, onClose }) => {
           formData.append('replyTo', replyData.id);
         }
         // Si le type de destinataire est individuel, ajouter le type
-        if (recipientType === 'individual') {
-          formData.append('recipientType', 'individual');
-        }
-        // Sinon, ajouter le type de destinataire spécial
-        if (recipientType === 'all-students') {
-          formData.append('recipientType', 'all-students');
-        } else if (recipientType === 'all-teachers') {
-          formData.append('recipientType', 'all-teachers');
-        } else if (recipientType === 'all-admins') {
-          formData.append('recipientType', 'all-admins');
-        }
+        formData.append('recipientType', recipientType);
 
         // Ajouter les pièces jointes
         Array.from(attachments).forEach(file => {
@@ -468,17 +494,29 @@ const Mailbox = ({ role, onClose }) => {
                 Type de destinataire
               </label>
               <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleSpecialRecipientSelect('individual')}
-                  className={`px-2 py-1.5 sm:px-3 sm:py-2 rounded-md text-xs sm:text-sm flex items-center gap-1 ${recipientType === 'individual'
-                    ? 'bg-blue-100 text-blue-800 border border-blue-300'
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                    }`}
-                >
-                  <User size={14} className="sm:size-6" />
-                  Individuel
-                </button>
+                {recipientType === 'multiple' ? (
+                  <button
+                    type="button"
+                    onClick={() => handleSpecialRecipientSelect('multiple')}
+                    className={`px-2 py-1.5 sm:px-3 sm:py-2 rounded-md text-xs sm:text-sm flex items-center gap-1 ${recipientType === 'multiple'
+                      ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                      }`}
+                  >
+                    <User size={14} className="sm:size-6" />
+                    Multiple
+                  </button>) : (
+                  <button
+                    type="button"
+                    onClick={() => handleSpecialRecipientSelect('individual')}
+                    className={`px-2 py-1.5 sm:px-3 sm:py-2 rounded-md text-xs sm:text-sm flex items-center gap-1 ${recipientType === 'individual'
+                      ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                      }`}
+                  >
+                    <User size={14} className="sm:size-6" />
+                    Individuel
+                  </button>)}
 
                 {role !== 'Etudiant' ? (
                   <>
@@ -527,7 +565,7 @@ const Mailbox = ({ role, onClose }) => {
             </div>
 
             {/* Individual Recipients Selection */}
-            {recipientType === 'individual' && (
+            {(recipientType === 'individual' || recipientType === 'multiple') && (
               <div className="mb-4">
                 <label
                   htmlFor="recipients"
@@ -803,8 +841,38 @@ const Mailbox = ({ role, onClose }) => {
     setMobileMenuOpen(!mobileMenuOpen);
   };
 
+  const handleTabClick = (newView) => {
+    // If clicking on the already active tab, just refresh messages
+    if (view === newView) {
+      setLoading(true);
+      // Force refresh by incrementing the key
+      setRefreshKey(prev => prev + 1);
+      return;
+    }
+
+    setMessages([]); // Clear messages to avoid flickering during transition
+
+    // Otherwise, change the view with appropriate state changes
+    setLoading(true);
+    setView(newView);
+    setSelectedMessage(null);
+    setPagination({ ...pagination, currentPage: 1 });
+    setMobileMenuOpen(false);
+  };
+
+
+
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-9950">
+      {isPending && (
+        <div className="fixed top-2 right-2 bg-blue-100 text-blue-800 px-3 py-1 rounded-md text-sm flex items-center gap-2 z-[9960]">
+          <svg className="animate-spin h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Actualisation...
+        </div>
+      )}
       <div className="bg-white rounded-lg shadow-xl w-full max-w-7xl max-h-[60vh] h-[95vh] overflow-hidden mx-2 sm:mx-4 flex flex-col">
         <Toaster position="top-center" reverseOrder={false} />
         {/* Header */}
@@ -861,16 +929,8 @@ const Mailbox = ({ role, onClose }) => {
               <ul>
                 <li>
                   <button
-                    onClick={() => {
-                      setLoading(true);
-                      setView('inbox');
-                      setSelectedMessage(null);
-                      setPagination({ ...pagination, currentPage: 1 });
-                      setMobileMenuOpen(false);
-                    }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 text-left ${view === 'inbox'
-                      ? 'bg-blue-50 text-blue-600'
-                      : 'hover:bg-gray-50'
+                    onClick={() => handleTabClick('inbox')}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-left ${view === 'inbox' ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50'
                       }`}
                   >
                     <Inbox size={18} />
@@ -879,16 +939,8 @@ const Mailbox = ({ role, onClose }) => {
                 </li>
                 <li>
                   <button
-                    onClick={() => {
-                      setLoading(true);
-                      setView('sent');
-                      setSelectedMessage(null);
-                      setPagination({ ...pagination, currentPage: 1 });
-                      setMobileMenuOpen(false);
-                    }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 text-left ${view === 'sent'
-                      ? 'bg-blue-50 text-blue-600'
-                      : 'hover:bg-gray-50'
+                    onClick={() => handleTabClick('sent')}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-left ${view === 'sent' ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50'
                       }`}
                   >
                     <Send size={18} />
@@ -897,16 +949,8 @@ const Mailbox = ({ role, onClose }) => {
                 </li>
                 <li>
                   <button
-                    onClick={() => {
-                      setLoading(true);
-                      setView('trash');
-                      setSelectedMessage(null);
-                      setPagination({ ...pagination, currentPage: 1 });
-                      setMobileMenuOpen(false);
-                    }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 text-left ${view === 'trash'
-                      ? 'bg-blue-50 text-blue-600'
-                      : 'hover:bg-gray-50'
+                    onClick={() => handleTabClick('trash')}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-left ${view === 'trash' ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50'
                       }`}
                   >
                     <Trash2 size={18} />
@@ -996,37 +1040,17 @@ const Mailbox = ({ role, onClose }) => {
                 </div>
               </div>
 
-              {/* Messages List */}
+              {/* Messages List - Optimisé pour éviter le flickering */}
               <div className="flex-1 overflow-y-auto">
-                {loading ? (
-                  <div className="flex items-center justify-center h-full">
-                    <div className="flex flex-col items-center">
-                      <svg
-                        className="animate-spin h-8 w-8 text-blue-600"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
-                      <p className="mt-2 text-gray-600 text-sm">
-                        Chargement des messages...
-                      </p>
-                    </div>
+                {loading && (
+                  // Afficher les skeletons si pas de messages déjà chargés
+                  <div className="space-y-1">
+                    {Array(5).fill(0).map((_, index) => (
+                      <MessageSkeleton key={index} />
+                    ))}
                   </div>
-                ) : filteredMessages.length === 0 ? (
+                )}
+                {filteredMessages.length === 0 ? (
                   <div className="flex items-center justify-center h-full">
                     <div className="text-center">
                       <Inbox className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-2" />
@@ -1038,8 +1062,9 @@ const Mailbox = ({ role, onClose }) => {
                     <button
                       key={message.id}
                       onClick={() => handleMessageSelect(message.id)}
-                      className={`w-full text-left p-3 sm:p-4 border-b border-gray-100 hover:bg-gray-50 ${!message.read && view === 'inbox' ? 'bg-blue-50' : ''
-                        } ${selectedMessage?.id === message.id ? 'bg-blue-100' : ''}`}
+                      className={`w-full text-left p-3 sm:p-4 border border-gray-100 hover:bg-gray-50 
+        ${!message.read && view === 'inbox' ? 'bg-blue-50' : ''} 
+        ${selectedMessage?.id === message.id ? 'bg-indigo-100 border-l-4 border-indigo-500' : ''}`}
                     >
                       <div className="flex items-start justify-between mb-1">
                         <h3
@@ -1060,7 +1085,9 @@ const Mailbox = ({ role, onClose }) => {
                         {message.subject}
                       </h4>
                       <p className="text-xs text-gray-500 truncate mt-1">
-                        {message.content}
+                        <ReactMarkdown>
+                          {message.content.split('\n')[0]}
+                        </ReactMarkdown>
                       </p>
                       <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-2">
                         {message.fromContactForm && (
@@ -1129,55 +1156,93 @@ const Mailbox = ({ role, onClose }) => {
             </div>
 
             {/* Message Detail View */}
-            {selectedMessage ? (
+            {loadingMessageDetails ? (
+              // Always show skeleton during message loading
+              <MessageDetailSkeleton />
+            ) : selectedMessage ? (
               <div className={`flex-1 flex flex-col bg-white ${selectedMessage ? 'block md:flex' : 'hidden md:flex'}`}>
                 {/* Message Header */}
                 <div className="p-3 sm:p-4 border-b border-gray-200 flex justify-between items-start relative">
-                  {loadingMessageDetails && (
-                    <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-10">
-                      <svg
-                        className="animate-spin h-8 w-8 text-blue-600"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
-                    </div>
-                  )}
-
+                  {/* Remove the loading overlay that was here */}
                   <div className="flex-1 min-w-0">
                     <h2 className="text-lg sm:text-xl font-medium text-gray-900 truncate">
                       {selectedMessage.subject}
                     </h2>
                     <div className="flex flex-col flex-wrap gap-x-4 gap-y-1 mt-2">
                       <div className="flex items-center text-xs sm:text-sm text-gray-500">
-                        <span className="font-medium text-gray-800 mr-1">
-                          De :
-                        </span>
-                        {selectedMessage.fromContactForm ? <span className="truncate">Formulaire de contact</span> : <span className="truncate">{selectedMessage.sender?.name}</span>}
+                        {!selectedMessage.fromContactForm && (
+                          <>
+                            <span className="font-medium text-gray-800 mr-1">De :</span>
+                            <span className="truncate">{selectedMessage.sender.email === user.email ? "Vous" : selectedMessage.sender?.name}</span>
+                          </>
+                        )}
                       </div>
+                      {console.log(selectedMessage)}
                       <div className="flex items-center text-xs sm:text-sm text-gray-500">
-                        <span className="font-medium text-gray-800 mr-1">
-                          À :
-                        </span>
-                        <span className="truncate">{selectedMessage.recipient?.name}</span>
+                        {["all-students", "all-admins", "all-teachers"].includes(selectedMessage?.recipientType) ? (
+                          <span className="font-medium text-gray-800 mr-1">
+                            À :{" "}
+                            {(() => {
+                              switch (selectedMessage?.recipientType) {
+                                case "all-students":
+                                  return "Tous les étudiants";
+                                case "all-admins":
+                                  return "Tous les administrateurs";
+                                case "all-teachers":
+                                  return "Tous les enseignants";
+                                default:
+                                  return "Inconnu";
+                              }
+                            })()}
+                          </span>
+                        ) : (
+                          <>
+                            <span className="font-medium text-gray-800 mr-1">À :</span>
+                            {(() => {
+                              const userIsRecipient = selectedMessage.recipients?.some(r => r?.email === user.email);
+
+                              // If user is a recipient, add "Vous", else just list recipient names
+                              const displayedRecipients = [
+                                ...(userIsRecipient ? ["Vous"] : []),
+                                ...(selectedMessage.recipients?.map(r => r?.name || "") ?? []),
+                              ];
+
+                              // Filter out "Vous" if user's email is in recipients, no need because "Vous" is string
+                              // So instead, just remove names equal to user's own name if needed, but you used email check on strings.
+                              // We should filter out empty strings and duplicates, also filter out user name if present.
+
+                              // Let's assume user.name is available
+                              const filteredRecipients = displayedRecipients.filter(name => name && name !== user.name && name !== "");
+
+                              return filteredRecipients.map((name, index) => (
+                                <span key={index} className="truncate">
+                                  {name}
+                                  {index < filteredRecipients.length - 1 && <>,&nbsp;</>}
+                                </span>
+                              ));
+                            })()}
+                          </>
+                        )}
+
                       </div>
                       <div className="flex items-center text-xs sm:text-sm text-gray-500">
                         <Clock size={12} className="mr-1 flex-shrink-0" />
-                        <span className="truncate">{new Date(selectedMessage.createdAt).toLocaleString()}</span>
+                        <span className="truncate">
+                          <span className="truncate">
+                            {new Date(selectedMessage.createdAt).toLocaleString(
+                              navigator?.language || 'fr-FR',
+                              {
+                                weekday: 'long',
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit',
+                              }
+                            )}
+                          </span>
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -1251,11 +1316,9 @@ const Mailbox = ({ role, onClose }) => {
 
                   {/* Message Body */}
                   <div className="prose max-w-none text-sm sm:text-base">
-                    {selectedMessage.content
-                      .split('\n')
-                      .map((paragraph, index) => (
-                        <p key={index}>{paragraph}</p>
-                      ))}
+                    <ReactMarkdown>
+                      {selectedMessage.content}
+                    </ReactMarkdown>
                   </div>
 
                   {/* Attachments */}
@@ -1405,6 +1468,7 @@ const Mailbox = ({ role, onClose }) => {
                 </div>
               </div>
             ) : (
+              // Pas de message sélectionné
               <div className="flex-1 items-center justify-center bg-white hidden md:flex">
                 <p className="text-gray-500 text-sm sm:text-base">
                   Sélectionnez un message pour le lire
@@ -1421,6 +1485,45 @@ const Mailbox = ({ role, onClose }) => {
   );
 };
 
+// Ajouter ce composant dans votre fichier
+const MessageSkeleton = () => {
+  return (
+    <div className="w-full p-3 sm:p-4 border border-gray-100 animate-pulse">
+      <div className="flex items-start justify-between mb-1">
+        <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+        <div className="h-3 bg-gray-200 rounded w-1/6"></div>
+      </div>
+      <div className="h-4 bg-gray-200 rounded w-3/4 mt-2"></div>
+      <div className="h-3 bg-gray-200 rounded w-1/2 mt-2"></div>
+      <div className="flex mt-2 gap-1">
+        <div className="h-5 bg-gray-200 rounded-full w-16"></div>
+      </div>
+    </div>
+  );
+};
+
+// Ajouter un composant skeleton pour le message sélectionné
+const MessageDetailSkeleton = () => {
+  return (
+    <div className="flex-1 flex flex-col bg-white">
+      <div className="p-3 sm:p-4 border-b border-gray-200 animate-pulse">
+        <div className="h-6 bg-gray-200 rounded w-3/4 mb-3"></div>
+        <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+        <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+      </div>
+      <div className="flex-1 p-3 sm:p-6 animate-pulse">
+        <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+        <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+        <div className="mt-8 pt-4 border-t border-gray-200">
+          <div className="h-5 bg-gray-200 rounded w-1/4 mb-3"></div>
+          <div className="h-12 bg-gray-200 rounded w-full mb-2"></div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 Mailbox.propTypes = {
   user: PropTypes.shape({
     id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
@@ -1428,7 +1531,7 @@ Mailbox.propTypes = {
     surname: PropTypes.string,
     email: PropTypes.string,
   }).isRequired,
-  role: PropTypes.oneOf(['admin', 'teacher', 'student']).isRequired,
+  role: PropTypes.oneOf(['Administrateur', 'Professeur', 'Etudiant']).isRequired,
   onClose: PropTypes.func.isRequired,
 };
 

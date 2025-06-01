@@ -13,17 +13,17 @@ const Message = sequelize.define('Message', {
         type: DataTypes.STRING,
         allowNull: false,
     },
+    senderId: {
+        type: DataTypes.UUID,
+        allowNull: true, // Nullable for messages sent from contact form
+    },
     recipientType: {
-        type: DataTypes.ENUM('individual', 'all-admins', 'all-users'),
-        allowNull: false,
+        type: DataTypes.ENUM('individual', 'multiple', 'all-admins', 'all-students', 'all-teachers'),
+        allowNull: false
     },
     content: {
         type: DataTypes.TEXT,
         allowNull: false,
-    },
-    read: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false,
     },
     fromContactForm: {
         type: DataTypes.BOOLEAN,
@@ -32,7 +32,6 @@ const Message = sequelize.define('Message', {
 }, {
     tableName: 'messages',
     timestamps: true,
-    paranoid: true, // Enables soft deletes
 });
 
 module.exports = Message;
