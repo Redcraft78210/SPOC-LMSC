@@ -56,6 +56,8 @@ CREATE TABLE courses (
     teacher_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     matiere VARCHAR(255),
     chapitre VARCHAR(255),
+    status ENUM('draft', 'published', 'archived', 'blocked') DEFAULT 'draft',
+    block_reason VARCHAR(255),
     "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

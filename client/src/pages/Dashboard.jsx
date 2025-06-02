@@ -13,9 +13,7 @@ const PictureModal = lazy(() => import('../components/PictureModal'));
 const AdminDashboardHome = lazy(() => import('./Admin/DashboardHome'));
 const ProfDashboardHome = lazy(() => import('./Professeur/DashboardHome'));
 const EleveDashboardHome = lazy(() => import('./Eleve/DashboardHome'));
-const ProfCoursesLibrary = lazy(() => import('./Professeur/CoursesLibrary'));
-const AdminCoursesLibrary = lazy(() => import('./Admin/CoursesLibrary'));
-const CoursesLibrary = lazy(() => import('./Eleve/CoursesLibrary'));
+const CoursesLibrary = lazy(() => import('./CoursesLibrary'));
 const CoursesManagement = lazy(() => import('../components/ProfComp/CoursesManagment'));
 const DocumentManager = lazy(() => import('../components/ProfComp/DocumentMng'));
 const VideoManager = lazy(() => import('../components/ProfComp/VideoMng'));
@@ -134,12 +132,11 @@ const Dashboard = ({ content, token, role }) => {
         <EleveDashboardHome authToken={token} />
       </Suspense>
     ),
-    CoursesLibrary: <CoursesLibrary authToken={token} />,
+    CoursesLibrary: <CoursesLibrary authToken={token} userRole={user.role} />,
     CourseReader: <CourseReader authToken={token} />,
     ...(user.role === 'Administrateur'
       ? {
         Home: <AdminDashboardHome authToken={token} />,
-        CoursesLibrary: <AdminCoursesLibrary authToken={token} />,
       }
       : {}),
     ...(user.role === 'Administrateur' || user.role === 'Professeur'
@@ -151,7 +148,6 @@ const Dashboard = ({ content, token, role }) => {
     ...(user.role === 'Professeur'
       ? {
         Home: <ProfDashboardHome authToken={token} />,
-        CoursesLibrary: <ProfCoursesLibrary authToken={token} />,
         CoursesManagement: <CoursesManagement authToken={token} />,
         VideoManager: <VideoManager authToken={token} />,
         VideoRecording: <VideoRecording authToken={token} />,

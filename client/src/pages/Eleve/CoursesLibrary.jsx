@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
-import { FileText, SquarePlay, Radio } from 'lucide-react';
+import { FileText, SquarePlay, Radio, ShieldEllipsis } from 'lucide-react'; // Ajout de ShieldEllipsis
 import { useNavigate } from 'react-router-dom';
 import { getAllCourses } from '../../API/CourseCaller';
 import { getAllLives } from '../../API/LiveCaller';
 
-const Courses = ({ authToken }) => {
+const Courses = ({ authToken, userRole }) => {
   const [selectedProfessor, setSelectedProfessor] = useState('Tous');
   const [selectedSubject, setSelectedSubject] = useState('Tous');
   const [searchQuery, setSearchQuery] = useState('');
@@ -14,6 +14,7 @@ const Courses = ({ authToken }) => {
   const [content, setContent] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  console.log('userRole:', userRole); // Debugging line to check userRole
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -246,7 +247,7 @@ const Courses = ({ authToken }) => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredContent.map(item => (
-              <ContentCard key={item.id} item={item} />
+              <ContentCard key={item.id} item={item} userRole={userRole} />
             ))}
           </div>
         )}
@@ -255,10 +256,12 @@ const Courses = ({ authToken }) => {
   );
 };
 
-const ContentCard = ({ item }) => {
+const ContentCard = ({ item, userRole }) => {
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
+  const [showModMenu, setShowModMenu] = useState(false);
   const hoverTimeout = useRef(null);
+  const menuRef = useRef(null);
 
   const handleMouseEnter = () => {
     hoverTimeout.current = setTimeout(() => {
@@ -272,7 +275,6 @@ const ContentCard = ({ item }) => {
   };
 
   const handleClick = () => {
-    // Utilisation de l'id au lieu de id_cours pour correspondre aux données
     if (item.type === 'live') {
       navigate('/liveViewer?liveid=' + item.id);
     } else {
@@ -280,8 +282,37 @@ const ContentCard = ({ item }) => {
     }
   };
 
+  const handleMenuToggle = (e) => {
+    e.stopPropagation();
+    setShowModMenu((prev) => !prev);
+  };
+
+  const handleModAction = (action, e) => {
+    e.stopPropagation();
+    setShowModMenu(false);
+    if (action === 'edit') {
+      if (item.type === 'live') {
+        navigate(`/admin/edit-live/${item.id}`);
+      } else {
+        navigate(`/admin/edit-course/${item.id}`);
+      }
+    } else if (action === 'delete') {
+      if (window.confirm(`Êtes-vous sûr de vouloir supprimer "${item.titre}" ?`)) {
+        // Logique de suppression à implémenter ici
+        alert('Suppression non implémentée');
+      }
+    }
+  };
+
   useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setShowModMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
     return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
       if (hoverTimeout.current) {
         clearTimeout(hoverTimeout.current);
       }
@@ -292,11 +323,9 @@ const ContentCard = ({ item }) => {
     if (isNaN(seconds) || seconds < 0) {
       return 'NaN';
     }
-
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-
     return [
       hrs > 0 ? String(hrs).padStart(2, '0') : '00',
       String(mins).padStart(2, '0'),
@@ -306,11 +335,41 @@ const ContentCard = ({ item }) => {
 
   return (
     <div
-      className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 cursor-pointer"
+      className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 cursor-pointer relative"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onClick={handleClick}
     >
+      {/* Bouton de modération pour les administrateurs */}
+      {userRole === 'Administrateur' && (
+        <div className="absolute top-2 right-2 z-10" onClick={e => e.stopPropagation()}>
+          <button
+            className="p-1 bg-white bg-opacity-80 rounded-full hover:bg-opacity-100 transition-colors"
+            onClick={handleMenuToggle}
+          >
+            <ShieldEllipsis className="h-5 w-5 text-gray-600" />
+          </button>
+          {showModMenu && (
+            <div
+              ref={menuRef}
+              className="absolute right-0 mt-1 w-40 bg-white shadow-lg rounded-md py-1 z-20"
+            >
+              <button
+                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                onClick={e => handleModAction('edit', e)}
+              >
+                Modifier
+              </button>
+              <button
+                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                onClick={e => handleModAction('delete', e)}
+              >
+                Supprimer
+              </button>
+            </div>
+          )}
+        </div>
+      )}
       <div className="flex flex-col h-full">
         <div className="aspect-video bg-gray-200 relative">
           {item.type === 'cours' && item.video ? (
@@ -422,9 +481,9 @@ const ContentCard = ({ item }) => {
             <span className="italic">
               {item.type === 'cours'
                 ? item.date_creation &&
-                  new Date(item.date_creation).toLocaleDateString('fr-FR')
+                new Date(item.date_creation).toLocaleDateString('fr-FR')
                 : item.live &&
-                  new Date(item.live.date_debut).toLocaleDateString('fr-FR')}
+                new Date(item.live.date_debut).toLocaleDateString('fr-FR')}
             </span>
           </div>
         </div>
@@ -456,6 +515,7 @@ ContentCard.propTypes = {
     professor: PropTypes.string.isRequired,
     subject: PropTypes.string,
   }).isRequired,
+  userRole: PropTypes.string, // Ajout de la prop userRole
 };
 
 // Composant de filtre déroulant
@@ -481,6 +541,7 @@ FilterDropdown.propTypes = {
 
 Courses.propTypes = {
   authToken: PropTypes.string.isRequired,
+  userRole: PropTypes.string, // Ajout de la prop userRole
 };
 
 export default Courses;
