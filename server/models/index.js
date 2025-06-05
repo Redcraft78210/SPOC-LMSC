@@ -24,6 +24,10 @@ const CourseDocument = require('./CourseDocument');
 const CourseVideo = require('./CourseVideo');
 const Attachment = require('./Attachment');
 const Message = require('./Message');
+const Recipient = require('./Recipient');
+const TrashMessage = require('./TrashMessage');
+const Warning = require('./Warning');
+const Flag = require('./Flag');
 
 // Define associations
 Course.belongsToMany(Student, { through: 'Enrollments' });
@@ -116,9 +120,23 @@ Video.belongsToMany(Course, {
 
 Message.belongsTo(User, { as: 'sender', foreignKey: 'senderId' });
 
-Message.belongsTo(User, { as: 'recipient', foreignKey: 'recipientId' });
+Message.hasMany(Recipient, {
+  foreignKey: 'MessageId',
+});
+
+Recipient.belongsTo(User, { foreignKey: 'recipientId' });
+Recipient.belongsTo(Message, { foreignKey: 'MessageId' });
 
 Message.hasMany(Attachment);
+
+Message.hasOne(TrashMessage, {
+  foreignKey: 'originalMessageId',
+});
+TrashMessage.belongsTo(Message, {
+  foreignKey: 'originalMessageId',
+});
+
+TrashMessage.belongsTo(User, { as: 'deletedByUser', foreignKey: 'deletedBy' });
 
 Attachment.belongsTo(Message);
 
@@ -126,29 +144,55 @@ Attachment.belongsTo(Message);
 User.hasOne(UserAvatar, { foreignKey: 'user_id', as: 'avatar' });
 UserAvatar.belongsTo(User, { foreignKey: 'user_id' });
 
+// Associations
+// Add any associations for the new models
+// For example:
+Warning.belongsTo(User, { as: 'user', foreignKey: 'userId' });
+Warning.belongsTo(User, { as: 'admin', foreignKey: 'adminId' });
+
+Flag.belongsTo(User, { as: 'reporter', foreignKey: 'reportedBy' });
+Flag.belongsTo(User, { as: 'resolver', foreignKey: 'resolvedBy' });
+
 // Export models and sequelize instance
 module.exports = {
+  // User-related models
   User,
-  Admin,
-  Attachment,
-  Message,
   Student,
-  StudentClass,
-  Classe,
-  Lives,
   Teacher,
-  ClassLives,
-  Course,
-  Code,
-  Comment,
-  Thread,
-  ChatMessage,
-  CourseProgress,
-  LiveAttendance,
+  Admin,
   UserAvatar,
+  
+  // Course-related models
+  Course,
+  CourseProgress,
   Document,
   Video,
-  CourseDocument,  // Add CourseDocument to exports
-  CourseVideo,     // Add CourseVideo to exports
+  CourseDocument,
+  CourseVideo,
+  
+  // Class and live session models
+  Classe,
+  Lives,
+  ClassLives,
+  LiveAttendance,
+  ChatMessage,
+  StudentClass,
+  
+  // Discussion models
+  Thread,
+  Comment,
+  
+  // Messaging models
+  Message,
+  Recipient,
+  Attachment,
+  TrashMessage,
+  
+  // Authentication
+  Code,
+  
+  // Database
   sequelize,
+  Warning,
+  Flag,
 };

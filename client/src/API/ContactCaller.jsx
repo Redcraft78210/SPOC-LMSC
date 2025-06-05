@@ -48,9 +48,12 @@ const sendContactMessage = async ({ name, email, motif, objet, message, attachme
       });
     }
 
-    const response = await api.post('/contact', formData, {
+    const endpoint = attachments.length > 0 ? '/messages/contact' : '/messages/contact/no-attachments';
+    const contentType = attachments.length > 0 ? 'multipart/form-data' : 'application/json';
+
+    const response = await api.post(endpoint, formData, {
       headers: {
-        'Content-Type': 'multipart/form-data',
+        'Content-Type': contentType,
       },
     });
     

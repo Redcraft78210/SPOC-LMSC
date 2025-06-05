@@ -1,4 +1,5 @@
-const { User, Code, Classe, StudentClass } = require('../models');
+const { User, Code, StudentClass } = require('../models');
+const { Op } = require('sequelize');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { authenticator } = require('otplib');
@@ -137,6 +138,7 @@ const manualRegister = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
+    // Ici, on suppose que le champ 'role' reçu est déjà en français
     const newUser = await User.create({
       email,
       password: hashedPassword,
@@ -151,7 +153,7 @@ const manualRegister = async (req, res) => {
       id: newUser.id,
       email: newUser.email,
       name: newUser.name,
-      role: newUser.role === 'admin' ? 'Administrateur' : newUser.role === 'teacher' ? 'Professeur' : 'Etudiant'
+      role: newUser.role // Toujours en français
     };
 
     const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '1h' });
@@ -164,14 +166,19 @@ const manualRegister = async (req, res) => {
 };
 
 const login = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, username, password } = req.body;
 
-  if (!email || !password) {
+  if ((!email && !username) || !password) {
     return res.status(400).json({ message: ERROR_MESSAGES.MISSING_FIELDS });
   }
 
   try {
-    const user = await User.findOne({ where: { email } });
+    let user;
+    if (email) {
+      user = await User.findOne({ where: { email } });
+    } else {
+      user = await User.findOne({ where: { username } });
+    }
     if (!user) return res.status(401).json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS });
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -195,9 +202,7 @@ const login = async (req, res) => {
       id: user.id,
       email: user.email,
       name: user.name,
-      role: user.role === 'admin' ? 'Administrateur' :
-        user.role === 'teacher' ? 'Professeur' :
-          'Etudiant',
+      role: user.role, // Toujours en français
       ...(user.firstLogin && { firstLogin: true })
     };
 
@@ -238,9 +243,7 @@ const verify2FA = async (req, res) => {
       id: user.id,
       email: user.email,
       name: user.name,
-      role: user.role === 'admin' ? 'Administrateur' :
-        user.role === 'teacher' ? 'Professeur' :
-          'Etudiant',
+      role: user.role, // Toujours en français
       ...(user.firstLogin && { firstLogin: true })
     };
 
@@ -305,7 +308,7 @@ const refresh2FASetup = async (req, res) => {
     if (!user) return res.status(404).json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS });
 
     const newTempToken = generateTempToken(user.id, true);
-    return res.json({ tempToken: newTempToken });
+    return res.status(201).json({ tempToken: newTempToken });
 
   } catch (error) {
     console.error('2FA refresh error:', error);
@@ -315,7 +318,6 @@ const refresh2FASetup = async (req, res) => {
 
 const firstLogin = async (req, res) => {
   const { username, password } = req.body;
-
   const userId = req.user.id;
 
   if (!password || !username) {
@@ -333,7 +335,7 @@ const firstLogin = async (req, res) => {
       return res.status(400).json({ message: 'User has already completed first login.' });
     }
 
-    const existingUser = await User.findOne({ where: { username } });
+    const existingUser = await User.findOne({ where: { username, id: { [Op.ne]: userId } } });
     if (existingUser) {
       return res.status(409).json({ message: ERROR_MESSAGES.USERNAME_EXISTS });
     }
@@ -348,9 +350,7 @@ const firstLogin = async (req, res) => {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role === 'admin' ? 'Administrateur' :
-          user.role === 'teacher' ? 'Professeur' :
-            'Etudiant',
+        role: user.role, // Toujours en français
         ...(user.firstLogin && { firstLogin: true })
       };
 
@@ -367,7 +367,7 @@ const firstLogin = async (req, res) => {
     const qrCode = await qrcode.toDataURL(authenticator.keyuri(email, process.env.APP_NAME, secret));
     const tempToken = generateTempToken(user.id, true);
 
-    return res.status(201).json({
+    return res.status(200).json({
       tempToken,
       twoFASetup: {
         qrCode,

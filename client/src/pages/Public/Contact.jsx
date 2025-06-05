@@ -1,8 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import PublicNavbar from '../../components/PublicComp/PublicNavbar';
 import Footer from '../../components/PublicComp/Footer';
+import { Paperclip, X } from 'lucide-react';
+import { sendContactMessage } from '../../API/ContactCaller';
+import toast, { Toaster } from 'react-hot-toast';
 
-const BASE_URL = "/api";
+// Ajouter ces imports pour Toast UI Editor
+import { Editor } from '@toast-ui/react-editor';
+import '@toast-ui/editor/dist/toastui-editor.css';
+
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -12,8 +18,38 @@ const Contact = () => {
     objet: '',
     message: '',
   });
+  const editorRef = useRef(null);
 
+  const [attachments, setAttachments] = useState([]);
   const [status, setStatus] = useState('');
+  const fileInputRef = useRef(null);
+
+  // Expressions régulières pour détecter les mentions de pièces jointes
+  const attachmentRegexList = [
+    /ci-joint/i,
+    /pièce[s]? jointe[s]?/i,
+    /fichier[s]? joint[s]?/i,
+    /attachement[s]?/i,
+    /en annexe/i,
+    /joint[s]? à ce mail/i,
+    /joint[s]? à ce message/i,
+    /joint[s]? à cet email/i,
+    /veuillez trouver/i,
+    /vous trouverez.*joint/i,
+    /je vous envoie.*fichier/i,
+    /document[s]? joint[s]?/i,
+    /photo[s]? jointe[s]?/i,
+    /image[s]? jointe[s]?/i,
+    /pdf joint/i,
+    /joint.*pdf/i,
+    /joint.*excel/i,
+    /joint.*document/i,
+  ];
+
+  // Fonction pour vérifier si le contenu mentionne des pièces jointes
+  const checkForAttachmentMention = (text) => {
+    return attachmentRegexList.some(regex => regex.test(text));
+  };
 
   const handleChange = e => {
     const { name, value } = e.target;
@@ -23,33 +59,166 @@ const Contact = () => {
     }));
   };
 
+  const handleFileChange = e => {
+    const files = Array.from(e.target.files);
+
+    // Check file size limit (10MB per file)
+    const validFiles = files.filter(file => file.size <= 10 * 1024 * 1024);
+    const invalidFiles = files.filter(file => file.size > 10 * 1024 * 1024);
+
+    if (invalidFiles.length > 0) {
+      alert(`${invalidFiles.length} fichier(s) dépassent la limite de 10 Mo`);
+    }
+
+    // Add valid files to attachments
+    setAttachments([...attachments, ...validFiles]);
+  };
+
+  const removeAttachment = index => {
+    setAttachments(attachments.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async e => {
     e.preventDefault();
     setStatus('loading');
 
+    // Vérifier si l'utilisateur mentionne des pièces jointes mais n'en a pas ajouté
+    if (attachments.length === 0 && checkForAttachmentMention(formData.message)) {
+      const confirmSend = window.confirm(
+        "Vous semblez mentionner des pièces jointes dans votre message, mais aucun fichier n'a été ajouté. Souhaitez-vous quand même envoyer le message sans pièces jointes?"
+      );
+
+      if (!confirmSend) {
+        setStatus(''); // Reset status
+        return;
+      }
+    }
+
+    // Obtenir le contenu de l'éditeur au format markdown
+    const editorContent = editorRef.current?.getInstance().getMarkdown() || '';
+
     try {
-      const response = await fetch(`${BASE_URL}/contact`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
+      // Use the sendContactMessage function from ContactCaller
+      const response = await sendContactMessage({
+        name: formData.name,
+        email: formData.email,
+        motif: formData.motif,
+        objet: formData.objet,
+        message: editorContent,
+        attachments: attachments
       });
 
-      if (response.ok) {
+      if (response.status >= 200 && response.status < 300) {
         setStatus('success');
+        toast.success('Votre message a été envoyé avec succès !');
         setFormData({ name: '', email: '', motif: '', objet: '', message: '' });
+        setAttachments([]); // Clear attachments
       } else {
+        console.error("Erreur lors de l'envoi du formulaire :", response.message);
         setStatus('error');
+        toast.error("Une erreur est survenue. Veuillez réessayer.");
       }
     } catch (error) {
       console.error("Erreur lors de l'envoi du formulaire :", error);
       setStatus('error');
+      toast.error("Une erreur est survenue. Veuillez réessayer.");
     }
   };
 
+
+  // Configuration du hook pour le glisser-déposer
+  useEffect(() => {
+    if (editorRef.current) {
+      const editorInstance = editorRef.current.getInstance();
+
+      const dropZone = document.querySelector('.toastui-editor-defaultUI');
+      if (dropZone) {
+        dropZone.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          dropZone.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+          dropZone.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          dropZone.classList.remove('drag-over');
+
+          if (e.dataTransfer.files.length) {
+            const files = Array.from(e.dataTransfer.files);
+            // Filtrer uniquement les images et les autres fichiers
+            const validFiles = files.filter(file => file.size <= 10 * 1024 * 1024);
+
+            // Séparer les images des autres fichiers
+            const imageFiles = validFiles.filter(file => file.type.startsWith('image/'));
+            const otherFiles = validFiles.filter(file => !file.type.startsWith('image/'));
+
+            // Ajouter les fichiers non-image aux pièces jointes
+            if (otherFiles.length > 0) {
+              setAttachments(prev => [...prev, ...otherFiles]);
+              toast.success(`${otherFiles.length} fichier(s) ajouté(s) aux pièces jointes`);
+            }
+
+            // Insérer les images directement dans l'éditeur
+            if (imageFiles.length > 0) {
+              // Pour chaque image, l'insérer dans l'éditeur
+              imageFiles.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                  // Insérer l'image à la position du curseur
+                  editorInstance.insertImage({
+                    src: e.target.result,
+                    alt: file.name
+                  });
+                };
+                reader.readAsDataURL(file);
+              });
+
+              toast.success(`${imageFiles.length} image(s) insérée(s) dans l'éditeur`);
+            }
+          }
+        });
+      }
+
+      // Nettoyer les event listeners lors du démontage du composant
+      return () => {
+        if (dropZone) {
+          dropZone.removeEventListener('dragover', () => { });
+          dropZone.removeEventListener('dragleave', () => { });
+          dropZone.removeEventListener('drop', () => { });
+        }
+      };
+    }
+  }, [editorRef.current]);
+
+
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Add Toaster component */}
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          success: {
+            style: {
+              background: '#e5f7ee',
+              color: '#0f766e',
+              border: '1px solid #0f766e',
+            },
+            duration: 5000,
+          },
+          error: {
+            style: {
+              background: '#fee2e2',
+              color: '#b91c1c',
+              border: '1px solid #b91c1c',
+            },
+            duration: 5000,
+          },
+        }}
+      />
+
       {/* Navigation */}
       <PublicNavbar />
 
@@ -139,16 +308,77 @@ const Contact = () => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Message
               </label>
-              <textarea
-                name="message"
-                value={formData.message}
-                onChange={handleChange}
-                rows="5"
-                placeholder="Votre message"
-                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                required
-              ></textarea>
+              <div className="border border-gray-300 rounded-md">
+                <Editor
+                  ref={editorRef}
+                  initialValue="<p></p>"
+                  previewStyle="tab"
+                  height="300px"
+                  initialEditType="wysiwyg"
+                  useCommandShortcut={true}
+                  toolbarItems={[
+                    ['heading', 'bold', 'italic', 'strike'],
+                    ['hr', 'quote'],
+                    ['ul', 'ol', 'task', 'indent', 'outdent'],
+                    ['table', 'link'],
+                    ['code', 'codeblock']
+                  ]}
+                />
+              </div>
             </div>
+
+            {/* Attachments Section */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Pièces jointes (optionnel)
+              </label>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                multiple
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current.click()}
+                className="px-4 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-200 flex items-center gap-2"
+              >
+                <Paperclip size={16} />
+                Ajouter des pièces jointes
+              </button>
+              <p className="text-xs text-gray-500 mt-1">Limite de 10 Mo par fichier</p>
+
+              {/* Attachment List */}
+              {attachments.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {attachments.map((file, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between bg-gray-50 p-2 rounded-md"
+                    >
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        <Paperclip size={16} className="text-gray-500 flex-shrink-0" />
+                        <span className="text-sm text-gray-700 truncate">
+                          {file.name}
+                        </span>
+                        <span className="text-xs text-gray-500 whitespace-nowrap">
+                          ({(file.size / 1024).toFixed(1)} KB)
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeAttachment(index)}
+                        className="text-gray-400 hover:text-red-500 flex-shrink-0 ml-2"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="text-center">
               <button
                 type="submit"
@@ -158,16 +388,6 @@ const Contact = () => {
                 {status === 'loading' ? 'Envoi en cours...' : 'Envoyer'}
               </button>
             </div>
-            {status === 'success' && (
-              <p className="text-green-600 text-center mt-4">
-                Votre message a été envoyé avec succès !
-              </p>
-            )}
-            {status === 'error' && (
-              <p className="text-red-600 text-center mt-4">
-                Une erreur est survenue. Veuillez réessayer.
-              </p>
-            )}
           </form>
         </div>
       </section>

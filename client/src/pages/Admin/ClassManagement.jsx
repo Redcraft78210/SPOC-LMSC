@@ -16,6 +16,7 @@ import {
   deleteClass,
 } from '../../API/ClassCaller';
 import { getAllUsers } from '../../API/UserCaller';
+import ClassManagementTutorial from '../../tutorials/ClassManagementTutorial';
 
 const ClasseManagement = () => {
 
@@ -52,14 +53,36 @@ const ClasseManagement = () => {
     }
   };
 
+  // Determine initial view mode based on screen width
+  const getInitialViewMode = () => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth < 640 ? 'grid' : 'list';
+    }
+    return 'list'; // Fallback for SSR
+  };
+
   const [classes, setClasses] = useState([]);
   const [studentsUsers, setStudentUsers] = useState([]);
   const [teachersUsers, setTeachersUsers] = useState([]);
-  const [viewMode, setViewMode] = useState('list');
+  const [viewMode, setViewMode] = useState(getInitialViewMode());
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClasses, setSelectedClasses] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedClasse, setSelectedClasse] = useState(null);
+
+  // Add window resize listener to update view mode on screen size change
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 640 && viewMode === 'list') {
+        setViewMode('grid');
+      } else if (window.innerWidth >= 640 && viewMode === 'grid') {
+        setViewMode('list');
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [viewMode]);
 
   useEffect(() => {
     fetchClasses();
@@ -120,10 +143,10 @@ const ClasseManagement = () => {
         const response = await deleteClass({ classId });
         if (response.status === 200) {
           toast.success('Classe supprimée avec succès');
-          fetchClasses();
         } else {
           toast.error(response.message || 'Erreur lors de la suppression');
         }
+        fetchClasses();
       } catch (error) {
         console.error('Erreur lors de la suppression:', error);
         toast.error('Erreur lors de la suppression de la classe');
@@ -181,20 +204,18 @@ const ClasseManagement = () => {
   );
 
   const ToggleView = () => (
-    <div className="flex gap-2">
+    <div className="flex gap-2 toggleView">
       <button
         onClick={() => setViewMode('list')}
-        className={`p-2 rounded-lg ${
-          viewMode === 'list' ? 'bg-blue-100 text-blue-600' : 'text-gray-600'
-        }`}
+        className={`p-2 rounded-lg ${viewMode === 'list' ? 'bg-blue-100 text-blue-600' : 'text-gray-600'
+          }`}
       >
         <List className="w-5 h-5" />
       </button>
       <button
         onClick={() => setViewMode('grid')}
-        className={`p-2 rounded-lg ${
-          viewMode === 'grid' ? 'bg-blue-100 text-blue-600' : 'text-gray-600'
-        }`}
+        className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-blue-100 text-blue-600' : 'text-gray-600'
+          }`}
       >
         <Grid className="w-5 h-5" />
       </button>
@@ -218,7 +239,7 @@ const ClasseManagement = () => {
     );
 
   const ClasseTable = () => (
-    <div className="bg-white rounded-lg shadow overflow-hidden">
+    <div className="bg-white rounded-lg shadow overflow-x-auto">
       <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
@@ -279,8 +300,8 @@ const ClasseManagement = () => {
               <td className="px-6 py-4 text-gray-600">
                 {Classe.description
                   ? `${Classe.description
-                      .charAt(0)
-                      .toUpperCase()}${Classe.description.slice(1)}`
+                    .charAt(0)
+                    .toUpperCase()}${Classe.description.slice(1)}`
                   : 'Aucune description'}
               </td>
               <td className="px-6 py-4">
@@ -437,7 +458,7 @@ const ClasseManagement = () => {
 
       setIsLoading(true);
       try {
-        
+
         await handleSubmitClasse(formData);
         if (isMounted) {
           setIsSuccess(true);
@@ -482,9 +503,8 @@ const ClasseManagement = () => {
         aria-labelledby="modalTitle"
       >
         <div
-          className={`bg-white rounded-xl shadow-2xl p-8 w-full max-w-md transform transition-all duration-300 ease-in-out ${
-            isMounted ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
-          }`}
+          className={`bg-white rounded-xl shadow-2xl p-8 w-full max-w-md transform transition-all duration-300 ease-in-out ${isMounted ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
+            }`}
         >
           <h2 id="modalTitle" className="text-2xl font-bold text-gray-900 mb-6">
             {selectedClasse ? 'Modifier la Classe' : 'Nouvelle Classe'}
@@ -508,11 +528,10 @@ const ClasseManagement = () => {
                     onChange={e =>
                       setFormData({ ...formData, name: e.target.value })
                     }
-                    className={`w-full px-4 py-2.5 rounded-lg border ${
-                      errors.name
-                        ? 'border-red-500 focus:ring-red-500'
-                        : 'border-gray-200 focus:border-blue-500'
-                    } focus:ring-2 focus:ring-blue-200 outline-none transition-all`}
+                    className={`w-full px-4 py-2.5 rounded-lg border ${errors.name
+                      ? 'border-red-500 focus:ring-red-500'
+                      : 'border-gray-200 focus:border-blue-500'
+                      } focus:ring-2 focus:ring-blue-200 outline-none transition-all`}
                     aria-invalid={!!errors.name}
                     aria-describedby="nameError"
                     disabled={isLoading}
@@ -544,11 +563,10 @@ const ClasseManagement = () => {
                     onChange={e =>
                       setFormData({ ...formData, description: e.target.value })
                     }
-                    className={`w-full px-4 py-2.5 rounded-lg border ${
-                      errors.description
-                        ? 'border-red-500 focus:ring-red-500'
-                        : 'border-gray-200 focus:border-blue-500'
-                    } focus:ring-2 focus:ring-blue-200 outline-none transition-all`}
+                    className={`w-full px-4 py-2.5 rounded-lg border ${errors.description
+                      ? 'border-red-500 focus:ring-red-500'
+                      : 'border-gray-200 focus:border-blue-500'
+                      } focus:ring-2 focus:ring-blue-200 outline-none transition-all`}
                     rows="3"
                     aria-invalid={!!errors.description}
                     aria-describedby="descError"
@@ -638,9 +656,8 @@ const ClasseManagement = () => {
                   {filteredUsers.map(user => (
                     <div
                       key={user.id}
-                      className={`flex items-center p-3 hover:bg-gray-50 cursor-pointer transition-colors ${
-                        formData.students.includes(user.id) ? 'bg-blue-50' : ''
-                      }`}
+                      className={`flex items-center p-3 hover:bg-gray-50 cursor-pointer transition-colors ${formData.students.includes(user.id) ? 'bg-blue-50' : ''
+                        }`}
                       onClick={() => toggleMember(user.id)}
                     >
                       <input
@@ -737,6 +754,8 @@ const ClasseManagement = () => {
 
   return (
     <div className="container mx-auto p-6">
+      <Toaster position="bottom-right" />
+      <ClassManagementTutorial />
       <div className="flex flex-col gap-4 mb-8">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-800">
@@ -760,7 +779,6 @@ const ClasseManagement = () => {
       {viewMode === 'list' ? <ClasseTable /> : <ClasseCards />}
 
       {showCreateModal && <ClasseCreationModal />}
-      <Toaster position="bottom-right" />
     </div>
   );
 };

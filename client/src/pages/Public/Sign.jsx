@@ -1,4 +1,4 @@
-import { Eye, EyeOff, TriangleAlert } from 'lucide-react';
+import { Eye, EyeOff, TriangleAlert, ArrowLeft, Copy } from 'lucide-react';
 import { jwtDecode } from 'jwt-decode';
 import {
   LoadCanvasTemplate,
@@ -97,9 +97,10 @@ const Sign = ({ setAuth }) => {
   const digitsRefs = useRef([]);
   const [countEchec2FACode, setCountEchec2FACode] = useState(0);
   const [username, setUsername] = useState('');
+  const [emailOrUsername, setEmailOrUsername] = useState(''); // Renamed from email for login form
+  const [email, setEmail] = useState(''); // Keep this for registration form
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [surname, setSurname] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -240,20 +241,27 @@ const Sign = ({ setAuth }) => {
     setLastSubmit(Date.now());
     setError(null);
 
-    if (!email.trim() || !password.trim()) {
-      return setError('Veuillez remplir tous les champs requis');
-    }
-
     if (isSignUpForm) {
+      // Pour l'inscription
+      if (!email.trim() || !password.trim() || !username.trim()) {
+        return setError('Veuillez remplir tous les champs requis');
+      }
+
       if (password !== confirmPassword) {
         return setError('Les mots de passe ne correspondent pas');
       }
+
       if (code.trim() === '') {
         return setError("Veuillez entrer le code d'inscription");
       }
-      if (!validatePassword(password)) {
 
+      if (!validatePassword(password)) {
         return setError(errorMessages['auth/weak-password']);
+      }
+    } else {
+      // Pour la connexion
+      if (!emailOrUsername.trim() || !password.trim()) {
+        return setError('Veuillez remplir tous les champs requis');
       }
     }
 
@@ -306,9 +314,12 @@ const Sign = ({ setAuth }) => {
           handleAuthSuccess(data.token);
         }
       } else {
-        // Connexion
+        // Connexion avec email ou username
+        const isEmail = emailOrUsername.includes('@');
+
         const loginResponse = await login({
-          email: email.trim(),
+          // Si c'est un email, envoyez-le comme email, sinon comme username
+          ...(isEmail ? { email: emailOrUsername.trim() } : { username: emailOrUsername.trim() }),
           password: password.trim(),
         });
 
@@ -317,7 +328,7 @@ const Sign = ({ setAuth }) => {
           return false;
         }
 
-        if (loginResponse.status !== 200) {
+        if (![200, 201, 202].includes(loginResponse.status)) {
           throw new Error(loginResponse.message || errorMessages.default);
         }
 
@@ -492,13 +503,17 @@ const Sign = ({ setAuth }) => {
     e.preventDefault();
     setError(null);
 
-    if (!email.trim()) {
-      return setError('Veuillez entrer votre email');
+    if (!emailOrUsername.trim()) {
+      return setError('Veuillez entrer votre email ou nom d\'utilisateur');
     }
 
     try {
-      // Utiliser le AuthCaller au lieu d'axios
-      const response = await forgotPassword({ email: email.trim() });
+      // Vérifier si c'est un email ou un nom d'utilisateur
+      const isEmail = emailOrUsername.includes('@');
+
+      const response = await forgotPassword({
+        ...(isEmail ? { email: emailOrUsername.trim() } : { username: emailOrUsername.trim() })
+      });
 
       if (response.status !== 200) {
         throw new Error(response.message || errorMessages.default);
@@ -511,64 +526,91 @@ const Sign = ({ setAuth }) => {
     }
   };
 
-  // Le reste du composant reste inchangé
   const toggleAuthMode = () => {
     setIsSignUpForm(!isSignUpForm);
     setError(null);
     if (isSignUpForm) {
       setUsername('');
       setName('');
+      setSurname('');
       setConfirmPassword('');
+      // Réinitialiser le champ email/username pour connexion
+      setEmailOrUsername(email); // Conserver l'email s'il a déjà été saisi
+    } else {
+      setEmail(emailOrUsername); // Conserver le email/username comme email pour inscription
+      setEmailOrUsername('');
     }
   };
 
-  // Le reste du composant reste inchangé (render2FAContent, renderForgotPasswordForm, renderInitialForm)
   const render2FAContent = () => (
-    <form onSubmit={handle2FASubmit} className="w-full space-y-8">
+    <form onSubmit={handle2FASubmit} className="w-full max-w-md mx-auto space-y-8 p-6 rounded-2xl">
+      {/* Section Configuration 2FA */}
       {authStep === '2fa-setup' && (
-        <div className="text-center space-y-4">
-          <h3 className="text-xl font-semibold">Configuration 2FA</h3>
-          <img
-            src={qrCodeData}
-            alt="QR Code 2FA"
-            className="mx-auto w-48 h-48 rounded-3xl shadow-lg mb-4 bg-white p-1 border-2 border-gray-200"
-            aria-describedby="qrCodeDesc"
-          />
-          <p id="qrCodeDesc" className="text-sm text-gray-600">
-            Scannez le QR Code avec votre application d&apos;authentification ou
-            entrez ce code manuellement :
-          </p>
-          <div className="font-mono bg-gray-100 p-2 rounded-lg">
-            {manualSecret}
+        <div className="text-center space-y-6">
+          <div className="mb-6">
+            <h3 className="text-2xl font-bold text-gray-800 mb-2">Activer la double authentification</h3>
+            <p className="text-gray-500 text-sm">Protégez votre compte avec un second niveau de sécurité</p>
+          </div>
+
+          <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm inline-block">
+            <img
+              src={qrCodeData}
+              alt="QR Code 2FA"
+              className="mx-auto w-52 h-52 rounded-xl"
+              aria-describedby="qrCodeDesc"
+            />
+          </div>
+
+          <div className="space-y-3">
+            <p id="qrCodeDesc" className="text-gray-600 text-sm">
+              Scannez ce QR Code avec votre application d&apos;authentification
+            </p>
+
+            <div className="pt-2">
+              <p className="text-gray-500 text-xs mb-1">OU entrez ce code manuellement :</p>
+              <div className="font-mono bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-700 tracking-wider shadow-inner">
+                {manualSecret}
+                <button
+                  type="button"
+                  onClick={() => navigator.clipboard.writeText(manualSecret)}
+                  className="ml-2 text-blue-500 hover:text-blue-700"
+                  aria-label="Copier le code"
+                >
+                  <Copy className="w-4 h-4 inline" />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
+      {/* Section CAPTCHA */}
       {countEchec2FACode >= 2 && (
-        <>
-          <div className="captcha-container">
-            <LoadCanvasTemplate reloadColor="red" />
+        <div className="space-y-4 animate-fadeIn">
+          <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+            <p className="text-red-500 text-sm font-medium mb-3">Veuillez vérifier que vous n&apos;êtes pas un robot</p>
+            <div className="captcha-container flex justify-center">
+              <LoadCanvasTemplate reloadColor="#002B2F" />
+            </div>
           </div>
+
           <div className="relative">
             <input
               id="captcha"
               type="text"
-              placeholder="Entrez le texte CAPTCHA"
+              placeholder="Saisissez le texte ci-dessus"
               value={captchaValue}
               onChange={e => setCaptchaValue(e.target.value)}
-              className="w-full h-14 px-6 py-3 text-base md:text-lg bg-white border-2 rounded-lg focus:ring-2 focus:ring-[#002B2F]"
+              className="w-full h-14 px-4 text-lg bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#002B2F] focus:border-transparent transition-all"
               required
             />
           </div>
-        </>
+        </div>
       )}
 
-      {/* Replace single input with 6 digit inputs */}
-      <div>
-        <label className="block text-sm font-medium text-gray-800 mb-2">
-          Code de vérification 2FA
-        </label>
-        <div className="flex gap-2 justify-center mb-4">
+      {/* Champ Code 2FA */}
+      <div className="space-y-3">
+        <div className="flex justify-between mb-2">
           {twoFADigits.map((digit, index) => (
             <input
               key={index}
@@ -580,39 +622,48 @@ const Sign = ({ setAuth }) => {
               onChange={e => handleDigitChange(index, e.target.value)}
               onKeyDown={e => handleDigitKeyDown(index, e)}
               onPaste={e => handleDigitPaste(index, e)}
-              className="w-12 h-12 border-2 border-gray-300 rounded-lg text-center text-xl font-bold bg-white focus:ring-2 focus:ring-[#002B2F]"
-              aria-label={`Digit ${index + 1} of verification code`}
+              className="w-14 h-14 border-2 border-gray-200 rounded-xl text-center text-2xl font-bold bg-white focus:border-[#002B2F] focus:ring-2 focus:ring-[#002B2F]/20 transition-all"
+              aria-label={`Chiffre ${index + 1} du code`}
               autoFocus={index === 0}
             />
           ))}
         </div>
+
+        <p className="text-gray-500 text-sm text-center">
+          Saisissez les 6 chiffres de votre application d&apos;authentification
+        </p>
       </div>
 
-      <SubmitButton
-        onSubmission={handle2FASubmit}
-        className="w-full py-4 text-lg md:text-xl font-semibold text-white bg-[#002B2F] rounded-lg hover:bg-[#00474F]"
-        disabled={!allDigitsFilled()}
-      />
+      {/* Boutons */}
+      <div className="space-y-4 pt-2">
+        <SubmitButton
+          onSubmission={handle2FASubmit}
+          className="w-full py-4 text-lg font-bold text-white bg-[#002B2F] rounded-xl hover:bg-[#00474F] transition-colors shadow-lg hover:shadow-xl disabled:opacity-60"
+          disabled={!allDigitsFilled()}
+        >
+          Vérifier le code
+        </SubmitButton>
 
-      {authStep !== '2fa-setup' && (
-        <p className="text-center text-base md:text-lg">
-          <button
-            type="button"
-            onClick={() => {
-              setAuthStep('initial');
-              setTempToken(null);
-              // Reset the 2FA digits when going back
-              setTwoFADigits(['', '', '', '', '', '']);
-              setTimeout(() => {
-                loadCaptchaEngine(6, '#f9fafb');
-              }, 100); // ensure canvas is mounted
-            }}
-            className="font-bold underline hover:text-[#00474F]"
-          >
-            Retour
-          </button>
-        </p>
-      )}
+        {authStep !== '2fa-setup' && (
+          <div className="text-center pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                setAuthStep('initial');
+                setTempToken(null);
+                setTwoFADigits(['', '', '', '', '', '']);
+                setTimeout(() => {
+                  loadCaptchaEngine(6, '#f9fafb');
+                }, 100);
+              }}
+              className="text-[#002B2F] font-medium hover:text-[#00474F] flex items-center justify-center mx-auto"
+            >
+              <ArrowLeft className="w-5 h-5 mr-1" />
+              Retour à la connexion
+            </button>
+          </div>
+        )}
+      </div>
     </form>
   );
 
@@ -620,11 +671,11 @@ const Sign = ({ setAuth }) => {
     <form onSubmit={handleForgotPasswordSubmit} className="w-full space-y-8">
       <div className="relative">
         <input
-          id="email"
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
+          id="emailOrUsername"
+          type="text"
+          placeholder="Email ou nom d'utilisateur"
+          value={emailOrUsername}
+          onChange={e => setEmailOrUsername(e.target.value)}
           className="w-full h-14 px-6 py-3 text-base md:text-lg bg-white border-2 rounded-lg"
           required
           autoFocus
@@ -687,21 +738,35 @@ const Sign = ({ setAuth }) => {
               required
             />
           </div>
+          <div className="relative">
+            <input
+              id="email"
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              className="w-full h-14 px-6 py-3 text-base md:text-lg bg-white border-2 rounded-lg"
+              required
+              autoFocus
+            />
+          </div>
         </>
       )}
 
-      <div className="relative">
-        <input
-          id="email"
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          className="w-full h-14 px-6 py-3 text-base md:text-lg bg-white border-2 rounded-lg"
-          required
-          autoFocus
-        />
-      </div>
+      {!isSignUpForm && (
+        <div className="relative">
+          <input
+            id="emailOrUsername"
+            type="text"
+            placeholder="Email ou nom d'utilisateur"
+            value={emailOrUsername}
+            onChange={e => setEmailOrUsername(e.target.value)}
+            className="w-full h-14 px-6 py-3 text-base md:text-lg bg-white border-2 rounded-lg"
+            required
+            autoFocus
+          />
+        </div>
+      )}
 
       {isSignUpForm && (
         // code d'inscription

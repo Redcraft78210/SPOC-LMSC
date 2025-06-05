@@ -32,9 +32,19 @@ const handleError = (error) => {
 };
 
 // Récupérer les messages de la boîte de réception
-const getInboxMessages = async ({ page = 1, limit = 20 }) => {
+const getInboxMessages = async ({ page = 1, limit = 20, filters = {} }) => {
   try {
-    const response = await api.get(`/messages/inbox?page=${page}&limit=${limit}`);
+    const queryParams = new URLSearchParams({
+      page,
+      limit
+    });
+    
+    // Add filter parameters if they are true
+    if (filters.unread) queryParams.append('unread', 'true');
+    if (filters.hasAttachments) queryParams.append('hasAttachments', 'true');
+    if (filters.fromContact) queryParams.append('fromContact', 'true');
+    
+    const response = await api.get(`/messages/inbox?${queryParams.toString()}`);
     return {
       status: response.status,
       data: response.data,
@@ -46,9 +56,19 @@ const getInboxMessages = async ({ page = 1, limit = 20 }) => {
 };
 
 // Récupérer les messages envoyés
-const getSentMessages = async ({ page = 1, limit = 20 }) => {
+const getSentMessages = async ({ page = 1, limit = 20, filters = {} }) => {
   try {
-    const response = await api.get(`/messages/sent?page=${page}&limit=${limit}`);
+    const queryParams = new URLSearchParams({
+      page,
+      limit
+    });
+    
+    // Add filter parameters if they are true
+    if (filters.unread) queryParams.append('unread', 'true');
+    if (filters.hasAttachments) queryParams.append('hasAttachments', 'true');
+    if (filters.fromContact) queryParams.append('fromContact', 'true');
+    
+    const response = await api.get(`/messages/sent?${queryParams.toString()}`);
     return {
       status: response.status,
       data: response.data,
@@ -60,9 +80,19 @@ const getSentMessages = async ({ page = 1, limit = 20 }) => {
 };
 
 // Récupérer les messages supprimés
-const getTrashMessages = async ({ page = 1, limit = 20 }) => {
+const getTrashMessages = async ({ page = 1, limit = 20, filters = {} }) => {
   try {
-    const response = await api.get(`/messages/trash?page=${page}&limit=${limit}`);
+    const queryParams = new URLSearchParams({
+      page,
+      limit
+    });
+    
+    // Add filter parameters if they are true
+    if (filters.unread) queryParams.append('unread', 'true');
+    if (filters.hasAttachments) queryParams.append('hasAttachments', 'true');
+    if (filters.fromContact) queryParams.append('fromContact', 'true');
+    
+    const response = await api.get(`/messages/trash?${queryParams.toString()}`);
     return {
       status: response.status,
       data: response.data,
@@ -88,26 +118,49 @@ const getMessage = async ({ messageId }) => {
 };
 
 // Envoyer un nouveau message
-const sendMessage = async ({ recipients, subject, content, attachments = [] }) => {
-  try {
-    const formData = new FormData();
-    formData.append('recipients', JSON.stringify(recipients));
-    formData.append('subject', subject);
-    formData.append('content', content);
-    
-    // Ajouter les pièces jointes s'il y en a
-    if (attachments && attachments.length > 0) {
-      attachments.forEach(file => {
-        formData.append('attachments', file);
-      });
-    }
+const sendMessage = async (formData) => {
+  console.log('Sending message with formData:', formData);
 
-    const response = await api.post('/messages/send', formData, {
+  // formData should be an instance of FormData containing:
+  // - recipients[]: Array of recipient IDs
+  // - subject: String
+  // - content: String
+  // - attachments: Array of File objects (optional)
+  if (!(formData instanceof FormData)) {
+    throw new Error('formData must be an instance of FormData');
+  }
+
+  // Check required fields
+  if (!formData.has('subject') || !formData.has('content')) {
+    throw new Error('formData must contain subject and content');
+  }
+
+  // Check if we have recipients or a recipient type
+  const hasIndividualRecipients = formData.getAll('recipients[]').length > 0;
+  const hasRecipientType = formData.has('recipientType');
+
+  if (!hasIndividualRecipients && !hasRecipientType) {
+    throw new Error('formData must contain either individual recipients or a recipient type');
+  }
+
+  let endpoint = '/messages/';
+  let contentType = 'multipart/form-data';
+
+  if (formData.has('attachments') || formData.getAll('attachments').length === 0) {
+    // If no attachments, use the endpoint for messages without attachments
+    endpoint = '/messages/no-attachments';
+    contentType = 'application/json';
+  }
+
+  try {
+    // Send the FormData object directly without extracting fields
+    const response = await api.post(endpoint, formData, {
+      // Don't manually set Content-Type, axios will set it correctly with boundary
       headers: {
-        'Content-Type': 'multipart/form-data',
+        'Content-Type': contentType,
       },
     });
-    
+
     return {
       status: response.status,
       data: response.data,

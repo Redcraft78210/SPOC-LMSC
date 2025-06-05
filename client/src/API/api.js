@@ -1,7 +1,7 @@
 // api.js
 import axios from 'axios';
 
-const baseURL = '/api';
+const baseURL = 'https://localhost:8443/api';
 
 // Create an Axios instance
 const api = axios.create({
@@ -32,11 +32,15 @@ api.interceptors.response.use(
   response => response,
   error => {
     // Handle errors globally (e.g., unauthorized, server errors)
-    if (error.response && error.response.data && error.response.data.message.includes("invalid") && error.response.data.message.includes("token")) {
+    if (error.response?.data?.message?.includes("invalid") && error.response?.data?.message?.includes("token")) {
       // Handle unauthorized access
       console.warn('Unauthorized. Redirecting to login...');
 
-      window.location.href = '/sign'; // Redirect to login page
+      window.location.href = '/logout'; // Redirect to login page
+    } else if (error.response?.data?.message?.includes("User has already completed first login.")) {
+      // Handle user already completed first login
+      console.warn('User has already completed first login. Redirecting to dashboard...');
+      window.location.href = '/logout'; // Redirect to dashboard
     }
     return Promise.reject(error);
   }
