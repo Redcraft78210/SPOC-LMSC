@@ -24,7 +24,7 @@ services:
     container_name: spoc_db
     restart: always
     environment:
-      POSTGRES_USER: spoc_app
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: securepassword
       POSTGRES_DB: spoc_app
     ports:

@@ -19,7 +19,7 @@ const setupChatWebSocket = (wss) => {
 
         // Parse and verify token
         try {
-            const fullUrl = new URL(request.url, `https://${request.headers.host}`);
+            const fullUrl = new URL(request.url, `http://${request.headers.host}`);
             const token = fullUrl.searchParams.get('token');
 
             if (!token) {

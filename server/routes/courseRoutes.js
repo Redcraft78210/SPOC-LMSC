@@ -1,6 +1,6 @@
 const express = require('express');
 const {
-    getAllCourses, getCourse, getMainCourse, deleteCourse, updateCourse, createCourse, blockCourse, unblockCourse
+    getAllCourses, getCourse, getMainCourse, deleteCourse, updateCourse, createCourse
 } = require('../controllers/courseController.js');
 const authMiddleware = require('../middlewares/authMiddleware.js');
 
@@ -12,9 +12,7 @@ router.get('/all', getAllCourses);
 router.get('/:id', getCourse);
 router.get('/:id/main', getMainCourse);
 router.post('/create', createCourse);
-router.post('/:id/block', blockCourse);
 router.put('/update/:id', updateCourse);
-router.put('/:id/unblock', unblockCourse);
-router.delete('/:id', deleteCourse);
+router.delete('/delete/:id', deleteCourse);
 
 module.exports = { route: router };

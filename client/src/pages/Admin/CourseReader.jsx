@@ -10,7 +10,7 @@ import {
   markCourseAsCompleted,
   getCourseProgress,
 } from '../API/CourseCaller';
-import { Get_special_Document } from '../API/DocumentCaller';
+import { downloadDocument } from '../API/DocumentCaller';
 
 const CourseReader = ({ authToken }) => {
   const navigate = useNavigate();
@@ -26,36 +26,31 @@ const CourseReader = ({ authToken }) => {
       try {
         const response = await getCourseById({ courseId });
 
-        if (response.status !== 200) {
-          setError('Cours non trouvé');
-          return;
-        }
+        if (response.status !== 200) throw new Error('Cours non trouvé');
 
         // Marquer le cours comme commencé
+        try {
+          const progressResponse = await markCourseAsInProgress({ courseId });
 
-        if (!completed) {
-          try {
-            const progressResponse = await markCourseAsInProgress({ courseId });
-
-            if (progressResponse.status !== 200) {
-              if (
-                progressResponse.status === 400 &&
-                progressResponse.message ===
+          if (progressResponse.status !== 200) {
+            if (
+              progressResponse.status === 400 &&
+              progressResponse.message ===
                 'Cannot mark as in progress, already completed'
-              ) {
-                toast.success(
-                  'Vous avez déjà terminé ce cours.\nVous pouvez le revoir à tout moment.'
-                );
-              } else {
-                throw new Error(
-                  progressResponse.message || 'Erreur lors de la validation'
-                );
-              }
+            ) {
+              setCompleted(true);
+              toast.success(
+                'Vous avez déjà terminé ce cours.\nVous pouvez le revoir à tout moment.'
+              );
+            } else {
+              throw new Error(progressResponse.message || 'Erreur lors de la validation');
             }
-          } catch (err) {
-            console.error('Error marking course as in progress:', err);
           }
+        } catch (err) {
+          console.error('Error marking course as in progress:', err);
+          throw err;
         }
+
         setCourseData(response.data);
       } catch (err) {
         setError(err.message);
@@ -73,7 +68,7 @@ const CourseReader = ({ authToken }) => {
         const response = await getCourseProgress({ courseId });
 
         if (response.status === 200) {
-          setCompleted(response.data.status === 'completed');
+          setCompleted(response.data.completed);
         } else if (response.status !== 404) {
           // 404 expected if no progress record exists
           throw new Error(response.message || 'Erreur lors de la vérification');
@@ -105,9 +100,9 @@ const CourseReader = ({ authToken }) => {
     }
   };
 
-  const handleDownloadDocument = async document_id => {
+  const handleDownloadDocument = async documentId => {
     try {
-      const response = await Get_special_Document({ document_id });
+      const response = await downloadDocument({ documentId });
 
       if (response.status !== 200) {
         throw new Error(response.message || 'Erreur lors du téléchargement');
@@ -145,48 +140,22 @@ const CourseReader = ({ authToken }) => {
     return (
       <div className="text-center p-8">
         <p className="text-red-600 mb-4">Cours non trouvé</p>
-        <button
-          type="button"
-          onClick={() => navigate('/courses-library')}
+        <a
+          href="#"
+          onClick={e => {
+            e.preventDefault();
+            navigate('/courses-library');
+          }}
           className="inline-block px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
         >
           Retour à la bibliothèque des cours
-        </button>
+        </a>
       </div>
     );
   }
 
-  if (!courseData) {
-    return (
-      <div className="text-center p-8">
-        <p className="text-red-600 mb-4">Cours non trouvé</p>
-        <button
-          type="button"
-          onClick={() => navigate('/courses-library')}
-          className="inline-block px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
-        >
-          Retour à la bibliothèque des cours
-        </button>
-      </div>
-    );
-  }
-  if (error) {
-    return (
-      <div className="text-center p-8">
-        <p className="text-red-600 mb-4">{error}</p>
-        <button
-          type="button"
-          onClick={() => navigate('/courses-library')}
-          className="inline-block px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
-        >
-          Retour à la bibliothèque des cours
-        </button>
-      </div>
-    );
-  }
   return (
     <div className="max-w-6xl mx-auto p-4">
-      <Toaster position="top-center" />
       {/* En-tête du cours */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">{courseData.titre}</h1>
@@ -195,7 +164,7 @@ const CourseReader = ({ authToken }) => {
           Créé le : {new Date(courseData.date_creation).toLocaleDateString()}
         </div>
       </div>
-      {error && <p className="text-red-600 mb-4">{error}</p>}
+      <p>{error && <p className="text-red-600 mb-4">{error}</p>}</p>
       {/* Section Vidéo */}
       {courseData.video && (
         <div className="mb-8">
@@ -214,18 +183,20 @@ const CourseReader = ({ authToken }) => {
           </div>
         </div>
       )}
+
       {/* Section Documents */}
       {courseData.documents && courseData.documents.length > 0 && (
-        <div className={`${courseData.video ? 'mt-8 border-t' : 'pt-0'}`}>
-          {courseData.video && (
-            <h2 className="text-2xl font-bold mb-4">Documents associés</h2>
-          )}
+        <div className="border-t pt-8">
+          <h2 className="text-2xl font-bold mb-4">Documents associés</h2>
           {documentError && (
             <p className="text-red-600 mb-4">{documentError}</p>
           )}
           <div className="grid gap-4">
             {courseData.documents.map(doc => (
-              <div key={doc.id} className="border rounded-lg p-4">
+              <div
+                key={doc.document_id || doc.id}
+                className="border rounded-lg p-4"
+              >
                 {!courseData.video && (
                   <SecureDocumentViewer
                     documentId={doc.id}
@@ -242,7 +213,7 @@ const CourseReader = ({ authToken }) => {
                       {new Date(doc.date_mise_en_ligne).toLocaleDateString()}
                     </span>
                     <button
-                      onClick={() => handleDownloadDocument(doc.id)}
+                      onClick={() => handleDownloadDocument(doc.document_id)}
                       className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700 transition-colors"
                     >
                       Télécharger
@@ -254,22 +225,6 @@ const CourseReader = ({ authToken }) => {
           </div>
         </div>
       )}
-
-      {/* Bouton "Cours terminé" */}
-      <div className="text-center mt-8">
-        {completed ? (
-          <p className="text-green-600 font-semibold">
-            Cours terminé ! Vous pouvez le revoir à tout moment.
-          </p>
-        ) : (
-          <button
-            onClick={handleCompleteCourse}
-            className="bg-blue-600 text-white px-6 py-3 rounded-md text-lg hover:bg-green-700 transition-colors"
-          >
-            Terminer le cours
-          </button>
-        )}
-      </div>
     </div>
   );
 };

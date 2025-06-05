@@ -1,7 +1,7 @@
 import api from './api';
 import PropTypes from 'prop-types';
 
-const baseURL = 'https://172.20.10.5:8443/api';
+const baseURL = '/api';
 
 /**
  * Fonction générique de gestion des erreurs
@@ -48,7 +48,7 @@ const getAllLives = async () => {
 };
 
 // Récupérer les lives d'une classe spécifique
-const getLivesByClass = async (classId) => {
+const getLivesByClass = async ({ classId }) => {
   try {
     const response = await api.get(`/lives/class/${classId}`);
     return {
@@ -62,7 +62,7 @@ const getLivesByClass = async (classId) => {
 };
 
 // Récupérer un live spécifique
-const getLiveById = async (liveId) => {
+const getLiveById = async ({ liveId }) => {
   try {
     const response = await api.get(`/lives/${liveId}`);
     return {
@@ -104,7 +104,7 @@ const updateLive = async ({ liveId, liveData }) => {
 };
 
 // Supprimer un live
-const deleteLive = async (liveId) => {
+const deleteLive = async ({ liveId }) => {
   try {
     const response = await api.delete(`/lives/${liveId}`);
     return {
@@ -118,9 +118,9 @@ const deleteLive = async (liveId) => {
 };
 
 // Démarrer un live
-const startLive = async (liveId) => {
+const startLive = async ({ liveId }) => {
   try {
-    const response = await api.patch(`/lives/${liveId}/start`);
+    const response = await api.post(`/lives/${liveId}/start`);
     return {
       status: response.status,
       data: response.data,
@@ -132,9 +132,9 @@ const startLive = async (liveId) => {
 };
 
 // Terminer un live
-const endLive = async (liveId) => {
+const endLive = async ({ liveId }) => {
   try {
-    const response = await api.patch(`/lives/${liveId}/end`);
+    const response = await api.post(`/lives/${liveId}/end`);
     return {
       status: response.status,
       data: response.data,
@@ -145,47 +145,8 @@ const endLive = async (liveId) => {
   }
 };
 
-const disapproveLive = async ({ liveId, justification }) => {
-  try {
-    const response = await api.patch(`/lives/${liveId}/disapprove`, { justification });
-    return {
-      status: response.status,
-      data: response.data,
-      message: 'Live disapproved successfully',
-    };
-  } catch (error) {
-    return handleError(error);
-  }
-}
-
-const blockLive = async ({ liveId, reason }) => {
-  try {
-    const response = await api.patch(`/lives/${liveId}/block`, { justification: reason });
-    return {
-      status: response.status,
-      data: response.data,
-      message: 'Live blocked successfully',
-    };
-  } catch (error) {
-    return handleError(error);
-  }
-};
-
-const unblockLive = async (liveId) => {
-  try {
-    const response = await api.patch(`/lives/${liveId}/unblock`);
-    return {
-      status: response.status,
-      data: response.data,
-      message: 'Live unblocked successfully',
-    };
-  } catch (error) {
-    return handleError(error);
-  }
-};
-
 // Récupérer les messages du chat d'un live
-const getLiveMessages = async (liveId) => {
+const getLiveMessages = async ({ liveId }) => {
   try {
     const response = await api.get(`/${liveId}/chat`);
     return {
@@ -299,7 +260,4 @@ export {
   sendLiveMessage,
   getLiveStreamUrl,
   logViewEngagement,
-  disapproveLive,
-  blockLive,
-  unblockLive,
 };

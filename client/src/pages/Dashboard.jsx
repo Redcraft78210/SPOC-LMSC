@@ -2,41 +2,32 @@ import { useState, useEffect, useRef, useCallback, Suspense, lazy } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { getAvatar } from '../API/ProfileCaller';
 import { jwtDecode } from 'jwt-decode';
-import { X, Pencil, Loader2, Mail, Bell, Menu } from 'lucide-react';
+import { X, Pencil, Loader2, Mail, Bell } from 'lucide-react';
 import PropTypes from 'prop-types';
 
 import NavigationBar from '../components/Navbar';
 import Logo from '../Logo';
 
 // Lazy load components
-
-// Common components
 const PictureModal = lazy(() => import('../components/PictureModal'));
-const Mailbox = lazy(() => import('../components/Mailbox'));
-const ThemeSettings = lazy(() => import('./Public/Theme'));
-const NotFound = lazy(() => import('./Public/NotFound'));
-
-// Administrator-specific components
 const AdminDashboardHome = lazy(() => import('./Admin/DashboardHome'));
-const UserManagement = lazy(() => import('./Admin/UserManagement'));
-const ClassManagement = lazy(() => import('./Admin/ClassManagement'));
-
-// Professor-specific components
 const ProfDashboardHome = lazy(() => import('./Professeur/DashboardHome'));
+const EleveDashboardHome = lazy(() => import('./Eleve/DashboardHome'));
+const ProfCoursesLibrary = lazy(() => import('./Professeur/CoursesLibrary'));
+const AdminCoursesLibrary = lazy(() => import('./Admin/CoursesLibrary'));
+const CoursesLibrary = lazy(() => import('./Eleve/CoursesLibrary'));
 const CoursesManagement = lazy(() => import('../components/ProfComp/CoursesManagment'));
 const DocumentManager = lazy(() => import('../components/ProfComp/DocumentMng'));
 const VideoManager = lazy(() => import('../components/ProfComp/VideoMng'));
-const VideoRecording = lazy(() => import('../components/ProfComp/Recording'));
-
-// Student-specific components
-const EleveDashboardHome = lazy(() => import('./Eleve/DashboardHome'));
-
-// Shared components across roles
-const CoursesLibrary = lazy(() => import('./CoursesLibrary'));
 const CourseReader = lazy(() => import('./CourseReader'));
-const LiveViewer = lazy(() => import('./LiveViewer'));
+const LiveViewer = lazy(() => import('./Eleve/LiveViewer'));
 const Forum = lazy(() => import('./Forum'));
+const UserManagement = lazy(() => import('./Admin/UserManagement'));
+const ClassManagement = lazy(() => import('./Admin/ClassManagement'));
+const ThemeSettings = lazy(() => import('./Public/Theme'));
 const Settings = lazy(() => import('./Settings'));
+const NotFound = lazy(() => import('./Public/NotFound'));
+const Mailbox = lazy(() => import('./Mailbox'));
 
 // Add a loading component
 const LoadingComponent = () => (
@@ -49,7 +40,6 @@ const Dashboard = ({ content, token, role }) => {
   const navigate = useNavigate();
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showProfilepictureModal, setShowProfilepictureModal] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const divRef = useRef();
   const [userAvatar, setUserAvatar] = useState(null);
   const [avatarVersion, setAvatarVersion] = useState(0);
@@ -113,11 +103,6 @@ const Dashboard = ({ content, token, role }) => {
     };
   }, [showProfileModal]);
 
-  // Fermer le menu mobile quand le contenu change
-  useEffect(() => {
-    setIsMobileMenuOpen(false);
-  }, [content]);
-
   const decodedToken = jwtDecode(token);
 
   const user = {
@@ -129,44 +114,54 @@ const Dashboard = ({ content, token, role }) => {
   };
 
   const contentMap = {
-    Home: role === 'Administrateur' ? (
+    Home: user.role === 'Admin' ? (
       <Suspense fallback={<LoadingComponent />}>
-        <AdminDashboardHome user={user} />
+        <AdminDashboardHome />
       </Suspense>
-    ) : role === 'Professeur' ? (
+    ) : user.role === 'Professeur' ? (
       <Suspense fallback={<LoadingComponent />}>
-        <ProfDashboardHome user={user} />
+        <ProfDashboardHome authToken={token} />
       </Suspense>
     ) : (
       <Suspense fallback={<LoadingComponent />}>
-        <EleveDashboardHome user={user} />
+        <EleveDashboardHome authToken={token} />
       </Suspense>
     ),
-    CoursesLibrary: <CoursesLibrary authToken={token} userRole={role} />,
-    CourseReader: <CourseReader authToken={token} userRole={role} />,
-    ...(role === 'Administrateur'
+    CoursesLibrary: <CoursesLibrary authToken={token} />,
+    CourseReader: <CourseReader authToken={token} />,
+    ...(user.role === 'Administrateur'
       ? {
-        UserManagement: <UserManagement authToken={token} />,
-        ClassManagement: <ClassManagement authToken={token} />,
-      }
+          Home: <AdminDashboardHome authToken={token} />,
+          CoursesLibrary: <AdminCoursesLibrary authToken={token} />,
+        }
       : {}),
-    ...(role === 'Professeur'
+    ...(user.role === 'Administrateur' || user.role === 'Professeur'
       ? {
-        CoursesManagement: <CoursesManagement authToken={token} />,
-        VideoManager: <VideoManager authToken={token} />,
-        VideoRecording: <VideoRecording authToken={token} />,
-        DocumentManager: <DocumentManager authToken={token} />,
-      }
+          UserManagement: <UserManagement authToken={token} />,
+          ClassManagement: <ClassManagement authToken={token} />,
+        }
       : {}),
-    ...(role === 'Etudiant'
+    ...(user.role === 'Professeur'
       ? {
-        CoursesLibrary: <CoursesLibrary authToken={token} />,
-        CourseReader: <CourseReader authToken={token} />,
-      }
+          Home: <ProfDashboardHome authToken={token} />,
+          CoursesLibrary: <ProfCoursesLibrary authToken={token} />,
+          // LiveManager: <LiveManager authToken={token} />,
+          CoursesManagement: <CoursesManagement authToken={token} />,
+          // CourseManager: <CourseManager authToken={token} />,
+          VideoManager: <VideoManager authToken={token} />,
+          DocumentManager: <DocumentManager authToken={token} />,
+        }
+      : {}),
+    ...(user.role === 'Etudiant'
+      ? {
+          Home: <EleveDashboardHome authToken={token} />,
+          CoursesLibrary: <CoursesLibrary authToken={token} />,
+          CourseReader: <CourseReader authToken={token} />,
+        }
       : {}),
     ThemeSettings: <ThemeSettings />,
-    Forum: <Forum authToken={token} userRole={role} />,
-    LiveViewer: <LiveViewer authToken={token} userRole={role} />,
+    Forum: <Forum authToken={token} />,
+    LiveViewer: <LiveViewer authToken={token} />,
     Settings: (
       <Settings
         authToken={token}
@@ -180,7 +175,7 @@ const Dashboard = ({ content, token, role }) => {
   const renderContent = () => {
     return contentMap[content] || <NotFound />;
   };
-
+  
   return showProfilepictureModal ? (
     <PictureModal
       setShowProfilepictureModal={setShowProfilepictureModal}
@@ -188,19 +183,8 @@ const Dashboard = ({ content, token, role }) => {
       authToken={token}
     />
   ) : (
-    <div className="h-screen w-full bg-white flex flex-col md:flex-row overflow-hidden">
-      {/* Mobile menu overlay */}
-      {isMobileMenuOpen && (
-        <div
-          className="fixed inset-0 backdrop-blur-md bg-black/10 z-30 md:hidden transition-opacity duration-300 ease-in-out"
-          onClick={() => setIsMobileMenuOpen(false)}
-        ></div>
-      )}
-
-      <aside
-        className={`fixed inset-y-0 left-0 z-40 bg-gray-800 transition-transform duration-300 ease-in-out md:translate-x-0 md:static md:inset-auto md:z-auto ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-          }`}
-      >
+    <div className="h-screen w-full bg-white flex overflow-hidden">
+      <aside className="flex-shrink-0">
         <NavigationBar
           page={content}
           isAdmin={role === 'Administrateur'}
@@ -219,35 +203,27 @@ const Dashboard = ({ content, token, role }) => {
         />
       )}
 
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="h-16 bg-gray-800 flex items-center justify-between px-4 md:px-6">
-          <div className="flex items-center">
-            <button
-              className="md:hidden mr-2 text-white"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            >
-              <Menu className="h-6 w-6" />
-            </button>
-            <a
-              href="#"
-              onClick={e => {
-                e.preventDefault();
-                navigate('/');
-              }}
-              className="flex items-center gap-2"
-            >
-              <Logo fillColor="#F9FAFB" className="h-15 w-auto sm:h-8 md:h-15 lg:h-20 transition-all" />
-            </a>
-          </div>
+      <main className="flex-1 flex flex-col min-w-0">
+        <header className="h-16 bg-gray-800 flex items-center justify-between px-6">
+          <a
+            href="#"
+            onClick={e => {
+              e.preventDefault();
+              navigate('/');
+            }}
+            className="flex items-center gap-2"
+          >
+            <Logo fillColor="#F9FAFB" />
+          </a>
 
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-4 text-white">
-              <Bell className="h-5 w-5 md:h-6 md:w-6 mx-1" />
+              <Bell className="h-6 w-6 mx-1" />
               <Mail
-                className="h-5 w-5 md:h-6 md:w-6 mx-1 md:mx-3 cursor-pointer"
+                className="h-6 w-6 mx-3"
                 onClick={() => setShowMailModal(true)}
               />
-              <div className="hidden md:flex flex-col items-end">
+              <div className="flex flex-col items-end">
                 <div className="text-md font-medium">{`${user.name}`}</div>
                 <div className="text-sm font-regular">{role}</div>
               </div>
@@ -259,12 +235,12 @@ const Dashboard = ({ content, token, role }) => {
                 onClick={() => setShowProfileModal(true)}
               >
                 {loadingAvatar ? (
-                  <div className="w-10 h-10 md:w-12 md:h-12 bg-gray-700 rounded-full flex items-center justify-center">
-                    <Loader2 className="h-5 w-5 md:h-6 md:w-6 text-blue-500 animate-spin" />
+                  <div className="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center">
+                    <Loader2 className="h-6 w-6 text-blue-500 animate-spin" />
                   </div>
                 ) : !userAvatar ? (
-                  <div className="w-10 h-10 md:w-12 md:h-12 bg-yellow-500 rounded-full flex items-center justify-center">
-                    <span className="text-lg md:text-xl font-bold text-gray-800">
+                  <div className="w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center">
+                    <span className="text-xl font-bold text-gray-800">
                       {user.name.charAt(0).toUpperCase()}
                     </span>
                   </div>
@@ -272,58 +248,53 @@ const Dashboard = ({ content, token, role }) => {
                   <img
                     src={userAvatar}
                     alt="Avatar"
-                    className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover"
+                    className="w-12 h-12 rounded-full object-cover"
                     onError={() => setUserAvatar(null)}
                   />
                 )}
               </button>
               {showProfileModal && (
                 <div
-                  className="absolute right-0 top-full mt-2 w-[calc(100vw-32px)] max-w-[360px] bg-white border rounded-xl shadow-lg z-50"
+                  className="absolute right-0 mt-13 w-96 bg-white border rounded-xl shadow-lg z-1000"
                   ref={divRef}
                 >
                   <div
-                    className="bg-slate-800 rounded-xl p-4 md:p-6 shadow-xl"
+                    className="bg-slate-800 rounded-xl p-6 max-w-full shadow-xl"
                     onClick={e => e.stopPropagation()}
                   >
                     <X
-                      className="absolute right-3 top-3 cursor-pointer text-white"
+                      className="absolute right-1/20 cursor-pointer"
                       onClick={() => setShowProfileModal(false)}
                     />
-                    <p className="text-center text-white mb-4 md:mb-6 text-sm md:text-base truncate">{`${user.email}`}</p>
+                    <p className="text-center text-lg text-white mb-6">{`${user.email}`}</p>
 
-                    <div className="text-center mb-4 relative">
-                      {/* Profile picture container */}
-                      <div className="relative inline-block mx-auto">
-                        {loadingAvatar ? (
-                          <div className="h-16 w-16 md:h-20 md:w-20 rounded-full border-2 bg-gray-700 mx-auto mb-4 flex items-center justify-center">
-                            <Loader2 className="h-6 w-6 md:h-8 md:w-8 text-blue-500 animate-spin" />
-                          </div>
-                        ) : !userAvatar ? (
-                          <div className="h-16 w-16 md:h-20 md:w-20 rounded-full border-2 bg-yellow-500 mx-auto mb-4 flex items-center justify-center">
-                            <span className="text-xl md:text-2xl font-bold text-gray-800">
-                              {user.name.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                        ) : (
-                          <img
-                            src={userAvatar}
-                            alt="Avatar"
-                            className="h-16 w-16 md:h-20 md:w-20 rounded-full mx-auto mb-4 object-cover"
-                            onError={() => setUserAvatar(null)}
-                          />
-                        )}
+                    <div className="text-center mb-4">
+                      <p
+                        className="relative left-46 top-20 cursor-pointer border border-blue-400 p-1 rounded-full bg-black w-fit"
+                        onClick={() => setShowProfilepictureModal(true)}
+                      >
+                        <Pencil className="h-4 w-4 text-blue-500" />
+                      </p>
 
-                        {/* Edit button positioned absolutely over the image */}
-                        <button
-                          className="absolute -right-2 top-0 cursor-pointer border border-blue-400 p-1 rounded-full bg-black"
-                          onClick={() => setShowProfilepictureModal(true)}
-                        >
-                          <Pencil className="h-3 w-3 md:h-4 md:w-4 text-blue-500" />
-                        </button>
-                      </div>
-
-                      <p className="text-center text-white mt-1 text-lg md:text-xl">
+                      {loadingAvatar ? (
+                        <div className="h-20 w-20 rounded-full border-2 bg-gray-700 mx-auto mb-4 flex items-center justify-center">
+                          <Loader2 className="h-8 w-8 text-blue-500 animate-spin" />
+                        </div>
+                      ) : !userAvatar ? (
+                        <div className="h-20 w-20 rounded-full border-2 bg-yellow-500 mx-auto mb-4 flex items-center justify-center">
+                          <span className="text-2xl font-bold text-gray-800">
+                            {user.name.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                      ) : (
+                        <img
+                          src={userAvatar}
+                          alt="Avatar"
+                          className="h-20 w-20 rounded-full mx-auto mb-4 object-cover"
+                          onError={() => setUserAvatar(null)}
+                        />
+                      )}
+                      <p className="text-center text-lg text-xl font-thin text-white mt-1">
                         Bonjour {`${user.name} !`}
                       </p>
                     </div>
@@ -336,9 +307,9 @@ const Dashboard = ({ content, token, role }) => {
                       }}
                       className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-center block"
                     >
-                      Déconnexion
+                      Log Out
                     </a>
-                    <div className="flex flex-wrap justify-center gap-3 mt-4 text-sm md:text-base">
+                    <div className="flex justify-around mt-4">
                       <p>
                         <a
                           href="#"
@@ -346,9 +317,9 @@ const Dashboard = ({ content, token, role }) => {
                             e.preventDefault();
                             navigate('/terms');
                           }}
-                          className="text-blue-400 hover:underline"
+                          className="text-blue-500"
                         >
-                          Conditions
+                          Conditions d&apos;utilisation
                         </a>
                       </p>
                       <p>
@@ -358,9 +329,9 @@ const Dashboard = ({ content, token, role }) => {
                             e.preventDefault();
                             navigate('/legal');
                           }}
-                          className="text-blue-400 hover:underline"
+                          className="text-blue-500"
                         >
-                          Mentions légales
+                          Mentions légales
                         </a>
                       </p>
                     </div>
@@ -371,7 +342,7 @@ const Dashboard = ({ content, token, role }) => {
           </div>
         </header>
 
-        <section className="flex-1 overflow-y-auto p-3 md:p-6 bg-gray-50 -webkit-overflow-scrolling-touch">
+        <section className="flex-1 overflow-auto p-6 bg-gray-50">
           {renderContent()}
         </section>
       </main>
@@ -382,7 +353,7 @@ const Dashboard = ({ content, token, role }) => {
 Dashboard.propTypes = {
   content: PropTypes.string.isRequired,
   token: PropTypes.string.isRequired,
-  role: PropTypes.oneOf(['Administrateur', 'Professeur', 'Etudiant']).isRequired,
+  role: PropTypes.oneOf(['admin', 'prof', 'eleve']).isRequired,
 };
 
 export default Dashboard;

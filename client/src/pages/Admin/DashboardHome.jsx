@@ -8,17 +8,11 @@ import {
   PlusCircle,
 } from 'lucide-react';
 
-
-// Tutorial component
-import DashboardTutorial from '../../tutorials/DashboardTutorial';
-import PropTypes from 'prop-types';
-
-const DashboardHome = ({ user }) => {
+const DashboardHome = () => {
   const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <DashboardTutorial userRole={user.role} name={user.name} />
       <header className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800">Tableau de bord</h1>
         <p className="text-gray-600 mt-2">
@@ -29,7 +23,7 @@ const DashboardHome = ({ user }) => {
 
       {/* Main Dashboard Grid */}
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mx-auto">
-        <div className="user-management bg-white rounded-lg shadow-md p-6 lg:ml-15 lg:mr-10 hover:shadow-lg transition-shadow">
+        <div className="bg-white rounded-lg shadow-md p-6 lg:ml-15 lg:mr-10 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-blue-600">
               Utilisateurs
@@ -48,7 +42,7 @@ const DashboardHome = ({ user }) => {
         </div>
 
         {/* Card 2: Gestion des classes */}
-        <div className="class-management bg-white rounded-lg shadow-md p-6 lg:ml-15 lg:mr-15 hover:shadow-lg transition-shadow">
+        <div className="bg-white rounded-lg shadow-md p-6 lg:ml-15 lg:mr-15 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-blue-600">Classes</h2>
             <ClipboardList className="h-8 w-8 text-blue-600" />
@@ -80,7 +74,7 @@ const DashboardHome = ({ user }) => {
         </div> */}
 
         {/* Card 4: Paramètres */}
-        <div className="settings bg-white rounded-lg shadow-md p-6 lg:ml-10 lg:mr-15 hover:shadow-lg transition-shadow">
+        <div className="bg-white rounded-lg shadow-md p-6 lg:ml-10 lg:mr-15 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-blue-600">Paramètres</h2>
             <Settings className="h-8 w-8 text-blue-600" />
@@ -121,7 +115,6 @@ const DashboardHome = ({ user }) => {
           <button
             onClick={() => navigate('/notifications')}
             className="mt-4 inline-block px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-            disabled
           >
             Voir toutes les notifications
           </button>
@@ -147,14 +140,13 @@ const DashboardHome = ({ user }) => {
           <button
             onClick={() => navigate('/activity-log')}
             className="mt-4 inline-block px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
-            disabled
           >
             Voir le journal
           </button>
         </div>
 
         {/* Quick Actions */}
-        <div className="quick-actions bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+        <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-orange-600">
               Actions rapides
@@ -193,14 +185,6 @@ const DashboardHome = ({ user }) => {
       </section>
     </div>
   );
-};
-
-
-DashboardHome.propTypes = {
-  user: PropTypes.shape({
-    role: PropTypes.string.isRequired,
-    name: PropTypes.string.isRequired,
-  }).isRequired,
 };
 
 export default DashboardHome;

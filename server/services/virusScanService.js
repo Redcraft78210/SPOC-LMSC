@@ -24,7 +24,7 @@ const scanAttachment = async (attachmentId) => {
       return;
     }
 
-    const filePath = path.join(UPLOADS_DIR, attachment.id);
+    const filePath = path.join(UPLOADS_DIR, attachment.filename);
     
     // Check if file exists
     if (!fs.existsSync(filePath)) {

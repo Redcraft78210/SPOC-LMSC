@@ -34,7 +34,6 @@ import {
   CircleX,
   XCircle,
 } from 'lucide-react';
-import UserManagementTutorial from '../../tutorials/UserManagementTutorial';
 
 const errorMessages = {
   'auth/invalid-credentials': 'Identifiants incorrects',
@@ -53,7 +52,7 @@ const errorMessages = {
 // Définir SearchUser en dehors du composant principal
 const SearchUser = memo(function SearchUser({ value, onChange }) {
   return (
-    <div className="searchuser relative flex-1 max-w-xl">
+    <div className="relative flex-1 max-w-xl">
       <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
       <input
         type="text"
@@ -109,34 +108,12 @@ const UserManagement = () => {
     fetchClasses();
   }, [fetchClasses, fetchUsers]);
 
-  // Determine initial view mode based on screen width
-  const getInitialViewMode = () => {
-    if (typeof window !== 'undefined') {
-      return window.innerWidth < 640 ? 'grid' : 'list';
-    }
-    return 'list'; // Fallback for SSR
-  };
-
-  const [viewMode, setViewMode] = useState(getInitialViewMode);
+  const [viewMode, setViewMode] = useState('list');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showInviteCodeModal, setShowInviteCodeModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
-
-  // Add window resize listener to update view mode on screen size change
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 640 && viewMode === 'list') {
-        setViewMode('grid');
-      } else if (window.innerWidth >= 640 && viewMode === 'grid') {
-        setViewMode('list');
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [viewMode]);
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
@@ -299,7 +276,7 @@ const UserManagement = () => {
 
   const ToggleView = () => {
     return (
-      <div className="flex gap-2 toggleView">
+      <div className="flex gap-2">
         <button
           onClick={() => setViewMode('list')}
           className={`p-2 rounded-lg ${viewMode === 'list' ? 'bg-blue-100 text-blue-600' : 'text-gray-600'
@@ -355,7 +332,7 @@ const UserManagement = () => {
 
   const UserTable = () => {
     return (
-      <div className="bg-white rounded-lg shadow overflow-x-auto">
+      <div className="bg-white rounded-lg shadow overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -417,10 +394,10 @@ const UserManagement = () => {
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span
                     className={`px-2 py-1 rounded-full text-xs text-white font-bold ${user.role === 'Administrateur'
-                      ? 'bg-amber-500'
-                      : user.role === 'Professeur'
-                        ? 'bg-sky-800'
-                        : 'bg-green-800'
+                        ? 'bg-amber-500'
+                        : user.role === 'Professeur'
+                          ? 'bg-sky-800'
+                          : 'bg-green-800'
                       }`}
                   >
                     {user.role}
@@ -567,18 +544,18 @@ const UserManagement = () => {
               <div className="flex gap-2 mt-4">
                 <span
                   className={`px-2 py-1 rounded-full text-xs ${user.active === 'actif'
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-red-100 text-red-800'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-red-100 text-red-800'
                     }`}
                 >
                   {user.active.charAt(0).toUpperCase() + user.active.slice(1)}
                 </span>
                 <span
                   className={`px-2 py-1 rounded-full text-xs ${user.role === 'Administrateur'
-                    ? 'bg-red-100 text-red-800'
-                    : user.role === 'Professeur'
-                      ? 'bg-blue-100 text-blue-800'
-                      : 'bg-green-100 text-green-800'
+                      ? 'bg-red-100 text-red-800'
+                      : user.role === 'Professeur'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-green-100 text-green-800'
                     }`}
                 >
                   {user.role}
@@ -596,9 +573,8 @@ const UserManagement = () => {
       name: '',
       surname: '',
       email: '',
-      role: 'Etudiant', // valeur par défaut en français
-      newPassword: '',
-      isPasswordGeneratedByAdmin: false,
+      role: 'student',
+      password: '',
     });
     const [initialUser, setInitialUser] = useState(null);
 
@@ -607,6 +583,7 @@ const UserManagement = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
+    const [newPassword, setNewPassword] = useState(null);
 
     useEffect(() => {
       setIsMounted(true);
@@ -615,15 +592,15 @@ const UserManagement = () => {
           name: selectedUser.name,
           surname: selectedUser.surname,
           email: selectedUser.email,
-          role: selectedUser.role, // déjà en français
-          newPassword: '',
+          role: selectedUser.role,
+          password: '',
         });
         setInitialUser({
           name: selectedUser.name,
           surname: selectedUser.surname,
           email: selectedUser.email,
           role: selectedUser.role,
-          newPassword: '',
+          password: '',
         });
       }
       return () => setIsMounted(false);
@@ -635,7 +612,7 @@ const UserManagement = () => {
         (formData.name ||
           formData.surname ||
           formData.email ||
-          formData.newPassword)
+          formData.password)
       )
         return true;
       if (selectedUser && initialUser) {
@@ -644,11 +621,12 @@ const UserManagement = () => {
           name !== initialUser.name ||
           surname !== initialUser.surname ||
           email !== initialUser.email ||
-          role !== initialUser.role
+          role !== initialUser.role ||
+          (newPassword && newPassword !== initialUser.password)
         );
       }
       return false;
-    }, [formData, initialUser]);
+    }, [formData, initialUser, newPassword]);
 
     useEffect(() => {
       const handleBeforeUnload = e => {
@@ -664,7 +642,7 @@ const UserManagement = () => {
       return () => {
         window.removeEventListener('beforeunload', handleBeforeUnload);
       };
-    }, [hasUnsavedChanges, formData, initialUser]);
+    }, [hasUnsavedChanges, formData, newPassword, initialUser]);
 
     const validateForm = () => {
       const newErrors = {};
@@ -697,7 +675,7 @@ const UserManagement = () => {
       setIsLoading(true);
       setServerError(''); // Reset server error
       try {
-        await handleUserSubmit(formData);
+        await handleUserSubmit(e);
         if (isMounted) {
           setIsSuccess(true);
           setTimeout(() => {
@@ -714,7 +692,6 @@ const UserManagement = () => {
         setIsLoading(false);
       }
     };
-
     const handleClose = useCallback(() => {
       if (
         hasUnsavedChanges() &&
@@ -745,35 +722,16 @@ const UserManagement = () => {
     }, [handleClose]);
 
     const handleGeneratePassword = () => {
-      const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-      const lower = 'abcdefghijklmnopqrstuvwxyz';
-      const digits = '0123456789';
-      const special = '!@#$%^&*()_+-=';
-      const all = upper + lower + digits + special;
-
-      // Assurer qu'on a au moins un de chaque
-      let password = [
-        upper[Math.floor(Math.random() * upper.length)],
-        lower[Math.floor(Math.random() * lower.length)],
-        digits[Math.floor(Math.random() * digits.length)],
-        special[Math.floor(Math.random() * special.length)],
-      ];
-
-      // Remplir le reste avec des caractères aléatoires
-      for (let i = password.length; i < 12; i++) {
-        password.push(all[Math.floor(Math.random() * all.length)]);
+      const characters =
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=';
+      let password = '';
+      for (let i = 0; i < 12; i++) {
+        password += characters.charAt(
+          Math.floor(Math.random() * characters.length)
+        );
       }
-
-      // Mélanger le mot de passe
-      password = password.sort(() => 0.5 - Math.random());
-
-      password = password.join('');
-
-      setFormData(prev => ({
-        ...prev,
-        newPassword: password,
-        isPasswordGeneratedByAdmin: true
-      }));
+      setFormData(prev => ({ ...prev, password }));
+      setNewPassword(password);
       return password;
     };
 
@@ -817,8 +775,8 @@ const UserManagement = () => {
                       setFormData({ ...formData, name: e.target.value })
                     }
                     className={`w-full px-4 py-2.5 rounded-lg border ${errors.name
-                      ? 'border-red-500 focus:ring-red-500'
-                      : 'border-gray-200 focus:border-blue-500'
+                        ? 'border-red-500 focus:ring-red-500'
+                        : 'border-gray-200 focus:border-blue-500'
                       } focus:ring-2 focus:ring-blue-200 outline-none transition-all`}
                     aria-invalid={!!errors.name}
                     aria-describedby="nameError"
@@ -847,8 +805,8 @@ const UserManagement = () => {
                       setFormData({ ...formData, surname: e.target.value })
                     }
                     className={`w-full px-4 py-2.5 rounded-lg border ${errors.surname
-                      ? 'border-red-500 focus:ring-red-500'
-                      : 'border-gray-200 focus:border-blue-500'
+                        ? 'border-red-500 focus:ring-red-500'
+                        : 'border-gray-200 focus:border-blue-500'
                       } focus:ring-2 focus:ring-blue-200 outline-none transition-all`}
                     aria-invalid={!!errors.surname}
                     aria-describedby="surnameError"
@@ -875,8 +833,8 @@ const UserManagement = () => {
                     setFormData({ ...formData, email: e.target.value })
                   }
                   className={`w-full px-4 py-2.5 rounded-lg border ${errors.email
-                    ? 'border-red-500 focus:ring-red-500'
-                    : 'border-gray-200 focus:border-blue-500'
+                      ? 'border-red-500 focus:ring-red-500'
+                      : 'border-gray-200 focus:border-blue-500'
                     } focus:ring-2 focus:ring-blue-200 outline-none transition-all`}
                   aria-invalid={!!errors.email}
                   aria-describedby="emailError"
@@ -888,22 +846,32 @@ const UserManagement = () => {
                   </p>
                 )}
               </div>
+              {/* Rôle */}
+              {console.log(formData.role)}
               <div>
                 <label className="block text-sm font-semibold text-gray-800 mb-2">
                   Rôle *
                 </label>
                 <select
                   name="role"
-                  value={formData.role}
+                  value={
+                    formData.role === 'Administrateur'
+                      ? 'admin'
+                      : formData.role === 'Professeur'
+                        ? 'teacher'
+                        : formData.role === 'Etudiant'
+                          ? 'student'
+                          : formData.role
+                  }
                   onChange={e => {
                     setFormData({ ...formData, role: e.target.value });
                   }}
                   className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
                   disabled={isLoading}
                 >
-                  <option value="Administrateur">Administrateur</option>
-                  <option value="Professeur">Professeur</option>
-                  <option value="Etudiant">Étudiant</option>
+                  <option value="admin">Administrateur</option>
+                  <option value="teacher">Professeur</option>
+                  <option value="student">Élève</option>
                 </select>
               </div>
               {
@@ -917,12 +885,12 @@ const UserManagement = () => {
                 </button>
               }
               {/* Afficher le mot de passe */}
-              {formData.newPassword && (
+              {newPassword && (
                 <div className="mt-4">
                   <p className="text-gray-700 text-sm mb-2">
                     Nouveau mot de passe :{' '}
                     <span className="bg-gray-100 px-2 py-1 rounded-lg">
-                      {formData.newPassword}
+                      {newPassword}
                     </span>
                   </p>
                   <p className="text-gray-500 text-xs">
@@ -931,7 +899,7 @@ const UserManagement = () => {
                     lieu sûr (par exemple, dans un gestionnaire de mots de
                     passe).
                   </p>
-                  <input type="hidden" name="password" value={formData.newPassword} />
+                  <input type="hidden" name="password" value={newPassword} />
                 </div>
               )}
             </div>
@@ -1008,10 +976,10 @@ const UserManagement = () => {
     const [filter, setFilter] = useState('all');
     const [page, setPage] = useState(1);
     const [formData, setFormData] = useState({
-      role: 'Etudiant',
+      role: 'student',
       usageLimit: 1,
       validityPeriod: 24,
-      classId: null,
+      classId: null, // New field for class assignment
     });
     const [assignClass, setAssignClass] = useState(false); // Checkbox state
     const [existingCodes, setExistingCodes] = useState([]);
@@ -1043,9 +1011,17 @@ const UserManagement = () => {
     }, []);
 
     const roleDetails = {
-      Etudiant: { color: 'bg-blue-100', text: 'text-blue-800', icon: <Book /> },
-      Professeur: { color: 'bg-green-100', text: 'text-green-800', icon: <User /> },
-      Administrateur: { color: 'bg-red-100', text: 'text-red-800', icon: <Shield /> },
+      student: { color: 'bg-blue-100', text: 'text-blue-800', icon: <Book /> },
+      teacher: {
+        color: 'bg-green-100',
+        text: 'text-green-800',
+        icon: <User />,
+      },
+      admin: {
+        color: 'bg-red-100',
+        text: 'text-red-800',
+        icon: <Shield />,
+      },
     };
 
     const handleGenerate = async () => {
@@ -1197,9 +1173,9 @@ const UserManagement = () => {
                   }
                   className="w-full p-2 border rounded"
                 >
-                  <option value="Etudiant">Étudiant</option>
-                  <option value="Professeur">Enseignant</option>
-                  <option value="Administrateur">Administrateur</option>
+                  <option value="student">Étudiant</option>
+                  <option value="teacher">Enseignant</option>
+                  <option value="admin">Administrateur</option>
                 </select>
               </div>
 
@@ -1340,10 +1316,10 @@ const UserManagement = () => {
                             </span>
                             <span
                               className={`text-xs px-2 py-1 rounded ${status === 'Actif'
-                                ? 'bg-green-100 text-green-800'
-                                : status === 'Expiré'
-                                  ? 'bg-red-100 text-red-800'
-                                  : 'bg-yellow-100 text-yellow-800'
+                                  ? 'bg-green-100 text-green-800'
+                                  : status === 'Expiré'
+                                    ? 'bg-red-100 text-red-800'
+                                    : 'bg-yellow-100 text-yellow-800'
                                 }`}
                             >
                               {status}
@@ -1441,8 +1417,6 @@ const UserManagement = () => {
   return (
     <div className="container mx-auto p-6">
       <Toaster position="bottom-right" reverseOrder={false} />
-      <UserManagementTutorial />
-
       <div className="flex flex-col gap-4 mb-8">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-800">
@@ -1494,10 +1468,10 @@ const UserManagement = () => {
 // const btnDanger = `${buttonStyles} bg-red-600 text-white hover:bg-red-700`;
 
 UserManagement.propTypes = {
-  authToken: PropTypes.string.isRequired,
-  viewMode: PropTypes.oneOf(['list', 'grid']),
-  showCreateModal: PropTypes.bool,
-  fetchUsers: PropTypes.func,
+  authToken: PropTypes.string.isRequired, // Required string
+  viewMode: PropTypes.oneOf(['list', 'grid']), // Optional, must be "list" or "grid"
+  showCreateModal: PropTypes.bool, // Optional boolean
+  fetchUsers: PropTypes.func, // Optional function
 };
 
 export default UserManagement;

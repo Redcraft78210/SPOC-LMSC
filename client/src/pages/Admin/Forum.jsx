@@ -3,15 +3,16 @@ import PropTypes from 'prop-types';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast, Toaster } from 'react-hot-toast';
-import { ArrowLeft, User, Clock, MessageSquareText, Search, Filter, X, Plus } from 'lucide-react';
+
+import { ArrowLeft, User, Clock, MessageSquareText } from 'lucide-react';
 import {
   getThreads,
   getThreadById,
   createThread,
   addComment
-} from '../API/ForumCaller';
+} from '../../API/ForumCaller';
 
-const Forum = () => {
+const Forum = ({ authToken }) => {
   const [threads, setThreads] = useState([]);
   const [selectedThread, setSelectedThread] = useState(null);
   const [newThreadTitle, setNewThreadTitle] = useState('');
@@ -26,38 +27,18 @@ const Forum = () => {
     totalPages: 1,
   });
 
-  // New state variables for search and filters
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeSearchQuery, setActiveSearchQuery] = useState(''); // New state for submitted search
-  const [sortBy, setSortBy] = useState('newest'); // Options: newest, oldest, popular
-  const [authorFilter, setAuthorFilter] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
-  // Ajout d'un nouvel état pour la modale
-  const [showCreateThreadModal, setShowCreateThreadModal] = useState(false);
-
   useEffect(() => {
     fetchThreads();
-  }, [pagination.currentPage, sortBy, authorFilter, activeSearchQuery, isSearching]); // Replace searchQuery with activeSearchQuery
+  }, [pagination.currentPage]);
 
   const fetchThreads = async () => {
     try {
       setLoading(true);
-      console.log("Paramètres de recherche:", {
-        page: pagination.currentPage,
-        limit: 10,
-        search: activeSearchQuery, // Use activeSearchQuery instead of searchQuery
-        sortBy: sortBy,
-        author: authorFilter || undefined
+      const response = await getThreads({ 
+        page: pagination.currentPage, 
+        limit: 10 
       });
-      const response = await getThreads({
-        page: pagination.currentPage,
-        limit: 10,
-        search: activeSearchQuery, // Use activeSearchQuery instead of searchQuery
-        sortBy: sortBy,
-        author: authorFilter || undefined,
-        searchSubmitted: activeSearchQuery ? 'true' : 'false' // Add parameter for the backend
-      });
-
+      
       if (response.status === 200) {
         setThreads(response.data.threads);
         setPagination({
@@ -67,12 +48,10 @@ const Forum = () => {
         setError('');
       } else {
         setError(response.message || "Erreur lors du chargement des discussions");
-        toast.error(response.message || "Erreur lors du chargement des discussions");
       }
     } catch (error) {
       console.error("Erreur lors du chargement des discussions:", error);
       setError("Erreur lors du chargement des discussions");
-      toast.error("Erreur lors du chargement des discussions");
     } finally {
       setLoading(false);
     }
@@ -82,131 +61,71 @@ const Forum = () => {
     try {
       setLoading(true);
       const response = await getThreadById({ threadId });
-
+      
       if (response.status === 200) {
         setSelectedThread(response.data);
         setError('');
       } else {
         setError(response.message || "Erreur lors du chargement de la discussion");
-        toast.error(response.message || "Erreur lors du chargement de la discussion");
       }
     } catch (error) {
       console.error("Erreur lors du chargement de la discussion:", error);
       setError("Erreur lors du chargement de la discussion");
-      toast.error("Erreur lors du chargement de la discussion");
     } finally {
       setLoading(false);
     }
   };
 
   const handleCreateThread = async () => {
-    if (!newThreadTitle.trim() || !newThreadContent.trim()) {
-      setError('Veuillez remplir tous les champs');
-      toast.error('Veuillez remplir tous les champs');
-      return;
-    }
-
-    setLoading(true);
     try {
+      if (!newThreadTitle.trim() || !newThreadContent.trim()) {
+        return;
+      }
+      
+      setLoading(true);
       const response = await createThread({
-        title: newThreadTitle.trim(),
-        content: newThreadContent.trim()
+        title: newThreadTitle,
+        content: newThreadContent
       });
-
+      
       if (response.status === 201) {
-        const threadId = response.data.id;
-        await fetchThreads();
-        await fetchThreadDetails(threadId);
         setNewThreadTitle('');
         setNewThreadContent('');
-        setError('');
-        setShowCreateThreadModal(false); // Fermer la modale après création réussie
-        toast.success('Discussion créée avec succès');
+        fetchThreads();
       } else {
-        if (response.message?.includes('forbidden words')) {
-          setShowDisciplinaryWarning(true);
-          setDisciplinaryWarning(response.message);
-          toast('Avertissement !', { icon: '⚠️' });
-        } else {
-          setError(response.message || "Erreur lors de la création de la discussion");
-          toast.error(response.message || "Erreur lors de la création de la discussion");
-        }
+        setError(response.message || "Erreur lors de la création de la discussion");
       }
     } catch (error) {
       console.error("Erreur lors de la création de la discussion:", error);
       setError("Erreur lors de la création de la discussion");
-      toast.error("Erreur lors de la création de la discussion");
     } finally {
       setLoading(false);
     }
   };
 
   const handleCreateComment = async () => {
-    if (!newComment.trim()) {
-      setError('Veuillez écrire un commentaire');
-      toast.error('Veuillez écrire un commentaire');
-      return;
-    }
-
-    setLoading(true);
     try {
+      if (!newComment.trim() || !selectedThread) {
+        return;
+      }
+      
+      setLoading(true);
       const response = await addComment({
         threadId: selectedThread.id,
-        content: newComment.trim()
+        content: newComment
       });
-
+      
       if (response.status === 201) {
-        await fetchThreadDetails(selectedThread.id);
         setNewComment('');
-        setError('');
-        toast.success('Commentaire publié avec succès');
+        fetchThreadDetails(selectedThread.id);
       } else {
-        if (response.message?.includes('forbidden words')) {
-          setShowDisciplinaryWarning(true);
-          setDisciplinaryWarning(response.message);
-          toast('Avertissement !', { icon: '⚠️' });
-        } else {
-          setError(response.message || "Erreur lors de l'ajout du commentaire");
-          toast.error(response.message || "Erreur lors de l'ajout du commentaire");
-        }
+        setError(response.message || "Erreur lors de l'ajout du commentaire");
       }
     } catch (error) {
       console.error("Erreur lors de l'ajout du commentaire:", error);
       setError("Erreur lors de l'ajout du commentaire");
-      toast.error("Erreur lors de l'ajout du commentaire");
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Modifie la fonction handleSearch pour mettre à jour activeSearchQuery
-  const handleSearch = (e) => {
-    e.preventDefault();
-    setActiveSearchQuery(searchQuery); // Set the active search query when search button is clicked
-    setPagination(prev => ({ ...prev, currentPage: 1 }));
-    setIsSearching(prev => !prev);
-  };
-
-  // Mettre à jour clearSearch pour réinitialiser activeSearchQuery aussi
-  const clearSearch = () => {
-    setSearchQuery('');
-    setActiveSearchQuery(''); // Clear the active search query
-    setPagination(prev => ({ ...prev, currentPage: 1 }));
-    setIsSearching(prev => !prev);
-  };
-
-  const handleFilterChange = (filter, value) => {
-    setPagination(prev => ({ ...prev, currentPage: 1 })); // Reset to first page when changing filters
-
-    switch (filter) {
-      case 'sort':
-        setSortBy(value);
-        break;
-      case 'author':
-        setAuthorFilter(value);
-        break;
-      default:
-        break;
     }
   };
 
@@ -235,7 +154,6 @@ const Forum = () => {
           </div>
         )}
 
-        {/* Disciplinary warning modal - existing code */}
         {showDisciplinaryWarning && (
           <div
             role="dialog"
@@ -433,50 +351,12 @@ const Forum = () => {
           </div>
         )}
 
-        {/* Create Thread Modal */}
-        {showCreateThreadModal && (
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="create-thread-heading"
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity"
-            onClick={() => setShowCreateThreadModal(false)}
-            onKeyDown={e => e.key === 'Escape' && setShowCreateThreadModal(false)}
-          >
-            <div
-              className="mx-4 w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl transition-all"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="flex items-start justify-between mb-6">
-                <h2
-                  id="create-thread-heading"
-                  className="text-xl font-semibold text-gray-900"
-                >
-                  Nouvelle discussion
-                </h2>
-
-                <button
-                  type="button"
-                  onClick={() => setShowCreateThreadModal(false)}
-                  className="ml-4 p-1 text-gray-400 hover:text-gray-500 rounded-full hover:bg-gray-100 transition-colors"
-                  aria-label="Fermer"
-                >
-                  <svg
-                    className="w-6 h-6"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              </div>
-
+        {!selectedThread ? (
+          <>
+            <section className="mb-10 p-6 bg-white rounded-xl shadow-sm border border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900 mb-6">
+                Nouvelle discussion
+              </h2>
               <div className="space-y-5">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -499,225 +379,80 @@ const Forum = () => {
                     value={newThreadContent}
                     onChange={e => setNewThreadContent(e.target.value)}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    rows="6"
+                    rows="4"
                   />
-                </div>
-
-                <div className="flex justify-end gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateThreadModal(false)}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 focus:ring-2 focus:ring-gray-300 transition-colors"
-                  >
-                    Annuler
-                  </button>
-                  <button
-                    onClick={handleCreateThread}
-                    className="inline-flex items-center justify-center px-6 py-2 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <>
-                        <svg
-                          className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                          ></circle>
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          ></path>
-                        </svg>
-                        Création...
-                      </>
-                    ) : (
-                      'Publier la discussion'
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Remplacer la section "New thread" par un bouton */}
-        <section className="mb-3 flex justify-end">
-          <button
-            onClick={() => setShowCreateThreadModal(true)}
-            className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            Nouvelle discussion
-          </button>
-        </section>
-
-        {!selectedThread ? (
-          <>
-            {/* Search and Filter Bar */}
-            <section className="mb-6 p-4 bg-white rounded-lg shadow-sm border border-gray-200">
-              <div className="mt-4 flex flex-wrap gap-4">
-                <div className="min-w-[200px]">
-                  <label htmlFor="sortBy" className="block text-sm font-medium text-gray-700 mb-1">
-                    Trier par
-                  </label>
-                  <select
-                    id="sortBy"
-                    value={sortBy}
-                    onChange={(e) => handleFilterChange('sort', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="newest">Plus récents</option>
-                    <option value="oldest">Plus anciens</option>
-                    <option value="popular">Plus commentés</option>
-                  </select>
-                </div>
-
-                <div className="min-w-[200px]">
-                  <label htmlFor="author" className="block text-sm font-medium text-gray-700 mb-1">
-                    Auteur
-                  </label>
-                  <input
-                    type="text"
-                    id="author"
-                    placeholder="Nom d'utilisateur"
-                    value={authorFilter}
-                    onChange={(e) => handleFilterChange('author', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-              </div>
-
-              <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-4 mt-4">
-                <div className="relative flex-grow">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Search className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="Rechercher dans les discussions..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                  {searchQuery && (
-                    <button
-                      type="button"
-                      onClick={clearSearch}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                    >
-                      <X className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                    </button>
-                  )}
                 </div>
                 <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  onClick={handleCreateThread}
+                  className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                  disabled={loading}
                 >
-                  Rechercher
+                  {loading ? (
+                    <>
+                      <svg
+                        className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      Création...
+                    </>
+                  ) : (
+                    'Publier la discussion'
+                  )}
                 </button>
-              </form>
-
-              {(searchQuery || sortBy !== 'newest' || authorFilter) && (
-                <div className="mt-4 flex items-center">
-                  <span className="text-sm text-gray-500 mr-2 flex items-center">
-                    <Filter className="w-4 h-4 mr-1" /> Filtres actifs:
-                  </span>
-                  <div className="flex flex-wrap gap-2">
-                    {searchQuery && (
-                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full flex items-center">
-                        Recherche: {searchQuery}
-                        <button onClick={clearSearch} className="ml-1">
-                          <X className="w-3 h-3" />
-                        </button>
-                      </span>
-                    )}
-                    {sortBy !== 'newest' && (
-                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                        Tri: {sortBy === 'oldest' ? 'Plus anciens' : 'Plus commentés'}
-                      </span>
-                    )}
-                    {authorFilter && (
-                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                        Auteur: {authorFilter}
-                      </span>
-                    )}
-                    <button
-                      onClick={() => {
-                        setSearchQuery('');
-                        setActiveSearchQuery(''); // Reset active search query
-                        setSortBy('newest');
-                        setAuthorFilter('');
-                        setPagination(prev => ({ ...prev, currentPage: 1 }));
-                        setIsSearching(prev => !prev);
-                      }}
-                      className="text-xs text-gray-600 underline hover:text-gray-900"
-                    >
-                      Réinitialiser tous les filtres
-                    </button>
-                  </div>
-                </div>
-              )}
+              </div>
             </section>
 
-            {/* Thread list - existing code */}
             <section className="space-y-6">
-              {loading && threads.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="inline-block animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mb-4"></div>
-                  <p className="text-gray-600">Chargement des discussions...</p>
-                </div>
-              ) : threads.length === 0 ? (
-                <div className="text-center py-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <p className="text-gray-600 mb-2">Aucune discussion trouvée.</p>
-                  <p className="text-sm text-gray-500">Essayez de modifier vos critères de recherche ou créez une nouvelle discussion.</p>
-                </div>
-              ) : (
-                threads.map(thread => (
-                  <article
-                    key={thread.id}
-                    onClick={() => fetchThreadDetails(thread.id)}
-                    className="group p-6 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 border border-gray-200 cursor-pointer"
-                  >
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                      {thread.title}
-                    </h3>
-                    <p className="text-gray-600 line-clamp-2 mb-4">
-                      {thread.content}
-                    </p>
-                    <div className="flex items-center text-sm text-gray-500 space-x-4">
-                      <span className="inline-flex items-center">
-                        <User className="w-4 h-4 mr-2" />
-                        {thread.User?.username}
-                      </span>
-                      <span className="inline-flex items-center">
-                        <Clock className="w-4 h-4 mr-2" />
-                        {formatDistanceToNow(new Date(thread.createdAt), {
-                          addSuffix: true,
-                          locale: fr,
-                        })}
-                      </span>
-                      <span className="inline-flex items-center">
-                        <MessageSquareText className="w-4 h-4 mr-1 mt-1" />
-                        {thread.commentsCount} réponse
-                        {thread.commentsCount > 1 ? 's' : ''}
-                      </span>
-                    </div>
-                  </article>
-                ))
-              )}
+              {threads.map(thread => (
+                <article
+                  key={thread.id}
+                  onClick={() => fetchThreadDetails(thread.id)}
+                  className="group p-6 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 border border-gray-200 cursor-pointer"
+                >
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    {thread.title}
+                  </h3>
+                  <p className="text-gray-600 line-clamp-2 mb-4">
+                    {thread.content}
+                  </p>
+                  <div className="flex items-center text-sm text-gray-500 space-x-4">
+                    <span className="inline-flex items-center">
+                      <User className="w-4 h-4 mr-2" />
+                      {thread.User?.username}
+                    </span>
+                    <span className="inline-flex items-center">
+                      <Clock className="w-4 h-4 mr-2" />
+                      {formatDistanceToNow(new Date(thread.createdAt), {
+                        addSuffix: true,
+                        locale: fr,
+                      })}
+                    </span>
+                    <span className="inline-flex items-center">
+                      <MessageSquareText className="w-4 h-4 mr-1 mt-1" />
+                      {thread.commentsCount} réponse
+                      {thread.commentsCount > 1 ? 's' : ''}
+                    </span>
+                  </div>
+                </article>
+              ))}
             </section>
 
-            {/* Pagination - existing code */}
             <div className="mt-6 flex justify-between">
               <button
                 disabled={pagination.currentPage <= 1}
@@ -746,7 +481,6 @@ const Forum = () => {
             </div>
           </>
         ) : (
-          // Thread detail view - existing code
           <div>
             <button
               onClick={() => {
@@ -864,6 +598,7 @@ const Forum = () => {
 };
 
 Forum.propTypes = {
+  authToken: PropTypes.string.isRequired,
   currentUser: PropTypes.shape({
     id: PropTypes.string.isRequired,
     username: PropTypes.string.isRequired,

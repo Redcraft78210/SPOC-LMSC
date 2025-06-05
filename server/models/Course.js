@@ -35,15 +35,7 @@ const Course = sequelize.define('Course', {
   chapitre: {
     type: DataTypes.STRING,
     allowNull: true  
-  },
-  status: {
-    type: DataTypes.ENUM('draft', 'published', 'archived', 'blocked'),
-    defaultValue: 'draft'
-  },
-  block_reason: {
-    type: DataTypes.STRING,
-    allowNull: true  
-  },
+  }
 }, {
   tableName: 'courses',
   
