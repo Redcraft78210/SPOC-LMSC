@@ -4,9 +4,11 @@
 CREATE TYPE statut_type AS ENUM ('actif', 'inactif');
 CREATE TYPE scan_status_type AS ENUM ('pending', 'clean', 'infected');
 CREATE TYPE user_role AS ENUM ('Administrateur', 'Professeur', 'Etudiant');
-CREATE TYPE live_status AS ENUM ('scheduled', 'ongoing', 'completed', 'cancelled');
+CREATE TYPE course_status AS ENUM('draft', 'published', 'archived', 'blocked');
+CREATE TYPE live_status AS ENUM ('scheduled', 'ongoing', 'completed', 'blocked', 'disapproved');
 CREATE TYPE progress_status AS ENUM ('not_started', 'in_progress', 'completed');
 CREATE TYPE attendance_status AS ENUM ('attended', 'missed');
+CREATE TYPE flag_status AS ENUM ('pending', 'reviewed', 'resolved');
 
 -- ============================================================
 -- TABLES PRINCIPALES
@@ -56,7 +58,7 @@ CREATE TABLE courses (
     teacher_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     matiere VARCHAR(255),
     chapitre VARCHAR(255),
-    status ENUM('draft', 'published', 'archived', 'blocked') DEFAULT 'draft',
+    status course_status DEFAULT 'draft',
     block_reason VARCHAR(255),
     "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -71,6 +73,7 @@ CREATE TABLE lives (
     start_time TIMESTAMP NOT NULL,
     end_time TIMESTAMP NOT NULL,
     status live_status NOT NULL,
+    block_reason VARCHAR(255),
     teacher_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -251,6 +254,32 @@ CREATE TABLE trash_messages (
 );
 
 -- ============================================================
+-- TABLES DE MODÉRATION
+-- ============================================================
+CREATE TABLE warnings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "userId" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    "adminId" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    message TEXT NOT NULL,
+    read BOOLEAN DEFAULT FALSE,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE flags (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    "itemId" UUID NOT NULL,
+    "itemType" VARCHAR(10) NOT NULL CHECK ("itemType" IN ('thread', 'comment')),
+    reason TEXT NOT NULL,
+    "reportedBy" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    status flag_status DEFAULT 'pending',
+    "resolvedBy" UUID REFERENCES users(id) ON DELETE SET NULL,
+    "resolvedAt" TIMESTAMP,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================================
 -- FONCTIONS ET TRIGGERS
 -- ============================================================
 
@@ -320,7 +349,11 @@ CREATE INDEX idx_lives_teacher_id ON lives(teacher_id);
 CREATE INDEX idx_chat_messages_live_id ON chat_messages(live_id);
 CREATE INDEX idx_recipients_recipient_id ON recipients("recipientId");
 CREATE INDEX idx_user_avatars_user_id ON user_avatars(user_id);
-
+CREATE INDEX idx_warnings_user_id ON warnings("userId");
+CREATE INDEX idx_warnings_admin_id ON warnings("adminId");
+CREATE INDEX idx_flags_item_id ON flags("itemId");
+CREATE INDEX idx_flags_reported_by ON flags("reportedBy");
+CREATE INDEX idx_flags_status ON flags(status);
 
 -- ============================================================
 -- DONNÉES MINIMALES D'INITIALISATION

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 
 import PictureModal from '../components/PictureModal';
+import { useTutorial } from '../contexts/TutorialContext';
 
 // Lazy load the tab components
 const SecurityTab = lazy(() => import('../components/settings/SecurityTab'));
@@ -42,6 +43,8 @@ const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
     avatar: '',
     twoFAEnabled: false,
   });
+
+  const { resetAllTutorials } = useTutorial();
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -375,7 +378,7 @@ const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
           </div>
 
           {showDeleteModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+            <div className="fixed inset-0 backdrop-filter backdrop-blur-sm bg-black/50 flex items-center justify-center p-4 z-50">
               <div className="bg-white rounded-lg p-6 max-w-md w-full">
                 <h3 className="text-xl font-bold text-red-600 mb-4">
                   Confirmer la suppression
@@ -427,6 +430,24 @@ const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
               {loading ? 'Enregistrement...' : 'Enregistrer les modifications'}
             </button>
           </div>
+
+          {/* Tutorials Section */}
+          <section className="bg-white shadow rounded-lg p-6 mb-6">
+            <h2 className="text-lg font-medium text-gray-900 mb-4">Tutoriels</h2>
+            <div className="space-y-4">
+              <div>
+                <button
+                  onClick={resetAllTutorials}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Réinitialiser tous les tutoriels
+                </button>
+                <p className="text-sm text-gray-500 mt-1">
+                  Cette action vous permettra de revoir tous les tutoriels comme si vous visitiez l&apos;application pour la première fois.
+                </p>
+              </div>
+            </div>
+          </section>
         </div>
       </div>
     </>

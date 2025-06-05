@@ -51,6 +51,7 @@ const chatRoutes = require('./routes/chatRoutes');
 
 // Miscellaneous
 const codeRoutes = require('./routes/codeRoutes');
+const moderationRoutes = require('./routes/moderationRoutes');
 
 // Initialize environment variables
 dotenv.config();
@@ -151,6 +152,7 @@ app.use('/api/streams', chatRoutes.route); // Streaming and chat-related routes
 
 // Miscellaneous
 app.use('/api/codes', codeRoutes.route); // Code-related routes
+app.use('/api/moderation', moderationRoutes.route); // Moderation-related routes
 
 // Serve React frontend (if applicable)
 if (process.env.NODE_ENV === "production") {

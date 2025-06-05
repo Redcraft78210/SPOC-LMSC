@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { Toaster, toast } from 'react-hot-toast';
-import { FileText, SquarePlay, Radio, ShieldEllipsis } from 'lucide-react'; // Ajout de ShieldEllipsis
+import { FileText, SquarePlay, Radio, ShieldEllipsis, ShieldBan } from 'lucide-react'; // Ajout de ShieldEllipsis
 import { useNavigate } from 'react-router-dom';
 import { getAllCourses, disapproveCourse, unblockCourse, deleteCourse } from '../API/CourseCaller';
-import { getAllLives } from '../API/LiveCaller';
+import { getAllLives, endLive, disapproveLive, blockLive, unblockLive, deleteLive } from '../API/LiveCaller';
+import CoursesLibraryTutorial from '../tutorials/CoursesLibraryTutorial';
 
 const Courses = ({ authToken, userRole }) => {
   const [selectedProfessor, setSelectedProfessor] = useState('Tous');
@@ -98,6 +99,8 @@ const Courses = ({ authToken, userRole }) => {
         : new Date(getDate(a)) - new Date(getDate(b));
     });
 
+  console.log(content);
+
   // Récupère les filtres uniques
   const professors = [...new Set(content.map(item => item.professor))];
   const subjects = [...new Set(content.map(item => item.subject))];
@@ -124,7 +127,7 @@ const Courses = ({ authToken, userRole }) => {
 
   return (
     <div className="min-h-screen pb-10">
-      <Toaster position="top-right" />
+      <Toaster position="top-center" />
       {/* Header */}
       <header>
         <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
@@ -134,6 +137,9 @@ const Courses = ({ authToken, userRole }) => {
         </div>
       </header>
 
+      {/* Add the tutorial component */}
+      <CoursesLibraryTutorial />
+
       <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
         {/* Barre de recherche et filtres */}
         <div className="mb-8 p-6 bg-white rounded-lg shadow-sm">
@@ -142,22 +148,7 @@ const Courses = ({ authToken, userRole }) => {
               Rechercher
             </label>
             <div className="relative">
-              <svg
-                width="20"
-                height="20"
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 16a6 6 0 1111.31 2.16l4.73 4.73a1 1 0 01-1.42 1.42l-4.73-4.73A6 6 0 018 16z"
-                />
-              </svg>
+              {/* Make sure the id matches the tutorial target */}
               <input
                 id="search"
                 type="text"
@@ -171,7 +162,7 @@ const Courses = ({ authToken, userRole }) => {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {/* Type de contenu */}
-            <div>
+            <div className="filter-type">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Type de contenu
               </label>
@@ -182,7 +173,7 @@ const Courses = ({ authToken, userRole }) => {
               />
             </div>
             {/* Professeur */}
-            <div>
+            <div className="filter-professor">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Professeur
               </label>
@@ -193,7 +184,7 @@ const Courses = ({ authToken, userRole }) => {
               />
             </div>
             {/* Matière */}
-            <div>
+            <div className="filter-subject">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Matière
               </label>
@@ -234,7 +225,8 @@ const Courses = ({ authToken, userRole }) => {
                 key={item.id}
                 item={item}
                 userRole={userRole}
-                onActionDone={fetchData} // <-- Ajoutez cette prop
+                onActionDone={fetchData}
+                className="course-card" // Add this class for the tutorial
               />
             ))}
           </div>
@@ -249,6 +241,7 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [showModMenu, setShowModMenu] = useState(false);
   const [showDisapproveModal, setShowDisapproveModal] = useState(false);
+  const [showStopModal, setShowStopModal] = useState(false);
   const [justification, setJustification] = useState('');
   const hoverTimeout = useRef(null);
   const menuRef = useRef(null);
@@ -297,10 +290,14 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
     setShowModMenu(false);
     if (action === 'disapprove') {
       setShowDisapproveModal(true);
+    } else if (action === 'stop') {
+      setShowStopModal(true);
     } else if (action === 'unblock') {
-      handleUnblockCourse();
+      item.type === 'cours' && handleUnblockCourse();
+      item.type === 'live' && handleUnblockLive();
     } else if (action === 'delete') {
-      handleDeleteCourse();
+      item.type === 'cours' && handleDeleteCourse();
+      item.type === 'live' && handleDeleteLive();
     }
   };
 
@@ -359,6 +356,66 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
     }
   };
 
+  const isValidJustification = (justification) => {
+    if (!justification.trim() || justification.length < 50) {
+      toast.error('Veuillez fournir une justification d\'au moins 50 caractères.');
+      return false;
+    }
+    return true;
+  };
+
+
+  const handleLiveDisapproval = async () => {
+    if (!isValidJustification(justification)) return;
+    try {
+      const response = await disapproveLive({
+        liveId: item.id,
+        justification,
+      });
+      if (response.status === 200) {
+        toast.success('Live désapprouvé avec succès');
+        console.log('Désapprobation réussie:', response.data);
+        setShowDisapproveModal(false);
+        setJustification('');
+        onActionDone(); // <-- Ajoutez ceci pour rafraîchir la liste
+      } else {
+        throw new Error(response.message || 'Erreur lors de la désapprobation du live');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la désapprobation du live:', error);
+      toast.error('Une erreur est survenue lors de la désapprobation du live');
+    }
+  };
+
+  const handleStopLive = async () => {
+    if (!isValidJustification(justification)) return;
+
+    try {
+      const response = await endLive({
+        liveId: item.id,
+        justification,
+      });
+
+      const blockResponse = await blockLive({ liveId: item.id, justification });
+      if (blockResponse.status !== 200) {
+        throw new Error(blockResponse.message || 'Erreur lors du blocage du live');
+      }
+
+      if (response.status === 200) {
+        toast.success('Live arrêté avec succès');
+        console.log('Arrêt réussi:', response.data);
+        setShowStopModal(false);
+        setJustification('');
+        onActionDone(); // <-- Ajoutez ceci pour rafraîchir la liste
+      } else {
+        throw new Error(response.message || 'Erreur lors de l\'arrêt du live');
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'arrêt du live:', error);
+      toast.error('Une erreur est survenue lors de l\'arrêt du live');
+    }
+  };
+
   const handleUnblockCourse = async () => {
     if (!window.confirm('Êtes-vous sûr de vouloir débloquer ce cours ?')) {
       return;
@@ -405,7 +462,54 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
     }
   };
 
-  const disapproveCourseModal = ({ course }) => {
+
+  const handleUnblockLive = async () => {
+    if (!window.confirm('Êtes-vous sûr de vouloir débloquer ce live ?')) {
+      return;
+    }
+    try {
+      const response = await unblockLive(item.id);
+      if (response.status === 200) {
+        toast.success('Live débloqué avec succès');
+        console.log('Déblocage réussi:', response.data);
+        onActionDone(); // <-- Ajoutez ceci pour rafraîchir la liste
+      } else {
+        throw new Error(response.message || 'Erreur lors du déblocage du cours');
+      }
+    } catch (error) {
+      console.error('Erreur lors du déblocage du live:', error);
+      toast.error(
+        error?.response?.data?.message ||
+        error.message ||
+        'Une erreur est survenue lors du déblocage du cours'
+      );
+    }
+  };
+
+  const handleDeleteLive = async () => {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce live ?')) {
+      return;
+    }
+    try {
+      const response = await deleteLive(item.id);
+      if (response.status === 200) {
+        toast.success('Live supprimé avec succès');
+        console.log('Suppression réussie:', response.data);
+        onActionDone(); // <-- Ajoutez ceci pour rafraîchir la liste
+      } else {
+        throw new Error(response.message || 'Erreur lors de la suppression du live');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la suppression du live:', error);
+      toast.error(
+        error?.response?.data?.message ||
+        error.message ||
+        'Une erreur est survenue lors de la suppression du live'
+      );
+    }
+  };
+
+  const disapproveCourseModal = (item) => {
     // Modale de désapprobation de cours avec justification
     return (
       <div
@@ -419,8 +523,8 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
           className="bg-white p-6 rounded-lg shadow-lg"
           onClick={e => e.stopPropagation()} // Empêche la propagation vers le fond
         >
-          <h2 className="text-xl font-semibold mb-4">Désapprouver le cours</h2>
-          <p>Êtes-vous sûr de vouloir désapprouver le cours &quot;{course.titre}&quot; ?</p>
+          <h2 className="text-xl font-semibold mb-4">Désapprouver le {item.type}</h2>
+          <p>Êtes-vous sûr de vouloir désapprouver le {item.type} &quot;{item.titre}&quot; ?</p>
           <p className="mt-2 text-sm text-gray-500">
             Celui-ci sera retiré de la bibliothèque et ne sera plus accessible aux utilisateurs.
           </p>
@@ -437,7 +541,7 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
           <div className="mt-4 flex justify-end">
             <button
               className="bg-red-600 text-white px-4 py-2 rounded mr-2"
-              onClick={handleCourseDisapproval}
+              onClick={item.type === 'cours' ? handleCourseDisapproval : handleLiveDisapproval}
               disabled={!justification.trim()}
             >
               Désapprouver
@@ -454,27 +558,76 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
     );
   };
 
+  const stopLiveModal = ({ live }) => {
+    // Modale d'arrêt de live avec justification
+    return (
+      <div
+        className="fixed inset-0 flex items-center justify-center bg-gray-800/50 backdrop-blur-sm z-100"
+        onClick={e => {
+          e.stopPropagation();
+          e.preventDefault();
+        }}
+      >
+        <div
+          className="bg-white p-6 rounded-lg shadow-lg"
+          onClick={e => e.stopPropagation()} // Empêche la propagation vers le fond
+        >
+          <h2 className="text-xl font-semibold mb-4">Arrêter le live</h2>
+          <p>Êtes-vous sûr de vouloir arrêter le live &quot;{live.titre}&quot; ?</p>
+          <p className="mt-2 text-sm text-gray-500">
+            Celui-ci sera retiré de la bibliothèque, sera arrêté et ne sera plus accessible aux utilisateurs.
+          </p>
+          <textarea
+            className="w-full mt-4 p-2 border rounded"
+            placeholder="Justification (obligatoire)"
+            value={justification}
+            onChange={e => setJustification(e.target.value)}
+            maxLength={255}
+            cols="30"
+            rows="4"
+            required
+          />
+          <div className="mt-4 flex justify-end">
+            <button
+              className="bg-red-600 text-white px-4 py-2 rounded mr-2"
+              onClick={handleStopLive}
+              disabled={!justification.trim()}
+            >
+              Arrêter
+            </button>
+            <button
+              className="bg-gray-300 text-gray-800 px-4 py-2 rounded"
+              onClick={() => setShowStopModal(false)}
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div
       className={`bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 relative 
-      ${(userRole !== 'Etudiant' && item.status === 'blocked') && 'border-2 border-red-500'} 
-      ${userRole !== 'Etudiant' && item.status === 'blocked' && showBlockedTooltip && !modButtonHovered ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+      ${(userRole !== 'Etudiant' && (item.status === 'blocked' || item.live?.statut === 'blocked' || item.live?.statut === 'disapproved') && 'border-2 border-red-500')}
+      ${userRole !== 'Etudiant' && (item.status === 'blocked' || item.live?.statut === 'blocked' || item.live?.statut === 'disapproved') && showBlockedTooltip && !modButtonHovered ? 'cursor-not-allowed' : 'cursor-pointer'}`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onMouseMove={
-        userRole === 'Administrateur' && item.status === 'blocked'
+        userRole === 'Administrateur' && (item.status === 'blocked' || item.live?.statut === 'blocked' || item.live?.statut === 'disapproved')
           ? handleBlockedMouseMove
           : undefined
       }
       onMouseOut={
-        userRole === 'Administrateur' && item.status === 'blocked'
+        userRole === 'Administrateur' && (item.status === 'blocked' || item.live?.statut === 'blocked' || item.live?.statut === 'disapproved')
           ? handleBlockedMouseLeave
           : undefined
       }
       onClick={handleClick}
     >
       {/* Tooltip flottant pour cours bloqué */}
-      {userRole === 'Administrateur' && item.status === 'blocked' && showBlockedTooltip && !modButtonHovered && (
+      {userRole === 'Administrateur' && (item.status === 'blocked' || item.live?.statut === 'blocked' || item.live?.statut === 'disapproved') && showBlockedTooltip && !modButtonHovered && (
         <div
           className="pointer-events-none fixed z-50"
           style={{
@@ -496,11 +649,12 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
           <div className="text-gray-700 whitespace-pre-line break-words">
             <span className="font-semibold text-red-600">Motif :</span>
             <br />
-            {item.block_reason ? item.block_reason : 'Aucun motif fourni.'}
+            {item.block_reason || item.live.block_reason || 'Aucun motif fourni.'}
           </div>
         </div>
       )}
-      {showDisapproveModal && disapproveCourseModal({ course: item })}
+      {showDisapproveModal && disapproveCourseModal(item)}
+      {showStopModal && stopLiveModal({ live: item })}
       {/* Bouton de modération pour les administrateurs */}
       {userRole === 'Administrateur' && (
         <div
@@ -540,11 +694,11 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
               {item.live?.statut === 'ongoing' ? (
                 <button
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                  onClick={e => handleModAction('unblock', e)}
+                  onClick={e => handleModAction('stop', e)}
                 >
                   Arrêter le live
                 </button>
-              ) : item.live?.statut === 'blocked' && (
+              ) : item.live?.statut === 'blocked' || item.live?.statut === 'disapproved' && (
                 <button
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                   onClick={e => handleModAction('unblock', e)}
@@ -669,7 +823,21 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
                 </p>
               </div>
             </div>
-          ) : (
+          ) : item.live?.statut === 'blocked' ? (<div className="w-full h-full bg-blue-50 flex items-center justify-center">
+            <div className="text-center">
+              <ShieldBan className="w-11 h-11 text-red-600 mx-auto mb-2" />
+              <p className="text-sm text-red-600 font-medium">
+                <strong>Live bloqué</strong>
+              </p>
+            </div>
+          </div>) : item.live?.statut === 'disapproved' ? (<div className="w-full h-full bg-blue-50 flex items-center justify-center">
+            <div className="text-center">
+              <ShieldBan className="w-11 h-11 text-red-600 mx-auto mb-2" />
+              <p className="text-sm text-red-600 font-medium">
+                <strong>Live programmé refusé</strong>
+              </p>
+            </div>
+          </div>) : (
             <div className="w-full h-full bg-gray-200 flex items-center justify-center">
               <p className="text-gray-500">Aucune image disponible</p>
             </div>
@@ -756,6 +924,7 @@ ContentCard.propTypes = {
     live: PropTypes.shape({
       date_debut: PropTypes.string,
       statut: PropTypes.string,
+      block_reason: PropTypes.string, // Ajouté pour les administrateurs
     }),
     description: PropTypes.string,
     video: PropTypes.shape({

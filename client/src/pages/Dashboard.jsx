@@ -9,24 +9,34 @@ import NavigationBar from '../components/Navbar';
 import Logo from '../Logo';
 
 // Lazy load components
+
+// Common components
 const PictureModal = lazy(() => import('../components/PictureModal'));
+const Mailbox = lazy(() => import('../components/Mailbox'));
+const ThemeSettings = lazy(() => import('./Public/Theme'));
+const NotFound = lazy(() => import('./Public/NotFound'));
+
+// Administrator-specific components
 const AdminDashboardHome = lazy(() => import('./Admin/DashboardHome'));
+const UserManagement = lazy(() => import('./Admin/UserManagement'));
+const ClassManagement = lazy(() => import('./Admin/ClassManagement'));
+
+// Professor-specific components
 const ProfDashboardHome = lazy(() => import('./Professeur/DashboardHome'));
-const EleveDashboardHome = lazy(() => import('./Eleve/DashboardHome'));
-const CoursesLibrary = lazy(() => import('./CoursesLibrary'));
 const CoursesManagement = lazy(() => import('../components/ProfComp/CoursesManagment'));
 const DocumentManager = lazy(() => import('../components/ProfComp/DocumentMng'));
 const VideoManager = lazy(() => import('../components/ProfComp/VideoMng'));
 const VideoRecording = lazy(() => import('../components/ProfComp/Recording'));
+
+// Student-specific components
+const EleveDashboardHome = lazy(() => import('./Eleve/DashboardHome'));
+
+// Shared components across roles
+const CoursesLibrary = lazy(() => import('./CoursesLibrary'));
 const CourseReader = lazy(() => import('./CourseReader'));
-const LiveViewer = lazy(() => import('./Eleve/LiveViewer'));
+const LiveViewer = lazy(() => import('./LiveViewer'));
 const Forum = lazy(() => import('./Forum'));
-const UserManagement = lazy(() => import('./Admin/UserManagement'));
-const ClassManagement = lazy(() => import('./Admin/ClassManagement'));
-const ThemeSettings = lazy(() => import('./Public/Theme'));
 const Settings = lazy(() => import('./Settings'));
-const NotFound = lazy(() => import('./Public/NotFound'));
-const Mailbox = lazy(() => import('./Mailbox'));
 
 // Add a loading component
 const LoadingComponent = () => (
@@ -119,51 +129,44 @@ const Dashboard = ({ content, token, role }) => {
   };
 
   const contentMap = {
-    Home: user.role === 'Administrateur' ? (
+    Home: role === 'Administrateur' ? (
       <Suspense fallback={<LoadingComponent />}>
-        <AdminDashboardHome />
+        <AdminDashboardHome user={user} />
       </Suspense>
-    ) : user.role === 'Professeur' ? (
+    ) : role === 'Professeur' ? (
       <Suspense fallback={<LoadingComponent />}>
-        <ProfDashboardHome authToken={token} />
+        <ProfDashboardHome user={user} />
       </Suspense>
     ) : (
       <Suspense fallback={<LoadingComponent />}>
-        <EleveDashboardHome authToken={token} />
+        <EleveDashboardHome user={user} />
       </Suspense>
     ),
-    CoursesLibrary: <CoursesLibrary authToken={token} userRole={user.role} />,
-    CourseReader: <CourseReader authToken={token} />,
-    ...(user.role === 'Administrateur'
-      ? {
-        Home: <AdminDashboardHome authToken={token} />,
-      }
-      : {}),
-    ...(user.role === 'Administrateur' || user.role === 'Professeur'
+    CoursesLibrary: <CoursesLibrary authToken={token} userRole={role} />,
+    CourseReader: <CourseReader authToken={token} userRole={role} />,
+    ...(role === 'Administrateur'
       ? {
         UserManagement: <UserManagement authToken={token} />,
         ClassManagement: <ClassManagement authToken={token} />,
       }
       : {}),
-    ...(user.role === 'Professeur'
+    ...(role === 'Professeur'
       ? {
-        Home: <ProfDashboardHome authToken={token} />,
         CoursesManagement: <CoursesManagement authToken={token} />,
         VideoManager: <VideoManager authToken={token} />,
         VideoRecording: <VideoRecording authToken={token} />,
         DocumentManager: <DocumentManager authToken={token} />,
       }
       : {}),
-    ...(user.role === 'Etudiant'
+    ...(role === 'Etudiant'
       ? {
-        Home: <EleveDashboardHome authToken={token} />,
         CoursesLibrary: <CoursesLibrary authToken={token} />,
         CourseReader: <CourseReader authToken={token} />,
       }
       : {}),
     ThemeSettings: <ThemeSettings />,
-    Forum: <Forum authToken={token} />,
-    LiveViewer: <LiveViewer authToken={token} />,
+    Forum: <Forum authToken={token} userRole={role} />,
+    LiveViewer: <LiveViewer authToken={token} userRole={role} />,
     Settings: (
       <Settings
         authToken={token}

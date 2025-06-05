@@ -402,6 +402,8 @@ const FirstLogin = ({ token, setAuth }) => {
                     onPaste={e => handleDigitPaste(index, e)}
                     className="w-12 h-12 border border-gray-300 rounded-lg text-center text-xl font-bold"
                     aria-label={`Digit ${index + 1} of verification code`}
+                    autoFocus={index === 0}
+                    required
                   />
                 ))}
               </div>

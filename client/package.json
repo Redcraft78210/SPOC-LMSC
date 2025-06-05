@@ -39,6 +39,7 @@
     "react-avataaars": "^0.2.3",
     "react-dom": "^19.1.0",
     "react-hot-toast": "^2.5.2",
+    "react-joyride": "^2.9.3",
     "react-markdown": "^10.1.0",
     "react-mentions": "^4.4.10",
     "react-pdf": "^9.2.1",

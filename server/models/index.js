@@ -26,6 +26,8 @@ const Attachment = require('./Attachment');
 const Message = require('./Message');
 const Recipient = require('./Recipient');
 const TrashMessage = require('./TrashMessage');
+const Warning = require('./Warning');
+const Flag = require('./Flag');
 
 // Define associations
 Course.belongsToMany(Student, { through: 'Enrollments' });
@@ -142,6 +144,15 @@ Attachment.belongsTo(Message);
 User.hasOne(UserAvatar, { foreignKey: 'user_id', as: 'avatar' });
 UserAvatar.belongsTo(User, { foreignKey: 'user_id' });
 
+// Associations
+// Add any associations for the new models
+// For example:
+Warning.belongsTo(User, { as: 'user', foreignKey: 'userId' });
+Warning.belongsTo(User, { as: 'admin', foreignKey: 'adminId' });
+
+Flag.belongsTo(User, { as: 'reporter', foreignKey: 'reportedBy' });
+Flag.belongsTo(User, { as: 'resolver', foreignKey: 'resolvedBy' });
+
 // Export models and sequelize instance
 module.exports = {
   // User-related models
@@ -182,4 +193,6 @@ module.exports = {
   
   // Database
   sequelize,
+  Warning,
+  Flag,
 };
