@@ -1,7 +1,7 @@
 // api.js
 import axios from 'axios';
 
-const baseURL = 'https://172.20.10.5:8443/api';
+const baseURL = 'https://localhost:8443/api';
 
 // Create an Axios instance
 const api = axios.create({
@@ -37,6 +37,10 @@ api.interceptors.response.use(
       console.warn('Unauthorized. Redirecting to login...');
 
       window.location.href = '/logout'; // Redirect to login page
+    } else if (error.response?.data?.message?.includes("User has already completed first login.")) {
+      // Handle user already completed first login
+      console.warn('User has already completed first login. Redirecting to dashboard...');
+      window.location.href = '/logout'; // Redirect to dashboard
     }
     return Promise.reject(error);
   }

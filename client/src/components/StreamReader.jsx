@@ -12,7 +12,7 @@ import {
 
 const WSS_BASE_URL = 'wss://172.20.10.5:8443/api';
 
-const StreamReader = ({ authToken, controls }) => {
+const StreamReader = ({ authToken, controls, status }) => {
   const containerRef = useRef();
   const playerRef = useRef();
   const controlsTimerRef = useRef(null);
@@ -113,7 +113,7 @@ const StreamReader = ({ authToken, controls }) => {
       function () {
         if (audioContext.state === 'suspended') {
           audioContext.resume();
-          
+
         }
       },
       { once: true }
@@ -159,12 +159,12 @@ const StreamReader = ({ authToken, controls }) => {
     wsRef.current = ws;
 
     ws.onopen = function () {
-      
+
       setConnectionStatus('connected');
     };
 
     ws.onclose = function () {
-      
+
       setConnectionStatus('disconnected');
     };
 
@@ -228,16 +228,18 @@ const StreamReader = ({ authToken, controls }) => {
           `}
         >
           <div className="flex justify-end px-4 pt-2">
-            <div
-              className={`flex items-center gap-2 ${connectionStatus === 'connected' ? 'text-red-500' : 'text-gray-400'}`}
-            >
-              <span
-                className={`w-3 h-3 rounded-full ${connectionStatus === 'connected' ? 'bg-red-500 animate-pulse' : 'bg-gray-400'}`}
-              ></span>
-              <span className="uppercase text-xs font-semibold tracking-widest">
-                {connectionStatus === 'connected' ? 'LIVE' : 'CONNECTING'}
-              </span>
-            </div>
+            {status === 'ongoing' && (
+              <div
+                className={`flex items-center gap-2 ${connectionStatus === 'connected' ? 'text-red-500' : 'text-gray-400'}`}
+              >
+                <span
+                  className={`w-3 h-3 rounded-full ${connectionStatus === 'connected' ? 'bg-red-500 animate-pulse' : 'bg-gray-400'}`}
+                ></span>
+                <span className="uppercase text-xs font-semibold tracking-widest">
+                  {connectionStatus === 'connected' ? 'LIVE' : 'CONNECTING'}
+                </span>
+              </div>
+            )}
           </div>
 
           {!isPlaying && (
@@ -295,6 +297,7 @@ const StreamReader = ({ authToken, controls }) => {
 StreamReader.propTypes = {
   authToken: PropTypes.string.isRequired,
   controls: PropTypes.bool,
+  status: PropTypes.string,
 };
 
 export { StreamReader };

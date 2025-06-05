@@ -7,6 +7,7 @@ import {
   useLocation,
 } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
+import { TutorialProvider } from './contexts/TutorialContext';
 
 // Replace static imports with lazy imports
 const About = React.lazy(() => import('./pages/Public/About'));
@@ -83,7 +84,9 @@ const publicRouteConfig = [
 function AppWrapper() {
   return (
     <Router>
-      <App />
+      <TutorialProvider>
+        <App />
+      </TutorialProvider>
     </Router>
   );
 }

@@ -2,12 +2,20 @@ const { Lives, ClassLives, Classe, Teacher } = require('../models');
 const ffmpeg = require('fluent-ffmpeg');
 const fs = require('fs');
 const path = require('path');
+const { Op } = require('sequelize');
 
 // Example controller functions
 const getLive = async (req, res) => {
+    let userRole = req.user.role;
+    let whereCondition;
+    if (userRole === 'Etudiant') {
+        whereCondition = {
+            status: { [Op.or]: ['ongoing', 'scheduled'] },
+        };
+    }
     try {
         const { id } = req.params;
-        const live = await Lives.findByPk(id);
+        const live = await Lives.findByPk(id, whereCondition);
 
         if (live) {
             const teacher = await Teacher.findByPk(live.teacher_id, { attributes: ['surname'] });
@@ -24,8 +32,17 @@ const getLive = async (req, res) => {
 };
 
 const getAllLives = async (req, res) => {
+    let userRole = req.user.role;
+    let whereCondition;
+    if (userRole === 'Etudiant') {
+        whereCondition = {
+            status: { [Op.or]: ['ongoing', 'scheduled'] },
+        };
+    }
+
     try {
         const lives = await Lives.findAll({
+            where: whereCondition,
             include: [
                 { model: Teacher, attributes: ['surname'] }
             ]
@@ -60,7 +77,8 @@ const getAllLives = async (req, res) => {
                 live: {
                     date_debut: live.start_time,
                     date_fin: live.end_time,
-                    statut: live.status
+                    statut: live.status,
+                    block_reason: live.block_reason
                 }
             };
         });
@@ -239,6 +257,91 @@ const addLive = async (req, res) => {
     }
 };
 
+const startLive = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const live = await Lives.findByPk(id);
+        if (live) {
+            live.status = 'ongoing';
+            await live.save();
+            res.json(live);
+        } else {
+            res.status(404).json({ message: 'Live data not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Error starting live data', error });
+    }
+};
+
+const endLive = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const live = await Lives.findByPk(id);
+        if (live) {
+            live.status = 'completed';
+            await live.save();
+            res.json(live);
+        } else {
+            res.status(404).json({ message: 'Live data not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Error ending live data', error });
+    }
+};
+
+const disapproveLive = async (req, res) => {
+    const { justification } = req.body;
+    if (!justification) {
+        return res.status(400).json({ message: 'Justification is required' });
+    }
+    try {
+        const { id } = req.params;
+        const live = await Lives.findByPk(id);
+        if (live) {
+            live.status = 'disapproved';
+            live.block_reason = justification;
+            await live.save();
+            res.json(live);
+        } else {
+            res.status(404).json({ message: 'Live data not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Error disapproving live data', error });
+    }
+}
+
+const blockLive = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const live = await Lives.findByPk(id);
+        if (live) {
+            live.status = 'blocked';
+            await live.save();
+            res.json(live);
+        } else {
+            res.status(404).json({ message: 'Live data not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Error blocking live data', error });
+    }
+};
+
+const unblockLive = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const live = await Lives.findByPk(id);
+        if (live) {
+            live.status = 'scheduled';
+            await live.save();
+            res.json(live);
+        } else {
+            res.status(404).json({ message: 'Live data not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Error unblocking live data', error });
+    }
+};
+
 const editLive = async (req, res) => {
     try {
         const { id } = req.params;
@@ -279,4 +382,9 @@ module.exports = {
     addLive,
     editLive,
     deleteLive,
+    startLive,
+    endLive,
+    disapproveLive,
+    blockLive,
+    unblockLive
 };

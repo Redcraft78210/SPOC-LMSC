@@ -181,6 +181,8 @@ const getMainCourse = async (req, res) => {
       "titre": cours.title,
       "date_creation": cours.createdAt,
       "description": cours.description,
+      "status": cours.status,
+      "block_reason": cours.block_reason || null,
       "video": cours.Videos.length > 0 ? {
         "video_id": cours.Videos[0].id,
         "date_mise_en_ligne": cours.Videos[0].createdAt,

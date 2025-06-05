@@ -34,6 +34,7 @@ import {
   CircleX,
   XCircle,
 } from 'lucide-react';
+import UserManagementTutorial from '../../tutorials/UserManagementTutorial';
 
 const errorMessages = {
   'auth/invalid-credentials': 'Identifiants incorrects',
@@ -52,7 +53,7 @@ const errorMessages = {
 // Définir SearchUser en dehors du composant principal
 const SearchUser = memo(function SearchUser({ value, onChange }) {
   return (
-    <div className="relative flex-1 max-w-xl">
+    <div className="searchuser relative flex-1 max-w-xl">
       <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
       <input
         type="text"
@@ -108,12 +109,34 @@ const UserManagement = () => {
     fetchClasses();
   }, [fetchClasses, fetchUsers]);
 
-  const [viewMode, setViewMode] = useState('list');
+  // Determine initial view mode based on screen width
+  const getInitialViewMode = () => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth < 640 ? 'grid' : 'list';
+    }
+    return 'list'; // Fallback for SSR
+  };
+
+  const [viewMode, setViewMode] = useState(getInitialViewMode);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showInviteCodeModal, setShowInviteCodeModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
+
+  // Add window resize listener to update view mode on screen size change
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 640 && viewMode === 'list') {
+        setViewMode('grid');
+      } else if (window.innerWidth >= 640 && viewMode === 'grid') {
+        setViewMode('list');
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [viewMode]);
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
@@ -276,7 +299,7 @@ const UserManagement = () => {
 
   const ToggleView = () => {
     return (
-      <div className="flex gap-2">
+      <div className="flex gap-2 toggleView">
         <button
           onClick={() => setViewMode('list')}
           className={`p-2 rounded-lg ${viewMode === 'list' ? 'bg-blue-100 text-blue-600' : 'text-gray-600'
@@ -332,7 +355,7 @@ const UserManagement = () => {
 
   const UserTable = () => {
     return (
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-lg shadow overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -691,7 +714,7 @@ const UserManagement = () => {
         setIsLoading(false);
       }
     };
-    
+
     const handleClose = useCallback(() => {
       if (
         hasUnsavedChanges() &&
@@ -1418,6 +1441,8 @@ const UserManagement = () => {
   return (
     <div className="container mx-auto p-6">
       <Toaster position="bottom-right" reverseOrder={false} />
+      <UserManagementTutorial />
+
       <div className="flex flex-col gap-4 mb-8">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-800">

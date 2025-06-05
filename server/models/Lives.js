@@ -32,8 +32,12 @@ const Lives = sequelize.define('Lives', {
         allowNull: false
     },
     status: {
-        type: DataTypes.ENUM('scheduled', 'ongoing', 'completed', 'cancelled'),
+        type: DataTypes.ENUM('draft', 'scheduled', 'ongoing', 'completed', 'blocked', 'disapproved'),
         defaultValue: 'scheduled'
+    },
+    block_reason: {
+        type: DataTypes.STRING,
+        allowNull: true
     },
     createdAt: {
         type: DataTypes.DATE,

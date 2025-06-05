@@ -308,7 +308,7 @@ const refresh2FASetup = async (req, res) => {
     if (!user) return res.status(404).json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS });
 
     const newTempToken = generateTempToken(user.id, true);
-    return res.json({ tempToken: newTempToken });
+    return res.status(201).json({ tempToken: newTempToken });
 
   } catch (error) {
     console.error('2FA refresh error:', error);
@@ -367,7 +367,7 @@ const firstLogin = async (req, res) => {
     const qrCode = await qrcode.toDataURL(authenticator.keyuri(email, process.env.APP_NAME, secret));
     const tempToken = generateTempToken(user.id, true);
 
-    return res.status(201).json({
+    return res.status(200).json({
       tempToken,
       twoFASetup: {
         qrCode,

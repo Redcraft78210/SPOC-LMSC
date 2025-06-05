@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import PropTypes from 'prop-types';
-import { StreamReader } from '../../components/StreamReader';
-import process from 'process';
+import { StreamReader } from '../components/StreamReader';
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 // Import react-mentions
@@ -11,13 +10,19 @@ import {
   getLiveMessages,
   sendLiveMessage,
   logViewEngagement,
-  getLiveParticipants
-} from '../../API/LiveCaller';
-
-const WSS_BASE_URL = "wss://172.20.10.5:8443";
+  disapproveLive,
+  endLive,
+  blockLive,
+  unblockLive,
+  deleteLive,
+} from '../API/LiveCaller';
+import { Toaster, toast } from 'react-hot-toast';
+import { ShieldEllipsis, ShieldBan, ShieldAlert } from 'lucide-react';
 
 const INACTIVITY_THRESHOLD = 60000; // 1 minute in ms
 const TEN_MINUTES = 600; // 600 seconds
+
+const WSS_BASE_URL = "wss://172.20.10.5:8443"
 
 // Extracted loading spinner component
 const LoadingSpinner = () => (
@@ -80,7 +85,7 @@ const LiveNotFound = () => {
           supprimé.
         </p>
         <button
-          onClick={() => navigate('/Lives-librairy')}
+          onClick={() => navigate('/courses-library')}
           className="mt-6 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
         >
           Retour
@@ -90,20 +95,21 @@ const LiveNotFound = () => {
   );
 };
 
-const LiveViewer = ({ authToken }) => {
+const LiveViewer = ({ authToken, userRole }) => {
   const [streamData, setStreamData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [streamId, setStreamId] = useState('');
   const [userId, setUserId] = useState('');
   const userActivityTimeout = useRef();
+  const navigate = useNavigate();
 
   // User engagement tracking
   const [activeViewTime, setActiveViewTime] = useState(0);
   const [isPageVisible, setIsPageVisible] = useState(true);
   const [hasReachedTenMinutes, setHasReachedTenMinutes] = useState(false);
 
-  // Get user ID from token
+  // Get user ID and role from token
   useEffect(() => {
     try {
       const decodedToken = jwtDecode(authToken);
@@ -129,19 +135,18 @@ const LiveViewer = ({ authToken }) => {
     let lastUpdateTime = Date.now();
 
     const handleUserActivity = () => {
-      // Reset inactivity timer
+      lastUpdateTime = Date.now();
       if (userActivityTimeout.current) {
         clearTimeout(userActivityTimeout.current);
       }
-      userActivityTimeout.current = setTimeout(() => {
-        logEngagement('inactive');
-      }, INACTIVITY_THRESHOLD);
     };
 
     const handleVisibilityChange = () => {
-      setIsPageVisible(document.visibilityState === 'visible');
-      if (document.visibilityState === 'visible') {
+      const visible = !document.hidden;
+      setIsPageVisible(visible);
+      if (visible) {
         logEngagement('visibility_return');
+        lastUpdateTime = Date.now();
       } else {
         logEngagement('visibility_lost');
       }
@@ -149,63 +154,55 @@ const LiveViewer = ({ authToken }) => {
 
     const startTracking = () => {
       timer = setInterval(() => {
-        if (isPageVisible && !hasReachedTenMinutes) {
-          const now = Date.now();
-          // Calculate time since last update
-          const deltaTime = (now - lastUpdateTime) / 1000;
-          lastUpdateTime = now;
-          
-          // Increment active view time
-          setActiveViewTime(prevTime => {
-            const newTime = prevTime + deltaTime;
-            
-            // Check if we've reached 10 minutes
-            if (prevTime < TEN_MINUTES && newTime >= TEN_MINUTES) {
-              logEngagement('ten_minutes_reached');
+        const now = Date.now();
+        const isActive = now - lastUpdateTime <= INACTIVITY_THRESHOLD;
+
+        if (isPageVisible && isActive) {
+          setActiveViewTime(prev => {
+            const newTime = prev + 1;
+            if (newTime >= TEN_MINUTES && !hasReachedTenMinutes) {
               setHasReachedTenMinutes(true);
+              logEngagement('active_ten_minute_view');
             }
-            
             return newTime;
           });
         }
       }, 1000);
     };
 
-    // Initial engagement log
-    logEngagement('start_view');
-    handleUserActivity();
+    // Event listeners
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('mousemove', handleUserActivity);
+    document.addEventListener('keydown', handleUserActivity);
+    document.addEventListener('scroll', handleUserActivity);
+
     startTracking();
 
     return () => {
       clearInterval(timer);
-      if (userActivityTimeout.current) {
-        clearTimeout(userActivityTimeout.current);
-      }
-      logEngagement('end_view');
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       document.removeEventListener('mousemove', handleUserActivity);
       document.removeEventListener('keydown', handleUserActivity);
       document.removeEventListener('scroll', handleUserActivity);
     };
-  }, [streamData, isPageVisible, hasReachedTenMinutes, authToken, streamId, logEngagement]);
+  }, [streamData, isPageVisible, hasReachedTenMinutes, authToken, streamId]);
 
-  const logEngagement = useCallback(type => {
+  const logEngagement = useCallback(() => {
     try {
-      logViewEngagement({ 
-        streamId, 
-        eventType: type, 
-        activeViewTime: Math.round(activeViewTime) 
+      logViewEngagement({
+        streamId,
+        activeViewTime: Math.round(activeViewTime)
       });
     } catch (error) {
       console.error("Failed to log engagement:", error);
     }
   }, [authToken, streamId, activeViewTime]);
 
-  const fetchStreamData = useCallback(async () => {
+  const fetchStreamData = useCallback(async signal => {
     try {
       setLoading(true);
-      const response = await getLiveById({ liveId: streamId });
-      
+      const response = await getLiveById(streamId);
+
       if (response.status === 200) {
         setStreamData(response.data);
         setError(null);
@@ -214,11 +211,14 @@ const LiveViewer = ({ authToken }) => {
       } else {
         setError(response.message || 'Erreur lors du chargement du stream');
       }
-    } catch (error) {
-      console.error("Erreur lors du chargement du stream:", error);
-      setError(error.data.message || 'Erreur lors du chargement du stream');
+    } catch (err) {
+      if (!signal.aborted) {
+        setError(err.message || 'Erreur lors du chargement du stream');
+      }
     } finally {
-      setLoading(false);
+      if (!signal.aborted) {
+        setLoading(false);
+      }
     }
   }, [streamId]);
 
@@ -230,15 +230,6 @@ const LiveViewer = ({ authToken }) => {
 
     return () => abortController.abort();
   }, [fetchStreamData, streamId]);
-
-  const formatTime = useMemo(
-    () => seconds => {
-      const mins = Math.floor(seconds / 60);
-      const secs = seconds % 60;
-      return `${mins}:${secs.toString().padStart(2, '0')}`;
-    },
-    []
-  );
 
   // Format date for scheduled live display
   const formatScheduledDate = useCallback((dateString) => {
@@ -273,6 +264,154 @@ const LiveViewer = ({ authToken }) => {
     return { days, hours, minutes };
   }, []);
 
+  const [showModMenu, setShowModMenu] = useState(false);
+  const [showDisapproveModal, setShowDisapproveModal] = useState(false);
+  const [showStopModal, setShowStopModal] = useState(false);
+  const [justification, setJustification] = useState('');
+  const menuRef = useRef(null);
+  const [showBlockedTooltip, setShowBlockedTooltip] = useState(false);
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+
+  const handleMenuToggle = (e) => {
+    e.stopPropagation();
+    setShowModMenu((prev) => !prev);
+  };
+
+  const handleModAction = (action, e) => {
+    e.stopPropagation();
+    setShowModMenu(false);
+    if (action === 'disapprove') {
+      setShowDisapproveModal(true);
+    } else if (action === 'stop') {
+      setShowStopModal(true);
+    } else if (action === 'unblock') {
+      handleUnblockLive();
+    } else if (action === 'delete') {
+      handleDeleteLive();
+    }
+  };
+
+  const handleLiveDisapproval = async () => {
+    if (!justification.trim() || justification.length < 50) {
+      toast.error('Veuillez fournir une justification d\'au moins 50 caractères pour la désapprobation.');
+      return;
+    }
+    try {
+      const response = await disapproveLive({
+        liveId: streamId,
+        justification,
+      });
+      if (response.status === 200) {
+        toast.success('Live désapprouvé avec succès');
+        setShowDisapproveModal(false);
+        setJustification('');
+        navigate('/courses-library');
+      } else {
+        throw new Error(response.message || 'Erreur lors de la désapprobation du live');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la désapprobation du live:', error);
+      toast.error('Une erreur est survenue lors de la désapprobation du live');
+    }
+  };
+
+  const handleStopLive = async () => {
+    if (!justification.trim() || justification.length < 50) {
+      toast.error('Veuillez fournir une justification d\'au moins 50 caractères.');
+      return;
+    }
+
+    try {
+      const response = await endLive({
+        liveId: streamId,
+        justification,
+      });
+
+      const blockResponse = await blockLive({ liveId: streamId, justification });
+      if (blockResponse.status !== 200) {
+        throw new Error(blockResponse.message || 'Erreur lors du blocage du live');
+      }
+
+      if (response.status === 200) {
+        toast.success('Live arrêté avec succès');
+        setShowStopModal(false);
+        setJustification('');
+        navigate('/courses-library');
+      } else {
+        throw new Error(response.message || 'Erreur lors de l\'arrêt du live');
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'arrêt du live:', error);
+      toast.error('Une erreur est survenue lors de l\'arrêt du live');
+    }
+  };
+
+  const handleUnblockLive = async () => {
+    if (!window.confirm('Êtes-vous sûr de vouloir débloquer ce live ?')) {
+      return;
+    }
+    try {
+      const response = await unblockLive(streamId);
+      if (response.status === 200) {
+        toast.success('Live débloqué avec succès');
+        fetchStreamData(new AbortController().signal);
+      } else {
+        throw new Error(response.message || 'Erreur lors du déblocage du live');
+      }
+    } catch (error) {
+      console.error('Erreur lors du déblocage du live:', error);
+      toast.error(
+        error?.response?.data?.message ||
+        error.message ||
+        'Une erreur est survenue lors du déblocage du live'
+      );
+    }
+  };
+
+  const handleDeleteLive = async () => {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce live ?')) {
+      return;
+    }
+    try {
+      const response = await deleteLive(streamId);
+      if (response.status === 200) {
+        toast.success('Live supprimé avec succès');
+        navigate('/courses-library');
+      } else {
+        throw new Error(response.message || 'Erreur lors de la suppression du live');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la suppression du live:', error);
+      toast.error(
+        error?.response?.data?.message ||
+        error.message ||
+        'Une erreur est survenue lors de la suppression du live'
+      );
+    }
+  };
+
+  const handleBlockedMouseMove = (e) => {
+    setTooltipPos({ x: e.clientX, y: e.clientY });
+    if (!showBlockedTooltip) setShowBlockedTooltip(true);
+  };
+
+  const handleBlockedMouseLeave = () => {
+    setShowBlockedTooltip(false);
+  };
+
+  // Add this effect to handle clicking outside the moderation menu
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setShowModMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   if (error === 'Stream non trouvé') return <LiveNotFound />;
   if (loading) return <LoadingSpinner />;
   if (error)
@@ -281,29 +420,226 @@ const LiveViewer = ({ authToken }) => {
     );
   if (!streamData) return null;
 
-  const isScheduled = streamData.est_programe;
-  const scheduledDate = isScheduled ? formatScheduledDate(streamData.date_heure_lancement) : null;
-  const timeRemaining = isScheduled ? calculateTimeRemaining(streamData.date_heure_lancement) : null;
+  const isScheduled = streamData.status === 'scheduled';
+  const scheduledDate = isScheduled ? formatScheduledDate(streamData.start_time) : null;
+  const timeRemaining = isScheduled ? calculateTimeRemaining(streamData.start_time) : null;
 
   return (
     <div className="space-y-6 p-4 max-w-7xl mx-auto">
-      {process.env.NODE_ENV === 'development' && (
-        <div className="text-xs bg-gray-100 p-2 rounded-md text-gray-600">
-          Active viewing time: {formatTime(activeViewTime)}
-          {!isPageVisible && ' (paused)'}
+      <Toaster position="top-right" />
+
+      {/* Moderation controls for admins */}
+      {userRole === 'Administrateur' && (
+        <div className="mb-4 flex justify-end">
+          <div className="relative">
+            <button
+              className="flex items-center bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md transition-colors"
+              onClick={handleMenuToggle}
+            >
+              <ShieldEllipsis className="h-5 w-5 mr-2" />
+              Modération
+            </button>
+
+            {showModMenu && (
+              <div
+                ref={menuRef}
+                className="absolute right-0 mt-1 w-48 bg-white shadow-lg rounded-md py-1 z-20"
+              >
+                {streamData && (streamData.status === 'blocked' || streamData.status === 'disapproved') ? (
+                  <button
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    onClick={(e) => handleModAction('unblock', e)}
+                  >
+                    Débloquer
+                  </button>
+                ) : streamData && streamData.status === 'scheduled' ? (
+                  <button
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    onClick={(e) => handleModAction('disapprove', e)}
+                  >
+                    Désapprouver
+                  </button>
+                ) : streamData && streamData.status === 'ongoing' ? (
+                  <button
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                    onClick={(e) => handleModAction('stop', e)}
+                  >
+                    Arrêter le live
+                  </button>
+                ) : null}
+                <button
+                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                  onClick={(e) => handleModAction('delete', e)}
+                >
+                  Supprimer
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Blocked Live Alert */}
+      {streamData && streamData.status === 'blocked' ? (
+        <div
+          className="mb-6 p-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-md"
+          onMouseMove={handleBlockedMouseMove}
+          onMouseLeave={handleBlockedMouseLeave}
+        >
+          <div className="flex items-center">
+            <ShieldBan className="h-6 w-6 mr-2" />
+            <p className="font-medium">Ce live est actuellement bloqué</p>
+          </div>
+          {streamData.block_reason && (
+            <p className="mt-2 text-sm truncate">{streamData.block_reason}</p>
+          )}
+        </div>
+      ) : streamData && streamData.status === 'disapproved' ? (
+        <div
+          className="mb-6 p-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 rounded-md"
+          onMouseMove={handleBlockedMouseMove}
+          onMouseLeave={handleBlockedMouseLeave}
+        >
+          <div className="flex items-center">
+            <ShieldAlert className="h-6 w-6 mr-2" />
+            <p className="font-medium">Ce live n&apos;a pas été approuvé par la modération</p>
+          </div>
+          {streamData.block_reason && (
+            <p className="mt-2 text-sm truncate">{streamData.block_reason}</p>
+          )}
+        </div>
+      ) : null}
+
+      {/* Tooltip for blocked live */}
+      {userRole === 'Administrateur' && streamData && (streamData.status === 'blocked' || streamData.status === 'disapproved') && showBlockedTooltip && (
+        <div
+          className="pointer-events-none fixed z-50"
+          style={{
+            left: tooltipPos.x + 16,
+            top: tooltipPos.y + 16,
+            maxWidth: 320,
+            background: 'rgba(255,255,255,0.98)',
+            border: '1px solid #ef4444',
+            borderRadius: '0.75rem',
+            boxShadow: '0 4px 24px 0 rgba(0,0,0,0.10)',
+            padding: '1rem',
+            color: '#991b1b',
+            fontSize: '0.95rem',
+            whiteSpace: 'pre-line',
+            lineHeight: 1.5,
+          }}
+        >
+          <div className="font-bold mb-1 text-red-700">Statut : Bloqué</div>
+          <div className="text-gray-700 whitespace-pre-line break-words">
+            <span className="font-semibold text-red-600">Motif :</span>
+            <br />
+            {streamData.block_reason || 'Aucun motif fourni.'}
+          </div>
+        </div>
+      )}
+
+      {/* Disapprove Modal */}
+      {showDisapproveModal && (
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-gray-800/50 backdrop-blur-sm z-100"
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+          }}
+        >
+          <div
+            className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-xl font-semibold mb-4">Désapprouver le live</h2>
+            <p>Êtes-vous sûr de vouloir désapprouver le live &quot;{streamData.title}&quot; ?</p>
+            <p className="mt-2 text-sm text-gray-500">
+              Celui-ci sera retiré de la bibliothèque et ne sera plus accessible aux utilisateurs.
+            </p>
+            <textarea
+              className="w-full mt-4 p-2 border rounded"
+              placeholder="Justification (minimum 50 caractères)"
+              value={justification}
+              onChange={(e) => setJustification(e.target.value)}
+              maxLength={255}
+              rows="4"
+              required
+            />
+            <div className="mt-4 flex justify-end">
+              <button
+                className="bg-red-600 text-white px-4 py-2 rounded mr-2"
+                onClick={handleLiveDisapproval}
+                disabled={justification.length < 50}
+              >
+                Désapprouver
+              </button>
+              <button
+                className="bg-gray-300 text-gray-800 px-4 py-2 rounded"
+                onClick={() => setShowDisapproveModal(false)}
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Stop Live Modal */}
+      {showStopModal && (
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-gray-800/50 backdrop-blur-sm z-100"
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+          }}
+        >
+          <div
+            className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-xl font-semibold mb-4">Arrêter le live</h2>
+            <p>Êtes-vous sûr de vouloir arrêter le live &quot;{streamData.title}&quot; ?</p>
+            <p className="mt-2 text-sm text-gray-500">
+              Le live sera immédiatement interrompu pour tous les spectateurs.
+            </p>
+            <textarea
+              className="w-full mt-4 p-2 border rounded"
+              placeholder="Justification (minimum 50 caractères)"
+              value={justification}
+              onChange={(e) => setJustification(e.target.value)}
+              maxLength={255}
+              rows="4"
+              required
+            />
+            <div className="mt-4 flex justify-end">
+              <button
+                className="bg-red-600 text-white px-4 py-2 rounded mr-2"
+                onClick={handleStopLive}
+                disabled={justification.length < 50}
+              >
+                Arrêter le live
+              </button>
+              <button
+                className="bg-gray-300 text-gray-800 px-4 py-2 rounded"
+                onClick={() => setShowStopModal(false)}
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
       <div className="mb-6 p-6 bg-white rounded-xl shadow-lg space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <span className="text-sm text-blue-700 font-semibold bg-blue-100 px-3 py-1 rounded-full">
-            {streamData.matiere}
+            {streamData.subject}
           </span>
           <time
             className="text-xs text-gray-500"
-            dateTime={streamData.date_heure_lancement}
+            dateTime={streamData.start_time}
           >
-            {new Date(streamData.date_heure_lancement).toLocaleDateString(
+            {new Date(streamData.start_time).toLocaleDateString(
               'fr-FR',
               {
                 weekday: 'long',
@@ -319,12 +655,12 @@ const LiveViewer = ({ authToken }) => {
         </div>
 
         <h1 className="text-2xl font-bold text-gray-900 leading-tight">
-          {streamData.titre}
+          {streamData.title}
         </h1>
 
         <div className="flex items-center gap-2 text-sm">
           <span className="text-gray-600">Par</span>
-          <span className="font-medium text-gray-800">{streamData.auteur}</span>
+          <span className="font-medium text-red-800 ">Professeur {streamData.professor}</span>
         </div>
 
         <p className="text-gray-700 text-base leading-relaxed">
@@ -333,57 +669,61 @@ const LiveViewer = ({ authToken }) => {
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
-        <div className="flex-1 rounded-xl overflow-hidden relative">
-          <StreamReader
+        {/* Container du player */}
+        <div className="flex-1 rounded-xl overflow-visible relative">
+          {!isScheduled && <StreamReader
             authToken={authToken}
             streamId={streamId}
-            controls={true}
-          />
-          
+            controls={streamData.status !== 'blocked' && streamData.status !== 'disapproved'}
+            status={streamData.status}
+          />}
+
           {isScheduled && (
-            <div className="absolute inset-0 bg-gray-900/80 backdrop-blur-sm flex flex-col items-center justify-center text-white z-10">
-              <div className="bg-gray-800/90 p-6 rounded-xl max-w-md text-center space-y-4">
-                <div className="inline-block p-3 bg-blue-600 rounded-full mb-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <h2 className="text-2xl font-bold">Live programmé</h2>
-                <p className="text-gray-300">Ce live commencera le</p>
-                <div className="font-medium text-xl">{scheduledDate?.day}</div>
-                <div className="text-2xl font-bold text-blue-400">{scheduledDate?.time}</div>
-                
-                {timeRemaining && (
-                  <div className="mt-6 grid grid-cols-3 gap-2">
-                    <div className="bg-gray-700 p-3 rounded-lg">
-                      <div className="text-2xl font-bold">{timeRemaining.days}</div>
-                      <div className="text-xs text-gray-400">jours</div>
-                    </div>
-                    <div className="bg-gray-700 p-3 rounded-lg">
-                      <div className="text-2xl font-bold">{timeRemaining.hours}</div>
-                      <div className="text-xs text-gray-400">heures</div>
-                    </div>
-                    <div className="bg-gray-700 p-3 rounded-lg">
-                      <div className="text-2xl font-bold">{timeRemaining.minutes}</div>
-                      <div className="text-xs text-gray-400">minutes</div>
-                    </div>
-                  </div>
-                )}
-                
-                <p className="text-sm text-gray-400 mt-4">
-                  Revenez à l&apos;heure indiquée pour regarder ce live.
-                </p>
+            <div className="bg-gray-900/80 backdrop-blur-sm flex flex-col items-center justify-center text-white w-full p-6 rounded-xl">
+              <div className="inline-block p-3 bg-blue-600 rounded-full mb-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               </div>
+              <h2 className="text-2xl font-bold">Live programmé</h2>
+              <p className="text-gray-300">Ce live commencera le</p>
+              <div className="font-medium text-xl">{scheduledDate?.day}</div>
+              <div className="text-2xl font-bold text-blue-400">{scheduledDate?.time}</div>
+
+              {timeRemaining && (
+                <div className="mt-6 grid grid-cols-3 gap-2">
+                  <div className="bg-gray-700 p-3 rounded-lg">
+                    <div className="text-2xl font-bold">{timeRemaining.days}</div>
+                    <div className="text-xs text-gray-400">jours</div>
+                  </div>
+                  <div className="bg-gray-700 p-3 rounded-lg">
+                    <div className="text-2xl font-bold">{timeRemaining.hours}</div>
+                    <div className="text-xs text-gray-400">heures</div>
+                  </div>
+                  <div className="bg-gray-700 p-3 rounded-lg">
+                    <div className="text-2xl font-bold">{timeRemaining.minutes}</div>
+                    <div className="text-xs text-gray-400">minutes</div>
+                  </div>
+                </div>
+              )}
+
+              <p className="text-sm text-gray-400 mt-4">
+                Revenez à l&apos;heure indiquée pour regarder ce live.
+              </p>
             </div>
           )}
         </div>
+
+        {/* Container du chat */}
         <div className="lg:w-96 w-full">
           <ChatBox
             streamId={streamId}
             authToken={authToken}
-            chatEnabled={isScheduled ? false : streamData.chat_enabled}
+            chatEnabled={!isScheduled && streamData.chat_enabled}
             userId={userId}
             isScheduled={isScheduled}
+            streamData={streamData} // <-- Ajout ici
           />
         </div>
       </div>
@@ -391,7 +731,7 @@ const LiveViewer = ({ authToken }) => {
   );
 };
 
-const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled }) => {
+const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled, streamData }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
@@ -399,7 +739,7 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled }) => {
   const messagesEndRef = useRef(null);
   const [disciplinaryWarning, setDisciplinaryWarning] = useState(null);
   const [showDisciplinaryWarning, setShowDisciplinaryWarning] = useState(false);
-  const [loadingMessages, setLoadingMessages] = useState(true);
+  const [loadingMessages, setLoadingMessages] = useState(false);
   const [participants, setParticipants] = useState([
     // Default empty state to prevent undefined errors
     // Will be populated when API call succeeds
@@ -410,30 +750,41 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled }) => {
   // Fetch chat history on component mount
   useEffect(() => {
     const fetchChatHistory = async () => {
-      if (!streamId || !chatEnabled || isScheduled) return;
-      
+      if (!streamId || !authToken) return;
+
+      setLoadingMessages(true);
       try {
-        setLoadingMessages(true);
-        const response = await getLiveMessages({ liveId: streamId });
-        
+        const response = await getLiveMessages(streamId);
+
         if (response.status === 200) {
           setMessages(response.data.messages || []);
+          setError(null);
         } else {
           setError(response.message || "Erreur lors du chargement des messages");
         }
-      } catch (error) {
-        console.error("Erreur lors du chargement des messages:", error);
-        setError("Erreur lors du chargement du chat");
+      } catch (err) {
+        console.error("Erreur lors de la récupération de l'historique du chat:", err);
+        setError('Impossible de charger les messages précédents.');
       } finally {
         setLoadingMessages(false);
       }
     };
-    
-    fetchChatHistory();
+
+    if (chatEnabled && !isScheduled && streamData && streamData.status !== 'blocked' && streamData.status !== 'disapproved') {
+      fetchChatHistory();
+    }
   }, [streamId, authToken, chatEnabled, isScheduled]);
 
   // WebSocket management
   useEffect(() => {
+    // Ne pas établir la connexion si le stream est bloqué ou désapprouvé
+    if (
+      streamData &&
+      (streamData.status === "blocked" || streamData.status === "disapproved")
+    ) {
+      return;
+    }
+
     const connectWebSocket = () => {
       const ws = new WebSocket(`${WSS_BASE_URL}/chat?token=${authToken}`);
       wsRef.current = ws;
@@ -444,14 +795,14 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled }) => {
       }
 
       ws.onopen = () => {
-        
+
         setError(null);
       };
 
       ws.onmessage = event => {
         try {
           const data = JSON.parse(event.data);
-           // Pour débugger
+          // Pour débugger
 
           switch (data.type) {
             case 'new_message':
@@ -480,7 +831,7 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled }) => {
               break;
 
             default:
-              
+
           }
         } catch (err) {
           console.error('Erreur lors du traitement du message WebSocket:', err);
@@ -488,7 +839,7 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled }) => {
       };
 
       ws.onclose = () => {
-        
+
       };
 
       ws.onerror = error => {
@@ -506,7 +857,7 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled }) => {
         ws.close();
       }
     };
-  }, [authToken]);
+  }, [authToken, userId, streamData]);
 
   // Fetch participants who can be mentioned
   useEffect(() => {
@@ -514,13 +865,21 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled }) => {
       if (!streamId || !authToken) return;
 
       try {
-        const response = await getLiveParticipants({ liveId: streamId });
-        
-        if (response.status === 200) {
-          setParticipants(response.data || []);
-        } else {
-          console.error("Erreur lors de la récupération des participants:", response.message);
-        }
+        // const response = await getLiveParticipants({liveId: streamId });
+
+        // if (response.status === 200) {
+        //   setParticipants(response.data || []);
+        // } else {
+        //   console.error("Erreur lors de la récupération des participants:", response.message);
+        // }
+
+        const data = [
+          { id: '1', display: 'Alice Dupont' },
+          { id: '2', display: 'Bob Martin' },
+          { id: '3', display: 'Charlie Dupont' },
+        ];
+
+        setParticipants(data);
       } catch (err) {
         console.error('Erreur lors de la récupération des participants:', err);
       }
@@ -542,29 +901,47 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled }) => {
   const handleSend = async e => {
     e.preventDefault();
     if (!input.trim() || sending) return;
-    
+
     setSending(true);
-    setError(null);
-    
+    const tempId = Date.now().toString();
+
+    // Optimistic update with tempId
+    setMessages(prev => [
+      ...prev,
+      {
+        tempId,
+        content: input.trim(),
+        user_id: userId,
+        createdAt: new Date().toISOString(),
+        User: { name: 'Vous' },
+      },
+    ]);
+
     try {
-      const response = await sendLiveMessage({ 
-        liveId: streamId, 
-        message: input.trim() 
+      const message = input.trim();
+      setInput(''); // Clear input right away
+
+      const response = await sendLiveMessage({
+        liveId: streamId,
+        message: message,
+        tempId: tempId
       });
-      
-      if (response.status === 201) {
-        setInput('');
-      } else {
+
+      if (response.status !== 201) {
         if (response.message?.includes('forbidden words')) {
           setShowDisciplinaryWarning(true);
           setDisciplinaryWarning(response.message);
         } else {
           setError(response.message || "Erreur lors de l'envoi du message");
         }
+        // Rollback optimistic update
+        setMessages(prev => prev.filter(msg => msg.tempId !== tempId));
       }
     } catch (error) {
       console.error("Erreur lors de l'envoi du message:", error);
       setError("Erreur lors de l'envoi du message");
+      // Rollback optimistic update
+      setMessages(prev => prev.filter(msg => msg.tempId !== tempId));
     } finally {
       setSending(false);
     }
@@ -673,81 +1050,81 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled }) => {
       )}
 
       {/* Zone des messages */}
-      <div className={`flex-1 p-3 space-y-3 overflow-y-auto bg-gradient-to-b from-gray-50 to-white ${isScheduled ? 'blur-sm' : ''}`}>
-        {loadingMessages ? (
-          // État de chargement
-          <div className="flex items-center justify-center py-4">
-            <svg
-              className="w-5 h-5 text-blue-500 animate-spin"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-                className="opacity-25"
-              />
-              <path
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                className="opacity-75"
-              />
-            </svg>
-          </div>
-        ) : messages.length === 0 ? (
-          // État vide
-          <div className="py-4 text-sm italic text-center text-gray-400">
-            Commencez la conversation...
-          </div>
-        ) : (
-          // Liste des messages
-          messages.map((msg, index) => (
-            <div
-              key={msg.id || `message-${index}`}
-              className="flex flex-col gap-1 group animate-fade-in"
-            >
-              <div className="flex items-baseline gap-2">
-                <span
-                  className={`text-sm font-medium ${
-                    isScheduled ? 'text-gray-400' : 
-                    msg.User?.name?.includes('Professeur')
-                      ? 'text-red-600 font-semibold'
-                      : 'text-blue-600'
-                  }`}
-                >
-                  {isScheduled 
-                    ? '••••••••' 
-                    : userId === msg.user_id
-                      ? 'Vous'
-                      : msg.User?.name || 'Anonyme'}
-                </span>
-                <time className="text-[0.7rem] text-gray-400 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                  {isScheduled 
-                    ? '••:••' 
-                    : new Date(msg.createdAt).toLocaleTimeString('fr-FR', {
+      {chatEnabled || streamData.status === 'scheduled' && (
+        <div className={`flex-1 p-3 space-y-3 overflow-y-auto bg-gradient-to-b from-gray-50 to-white ${isScheduled ? 'blur-sm' : ''}`}>
+          {loadingMessages ? (
+            // État de chargement
+            <div className="flex items-center justify-center py-4">
+              <svg
+                className="w-5 h-5 text-blue-500 animate-spin"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                  className="opacity-25"
+                />
+                <path
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  className="opacity-75"
+                />
+              </svg>
+            </div>
+          ) : messages.length === 0 ? (
+            // État vide
+            <div className="py-4 text-sm italic text-center text-gray-400">
+              Commencez la conversation...
+            </div>
+          ) : (
+            // Liste des messages
+            messages.map((msg, index) => (
+              <div
+                key={msg.id || `message-${index}`}
+                className="flex flex-col gap-1 group animate-fade-in"
+              >
+                <div className="flex items-baseline gap-2">
+                  <span
+                    className={`text-sm font-medium ${isScheduled ? 'text-gray-400' :
+                      msg.User?.name?.includes('Professeur')
+                        ? 'text-red-600 font-semibold'
+                        : 'text-blue-600'
+                      }`}
+                  >
+                    {isScheduled
+                      ? '••••••••'
+                      : userId === msg.user_id
+                        ? 'Vous'
+                        : msg.User?.name || 'Anonyme'}
+                  </span>
+                  <time className="text-[0.7rem] text-gray-400 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                    {isScheduled
+                      ? '••:••'
+                      : new Date(msg.createdAt).toLocaleTimeString('fr-FR', {
                         hour: '2-digit',
                         minute: '2-digit',
                       })}
-                </time>
+                  </time>
+                </div>
+                <div
+                  className={`p-2 text-sm ${isScheduled ? 'text-gray-400' : 'text-gray-700'} bg-gray-50 rounded-lg border border-gray-100 shadow-sm max-w-[85%] ${msg.user_id === userId ? 'mr-auto' : ''
+                    }`}
+                >
+                  {isScheduled
+                    ? '•••••••••••••••••••••••••••••••••'
+                    : renderMessageContent(msg.content)}
+                </div>
               </div>
-              <div
-                className={`p-2 text-sm ${isScheduled ? 'text-gray-400' : 'text-gray-700'} bg-gray-50 rounded-lg border border-gray-100 shadow-sm max-w-[85%] ${
-                  msg.user_id === userId ? 'mr-auto' : ''
-                }`}
-              >
-                {isScheduled 
-                  ? '•••••••••••••••••••••••••••••••••' 
-                  : renderMessageContent(msg.content)}
-              </div>
-            </div>
-          ))
-        )}
-        <div ref={messagesEndRef} />
-      </div>
+            ))
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+      )}
 
       {/* Message d'erreur */}
       {error && (
@@ -1045,10 +1422,12 @@ ChatBox.propTypes = {
   chatEnabled: PropTypes.bool.isRequired,
   userId: PropTypes.string,
   isScheduled: PropTypes.bool,
+  streamData: PropTypes.object, // <-- Ajout ici
 };
 
 LiveViewer.propTypes = {
   authToken: PropTypes.string.isRequired,
+  userRole: PropTypes.string, // Added for moderation features
 };
 
 export default LiveViewer;
