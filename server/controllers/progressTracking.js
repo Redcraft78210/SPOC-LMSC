@@ -223,17 +223,12 @@ const getUserStats = async (req, res) => {
             where: { user_id: userId, status: 'completed' },
         });
 
-        const startedCourses = await CourseProgress.count({
-            where: { user_id: userId, status: 'in_progress' },
-        });
-
         const liveSessions = await LiveAttendance.count({
             where: { user_id: userId, status: 'attended' }
         });
 
         return res.status(200).json({
             completedCourses,
-            startedCourses,
             liveSessions
         });
     } catch (error) {

@@ -51,7 +51,6 @@ const chatRoutes = require('./routes/chatRoutes');
 
 // Miscellaneous
 const codeRoutes = require('./routes/codeRoutes');
-const moderationRoutes = require('./routes/moderationRoutes');
 
 // Initialize environment variables
 dotenv.config();
@@ -73,14 +72,11 @@ app.use((request, response, next) => {
 
 const DEFAULTS = {
   imageName: 'quarantine-image',
-  containerName: 'quarantine_container',
+  containerName: 'quarantine',
   dockerfile: 'Quarantine.Dockerfile',
   buildTimeoutMs: 5 * 60 * 1000,   // 5 minutes
   runTimeoutMs: 30 * 1000,         // 30 seconds
 };
-
-app.use(express.json({ limit: '300mb' }));
-app.use(express.urlencoded({ limit: '300mb', extended: true }));
 
 // CORS configuration
 // Allowed origins for CORS
@@ -88,8 +84,8 @@ app.use(express.urlencoded({ limit: '300mb', extended: true }));
 // En production, il faut ajouter le nom de domaine de l'application
 // const allowedOrigins = ["https://your-production-domain.com"];
 
-const allowedOrigins = ["https://localhost", "https://172.20.10.3",
-  "https://172.20.10.5", "https://172.16.84.14"];
+const allowedOrigins = ["https://192.168.36.150",
+  "https://localhost"];
 
 // Middleware
 app.use(cors({
@@ -152,7 +148,6 @@ app.use('/api/streams', chatRoutes.route); // Streaming and chat-related routes
 
 // Miscellaneous
 app.use('/api/codes', codeRoutes.route); // Code-related routes
-app.use('/api/moderation', moderationRoutes.route); // Moderation-related routes
 
 // Serve React frontend (if applicable)
 if (process.env.NODE_ENV === "production") {
@@ -239,9 +234,9 @@ const createQuarantineContainer = () => {
 
   async function buildAndRun() {
     try {
-      const imageName = DEFAULTS.imageName || 'quarantine-image';
-      const containerName = DEFAULTS.containerName || 'quarantine';
-      const dockerfile = DEFAULTS.dockerfile || 'Quarantine.Dockerfile';
+      const imageName = 'quarantine-image';
+      const containerName = 'quarantine';
+      const dockerfile = 'Quarantine.Dockerfile';
       console.log('🔨 Building image…');
 
       // Check if the image already exists

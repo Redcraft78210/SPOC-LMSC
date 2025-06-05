@@ -3,11 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { getStudentProgress } from '../../API/CourseCaller'; // Ajout de cette fonction dans CourseCaller
 
-// Tutorial component
-import DashboardTutorial from '../../tutorials/DashboardTutorial';
-
-
-const DashboardHome = ({ user }) => {
+const DashboardHome = ({ authToken }) => {
   const navigate = useNavigate();
   const [stats, setStats] = useState({ completedCourses: 0, liveSessions: 0 });
 
@@ -26,12 +22,10 @@ const DashboardHome = ({ user }) => {
     };
 
     fetchData();
-  }, []);
+  }, [authToken]);
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <DashboardTutorial userRole={user.role} name={user.name} />
-
       <header className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800">
           Bienvenue sur votre tableau de bord
@@ -129,10 +123,7 @@ const DashboardHome = ({ user }) => {
 };
 
 DashboardHome.propTypes = {
-  user: PropTypes.shape({
-    role: PropTypes.string.isRequired,
-    name: PropTypes.string.isRequired,
-  }).isRequired,
+  authToken: PropTypes.string.isRequired,
 };
 
 export default DashboardHome;

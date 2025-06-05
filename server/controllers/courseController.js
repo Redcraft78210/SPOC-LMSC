@@ -15,7 +15,7 @@ const imageToByteArray = (imagePath) => {
 
 const updateVideoCoverImages = async () => {
   try {
-    const imagePath = path.join(__dirname, '../images/0.png');
+    const imagePath = path.join(__dirname, '../../client/public/videos/3f4b538504facde3c881b73844f52f24-1742237522/0.png');
     const imageBytes = imageToByteArray(imagePath);
 
     if (!imageBytes) {
@@ -36,22 +36,13 @@ const updateVideoCoverImages = async () => {
   }
 };
 
-//updateVideoCoverImages();
+updateVideoCoverImages();
 
 const getAllCourses = async (req, res) => {
-
-  let userRole = req.user.role;
-  let whereCondition = {is_published: true};
-  if (userRole === 'Etudiant') {
-    whereCondition = {
-      is_published: true,
-      status: 'published',
-    };
-  }
   try {
     const courses = await Course.findAll({
       where: {
-        ...whereCondition,
+        is_published: true
       },
       include: [
         {
@@ -77,6 +68,8 @@ const getAllCourses = async (req, res) => {
         }
       ]
     });
+
+    console.log('Courses:', JSON.stringify(courses, null, 2));
 
     // Transformation des données en structure imbriquée
     const structuredData = {};
@@ -107,7 +100,6 @@ const getAllCourses = async (req, res) => {
         titre: course.title,
         description: course.description,
         date_creation: course.createdAt,
-        ...(userRole !== 'Etudiant' ? { status: course.status, block_reason: course.block_reason } : {}),
         id: course.id,
         type: 'cours',
         video: course.Videos.length > 0 ? {
@@ -181,8 +173,6 @@ const getMainCourse = async (req, res) => {
       "titre": cours.title,
       "date_creation": cours.createdAt,
       "description": cours.description,
-      "status": cours.status,
-      "block_reason": cours.block_reason || null,
       "video": cours.Videos.length > 0 ? {
         "video_id": cours.Videos[0].id,
         "date_mise_en_ligne": cours.Videos[0].createdAt,
@@ -202,46 +192,6 @@ const getMainCourse = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
-const blockCourse = async (req, res) => {
-  try {
-    const cours = await Course.findByPk(req.params.id);
-
-    if (!cours) {
-      return res.status(404).json({ error: 'Cours not found' });
-    }
-
-    const { block_reason } = req.body;
-
-    await cours.update({
-      status: 'blocked',
-      block_reason
-    });
-
-    res.status(200).json(cours);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-}
-
-const unblockCourse = async (req, res) => {
-  try {
-    const cours = await Course.findByPk(req.params.id);
-
-    if (!cours) {
-      return res.status(404).json({ error: 'Cours not found' });
-    }
-
-    await cours.update({
-      status: 'published',
-      block_reason: null
-    });
-
-    res.status(200).json(cours);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-}
 
 const deleteCourse = async (req, res) => {
   try {
@@ -301,4 +251,4 @@ const createCourse = async (req, res) => {
   }
 }
 
-module.exports = { getAllCourses, getCourse, getMainCourse, deleteCourse, updateCourse, createCourse, blockCourse, unblockCourse };
+module.exports = { getAllCourses, getCourse, getMainCourse, deleteCourse, updateCourse, createCourse };

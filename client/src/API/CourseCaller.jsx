@@ -73,35 +73,6 @@ const createCourse = async (courseData) => {
   }
 };
 
-// Désapprouver un cours
-const disapproveCourse = async ({ courseId, justification }) => {
-  try {
-    const response = await api.post(`/courses/${courseId}/block`,
-      { block_reason: justification }
-    );
-    return {
-      status: response.status,
-      data: response.data,
-      message: 'Course disapproved successfully',
-    };
-  } catch (error) {
-    return handleError(error);
-  }
-};
-
-const unblockCourse = async (courseId) => {
-  try {
-    const response = await api.put(`/courses/${courseId}/unblock`);
-    return {
-      status: response.status,
-      data: response.data,
-      message: 'Course unblocked successfully',
-    };
-  } catch (error) {
-    return handleError(error);
-  }
-};
-
 // Mettre à jour un cours
 const updateCourse = async ({ courseId, courseData }) => {
   try {
@@ -117,7 +88,7 @@ const updateCourse = async ({ courseId, courseData }) => {
 };
 
 // Supprimer un cours
-const deleteCourse = async (courseId) => {
+const deleteCourse = async ({ courseId }) => {
   try {
     const response = await api.delete(`/courses/${courseId}`);
     return {
@@ -227,15 +198,6 @@ getCourseById.propTypes = {
   courseId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
 };
 
-disapproveCourse.propTypes = {
-  courseId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
-  justification: PropTypes.string.isRequired,
-};
-
-unblockCourse.propTypes = {
-  courseId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
-};
-
 createCourse.propTypes = {
   courseData: PropTypes.shape({
     matiere: PropTypes.string.isRequired,
@@ -289,8 +251,6 @@ getCourseProgress.propTypes = {
 export {
   getAllCourses,
   getCourseById,
-  disapproveCourse,
-  unblockCourse,
   createCourse,
   updateCourse,
   deleteCourse,

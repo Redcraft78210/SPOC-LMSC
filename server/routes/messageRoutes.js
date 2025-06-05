@@ -7,9 +7,7 @@ const { getInboxMessages,
   getMessage,
   sendMessage,
   markMessageAsRead,
-  deleteMessage: moveToTrash,
-  permanentlyDeleteMessage,
-  restoreMessage: restoreFromTrash,
+  deleteMessage,
   downloadAttachment,
   createContactMessage } = require('../controllers/messageController');
 const authMiddleware = require('../middlewares/authMiddleware');
@@ -24,12 +22,6 @@ const upload = multer({
   }
 });
 
-// Create a new message with contact form
-router.post('/contact', upload.array('attachments', 5), createContactMessage);
-
-// Create a new message without attachments and with contact form
-router.post('/contact/no-attachments', createContactMessage);
-
 // Protected routes
 router.use(authMiddleware);
 
@@ -42,15 +34,16 @@ router.get('/:messageId', getMessage);
 // Create a new message
 router.post('/', upload.array('attachments', 5), sendMessage);
 
+// Create a new message with contact form
+router.post('/contact', upload.array('attachments', 5), createContactMessage);
 // Create a new message without attachments
 router.post('/no-attachments', sendMessage);
+// Create a new message without attachments and with contact form
+router.post('/contact/no-attachments', createContactMessage);
 
 // Message actions
-router.patch('/:messageId/trash', moveToTrash);
-router.patch('/:messageId/restore', restoreFromTrash);
-router.patch('/:messageId/read', markMessageAsRead);
-
-router.delete('/:messageId', permanentlyDeleteMessage);
+router.put('/:messageId/read', markMessageAsRead);
+router.delete('/:messageId', deleteMessage);
 
 // Attachments
 router.get('/attachments/:attachmentId', downloadAttachment);

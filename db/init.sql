@@ -3,12 +3,10 @@
 -- ============================================================
 CREATE TYPE statut_type AS ENUM ('actif', 'inactif');
 CREATE TYPE scan_status_type AS ENUM ('pending', 'clean', 'infected');
-CREATE TYPE user_role AS ENUM ('Administrateur', 'Professeur', 'Etudiant');
-CREATE TYPE course_status AS ENUM('draft', 'published', 'archived', 'blocked');
-CREATE TYPE live_status AS ENUM ('scheduled', 'ongoing', 'completed', 'blocked', 'disapproved');
+CREATE TYPE user_role AS ENUM ('admin', 'teacher', 'student');
+CREATE TYPE live_status AS ENUM ('scheduled', 'ongoing', 'completed', 'cancelled');
 CREATE TYPE progress_status AS ENUM ('not_started', 'in_progress', 'completed');
 CREATE TYPE attendance_status AS ENUM ('attended', 'missed');
-CREATE TYPE flag_status AS ENUM ('pending', 'reviewed', 'resolved');
 
 -- ============================================================
 -- TABLES PRINCIPALES
@@ -58,8 +56,6 @@ CREATE TABLE courses (
     teacher_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     matiere VARCHAR(255),
     chapitre VARCHAR(255),
-    status course_status DEFAULT 'draft',
-    block_reason VARCHAR(255),
     "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -73,7 +69,6 @@ CREATE TABLE lives (
     start_time TIMESTAMP NOT NULL,
     end_time TIMESTAMP NOT NULL,
     status live_status NOT NULL,
-    block_reason VARCHAR(255),
     teacher_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -141,19 +136,11 @@ CREATE TABLE messages (
     subject VARCHAR(255) NOT NULL,
     content TEXT NOT NULL,
     read BOOLEAN DEFAULT FALSE,
+    deleted BOOLEAN DEFAULT FALSE,
     "senderId" UUID REFERENCES users(id) ON DELETE CASCADE,
-    "recipientType" VARCHAR(50) NOT NULL CHECK ("recipientType" IN ('individual', 'multiple', 'all-admins', 'all-teachers', 'all-students')),
+    "recipientId" UUID REFERENCES users(id) ON DELETE CASCADE,
     "fromContactForm" BOOLEAN DEFAULT FALSE,
-    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE recipients (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    "MessageId" UUID NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
-    "recipientId" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    read BOOLEAN DEFAULT FALSE,
-    hidden BOOLEAN DEFAULT FALSE,
+    "deletedAt" TIMESTAMP,
     "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -242,39 +229,12 @@ CREATE TABLE course_videos (
     PRIMARY KEY (course_id, video_id)
 );
 
-CREATE TABLE trash_messages (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  "originalMessageId" UUID,
-  "deletedBy" UUID NOT NULL,
-  "deletedAt" TIMESTAMP NOT NULL,
-  "scheduledPurgeDate" TIMESTAMP,
-  "permanentlyDeleted" BOOLEAN DEFAULT FALSE,
-  "createdAt" TIMESTAMP NOT NULL,
-  "updatedAt" TIMESTAMP NOT NULL
-);
-
--- ============================================================
--- TABLES DE MODÉRATION
--- ============================================================
-CREATE TABLE warnings (
+CREATE TABLE message_recipients (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    "userId" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    "adminId" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    message TEXT NOT NULL,
+    message_id UUID NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+    recipient_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     read BOOLEAN DEFAULT FALSE,
-    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE flags (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    "itemId" UUID NOT NULL,
-    "itemType" VARCHAR(10) NOT NULL CHECK ("itemType" IN ('thread', 'comment')),
-    reason TEXT NOT NULL,
-    "reportedBy" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    status flag_status DEFAULT 'pending',
-    "resolvedBy" UUID REFERENCES users(id) ON DELETE SET NULL,
-    "resolvedAt" TIMESTAMP,
+    deleted BOOLEAN DEFAULT FALSE,
     "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -297,7 +257,7 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION validate_teacher()
 RETURNS TRIGGER AS $$
 BEGIN
-    IF NOT validate_user_role(NEW.main_teacher_id, 'Professeur') THEN
+    IF NOT validate_user_role(NEW.main_teacher_id, 'teacher') THEN
         RAISE EXCEPTION 'User % is not a teacher', NEW.main_teacher_id;
     END IF;
     RETURN NEW;
@@ -347,24 +307,20 @@ CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_courses_teacher_id ON courses(teacher_id);
 CREATE INDEX idx_lives_teacher_id ON lives(teacher_id);
 CREATE INDEX idx_chat_messages_live_id ON chat_messages(live_id);
-CREATE INDEX idx_recipients_recipient_id ON recipients("recipientId");
+CREATE INDEX idx_message_recipients_recipient_id ON message_recipients(recipient_id);
 CREATE INDEX idx_user_avatars_user_id ON user_avatars(user_id);
-CREATE INDEX idx_warnings_user_id ON warnings("userId");
-CREATE INDEX idx_warnings_admin_id ON warnings("adminId");
-CREATE INDEX idx_flags_item_id ON flags("itemId");
-CREATE INDEX idx_flags_reported_by ON flags("reportedBy");
-CREATE INDEX idx_flags_status ON flags(status);
+
 
 -- ============================================================
 -- DONNÉES MINIMALES D'INITIALISATION
 -- ============================================================
 -- Admin
 INSERT INTO users (id, name, surname, role, username, email, password)
-VALUES ('a0000000-0000-0000-0000-000000000001', 'Admin', 'System', 'Administrateur', 'admin', 'admin@spoc.lmsc', '$2b$10$1Tl7ARRSx3HHsS8nehhTF.asiDLQ7IOzCJ1EzCoMGQBFysfFCdQc2');
+VALUES ('a0000000-0000-0000-0000-000000000001', 'Admin', 'System', 'admin', 'admin', 'admin@spoc.lmsc', '$2b$10$1Tl7ARRSx3HHsS8nehhTF.asiDLQ7IOzCJ1EzCoMGQBFysfFCdQc2');
 
 -- Code d'inscription initial
 INSERT INTO codes (id, value, role, "usageLimit", "remainingUses", "expiresAt")
-VALUES ('b0000000-0000-0000-0000-000000000001', 'ADMIN-INIT', 'Administrateur', 10, 10, '2030-01-01 00:00:00');
+VALUES ('b0000000-0000-0000-0000-000000000001', 'ADMIN-INIT', 'admin', 10, 10, '2030-01-01 00:00:00');
 
 -- Trigger Functions
 CREATE OR REPLACE FUNCTION validate_teacher_class()
@@ -373,7 +329,7 @@ BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM users 
         WHERE id = NEW.teacher_id 
-        AND role = 'Professeur'
+        AND role = 'teacher'
     ) THEN
         RAISE EXCEPTION 'User % is not a teacher', NEW.teacher_id;
     END IF;
@@ -387,7 +343,7 @@ BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM users 
         WHERE id = NEW.student_id 
-        AND role = 'Etudiant'
+        AND role = 'student'
     ) THEN
         RAISE EXCEPTION 'User % is not a student', NEW.student_id;
     END IF;
@@ -407,7 +363,7 @@ BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM users 
         WHERE id = NEW.teacher_id 
-        AND role = 'Professeur'
+        AND role = 'teacher'
     ) THEN
         RAISE EXCEPTION 'User % is not a teacher', NEW.teacher_id;
     END IF;
@@ -575,10 +531,11 @@ CREATE INDEX idx_course_videos_course_id ON course_videos(course_id);
 CREATE INDEX idx_course_videos_video_id ON course_videos(video_id);
 
 -- Create indexes for better performance
+CREATE INDEX "idx_messages_senderId" ON messages("senderId");
 CREATE INDEX idx_messages_contact_form ON messages("fromContactForm");
-CREATE INDEX idx_recipients_message_id ON recipients("MessageId");
-CREATE INDEX idx_recipients_read ON recipients(read);
-CREATE INDEX idx_recipients_hidden ON recipients(hidden);
+CREATE INDEX idx_message_recipients_message_id ON message_recipients(message_id);
+CREATE INDEX idx_message_recipients_read ON message_recipients(read);
+CREATE INDEX idx_message_recipients_deleted ON message_recipients(deleted);
 CREATE INDEX idx_attachments_message_id ON attachments("MessageId");
 CREATE INDEX idx_attachments_scan_status ON attachments("scanStatus");
 CREATE INDEX idx_registry_rgpd_user_email ON registry_rgpd(user_email);
@@ -589,15 +546,15 @@ RETURNS TRIGGER AS $$
 BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM users 
-        WHERE id = NEW."recipientId"
+        WHERE id = NEW.recipient_id
     ) THEN
-        RAISE EXCEPTION 'User % does not exist', NEW."recipientId";
+        RAISE EXCEPTION 'User % does not exist', NEW.recipient_id;
     END IF;
     IF NOT EXISTS (
         SELECT 1 FROM messages 
-        WHERE id = NEW."MessageId"
+        WHERE id = NEW.message_id
     ) THEN
-        RAISE EXCEPTION 'Message % does not exist', NEW."MessageId";
+        RAISE EXCEPTION 'Message % does not exist', NEW.message_id;
     END IF;
     RETURN NEW;
 END;
@@ -644,8 +601,8 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Apply validation triggers
-CREATE TRIGGER trg_recipients 
-BEFORE INSERT OR UPDATE ON recipients
+CREATE TRIGGER trg_message_recipients 
+BEFORE INSERT OR UPDATE ON message_recipients
 FOR EACH ROW EXECUTE FUNCTION validate_message_recipient();
 
 CREATE TRIGGER trg_messages_sender 
@@ -664,7 +621,7 @@ VALUES
         'a6fa5fc1-1234-4321-0000-000000000003',
         'John',
         'Doe',
-        'Administrateur',
+        'admin',
         'jdoe1_admin',
         'john.doeadmin@spoc.lmsc',
         '$2b$10$1Tl7ARRSx3HHsS8nehhTF.asiDLQ7IOzCJ1EzCoMGQBFysfFCdQc2'
@@ -673,7 +630,7 @@ VALUES
         'a6fa5fc1-1234-4321-0000-000000000009',
         'Jane',
         'Doe',
-        'Administrateur',        
+        'admin',        
         'jdoe2_admin',
         'jane.doeadmin@spoc.lmsc',
         '$2b$10$1Tl7ARRSx3HHsS8nehhTF.asiDLQ7IOzCJ1EzCoMGQBFysfFCdQc2'
@@ -682,7 +639,7 @@ VALUES
         'a6fa5fc1-1234-4321-0000-000000000005',
         'Bob',
         'Smith',
-        'Professeur',
+        'teacher',
         'bsmith_teacher',
         'bob.smithteacher@spoc.lmsc',
         '$2b$10$1Tl7ARRSx3HHsS8nehhTF.asiDLQ7IOzCJ1EzCoMGQBFysfFCdQc2'
@@ -691,7 +648,7 @@ VALUES
         'a6fa5fc1-1234-4321-0000-000000000006',
         'Ewe',
         'Willi',
-        'Professeur',
+        'teacher',
         'willi_teacher',
         'willi@spoc.lmsc',
         '$2b$05$eZDYdmMp4ZxVrl3um/hcp.G15wMNvB2/17OS7gBTtBnj4VtFIM6Z.'
@@ -700,7 +657,7 @@ VALUES
         'a6fa5fc1-1234-4321-0000-000000000007',
         'Charlie',
         'Brown',
-        'Etudiant',
+        'student',
         'cbrown_student',
         'charlie.brownstudent@spoc.lmsc',
         '$2b$10$1Tl7ARRSx3HHsS8nehhTF.asiDLQ7IOzCJ1EzCoMGQBFysfFCdQc2'
@@ -709,7 +666,7 @@ VALUES
         'a6fa5fc1-1234-4321-0000-000000000008',
         'Emily',
         'Davis',
-        'Etudiant',
+        'student',
         'edavis_student',
         'emily.disvstudent@spoc.lmsc',
         '$2b$10$1Tl7ARRSx3HHsS8nehhTF.asiDLQ7IOzCJ1EzCoMGQBFysfFCdQc2'
@@ -723,7 +680,7 @@ VALUES
     (
         '11111111-aaaa-bbbb-cccc-000000000001',
         'STU-FRESH-01',
-        'Etudiant',
+        'student',
         10,
         10,
         '2026-01-01 00:00:00'
@@ -732,7 +689,7 @@ VALUES
     (
         '11111111-aaaa-bbbb-cccc-000000000002',
         'STU-HALF-USED',
-        'Etudiant',
+        'student',
         10,
         4,
         '2025-05-15 00:00:00'
@@ -741,7 +698,7 @@ VALUES
     (
         '11111111-aaaa-bbbb-cccc-000000000003',
         'STU-EXPIRED',
-        'Etudiant',
+        'student',
         10,
         1,
         '2024-12-31 00:00:00'
@@ -750,7 +707,7 @@ VALUES
     (
         '11111111-aaaa-bbbb-cccc-000000000004',
         'TEACH-ACTIVE-01',
-        'Professeur',
+        'teacher',
         20,
         15,
         '2025-11-01 00:00:00'
@@ -759,7 +716,7 @@ VALUES
     (
         '11111111-aaaa-bbbb-cccc-000000000005',
         'TEACH-LIMITED',
-        'Professeur',
+        'teacher',
         20,
         2,
         '2025-04-30 00:00:00'
@@ -768,7 +725,7 @@ VALUES
     (
         '11111111-aaaa-bbbb-cccc-000000000006',
         'ADMIN-FULL',
-        'Administrateur',
+        'admin',
         100,
         100,
         '2030-01-01 00:00:00'
@@ -777,7 +734,7 @@ VALUES
     (
         '11111111-aaaa-bbbb-cccc-000000000007',
         'ADMIN-EXPIRED',
-        'Administrateur',
+        'admin',
         50,
         25,
         '2024-01-01 00:00:00'
@@ -916,14 +873,14 @@ VALUES
     ('a6fa5fc1-1234-4321-0000-000000000014', 'a6fa5fc1-1234-4321-0000-000000000021', TRUE);
 
 -- Insert some sample messages
-INSERT INTO messages (id, subject, content, "senderId", "recipientType", "fromContactForm")
+INSERT INTO messages (id, subject, content, "senderId", "recipientId", "fromContactForm")
 VALUES
-    ('33333333-aaaa-bbbb-cccc-000000000001', 'Bienvenue sur la plateforme', 'Bonjour et bienvenue sur notre plateforme d''apprentissage. N''hésitez pas à contacter l''équipe administrative si vous avez des questions.', 'a6fa5fc1-1234-4321-0000-000000000007', 'multiple', FALSE),
-    ('33333333-aaaa-bbbb-cccc-000000000002', 'Question sur le cours de JavaScript', 'Bonjour, j''ai une question concernant le dernier cours sur les closures en JavaScript. Pourriez-vous préciser leur utilité dans un contexte réel ?', 'a6fa5fc1-1234-4321-0000-000000000007', 'individual', FALSE),
-    ('33333333-aaaa-bbbb-cccc-000000000003', 'Demande de contact via formulaire', 'Bonjour, je suis intéressé par vos formations en ligne. Pouvez-vous me donner plus d''informations sur les prérequis pour la formation en développement web ?', NULL, 'all-admins', TRUE);
+    ('33333333-aaaa-bbbb-cccc-000000000001', 'Bienvenue sur la plateforme', 'Bonjour et bienvenue sur notre plateforme d''apprentissage. N''hésitez pas à contacter l''équipe administrative si vous avez des questions.', 'a6fa5fc1-1234-4321-0000-000000000003', 'a6fa5fc1-1234-4321-0000-000000000007', FALSE),
+    ('33333333-aaaa-bbbb-cccc-000000000002', 'Question sur le cours de JavaScript', 'Bonjour, j''ai une question concernant le dernier cours sur les closures en JavaScript. Pourriez-vous préciser leur utilité dans un contexte réel ?', 'a6fa5fc1-1234-4321-0000-000000000007', 'a6fa5fc1-1234-4321-0000-000000000005', FALSE),
+    ('33333333-aaaa-bbbb-cccc-000000000003', 'Demande de contact via formulaire', 'Bonjour, je suis intéressé par vos formations en ligne. Pouvez-vous me donner plus d''informations sur les prérequis pour la formation en développement web ?', NULL, 'a6fa5fc1-1234-4321-0000-000000000006', TRUE);
 
 -- Insert message recipients
-INSERT INTO recipients ("MessageId", "recipientId", read)
+INSERT INTO message_recipients (message_id, recipient_id, read)
 VALUES
     ('33333333-aaaa-bbbb-cccc-000000000001', 'a6fa5fc1-1234-4321-0000-000000000007', TRUE),
     ('33333333-aaaa-bbbb-cccc-000000000001', 'a6fa5fc1-1234-4321-0000-000000000008', FALSE),

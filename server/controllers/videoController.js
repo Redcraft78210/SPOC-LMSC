@@ -227,66 +227,9 @@ const deleteVideo = async (req, res) => {
     }
 };
 
-const getVideoInfo = async (req, res) => {
-    try {
-        setCORSHeaders(res);
-        // Auth
-        const { authToken } = req.query;
-        if (!authToken) {
-            return res.status(401).json({ message: 'Token manquant' });
-        }
-
-        try {
-            const decoded = jwt.verify(authToken, process.env.JWT_SECRET);
-            req.user = decoded;
-        } catch (err) {
-            return res.status(403).json({ message: 'Token invalide' });
-        }
-
-        const { id } = req.params;
-        if (!id || !/^[a-zA-Z0-9_-]+$/.test(id)) {
-            return res.status(400).json({ message: 'ID invalide' });
-        }
-
-        // Récupération des informations de la vidéo depuis la base de données
-        const video = await Video.findOne({ 
-            where: { id },
-            // Inclure les relations si la vidéo est associée à un cours
-            include: [
-                { 
-                    association: 'course',
-                    attributes: ['id', 'title'] 
-                }
-            ]
-        });
-
-        if (!video) {
-            return res.status(404).json({ message: 'Vidéo non trouvée' });
-        }
-
-        // Retourner les informations de la vidéo
-        res.status(200).json({
-            id: video.id,
-            title: video.title,
-            description: video.description,
-            course: video.course,
-            duration: video.duration,
-            createdAt: video.createdAt,
-            updatedAt: video.updatedAt
-        });
-
-    } catch (error) {
-        console.error('Erreur serveur:', error);
-        res.status(500).json({
-            message: error.message || 'Erreur interne'
-        });
-    }
-};
-
 module.exports = {
     getVideo,
     uploadVideo,
     deleteVideo,
-    downloadVideo,
-    getVideoInfo
+    downloadVideo
 };

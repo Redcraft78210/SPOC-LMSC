@@ -1,10 +1,10 @@
 const express = require('express');
-const { getVideo, getVideoInfo, uploadVideo, downloadVideo, deleteVideo } = require('../controllers/videoController.js');
+const { getVideo, uploadVideo, downloadVideo, deleteVideo } = require('../controllers/videoController.js');
 const authMiddleware = require('../middlewares/authMiddleware.js');
 
 const router = express.Router();
 
-const allowedReferrerStarts = ['https://172.20.10.5', 'https://172.20.10.3'];
+const allowedReferrerStarts = ['https://localhost'];
 
 // Get video by ID
 router.get('/:id', (req, res, next) => {
@@ -14,15 +14,6 @@ router.get('/:id', (req, res, next) => {
   }
   next();
 }, getVideo);
-
-// Get video information by ID
-router.get('/info/:id', (req, res, next) => {
-  const referrer = req.get('Referrer');
-  if (!referrer || !allowedReferrerStarts.some(start => referrer.startsWith(start))) {
-    return res.status(403).send('Forbidden');
-  }
-  next();
-}, getVideoInfo);
 
 router.use(authMiddleware);
 
