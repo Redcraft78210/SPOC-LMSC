@@ -73,7 +73,7 @@ const FirstLogin = ({ token, setAuth }) => {
           twoFASetup: {} // Add any required setup data
         });
 
-        if (response.status === 200) {
+        if (response.status === 201) {
           setTempToken(response.data.tempToken);
           setError(null);
         } else {
@@ -174,6 +174,14 @@ const FirstLogin = ({ token, setAuth }) => {
             sessionStorage.setItem('authToken', response.data.token);
             localStorage.removeItem('authToken');
           }
+          
+          // Clean up all temporary tokens
+          localStorage.removeItem('token');
+          localStorage.removeItem('tempToken');
+          localStorage.removeItem('QrCodeData');
+          localStorage.removeItem('manualSecret');
+          localStorage.removeItem('is2FASetup');
+          
           setAuth(response.data.token);
           navigate('/dashboard');
           return;
@@ -204,7 +212,8 @@ const FirstLogin = ({ token, setAuth }) => {
         localStorage.removeItem('tempToken');
         localStorage.removeItem('QrCodeData');
         localStorage.removeItem('manualSecret');
-        navigate('/sign');
+        localStorage.removeItem('token');
+        navigate('/logout');
       }
       setError(errorMessages[errorCode] || errorMessages.default);
     } finally {
@@ -313,6 +322,7 @@ const FirstLogin = ({ token, setAuth }) => {
         localStorage.removeItem('tempToken');
         localStorage.removeItem('QrCodeData');
         localStorage.removeItem('manualSecret');
+        localStorage.removeItem('token');
 
         setAuth(response.data.token);
         navigate('/dashboard');
@@ -327,6 +337,8 @@ const FirstLogin = ({ token, setAuth }) => {
         localStorage.removeItem('tempToken');
         localStorage.removeItem('QrCodeData');
         localStorage.removeItem('manualSecret');
+        localStorage.removeItem('token');
+        navigate('/logout');
       }
       setError(errorMessages[errorCode] || errorMessages.default);
     }
@@ -390,6 +402,8 @@ const FirstLogin = ({ token, setAuth }) => {
                     onPaste={e => handleDigitPaste(index, e)}
                     className="w-12 h-12 border border-gray-300 rounded-lg text-center text-xl font-bold"
                     aria-label={`Digit ${index + 1} of verification code`}
+                    autoFocus={index === 0}
+                    required
                   />
                 ))}
               </div>

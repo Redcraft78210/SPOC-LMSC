@@ -25,7 +25,7 @@ const getProfile = async (req, res) => {
 
 // Update user's profile
 const updateProfile = async (req, res) => {
-    const { name, surname, email, password } = req.body;
+    const { name, surname, username, email, password } = req.body;
 
     try {
         const user = await User.findByPk(req.user.id);
@@ -34,6 +34,8 @@ const updateProfile = async (req, res) => {
         }
 
         user.name = name || user.name;
+        user.surname = surname || user.surname;
+        user.username = username || user.username;
         user.email = email || user.email;
 
         if (password) {
@@ -47,6 +49,8 @@ const updateProfile = async (req, res) => {
             user: {
                 id: user.id,
                 name: user.name,
+                surname: user.surname,
+                username: user.username,
                 email: user.email,
             }
         });
@@ -132,8 +136,8 @@ const changePassword = async (req, res) => {
         // Check password strength
         const passwordStrength = zxcvbn(newPassword);
         if (passwordStrength.score < 3) {
-            return res.status(400).json({ 
-                message: 'Password is too weak', 
+            return res.status(400).json({
+                message: 'Password is too weak',
                 feedback: passwordStrength.feedback.suggestions,
                 score: passwordStrength.score
             });
@@ -173,11 +177,15 @@ const getAllUsers = async (req, res) => {
 
     try {
         // Build filter only if role is provided
-        const where = role ? { role } : {};
+        // Uniformise les rôles en français côté filtre
+        let where = {};
+        if (role) {
+            where.role = role;
+        }
 
-        // If the current user is a student, exclude admin accounts
+        // Si l'utilisateur courant est un étudiant, exclure les comptes Administrateur
         if (userRole === 'Etudiant') {
-            where.role = { [sequelize.Op.ne]: 'admin' }; // Sequelize operator to exclude 'admin'
+            where.role = { [sequelize.Op.ne]: 'Administrateur' }; // Exclure 'Administrateur'
         }
 
         const users = await User.findAll({ where });
@@ -187,18 +195,9 @@ const getAllUsers = async (req, res) => {
             return res.status(404).json({ message: 'No users found' });
         }
 
-        // Centralize role→label mapping
-        const ROLE_LABELS = {
-            admin: 'Administrateur',
-            teacher: 'Professeur',
-            student: 'Étudiant',
-        };
-
-        const result = users.map(({ id, name, surname, email, statut, role: rawRole }) => {
-            const label = ROLE_LABELS[rawRole] || rawRole;
-
+        const result = users.map(({ id, name, surname, email, statut, role }) => {
             // Always include id/name/surname/role
-            const output = { id, surname, role: label };
+            const output = { id, surname, role };
 
             // If not for mailbox recipients, also include email + active status
             if (!mailboxrecipients) {
@@ -206,7 +205,7 @@ const getAllUsers = async (req, res) => {
                 output.email = email;
                 output.active = statut;
             } else {
-                output.name = rawRole === "teacher" ? "Professeur" : name;
+                output.name = role === "Professeur" ? "Professeur" : name;
             }
 
             return output;
@@ -249,15 +248,13 @@ const updateUserById = async (req, res) => {
         user.email = email || user.email;
         user.role = role || user.role;
 
-        if (password) {
-            user.password = await bcrypt.hash(password, 10);
-        }
-
         if (currentPassword) {
             const isMatch = await bcrypt.compare(currentPassword, user.password);
             if (!isMatch) {
                 return res.status(400).json({ message: 'Current password is incorrect' });
             }
+            user.password = await bcrypt.hash(newPassword, 10);
+        } else if (newPassword) {
             user.password = await bcrypt.hash(newPassword, 10);
         }
 
@@ -304,12 +301,13 @@ const retrogradeUser = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
+        // Utilise les rôles en français
         switch (user.role) {
-            case 'admin':
-                user.role = 'teacher';
+            case 'Administrateur':
+                user.role = 'Professeur';
                 break;
-            case 'teacher':
-                user.role = 'student';
+            case 'Professeur':
+                user.role = 'Etudiant';
                 break;
         }
         await user.save();
@@ -327,12 +325,13 @@ const upgradeUser = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
+        // Utilise les rôles en français
         switch (user.role) {
-            case 'student':
-                user.role = 'teacher';
+            case 'Etudiant':
+                user.role = 'Professeur';
                 break;
-            case 'teacher':
-                user.role = 'admin';
+            case 'Professeur':
+                user.role = 'Administrateur';
                 break;
         }
         await user.save();

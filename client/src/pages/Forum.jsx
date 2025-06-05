@@ -3,15 +3,23 @@ import PropTypes from 'prop-types';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast, Toaster } from 'react-hot-toast';
-import { ArrowLeft, User, Clock, MessageSquareText, Search, Filter, X, Plus } from 'lucide-react';
+import { ArrowLeft, User, Clock, MessageSquareText, Search, Filter, X, Plus, Trash2, Flag, Shield, AlertTriangle } from 'lucide-react';
 import {
   getThreads,
   getThreadById,
   createThread,
-  addComment
+  addComment,
+  deleteThread,
+  deleteComment
 } from '../API/ForumCaller';
 
-const Forum = () => {
+import {
+  sendWarning,
+  flagContent
+} from '../API/ModerationCaller';
+
+const Forum = ({ userRole }) => {
+  // Existing state variables
   const [threads, setThreads] = useState([]);
   const [selectedThread, setSelectedThread] = useState(null);
   const [newThreadTitle, setNewThreadTitle] = useState('');
@@ -26,15 +34,27 @@ const Forum = () => {
     totalPages: 1,
   });
 
-  // New state variables for search and filters
+  // Search and filters state
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeSearchQuery, setActiveSearchQuery] = useState(''); // New state for submitted search
-  const [sortBy, setSortBy] = useState('newest'); // Options: newest, oldest, popular
+  const [activeSearchQuery, setActiveSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('newest');
   const [authorFilter, setAuthorFilter] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  // Ajout d'un nouvel état pour la modale
   const [showCreateThreadModal, setShowCreateThreadModal] = useState(false);
-
+  
+  // Moderation state variables
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [deleteType, setDeleteType] = useState(''); // 'thread' or 'comment'
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [warningMessage, setWarningMessage] = useState('');
+  const [userToWarn, setUserToWarn] = useState(null);
+  const [flaggedItems, setFlaggedItems] = useState(new Set());
+  const [showFlagModal, setShowFlagModal] = useState(false);
+  const [itemToFlag, setItemToFlag] = useState(null);
+  const [flagType, setFlagType] = useState(''); // 'thread' or 'comment'
+  const [flagReason, setFlagReason] = useState('');
+  
   useEffect(() => {
     fetchThreads();
   }, [pagination.currentPage, sortBy, authorFilter, activeSearchQuery, isSearching]); // Replace searchQuery with activeSearchQuery
@@ -210,9 +230,240 @@ const Forum = () => {
     }
   };
 
+  // Moderation Functions
+  const handleDeleteThread = async (threadId) => {
+    try {
+      setLoading(true);
+      const response = await deleteThread({ threadId });
+      
+      if (response.status === 200) {
+        toast.success("Discussion supprimée avec succès");
+        // If in thread detail view, go back to list
+        if (selectedThread && selectedThread.id === threadId) {
+          setSelectedThread(null);
+        }
+        // Refresh thread list
+        await fetchThreads();
+      } else {
+        toast.error(response.message || "Erreur lors de la suppression de la discussion");
+      }
+    } catch (error) {
+      console.error("Erreur lors de la suppression de la discussion:", error);
+      toast.error("Erreur lors de la suppression de la discussion");
+    } finally {
+      setLoading(false);
+      setShowDeleteModal(false);
+      setItemToDelete(null);
+      setDeleteType('');
+    }
+  };
+  
+  const handleDeleteComment = async (commentId) => {
+    try {
+      setLoading(true);
+      const response = await deleteComment({ commentId });
+      
+      if (response.status === 200) {
+        toast.success("Commentaire supprimé avec succès");
+        // Refresh thread details to update comment list
+        if (selectedThread) {
+          await fetchThreadDetails(selectedThread.id);
+        }
+      } else {
+        toast.error(response.message || "Erreur lors de la suppression du commentaire");
+      }
+    } catch (error) {
+      console.error("Erreur lors de la suppression du commentaire:", error);
+      toast.error("Erreur lors de la suppression du commentaire");
+    } finally {
+      setLoading(false);
+      setShowDeleteModal(false);
+      setItemToDelete(null);
+      setDeleteType('');
+    }
+  };
+  
+  const showDeleteConfirmation = (id, type) => {
+    setItemToDelete(id);
+    setDeleteType(type);
+    setShowDeleteModal(true);
+  };
+  
+  const confirmDelete = () => {
+    if (deleteType === 'thread') {
+      handleDeleteThread(itemToDelete);
+    } else if (deleteType === 'comment') {
+      handleDeleteComment(itemToDelete);
+    }
+  };
+  
+  const showWarningForm = (userId, username) => {
+    setUserToWarn({ id: userId, username });
+    setShowWarningModal(true);
+  };
+  
+  // Rename the local function to avoid naming conflict
+  const handleSendWarning = async () => {
+    if (!warningMessage.trim()) {
+      toast.error("Veuillez saisir un message d'avertissement");
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      // Now properly calling the imported sendWarning function
+      const response = await sendWarning({
+        userId: userToWarn.id,
+        message: warningMessage.trim()
+      });
+      
+      if (response.status === 201) {
+        toast.success(`Avertissement envoyé à ${userToWarn.username}`);
+        setShowWarningModal(false);
+        setWarningMessage('');
+        setUserToWarn(null);
+      } else {
+        toast.error(response.message || "Erreur lors de l'envoi de l'avertissement");
+      }
+    } catch (error) {
+      console.error("Erreur lors de l'envoi de l'avertissement:", error);
+      toast.error("Erreur lors de l'envoi de l'avertissement");
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const handleFlagContent = (id, type) => {
+    setItemToFlag(id);
+    setFlagType(type);
+    setShowFlagModal(true);
+  };
+  
+  const submitFlag = async () => {
+    if (!flagReason.trim()) {
+      toast.error("Veuillez indiquer une raison pour le signalement");
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      const response = await flagContent({
+        itemId: itemToFlag,
+        itemType: flagType,
+        reason: flagReason.trim()
+      });
+      
+      if (response.status === 201) {
+        // Ajouter l'élément aux éléments signalés localement
+        setFlaggedItems(prev => new Set([...prev, itemToFlag]));
+        toast.success(`${flagType === 'thread' ? 'Discussion' : 'Commentaire'} signalé pour révision`);
+        setShowFlagModal(false);
+        setFlagReason('');
+        setItemToFlag(null);
+        setFlagType('');
+      } else {
+        toast.error(response.message || "Erreur lors du signalement du contenu");
+      }
+    } catch (error) {
+      console.error("Erreur lors du signalement du contenu:", error);
+      toast.error("Erreur lors du signalement du contenu");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Update the renderModerationControls function to include the flag button
+  const renderModerationControls = (threadId, userId, username) => {
+    if (userRole !== 'Administrateur') return null;
+    
+    const isFlagged = flaggedItems.has(threadId);
+    
+    return (
+      <div className="flex items-center gap-2 mt-2 text-sm">
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
+            showDeleteConfirmation(threadId, 'thread');
+          }}
+          className="flex items-center gap-1 text-red-600 hover:text-red-800"
+          title="Supprimer cette discussion"
+        >
+          <Trash2 className="w-4 h-4" />
+          <span>Supprimer</span>
+        </button>
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
+            showWarningForm(userId, username);
+          }}
+          className="flex items-center gap-1 text-amber-600 hover:text-amber-800"
+          title="Avertir l'utilisateur"
+        >
+          <AlertTriangle className="w-4 h-4" />
+          <span>Avertir</span>
+        </button>
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
+            handleFlagContent(threadId, 'thread');
+          }}
+          className={`flex items-center gap-1 ${isFlagged ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
+          title={isFlagged ? "Discussion déjà signalée" : "Signaler cette discussion pour révision"}
+        >
+          <Flag className="w-4 h-4" fill={isFlagged ? "currentColor" : "none"} />
+          <span>{isFlagged ? "Signalé" : "Signaler"}</span>
+        </button>
+      </div>
+    );
+  };
+  
+  // Update the renderCommentModerationControls function similarly
+  const renderCommentModerationControls = (commentId, userId, username) => {
+    if (userRole !== 'Administrateur') return null;
+    
+    const isFlagged = flaggedItems.has(commentId);
+    
+    return (
+      <div className="flex items-center gap-2 mt-2 text-sm">
+        <button 
+          onClick={() => showDeleteConfirmation(commentId, 'comment')}
+          className="flex items-center gap-1 text-red-600 hover:text-red-800"
+        >
+          <Trash2 className="w-4 h-4" />
+          <span>Supprimer</span>
+        </button>
+        <button 
+          onClick={() => showWarningForm(userId, username)}
+          className="flex items-center gap-1 text-amber-600 hover:text-amber-800"
+        >
+          <AlertTriangle className="w-4 h-4" />
+          <span>Avertir</span>
+        </button>
+        <button 
+          onClick={() => handleFlagContent(commentId, 'comment')}
+          className={`flex items-center gap-1 ${isFlagged ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
+        >
+          <Flag className="w-4 h-4" fill={isFlagged ? "currentColor" : "none"} />
+          <span>{isFlagged ? "Signalé" : "Signaler"}</span>
+        </button>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <Toaster position="top-center" reverseOrder={false} />
+      
+      {/* Admin badge for administrators */}
+      {userRole === 'Administrateur' && (
+        <div className="max-w-4xl mx-auto px-4 mb-4">
+          <div className="inline-flex items-center gap-2 bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium">
+            <Shield className="w-4 h-4" />
+            Mode modération
+          </div>
+        </div>
+      )}
+      
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <h1 className="text-4xl font-extrabold text-gray-900 mb-8 border-b pb-4 border-gray-200">
           Forum de discussion
@@ -712,11 +963,14 @@ const Forum = () => {
                         {thread.commentsCount > 1 ? 's' : ''}
                       </span>
                     </div>
+                    
+                    {/* Add moderation controls */}
+                    {renderModerationControls(thread.id, thread.User?.id, thread.User?.username)}
                   </article>
                 ))
               )}
             </section>
-
+            
             {/* Pagination - existing code */}
             <div className="mt-6 flex justify-between">
               <button
@@ -778,6 +1032,26 @@ const Forum = () => {
                     })}
                   </span>
                 </div>
+                
+                {/* Add thread moderation controls */}
+                {userRole === 'Administrateur' && (
+                  <div className="mt-3 flex gap-3">
+                    <button 
+                      onClick={() => showDeleteConfirmation(selectedThread.id, 'thread')}
+                      className="flex items-center gap-1 px-3 py-1 text-white bg-red-600 rounded-md hover:bg-red-700"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>Supprimer la discussion</span>
+                    </button>
+                    <button 
+                      onClick={() => showWarningForm(selectedThread.User?.id, selectedThread.User?.username)}
+                      className="flex items-center gap-1 px-3 py-1 text-white bg-amber-600 rounded-md hover:bg-amber-700"
+                    >
+                      <AlertTriangle className="w-4 h-4" />
+                      <span>Avertir l&apos;auteur</span>
+                    </button>
+                  </div>
+                )}
               </header>
 
               <div className="prose prose-blue mb-10 p-4 bg-gray-50 rounded-lg">
@@ -806,10 +1080,13 @@ const Forum = () => {
                         })}
                       </span>
                     </div>
+                    
+                    {/* Add comment moderation controls */}
+                    {renderCommentModerationControls(comment.id, comment.User.id, comment.User.username)}
                   </div>
                 ))}
               </section>
-
+              
               <div className="mt-10 pt-6 border-t border-gray-200">
                 <label className="block text-sm font-medium text-gray-700 mb-4">
                   Votre réponse
@@ -859,15 +1136,120 @@ const Forum = () => {
           </div>
         )}
       </div>
+      
+      {/* Delete confirmation modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Confirmer la suppression</h3>
+            <p className="text-gray-600 mb-6">
+              Êtes-vous sûr de vouloir supprimer {deleteType === 'thread' ? 'cette discussion' : 'ce commentaire'} ? 
+              Cette action est irréversible.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700"
+                disabled={loading}
+              >
+                {loading ? 'Suppression...' : 'Supprimer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Warning modal */}
+      {showWarningModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">
+              Envoyer un avertissement à {userToWarn?.username}
+            </h3>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Message d&apos;avertissement
+              </label>
+              <textarea
+                value={warningMessage}
+                onChange={e => setWarningMessage(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                rows="4"
+                placeholder="Décrivez la raison de l'avertissement..."
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowWarningModal(false)}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleSendWarning}
+                className="px-4 py-2 text-white bg-amber-600 rounded-lg hover:bg-amber-700"
+                disabled={loading}
+              >
+                {loading ? 'Envoi...' : 'Envoyer l\'avertissement'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Flag modal */}
+      {showFlagModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">
+              Signaler le contenu
+            </h3>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Motif du signalement
+              </label>
+              <textarea
+                value={flagReason}
+                onChange={e => setFlagReason(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                rows="4"
+                placeholder="Décrivez pourquoi ce contenu doit être révisé..."
+              />
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowFlagModal(false)}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={submitFlag}
+                className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                disabled={loading}
+              >
+                {loading ? 'Envoi...' : 'Signaler le contenu'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 Forum.propTypes = {
+  userRole: PropTypes.string,
   currentUser: PropTypes.shape({
     id: PropTypes.string.isRequired,
     username: PropTypes.string.isRequired,
-  }).isRequired,
+  })
 };
 
 export default Forum;

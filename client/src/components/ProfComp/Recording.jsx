@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { toast, Toaster } from 'react-hot-toast';
 import { Play, Square, Video } from 'lucide-react';
-import {
-  startRecording,
-  stopRecording,
-  getRecordingStatus,
-} from '../../API/RecordCaller';
+// import {
+//   startRecording,
+//   stopRecording,
+//   getRecordingStatus,
+// } from '../../API/RecordCaller';
 import { GetCourses } from '../../API/ProfGestion';
 import { StreamReader } from '../StreamReader';
 
@@ -40,8 +40,8 @@ const Recording = () => {
 
     const checkStatus = async () => {
       try {
-        const status = await getRecordingStatus();
-        setIsRecording(status.recording);
+        // const status = await getRecordingStatus();
+        setIsRecording(true);
       } catch (error) {
         console.error('Erreur lors de la vérification du statut:', error);
       }
@@ -58,10 +58,11 @@ const Recording = () => {
 
     setLoading(true);
     try {
-      await startRecording(selectedCourse, description);
+      // await startRecording(selectedCourse, description);
       setIsRecording(true);
       toast.success('Enregistrement démarré');
     } catch (error) {
+      console.error('Erreur lors du démarrage de l\'enregistrement:', error);
       toast.error("Erreur lors du démarrage de l'enregistrement");
     } finally {
       setLoading(false);
@@ -71,13 +72,14 @@ const Recording = () => {
   const handleStop = async () => {
     setLoading(true);
     try {
-      await stopRecording();
+      // await stopRecording();
       setIsRecording(false);
       toast.success('Enregistrement arrêté');
       // Reset form
       setDescription('');
       setSelectedCourse('');
     } catch (error) {
+      console.error('Erreur lors de l\'arrêt de l\'enregistrement:', error);
       toast.error("Erreur lors de l'arrêt de l'enregistrement");
     } finally {
       setLoading(false);

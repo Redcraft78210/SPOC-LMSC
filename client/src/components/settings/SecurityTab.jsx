@@ -8,11 +8,15 @@ import {
   // loadCaptchaEnginge as loadCaptchaEngine,
   validateCaptcha,
 } from 'react-simple-captcha';
-import { setup2FA, verify2FASetup, disable2FA, changePassword } from '../../API/ProfileCaller';
+
+import { changePassword } from '../../API/UserCaller';
+
+import { setup2FA, verify2FASetup, disable2FA } from '../../API/AuthCaller';
 
 const LoadCanvasTemplate = lazy(() =>
   import('react-simple-captcha').then(module => ({ default: module.LoadCanvasTemplate }))
 );
+
 const loadCaptchaEngine = lazy(() =>
   import('react-simple-captcha').then(module => ({ default: module.loadCaptchaEnginge }))
 );
@@ -80,10 +84,10 @@ const TwoFASetupModal = lazy(() => {
                     />
                   ))}
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 mt-10 gap-20">
                   <button
                     type="button"
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                    className="mx-auto flex-1 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
                     onClick={() => setAuthStep('2fa')}
                   >
                     Annuler
@@ -91,7 +95,7 @@ const TwoFASetupModal = lazy(() => {
 
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center"
+                    className="mx-auto flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center"
                     disabled={loading}
                   >
                     {loading ? <Spinner /> : 'Vérifier le code'}
@@ -241,7 +245,7 @@ const SecurityTab = ({ user, handleInputChange }) => {
 
     setLoading(true); // Début du chargement
     try {
-      const { data } = await verify2FASetup(fullCode, tempToken);
+      const { data } = await verify2FASetup({ code: fullCode, tempToken });
 
       if (data.token) {
         setTwoFactorAuth(true);
@@ -270,9 +274,10 @@ const SecurityTab = ({ user, handleInputChange }) => {
     try {
       const response = await setup2FA();
 
-      if (response.status === 200) {
-        setQrCodeData(response.data.qrCodeUrl);
-        setManualSecret(response.data.manualSetupKey);
+      if (response.status === 201) {
+        setTempToken(response.data.tempToken);
+        setQrCodeData(response.data.twoFASetup.qrCode);
+        setManualSecret(response.data.twoFASetup.manualSecret);
         setAuthStep('setup');
       }
     } catch (error) {

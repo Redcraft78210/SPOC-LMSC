@@ -130,6 +130,62 @@ export const refreshTwoFASetup = async ({ tempToken, twoFASetup }) => {
   }
 };
 
+
+
+/**
+ * Configurer l'authentification à deux facteurs
+ * @returns {Promise<Object>} - La réponse du serveur
+ */
+export const setup2FA = async () => {
+  try {
+    const response = await api.post('/auth/activate-2fa');
+    return {
+      status: response.status,
+      data: response.data,
+      message: 'Success',
+    };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+/**
+ * Désactiver l'authentification à deux facteurs
+ * @param {Object} params - Les paramètres
+ * @returns {Promise<Object>} - La réponse du serveur
+ */
+export const disable2FA = async () => {
+  try {
+    const response = await api.delete('/users/2fa');
+    return {
+      status: response.status,
+      data: response.data,
+      message: 'Success',
+    };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+/**
+ * Vérifier la configuration de l'authentification à deux facteurs
+ * @param {Object} params - Les paramètres
+ * @param {string} params.code - Le code de vérification 2FA
+ * @returns {Promise<Object>} - La réponse du serveur
+ */
+export const verify2FASetup = async ({ code, tempToken }) => {
+  try {
+    const response = await api.post('/auth/verify-2fa', { code, tempToken, setup: true });
+    return {
+      status: response.status,
+      data: response.data,
+      message: 'Success',
+    };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
 /**
  * Demander la réinitialisation du mot de passe
  * @param {Object} params - Les paramètres
@@ -226,6 +282,14 @@ verifyTwoFA.propTypes = {
 refreshTwoFASetup.propTypes = {
   tempToken: PropTypes.string.isRequired,
   twoFASetup: PropTypes.object.isRequired,
+};
+
+verify2FASetup.propTypes = {
+  code: PropTypes.string.isRequired,
+};
+
+disable2FA.propTypes = {
+  code: PropTypes.string.isRequired,
 };
 
 forgotPassword.propTypes = {

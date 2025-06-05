@@ -7,6 +7,7 @@ import {
   useLocation,
 } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
+import { TutorialProvider } from './contexts/TutorialContext';
 
 // Replace static imports with lazy imports
 const About = React.lazy(() => import('./pages/Public/About'));
@@ -44,7 +45,7 @@ const routeConfig = [
   // Course-related routes
   { path: '/course-reader', content: 'CourseReader' },
   { path: '/courses-library', content: 'CoursesLibrary' },
-  { path: '/courses-managment', content: 'CoursesManagment' },
+  { path: '/courses-managment', content: 'CoursesManagement' },
 
   // Class-related routes
   { path: '/classes-management', content: 'ClassManagement' },
@@ -56,6 +57,7 @@ const routeConfig = [
   // Media-related routes
   { path: '/video-manager', content: 'VideoManager' },
   { path: '/document-manager', content: 'DocumentManager' },
+  { path: '/video-recording', content: 'VideoRecording' },
 
   // Communication-related routes
   { path: '/forum', content: 'Forum' },
@@ -82,7 +84,9 @@ const publicRouteConfig = [
 function AppWrapper() {
   return (
     <Router>
-      <App />
+      <TutorialProvider>
+        <App />
+      </TutorialProvider>
     </Router>
   );
 }
