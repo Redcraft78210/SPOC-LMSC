@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, Suspense, lazy } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { getAvatar } from '../API/ProfileCaller';
 import { jwtDecode } from 'jwt-decode';
-import { X, Pencil, Loader2, Mail, Bell, Menu } from 'lucide-react';
+import { X, Pencil, Loader2, Mail, Menu } from 'lucide-react';
 import PropTypes from 'prop-types';
 
 import NavigationBar from '../components/Navbar';
@@ -242,7 +242,6 @@ const Dashboard = ({ content, token, role }) => {
 
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-4 text-white">
-              <Bell className="h-5 w-5 md:h-6 md:w-6 mx-1" />
               <Mail
                 className="h-5 w-5 md:h-6 md:w-6 mx-1 md:mx-3 cursor-pointer"
                 onClick={() => setShowMailModal(true)}
