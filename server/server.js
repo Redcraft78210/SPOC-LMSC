@@ -88,8 +88,7 @@ app.use(express.urlencoded({ limit: '300mb', extended: true }));
 // En production, il faut ajouter le nom de domaine de l'application
 // const allowedOrigins = ["https://your-production-domain.com"];
 
-const allowedOrigins = ["https://localhost", "https://172.20.10.3",
-  "https://172.16.87.30", "https://172.16.84.14"];
+const allowedOrigins = ["https://localhost", "https://spoc.lmsc"];
 
 // Middleware
 app.use(cors({

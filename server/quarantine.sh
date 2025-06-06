@@ -52,8 +52,14 @@ TMP_ENC="/tmp/$(basename "$FICHIER").enc"
 }
 
 # Vérifie si le conteneur Docker de quarantaine existe
-docker ps -q --filter "name=quarantine_container" | grep -q . || {
+docker ps -a -q --filter "name=quarantine_container" | grep -q . || {
     echo "Erreur : Le conteneur Docker 'quarantine_container' n'existe pas."
+    exit 1
+}
+
+# Si le conteneur n'est pas en cours d'exécution, on le démarre
+docker start quarantine_container &>/dev/null || {
+    echo "Erreur : Impossible de démarrer le conteneur Docker 'quarantine_container'."
     exit 1
 }
 

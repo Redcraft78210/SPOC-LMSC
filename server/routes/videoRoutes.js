@@ -4,7 +4,7 @@ const authMiddleware = require('../middlewares/authMiddleware.js');
 
 const router = express.Router();
 
-const allowedReferrerStarts = ['https://172.16.87.30', 'https://172.20.10.3'];
+const allowedReferrerStarts = ['https://spoc.lmsc'];
 
 // Get video by ID
 router.get('/:id', (req, res, next) => {
