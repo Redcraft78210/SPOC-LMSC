@@ -9,7 +9,7 @@ import {
   moveToTrash,
   downloadAttachment,
   sendMessage,
-  // restoreFromTrash,
+
   deleteMessage as permanentlyDeleteMessage,
   getAvailableRecipients
 } from '../API/MailboxCaller';
@@ -57,17 +57,17 @@ const Mailbox = ({ role, onClose, user }) => {
     totalMessages: 0,
   });
 
-  // Ajoutez useTransition pour gérer les transitions d'état
+
   const [isPending, startTransition] = useTransition();
 
-  // Add missing state variables
+
   const [downloadingAttachments, setDownloadingAttachments] = useState({});
   const [loadingMessageDetails, setLoadingMessageDetails] = useState(false);
   const [deletingMessage, setDeletingMessage] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // Filter options
+
   const [filters, setFilters] = useState({
     unread: false,
     hasAttachments: false,
@@ -100,7 +100,7 @@ const Mailbox = ({ role, onClose, user }) => {
       });
 
       if (response.status === 200) {
-        // Utilisation de startTransition pour éviter le flickering
+
         startTransition(() => {
           setMessages(response.data.messages);
           setPagination({
@@ -125,13 +125,13 @@ const Mailbox = ({ role, onClose, user }) => {
 
   const handleMessageSelect = async messageId => {
     try {
-      // Clear the selected message first before loading the new one
+
       setSelectedMessage(null);
 
-      // Mark the message as read immediately if it's in inbox and unread
+
       const messageToUpdate = messages.find(msg => msg.id === messageId);
       if (messageToUpdate && !messageToUpdate.read && view === 'inbox') {
-        // Update UI immediately
+
         startTransition(() => {
           setMessages(prevMessages =>
             prevMessages.map(msg =>
@@ -140,13 +140,13 @@ const Mailbox = ({ role, onClose, user }) => {
           );
         });
         
-        // Send API request to mark as read (don't await)
+
         markAsRead({ messageId }).catch(error => {
           console.error("Erreur lors du marquage comme lu:", error);
         });
       }
 
-      // Then start loading the new message
+
       startTransition(() => {
         setLoadingMessageDetails(true);
       });
@@ -202,7 +202,7 @@ const Mailbox = ({ role, onClose, user }) => {
       const response = await downloadAttachment({ attachmentId });
 
       if (response && response.status === 200) {
-        // Téléchargement du fichier
+
         const blob = response.data;
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -211,13 +211,13 @@ const Mailbox = ({ role, onClose, user }) => {
         document.body.appendChild(link);
         link.click();
 
-        // Cleanup
+
         setTimeout(() => {
           document.body.removeChild(link);
           window.URL.revokeObjectURL(url);
         }, 100);
       } else {
-        // Safe access to response message with fallback
+
         const errorMessage = response?.message || "Unknown error";
         console.error("Error downloading attachment:", errorMessage);
       }
@@ -243,7 +243,7 @@ const Mailbox = ({ role, onClose, user }) => {
     const [subject, setSubject] = useState(replyData?.subject || '');
     const [attachments, setAttachments] = useState([]);
     const [sending, setSending] = useState(false);
-    const [recipientType, setRecipientType] = useState('individual'); // individual, all-admins, all-teachers, all-students
+    const [recipientType, setRecipientType] = useState('individual');
     const [searchQuery, setSearchQuery] = useState('');
     const [showSuggestions, setShowSuggestions] = useState(false);
     const recipientsInitialized = useRef(false);
@@ -251,14 +251,14 @@ const Mailbox = ({ role, onClose, user }) => {
     const searchInputRef = useRef(null);
     const editorRef = useRef(null);
 
-    // Add this useEffect near your other effects
+
     useEffect(() => {
       if (recipients.length > 1 && recipientType !== 'multiple') {
         setRecipientType('multiple');
       }
     }, [recipients, recipientType]);
 
-    // Expressions régulières pour détecter les mentions de pièces jointes
+
     const attachmentRegexList = [
       /ci-joint/i,
       /pièce[s]? jointe[s]?/i,
@@ -280,7 +280,7 @@ const Mailbox = ({ role, onClose, user }) => {
       /joint.*document/i,
     ];
 
-    // Fonction pour vérifier si le contenu mentionne des pièces jointes
+
     const checkForAttachmentMention = (text) => {
       return attachmentRegexList.some(regex => regex.test(text));
     };
@@ -308,17 +308,17 @@ const Mailbox = ({ role, onClose, user }) => {
       fetchAvailableRecipients();
     }, [fetchAvailableRecipients]);
 
-    // Add effect to handle reply data initialization
+
     useEffect(() => {
       if (
         replyData &&
         availableRecipients.length > 0 &&
         !recipientsInitialized.current
       ) {
-        // Pre-fill subject from replyData
+
         setSubject(replyData.subject);
 
-        // Pre-select recipient if it exists in available recipients
+
         const replyRecipient = availableRecipients.find(
           r => r.id === replyData.recipientId
         );
@@ -330,7 +330,7 @@ const Mailbox = ({ role, onClose, user }) => {
       }
     }, [replyData, availableRecipients]);
 
-    // Close suggestions on outside click
+
     useEffect(() => {
       const handleClickOutside = event => {
         if (
@@ -350,7 +350,7 @@ const Mailbox = ({ role, onClose, user }) => {
     const handleFileChange = e => {
       const files = Array.from(e.target.files);
 
-      // Check file size limit (10MB per file)
+
       const validFiles = files.filter(file => file.size <= 10 * 1024 * 1024);
       const invalidFiles = files.filter(file => file.size > 10 * 1024 * 1024);
 
@@ -360,7 +360,7 @@ const Mailbox = ({ role, onClose, user }) => {
         );
       }
 
-      // Add valid files to attachments
+
       setAttachments([...attachments, ...validFiles]);
     };
 
@@ -370,7 +370,7 @@ const Mailbox = ({ role, onClose, user }) => {
 
     const handleSearchChange = e => {
       setSearchQuery(e.target.value);
-      setShowSuggestions(true); // Show suggestions when typing
+      setShowSuggestions(true);
     };
 
     const handleRecipientSelect = input => {
@@ -381,7 +381,7 @@ const Mailbox = ({ role, onClose, user }) => {
 
       if (selectedUser) {
         setRecipients(prevRecipients => {
-          // Check if the user is already selected
+
           if (!prevRecipients.some(r => r.id === selectedUser.id)) {
             return [...prevRecipients, selectedUser];
           }
@@ -396,14 +396,14 @@ const Mailbox = ({ role, onClose, user }) => {
     const handleSpecialRecipientSelect = type => {
       if (type !== recipientType) {
         setRecipientType(type);
-        setRecipients([]); // Clear individual recipients when selecting a special group
+        setRecipients([]);
       }
     };
 
     const handleSubmit = async e => {
       e.preventDefault();
 
-      // Obtenir le contenu de l'éditeur au format markdown
+
       const editorContent = editorRef.current?.getInstance().getMarkdown() || '';
 
       if (recipients.length === 0 && recipientType === 'individual') {
@@ -421,7 +421,7 @@ const Mailbox = ({ role, onClose, user }) => {
         return;
       }
 
-      // Vérifier si l'utilisateur mentionne des pièces jointes mais n'en a pas ajouté
+
       if (attachments.length === 0 && checkForAttachmentMention(editorContent)) {
         const confirmSend = window.confirm(
           "Vous semblez mentionner des pièces jointes dans votre message, mais aucun fichier n'a été ajouté. Souhaitez-vous quand même envoyer le message sans pièces jointes?"
@@ -437,7 +437,7 @@ const Mailbox = ({ role, onClose, user }) => {
       try {
         const formData = new FormData();
 
-        // Ajouter les destinataires
+
         recipients.forEach(recipient => {
           formData.append('recipients[]', recipient.id);
         });
@@ -451,12 +451,12 @@ const Mailbox = ({ role, onClose, user }) => {
         formData.append('subject', subject.trim());
         formData.append('content', editorContent.trim());
 
-        // Si c'est une réponse, ajouter l'ID du message auquel on répond
+
         if (replyData) {
           formData.append('replyTo', replyData.id);
         }
 
-        // Ajouter les pièces jointes
+
         Array.from(attachments).forEach(file => {
           formData.append('attachments', file);
         });
@@ -478,10 +478,10 @@ const Mailbox = ({ role, onClose, user }) => {
       }
     };
 
-    // Fonction pour initialiser l'éditeur avec un contenu initial (pour les réponses)
+
     useEffect(() => {
       if (replyData && editorRef.current) {
-        // Si nous avons des données de réponse, pré-remplir l'éditeur avec une citation
+
         const originalContent = replyData.originalMessage?.content || '';
         const quoteContent = originalContent
           .split('\n')
@@ -490,12 +490,12 @@ const Mailbox = ({ role, onClose, user }) => {
 
         const replyTemplate = `\n\n---\n${quoteContent}`;
 
-        // Initialiser l'éditeur avec ce contenu
+
         editorRef.current.getInstance().setMarkdown(replyTemplate);
       }
     }, [replyData]);
 
-    // Configuration du hook pour le glisser-déposer
+
     useEffect(() => {
       if (editorRef.current) {
         const editorInstance = editorRef.current.getInstance();
@@ -517,26 +517,26 @@ const Mailbox = ({ role, onClose, user }) => {
 
             if (e.dataTransfer.files.length) {
               const files = Array.from(e.dataTransfer.files);
-              // Filtrer uniquement les images et les autres fichiers
+
               const validFiles = files.filter(file => file.size <= 10 * 1024 * 1024);
 
-              // Séparer les images des autres fichiers
+
               const imageFiles = validFiles.filter(file => file.type.startsWith('image/'));
               const otherFiles = validFiles.filter(file => !file.type.startsWith('image/'));
 
-              // Ajouter les fichiers non-image aux pièces jointes
+
               if (otherFiles.length > 0) {
                 setAttachments(prev => [...prev, ...otherFiles]);
                 toast.success(`${otherFiles.length} fichier(s) ajouté(s) aux pièces jointes`);
               }
 
-              // Insérer les images directement dans l'éditeur
+
               if (imageFiles.length > 0) {
-                // Pour chaque image, l'insérer dans l'éditeur
+
                 imageFiles.forEach(file => {
                   const reader = new FileReader();
                   reader.onload = (e) => {
-                    // Insérer l'image à la position du curseur
+
                     editorInstance.insertImage({
                       src: e.target.result,
                       alt: file.name
@@ -551,7 +551,7 @@ const Mailbox = ({ role, onClose, user }) => {
           });
         }
 
-        // Nettoyer les event listeners lors du démontage du composant
+
         return () => {
           if (dropZone) {
             dropZone.removeEventListener('dragover', () => { });
@@ -743,7 +743,7 @@ const Mailbox = ({ role, onClose, user }) => {
                       {availableRecipients
                         .filter(
                           user =>
-                            !recipients.some(r => r.id === user.id) && // Filter out already selected recipients
+                            !recipients.some(r => r.id === user.id) &&
                             (user.name
                               .toLowerCase()
                               .includes(searchQuery.toLowerCase()) ||
@@ -935,7 +935,7 @@ const Mailbox = ({ role, onClose, user }) => {
     );
   };
 
-  // When closing compose modal, clear reply data
+
   const closeComposeModal = () => {
     setShowComposeModal(false);
     setReplyData(null);
@@ -946,17 +946,17 @@ const Mailbox = ({ role, onClose, user }) => {
   };
 
   const handleTabClick = (newView) => {
-    // If clicking on the already active tab, just refresh messages
+
     if (view === newView) {
       setLoading(true);
-      // Force refresh by incrementing the key
+
       setRefreshKey(prev => prev + 1);
       return;
     }
 
-    setMessages([]); // Clear messages to avoid flickering during transition
+    setMessages([]);
 
-    // Otherwise, change the view with appropriate state changes
+
     setLoading(true);
     setView(newView);
     setSelectedMessage(null);
@@ -974,7 +974,7 @@ const Mailbox = ({ role, onClose, user }) => {
       });
 
       return () => {
-        // Clean up
+
         viewerInstance.destroy();
       };
     }, [content]);
@@ -1166,7 +1166,7 @@ const Mailbox = ({ role, onClose, user }) => {
               {/* Messages List - Optimisé pour éviter le flickering */}
               <div className="flex-1 overflow-y-auto">
                 {loading && (
-                  // Afficher les skeletons si pas de messages déjà chargés
+
                   <div className="space-y-1">
                     {Array(5).fill(0).map((_, index) => (
                       <MessageSkeleton key={index} />
@@ -1275,7 +1275,7 @@ const Mailbox = ({ role, onClose, user }) => {
 
             {/* Message Detail View */}
             {loadingMessageDetails ? (
-              // Always show skeleton during message loading
+
               <MessageDetailSkeleton />
             ) : selectedMessage ? (
               <div className={`flex-1 flex flex-col bg-white ${selectedMessage ? 'block md:flex' : 'hidden md:flex'}`}>
@@ -1318,17 +1318,17 @@ const Mailbox = ({ role, onClose, user }) => {
                             {(() => {
                               const userIsRecipient = selectedMessage.recipients?.some(r => r?.email === user.email);
 
-                              // If user is a recipient, add "Vous", else just list recipient names
+
                               const displayedRecipients = [
                                 ...(userIsRecipient ? ["Vous"] : []),
                                 ...(selectedMessage.recipients?.map(r => r?.name || "") ?? []),
                               ];
 
-                              // Filter out "Vous" if user's email is in recipients, no need because "Vous" is string
-                              // So instead, just remove names equal to user's own name if needed, but you used email check on strings.
-                              // We should filter out empty strings and duplicates, also filter out user name if present.
 
-                              // Let's assume user.name is available
+
+
+
+
                               const filteredRecipients = displayedRecipients.filter(name => name && name !== user.name && name !== "");
 
                               return filteredRecipients.map((name, index) => (
@@ -1567,7 +1567,7 @@ const Mailbox = ({ role, onClose, user }) => {
                 <div className="p-3 sm:p-4 border-t border-gray-200">
                   <button
                     onClick={() => {
-                      // Set the reply data that will be used by ComposeMail
+
                       setReplyData({
                         subject: `Re: ${selectedMessage.subject}`,
                         recipientId: selectedMessage.sender?.id,
@@ -1583,7 +1583,7 @@ const Mailbox = ({ role, onClose, user }) => {
                 </div>
               </div>
             ) : (
-              // Pas de message sélectionné
+
               <div className="flex-1 items-center justify-center bg-white hidden md:flex">
                 <p className="text-gray-500 text-sm sm:text-base">
                   Sélectionnez un message pour le lire
@@ -1600,7 +1600,7 @@ const Mailbox = ({ role, onClose, user }) => {
   );
 };
 
-// Ajouter ce composant dans votre fichier
+
 const MessageSkeleton = () => {
   return (
     <div className="w-full p-3 sm:p-4 border border-gray-100 animate-pulse">
@@ -1617,7 +1617,7 @@ const MessageSkeleton = () => {
   );
 };
 
-// Ajouter un composant skeleton pour le message sélectionné
+
 const MessageDetailSkeleton = () => {
   return (
     <div className="flex-1 flex flex-col bg-white">

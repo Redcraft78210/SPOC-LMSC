@@ -8,37 +8,37 @@ import PropTypes from 'prop-types';
 import NavigationBar from '../components/Navbar';
 import Logo from '../Logo';
 
-// Lazy load components
 
-// Common components
+
+
 const PictureModal = lazy(() => import('../components/PictureModal'));
 const Mailbox = lazy(() => import('../components/Mailbox'));
 const ThemeSettings = lazy(() => import('./Public/Theme'));
 const NotFound = lazy(() => import('./Public/NotFound'));
 
-// Administrator-specific components
+
 const AdminDashboardHome = lazy(() => import('./Admin/DashboardHome'));
 const UserManagement = lazy(() => import('./Admin/UserManagement'));
 const ClassManagement = lazy(() => import('./Admin/ClassManagement'));
 
-// Professor-specific components
+
 const ProfDashboardHome = lazy(() => import('./Professeur/DashboardHome'));
 const CoursesManagement = lazy(() => import('../components/ProfComp/CoursesManagment'));
 const DocumentManager = lazy(() => import('../components/ProfComp/DocumentMng'));
 const VideoManager = lazy(() => import('../components/ProfComp/VideoMng'));
 const VideoRecording = lazy(() => import('../components/ProfComp/Recording'));
 
-// Student-specific components
+
 const EleveDashboardHome = lazy(() => import('./Eleve/DashboardHome'));
 
-// Shared components across roles
+
 const CoursesLibrary = lazy(() => import('./CoursesLibrary'));
 const CourseReader = lazy(() => import('./CourseReader'));
 const LiveViewer = lazy(() => import('./LiveViewer'));
 const Forum = lazy(() => import('./Forum'));
 const Settings = lazy(() => import('./Settings'));
 
-// Add a loading component
+
 const LoadingComponent = () => (
   <div className="flex items-center justify-center h-full w-full">
     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -57,12 +57,12 @@ const Dashboard = ({ content, token, role }) => {
   const [showMailModal, setShowMailModal] = useState(false);
   const avatarUrlRef = useRef(null);
 
-  // Fonction pour rafraîchir l'avatar
+
   const refreshAvatar = useCallback(() => {
     setAvatarVersion(Date.now());
   }, []);
 
-  // Récupération de l'avatar
+
   useEffect(() => {
     const fetchAvatar = async () => {
       try {
@@ -113,7 +113,7 @@ const Dashboard = ({ content, token, role }) => {
     };
   }, [showProfileModal]);
 
-  // Fermer le menu mobile quand le contenu change
+
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [content]);

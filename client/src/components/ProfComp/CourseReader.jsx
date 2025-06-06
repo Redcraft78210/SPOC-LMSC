@@ -23,7 +23,7 @@ const CourseReader = ({ authToken }) => {
         
         if (response.status !== 200) throw new Error('Cours non trouvé');
         
-        // Marquer le cours comme commencé
+
         try {
           const progressResponse = await markCourseAsInProgress({ courseId });
           
@@ -76,7 +76,7 @@ const CourseReader = ({ authToken }) => {
         throw new Error(response.message || 'Erreur lors du téléchargement');
       }
 
-      // Traitement du blob retourné
+
       const blob = response.data;
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -87,7 +87,7 @@ const CourseReader = ({ authToken }) => {
 
       setDocumentError(null);
 
-      // Cleanup
+
       setTimeout(() => {
         document.body.removeChild(link);
         window.URL.revokeObjectURL(url);

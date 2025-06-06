@@ -7,7 +7,7 @@ import PropTypes from 'prop-types';
  * @returns {Object} - Objet d'erreur formaté
  */
 const handleError = (error) => {
-  // Si l'API a répondu avec une erreur
+
   if (error.response) {
     return {
       status: error.response.status,
@@ -15,7 +15,7 @@ const handleError = (error) => {
       message: error.response.data?.message || error.message,
     };
   }
-  // Si l'erreur est liée à la configuration de la requête
+
   if (error.request) {
     return {
       status: 500,
@@ -23,7 +23,7 @@ const handleError = (error) => {
       message: 'Aucune réponse reçue du serveur',
     };
   }
-  // Pour les autres types d'erreurs
+
   return {
     status: 500,
     data: null,
@@ -31,7 +31,7 @@ const handleError = (error) => {
   };
 };
 
-// Récupérer toutes les classes
+
 const GetClasses = async () => {
   try {
     const response = await api.get('/classes/');
@@ -45,7 +45,7 @@ const GetClasses = async () => {
   }
 };
 
-// Récupérer tous les cours
+
 const GetCourses = async () => {
   try {
     const response = await api.get('/all/');
@@ -59,7 +59,7 @@ const GetCourses = async () => {
   }
 };
 
-// Créer un cours
+
 const CreateCourse = async ({ courseData }) => {
   try {
     const response = await api.post('/create/', courseData);
@@ -73,7 +73,7 @@ const CreateCourse = async ({ courseData }) => {
   }
 };
 
-// Mettre à jour un cours
+
 const UpdateCourse = async ({ courseId, courseData }) => {
   try {
     const response = await api.put(`/cours/${courseId}/`, courseData);
@@ -87,7 +87,7 @@ const UpdateCourse = async ({ courseId, courseData }) => {
   }
 };
 
-// Détails d'un cours
+
 const GetCourseDetails = async ({ courseId }) => {
   try {
     const response = await api.get(`/cours/${courseId}/`);
@@ -101,7 +101,7 @@ const GetCourseDetails = async ({ courseId }) => {
   }
 };
 
-// Supprimer un cours
+
 const DeleteCourse = async ({ courseId }) => {
   try {
     const response = await api.delete(`/delete/${courseId}`);
@@ -115,7 +115,7 @@ const DeleteCourse = async ({ courseId }) => {
   }
 };
 
-// PropTypes
+
 GetClasses.propTypes = {};
 
 GetCourses.propTypes = {};

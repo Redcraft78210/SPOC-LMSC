@@ -11,7 +11,7 @@ export default function DocumentExplorer({ onDocumentSelect }) {
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Charger la liste des cours
+
   useEffect(() => {
     const fetchCourses = async () => {
       try {
@@ -27,7 +27,7 @@ export default function DocumentExplorer({ onDocumentSelect }) {
     fetchCourses();
   }, []);
 
-  // Mettre à jour la liste des documents quand un cours est sélectionné
+
   useEffect(() => {
     if (selectedCourseId) {
       const selectedCourse = courses.find(

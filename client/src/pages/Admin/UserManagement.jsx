@@ -50,7 +50,7 @@ const errorMessages = {
   default: 'Une erreur est survenue. Veuillez réessayer.',
 };
 
-// Définir SearchUser en dehors du composant principal
+
 const SearchUser = memo(function SearchUser({ value, onChange }) {
   return (
     <div className="searchuser relative flex-1 max-w-xl">
@@ -109,12 +109,12 @@ const UserManagement = () => {
     fetchClasses();
   }, [fetchClasses, fetchUsers]);
 
-  // Determine initial view mode based on screen width
+
   const getInitialViewMode = () => {
     if (typeof window !== 'undefined') {
       return window.innerWidth < 640 ? 'grid' : 'list';
     }
-    return 'list'; // Fallback for SSR
+    return 'list';
   };
 
   const [viewMode, setViewMode] = useState(getInitialViewMode);
@@ -124,7 +124,7 @@ const UserManagement = () => {
   const [showInviteCodeModal, setShowInviteCodeModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
 
-  // Add window resize listener to update view mode on screen size change
+
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth < 640 && viewMode === 'list') {
@@ -144,14 +144,14 @@ const UserManagement = () => {
     setShowInviteCodeModal(searchParams.get('invite-code'));
   }, []);
 
-  // Filtrage des utilisateurs
+
   const filteredUsers = users.filter(user =>
     Object.values(user).some(value =>
       String(value).toLowerCase().includes(searchQuery.toLowerCase())
     )
   );
 
-  // Gestion de la sélection
+
   const toggleAll = () => {
     if (selectedUsers.length === filteredUsers.length) {
       setSelectedUsers([]);
@@ -168,7 +168,7 @@ const UserManagement = () => {
     );
   };
 
-  // Actions groupées
+
   const bulkDelete = async () => {
     if (window.confirm(`Supprimer ${selectedUsers.length} utilisateur(s) ?`)) {
       try {
@@ -596,14 +596,14 @@ const UserManagement = () => {
       name: '',
       surname: '',
       email: '',
-      role: 'Etudiant', // valeur par défaut en français
+      role: 'Etudiant',
       newPassword: '',
       isPasswordGeneratedByAdmin: false,
     });
     const [initialUser, setInitialUser] = useState(null);
 
     const [errors, setErrors] = useState({});
-    const [serverError, setServerError] = useState(''); // État pour les erreurs du serveur
+    const [serverError, setServerError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
@@ -615,7 +615,7 @@ const UserManagement = () => {
           name: selectedUser.name,
           surname: selectedUser.surname,
           email: selectedUser.email,
-          role: selectedUser.role, // déjà en français
+          role: selectedUser.role,
           newPassword: '',
         });
         setInitialUser({
@@ -695,7 +695,7 @@ const UserManagement = () => {
       if (!validateForm()) return;
 
       setIsLoading(true);
-      setServerError(''); // Reset server error
+      setServerError('');
       try {
         await handleUserSubmit(formData);
         if (isMounted) {
@@ -707,7 +707,7 @@ const UserManagement = () => {
           }, 1500);
         }
       } catch (error) {
-        // Map server error to user-friendly message
+
         const errorCode = error?.message || 'default';
         setServerError(errorMessages[errorCode] || errorMessages.default);
       } finally {
@@ -751,7 +751,7 @@ const UserManagement = () => {
       const special = '!@#$%^&*()_+-=';
       const all = upper + lower + digits + special;
 
-      // Assurer qu'on a au moins un de chaque
+
       let password = [
         upper[Math.floor(Math.random() * upper.length)],
         lower[Math.floor(Math.random() * lower.length)],
@@ -759,12 +759,12 @@ const UserManagement = () => {
         special[Math.floor(Math.random() * special.length)],
       ];
 
-      // Remplir le reste avec des caractères aléatoires
+
       for (let i = password.length; i < 12; i++) {
         password.push(all[Math.floor(Math.random() * all.length)]);
       }
 
-      // Mélanger le mot de passe
+
       password = password.sort(() => 0.5 - Math.random());
 
       password = password.join('');
@@ -1013,13 +1013,13 @@ const UserManagement = () => {
       validityPeriod: 24,
       classId: null,
     });
-    const [assignClass, setAssignClass] = useState(false); // Checkbox state
+    const [assignClass, setAssignClass] = useState(false);
     const [existingCodes, setExistingCodes] = useState([]);
     const [loading, setLoading] = useState(false);
 
     const codesPerPage = 5;
 
-    // Fetch existing codes on mount
+
     useEffect(() => {
       const fetchInviteCodes = async () => {
         try {
@@ -1059,7 +1059,7 @@ const UserManagement = () => {
         });
 
         if (response.status === 201) {
-          // Mettre à jour la liste des codes
+
           const updatedCodesResponse = await getAllInviteCodes();
           if (updatedCodesResponse.status === 200) {
             setExistingCodes(updatedCodesResponse.data || []);
@@ -1089,7 +1089,7 @@ const UserManagement = () => {
         const response = await deleteInviteCode({ codeId: codeToDelete });
 
         if (response.status === 200) {
-          // Mettre à jour la liste des codes
+
           const updatedCodesResponse = await getAllInviteCodes();
           if (updatedCodesResponse.status === 200) {
             setExistingCodes(updatedCodesResponse.data || []);
@@ -1156,7 +1156,7 @@ const UserManagement = () => {
           setExistingCodes(remainingCodes);
           toast.info('Codes inutiles supprimés');
         }
-      }, 3600000); // Check every hour
+      }, 3600000);
 
       return () => clearInterval(intervalId);
     }, [existingCodes]);
@@ -1486,12 +1486,12 @@ const UserManagement = () => {
   );
 };
 
-// Ajouter les styles réutilisables dans Tailwind
-// const buttonStyles = 'px-4 py-2 rounded-lg flex items-center transition-colors';
-// const btnPrimary = `${buttonStyles} bg-blue-600 text-white hover:bg-blue-700`;
-// const btnSuccess = `${buttonStyles} bg-green-600 text-white hover:bg-green-700`;
-// const btnWarning = `${buttonStyles} bg-yellow-600 text-white hover:bg-yellow-700`;
-// const btnDanger = `${buttonStyles} bg-red-600 text-white hover:bg-red-700`;
+
+
+
+
+
+
 
 UserManagement.propTypes = {
   authToken: PropTypes.string.isRequired,

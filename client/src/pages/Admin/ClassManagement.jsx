@@ -38,7 +38,7 @@ const ClasseManagement = () => {
     try {
       const response = await getAllUsers();
       if (response.status === 200) {
-        // Séparer les étudiants et les enseignants
+
         const students = response.data.filter(user => user.role === 'Etudiant');
         const teachers = response.data.filter(user => user.role === 'Professeur');
 
@@ -53,12 +53,12 @@ const ClasseManagement = () => {
     }
   };
 
-  // Determine initial view mode based on screen width
+
   const getInitialViewMode = () => {
     if (typeof window !== 'undefined') {
       return window.innerWidth < 640 ? 'grid' : 'list';
     }
-    return 'list'; // Fallback for SSR
+    return 'list';
   };
 
   const [classes, setClasses] = useState([]);
@@ -70,7 +70,7 @@ const ClasseManagement = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedClasse, setSelectedClasse] = useState(null);
 
-  // Add window resize listener to update view mode on screen size change
+
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth < 640 && viewMode === 'list') {
@@ -94,14 +94,14 @@ const ClasseManagement = () => {
     setShowCreateModal(searchParams.get('create-class') === 'true');
   }, []);
 
-  // Filtrage des Classes
+
   const filteredClasses = classes.filter(
     Classe =>
       Classe.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       Classe.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Gestion de la sélection
+
   const toggleAll = () => {
     setSelectedClasses(prev =>
       prev.length === filteredClasses.length
@@ -118,11 +118,11 @@ const ClasseManagement = () => {
     );
   };
 
-  // Suppression Classeée
+
   const bulkDelete = async () => {
     if (window.confirm(`Supprimer ${selectedClasses.length} Classe(s) ?`)) {
       try {
-        // Utilisation d'une boucle pour supprimer chaque classe individuellement
+
         for (const classId of selectedClasses) {
           await deleteClass({ classId });
         }
@@ -136,7 +136,7 @@ const ClasseManagement = () => {
     }
   };
 
-  // Suppression individuelle
+
   const deleteClasseHandler = async classId => {
     if (window.confirm('Supprimer cette Classe ?')) {
       try {
@@ -154,7 +154,7 @@ const ClasseManagement = () => {
     }
   };
 
-  // Gestion formulaire
+
   const handleSubmitClasse = async formData => {
     const classData = {
       name: formData.name,
@@ -189,7 +189,7 @@ const ClasseManagement = () => {
     }
   };
 
-  // Composants UI
+
   const SearchBar = () => (
     <div className="relative flex-1 max-w-xl">
       <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
@@ -414,7 +414,7 @@ const ClasseManagement = () => {
           name: selectedClasse.name,
           description: selectedClasse.description || '',
           main_teacher_id: selectedClasse.main_teacher_id || 0,
-          students: selectedClasse.students || [], // Synchroniser les élèves
+          students: selectedClasse.students || [],
         });
       }
       return () => setIsMounted(false);
@@ -480,12 +480,12 @@ const ClasseManagement = () => {
       setSelectedClasse(null);
     };
 
-    // Handle backdrop click
+
     const handleBackdropClick = e => {
       if (e.target === e.currentTarget) handleClose();
     };
 
-    // Handle Escape key
+
     useEffect(() => {
       const handleKeyDown = e => {
         if (e.key === 'Escape') handleClose();

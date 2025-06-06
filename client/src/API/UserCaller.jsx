@@ -7,7 +7,7 @@ import PropTypes from 'prop-types';
  * @returns {Object} - Objet d'erreur formaté
  */
 const handleError = (error) => {
-  // Si l'API a répondu avec une erreur
+
   if (error.response) {
     return {
       status: error.response.status,
@@ -15,7 +15,7 @@ const handleError = (error) => {
       message: error.response.data?.message || error.message,
     };
   }
-  // Si l'erreur est liée à la configuration de la requête
+
   if (error.request) {
     return {
       status: 500,
@@ -23,7 +23,7 @@ const handleError = (error) => {
       message: 'Aucune réponse reçue du serveur',
     };
   }
-  // Pour les autres types d'erreurs
+
   return {
     status: 500,
     data: null,
@@ -31,7 +31,7 @@ const handleError = (error) => {
   };
 };
 
-// Récupérer tous les utilisateurs
+
 const getAllUsers = async () => {
   try {
     const response = await api.get('/users/');
@@ -45,7 +45,7 @@ const getAllUsers = async () => {
   }
 };
 
-// Récupérer un utilisateur spécifique
+
 const getUserById = async ({ userId }) => {
   try {
     const response = await api.get(`/users/${userId}`);
@@ -59,7 +59,7 @@ const getUserById = async ({ userId }) => {
   }
 };
 
-// Créer un utilisateur
+
 const createUser = async (userData) => {
   try {
     const response = await api.post('/users/', userData);
@@ -73,7 +73,7 @@ const createUser = async (userData) => {
   }
 };
 
-// Mettre à jour un utilisateur
+
 const updateUser = async ({ userId, userData }) => {
   try {
     const response = await api.put(`/users/${userId}`, userData);
@@ -87,7 +87,7 @@ const updateUser = async ({ userId, userData }) => {
   }
 };
 
-// Supprimer un utilisateur
+
 const deleteUser = async ({ userId }) => {
   try {
     const response = await api.delete(`/users/${userId}`);
@@ -101,7 +101,7 @@ const deleteUser = async ({ userId }) => {
   }
 };
 
-// Activer un utilisateur
+
 const activateUser = async ({ userId }) => {
   try {
     const response = await api.patch(`/users/${userId}`);
@@ -115,7 +115,7 @@ const activateUser = async ({ userId }) => {
   }
 };
 
-// Désactiver un utilisateur
+
 const deactivateUser = async ({ userId }) => {
   try {
     const response = await api.patch(`/users/${userId}`);
@@ -129,7 +129,7 @@ const deactivateUser = async ({ userId }) => {
   }
 };
 
-// Générer un code d'invitation
+
 const generateInviteCode = async ({ role, usageLimit, validityPeriod, classId }) => {
   try {
     const payload = { role };
@@ -148,7 +148,7 @@ const generateInviteCode = async ({ role, usageLimit, validityPeriod, classId })
   }
 };
 
-// Récupérer tous les codes d'invitation
+
 const getAllInviteCodes = async () => {
   try {
     const response = await api.get('/codes');
@@ -162,7 +162,7 @@ const getAllInviteCodes = async () => {
   }
 };
 
-// Supprimer un code d'invitation
+
 const deleteInviteCode = async ({ codeId }) => {
   try {
     const response = await api.delete(`/codes/${codeId}`);
@@ -176,7 +176,7 @@ const deleteInviteCode = async ({ codeId }) => {
   }
 };
 
-// Rétrograder un utilisateur
+
 const retrogradeUserRole = async ({ userId }) => {
   try {
     const response = await api.patch(`/users/retrograde/${userId}`);
@@ -190,7 +190,7 @@ const retrogradeUserRole = async ({ userId }) => {
   }
 };
 
-// Promouvoir un utilisateur
+
 const upgradeUserRole = async ({ userId }) => {
   try {
     const response = await api.patch(`/users/upgrade/${userId}`);
@@ -205,7 +205,7 @@ const upgradeUserRole = async ({ userId }) => {
 };
 
 
-// Changer le mot de passe
+
 const changePassword = async ({ oldPassword, newPassword }) => {
   try {
     const response = await api.put('/users/change-password', { oldPassword, newPassword });
@@ -219,7 +219,7 @@ const changePassword = async ({ oldPassword, newPassword }) => {
   }
 };
 
-// Désactiver l'authentification à deux facteurs d'un utilisateur
+
 const disable2FA = async () => {
   try {
     const response = await api.delete('/auth/2fa');
@@ -233,7 +233,7 @@ const disable2FA = async () => {
   }
 };
 
-// PropTypes
+
 getAllUsers.propTypes = {};
 
 getUserById.propTypes = {

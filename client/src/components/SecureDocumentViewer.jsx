@@ -15,7 +15,7 @@ const SecureDocumentViewer = ({ authToken, documentId }) => {
 
   useEffect(() => {
     if (!containerRef.current) return;
-    // Création de l'observer
+
     const observer = new ResizeObserver(entries => {
       for (let entry of entries) {
         const w = entry.contentRect.width;
@@ -23,7 +23,7 @@ const SecureDocumentViewer = ({ authToken, documentId }) => {
       }
     });
     observer.observe(containerRef.current);
-    // nettoyage
+
     return () => observer.disconnect();
   }, []);
 
@@ -38,7 +38,7 @@ const SecureDocumentViewer = ({ authToken, documentId }) => {
 
         const blob = response.data;
 
-        // Validation renforcée du PDF
+
         if (!blob.type.includes('pdf')) {
           throw new Error('Invalid file type');
         }
@@ -74,7 +74,7 @@ const SecureDocumentViewer = ({ authToken, documentId }) => {
                   <Page
                     key={pageIndex}
                     pageNumber={pageIndex + 1}
-                    // renderTextLayer={false}
+
                     loading={
                       <div className="text-center py-8">
                         Chargement de la page...

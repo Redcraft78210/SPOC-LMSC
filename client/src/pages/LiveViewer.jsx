@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { StreamReader } from '../components/StreamReader';
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
-// Import react-mentions
+
 import { MentionsInput, Mention } from 'react-mentions';
 import {
   getLiveById,
@@ -19,12 +19,12 @@ import {
 import { Toaster, toast } from 'react-hot-toast';
 import { ShieldEllipsis, ShieldBan, ShieldAlert } from 'lucide-react';
 
-const INACTIVITY_THRESHOLD = 60000; // 1 minute in ms
-const TEN_MINUTES = 600; // 600 seconds
+const INACTIVITY_THRESHOLD = 60000;
+const TEN_MINUTES = 600;
 
 const WSS_BASE_URL = "wss://172.16.87.30/api"
 
-// Extracted loading spinner component
+
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center h-screen" role="status">
     <svg
@@ -51,7 +51,7 @@ const LoadingSpinner = () => (
   </div>
 );
 
-// Extracted error message component
+
 const ErrorMessage = ({ message, onRetry }) => (
   <div className="flex flex-col items-center justify-center h-screen gap-4">
     <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative max-w-md">
@@ -104,12 +104,12 @@ const LiveViewer = ({ authToken, userRole }) => {
   const userActivityTimeout = useRef();
   const navigate = useNavigate();
 
-  // User engagement tracking
+
   const [activeViewTime, setActiveViewTime] = useState(0);
   const [isPageVisible, setIsPageVisible] = useState(true);
   const [hasReachedTenMinutes, setHasReachedTenMinutes] = useState(false);
 
-  // Get user ID and role from token
+
   useEffect(() => {
     try {
       const decodedToken = jwtDecode(authToken);
@@ -120,14 +120,14 @@ const LiveViewer = ({ authToken, userRole }) => {
     }
   }, [authToken]);
 
-  // Get stream ID from URL
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const liveId = params.get('liveid');
     liveId ? setStreamId(liveId) : setError('ID de stream manquant');
   }, []);
 
-  // Engagement tracking with user activity detection
+
   useEffect(() => {
     if (!streamData) return;
 
@@ -170,7 +170,7 @@ const LiveViewer = ({ authToken, userRole }) => {
       }, 1000);
     };
 
-    // Event listeners
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
     document.addEventListener('mousemove', handleUserActivity);
     document.addEventListener('keydown', handleUserActivity);
@@ -231,7 +231,7 @@ const LiveViewer = ({ authToken, userRole }) => {
     return () => abortController.abort();
   }, [fetchStreamData, streamId]);
 
-  // Format date for scheduled live display
+
   const formatScheduledDate = useCallback((dateString) => {
     const date = new Date(dateString);
     return {
@@ -249,7 +249,7 @@ const LiveViewer = ({ authToken, userRole }) => {
     };
   }, []);
 
-  // Calculate time remaining until live start
+
   const calculateTimeRemaining = useCallback((dateString) => {
     const now = new Date();
     const scheduledDate = new Date(dateString);
@@ -399,7 +399,7 @@ const LiveViewer = ({ authToken, userRole }) => {
     setShowBlockedTooltip(false);
   };
 
-  // Add this effect to handle clicking outside the moderation menu
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -723,7 +723,7 @@ const LiveViewer = ({ authToken, userRole }) => {
             chatEnabled={!isScheduled && streamData.chat_enabled}
             userId={userId}
             isScheduled={isScheduled}
-            streamData={streamData} // <-- Ajout ici
+            streamData={streamData}
           />
         </div>
       </div>
@@ -741,13 +741,13 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled, stream
   const [showDisciplinaryWarning, setShowDisciplinaryWarning] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [participants, setParticipants] = useState([
-    // Default empty state to prevent undefined errors
-    // Will be populated when API call succeeds
+
+
   ]);
 
   const wsRef = useRef(null);
 
-  // Fetch chat history on component mount
+
   useEffect(() => {
     const fetchChatHistory = async () => {
       if (!streamId || !authToken) return;
@@ -775,9 +775,9 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled, stream
     }
   }, [streamId, authToken, chatEnabled, isScheduled]);
 
-  // WebSocket management
+
   useEffect(() => {
-    // Ne pas établir la connexion si le stream est bloqué ou désapprouvé
+
     if (
       streamData &&
       (streamData.status === "blocked" || streamData.status === "disapproved")
@@ -789,7 +789,7 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled, stream
       const ws = new WebSocket(`${WSS_BASE_URL}/chat?token=${authToken}`);
       wsRef.current = ws;
 
-      // Si on a déjà une connexion, on n'en crée pas une deuxième
+
       if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
         return;
       }
@@ -802,16 +802,16 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled, stream
       ws.onmessage = event => {
         try {
           const data = JSON.parse(event.data);
-          // Pour débugger
+
 
           switch (data.type) {
             case 'new_message':
-              // Message envoyé par l'utilisateur
+
               if (data.user_id === userId) {
-                // Ignore messages sent by the current user
+
                 break;
               }
-              // Message provenant d'autres utilisateurs
+
               setMessages(prevMessages => [...prevMessages, data]);
               break;
             case 'error':
@@ -859,19 +859,19 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled, stream
     };
   }, [authToken, userId, streamData]);
 
-  // Fetch participants who can be mentioned
+
   useEffect(() => {
     const fetchParticipants = async () => {
       if (!streamId || !authToken) return;
 
       try {
-        // const response = await getLiveParticipants({liveId: streamId });
 
-        // if (response.status === 200) {
-        //   setParticipants(response.data || []);
-        // } else {
-        //   console.error("Erreur lors de la récupération des participants:", response.message);
-        // }
+
+
+
+
+
+
 
         const data = [
           { id: '1', display: 'Alice Dupont' },
@@ -888,7 +888,7 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled, stream
     fetchParticipants();
   }, [streamId, authToken]);
 
-  // Scroll to bottom on new messages
+
   useEffect(() => {
     try {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -905,7 +905,7 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled, stream
     setSending(true);
     const tempId = Date.now().toString();
 
-    // Optimistic update with tempId
+
     setMessages(prev => [
       ...prev,
       {
@@ -919,7 +919,7 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled, stream
 
     try {
       const message = input.trim();
-      setInput(''); // Clear input right away
+      setInput('');
 
       const response = await sendLiveMessage({
         liveId: streamId,
@@ -934,29 +934,29 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled, stream
         } else {
           setError(response.message || "Erreur lors de l'envoi du message");
         }
-        // Rollback optimistic update
+
         setMessages(prev => prev.filter(msg => msg.tempId !== tempId));
       }
     } catch (error) {
       console.error("Erreur lors de l'envoi du message:", error);
       setError("Erreur lors de l'envoi du message");
-      // Rollback optimistic update
+
       setMessages(prev => prev.filter(msg => msg.tempId !== tempId));
     } finally {
       setSending(false);
     }
   };
 
-  // Custom styling for mentions input
+
   const mentionsInputStyle = {
     control: {
       backgroundColor: 'transparent',
       border: 'none',
       width: '100%',
-      maxHeight: '8rem', // allow growing up to 8rem
-      overflowX: 'auto', // horizontal scroll if needed
+      maxHeight: '8rem',
+      overflowX: 'auto',
       padding: '0.5rem 1rem',
-      resize: 'none', // allow user to drag-resize vertically
+      resize: 'none',
     },
     highlighter: {
       backgroundColor: 'red',
@@ -968,11 +968,11 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled, stream
     },
     input: {
       padding: '0.5rem 1rem',
-      maxHeight: '8rem', // match the control maxHeight
+      maxHeight: '8rem',
       whiteSpace: 'pre-wrap',
       overflowWrap: 'break-word',
       wordBreak: 'break-all',
-      overflowY: 'auto', // ensure the inner text can scroll
+      overflowY: 'auto',
       border: '1px solid #e2e8f0',
       borderRadius: '0.375rem',
       backgroundColor: 'white',
@@ -995,22 +995,22 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled, stream
     },
   };
 
-  // Function to render mentions in messages
+
   const renderMessageContent = content => {
-    // Simple regex to detect @mentions in text
+
     const mentionPattern = /@\[([^\]]+)\]\((\d+)\)/g;
     const parts = [];
     let lastIndex = 0;
     let match;
 
-    // Find all mentions in the message
+
     while ((match = mentionPattern.exec(content)) !== null) {
-      // Add text before the mention
+
       if (match.index > lastIndex) {
         parts.push(content.substring(lastIndex, match.index));
       }
 
-      // Add the mention as a styled span
+
       const [, display, id] = match;
       parts.push(
         <span
@@ -1024,7 +1024,7 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled, stream
       lastIndex = match.index + match[0].length;
     }
 
-    // Add remaining text
+
     if (lastIndex < content.length) {
       parts.push(content.substring(lastIndex));
     }
@@ -1053,7 +1053,7 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled, stream
       {chatEnabled || streamData.status === 'scheduled' && (
         <div className={`flex-1 p-3 space-y-3 overflow-y-auto bg-gradient-to-b from-gray-50 to-white ${isScheduled ? 'blur-sm' : ''}`}>
           {loadingMessages ? (
-            // État de chargement
+
             <div className="flex items-center justify-center py-4">
               <svg
                 className="w-5 h-5 text-blue-500 animate-spin"
@@ -1077,12 +1077,12 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled, stream
               </svg>
             </div>
           ) : messages.length === 0 ? (
-            // État vide
+
             <div className="py-4 text-sm italic text-center text-gray-400">
               Commencez la conversation...
             </div>
           ) : (
-            // Liste des messages
+
             messages.map((msg, index) => (
               <div
                 key={msg.id || `message-${index}`}
@@ -1155,7 +1155,7 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled, stream
                 data={participants}
                 style={{
                   backgroundColor: 'transparent',
-                  color: 'red', // <<< this makes the mention text red
+                  color: 'red',
                 }}
                 renderSuggestion={(suggestion, _, highlighted) => (
                   <div className="flex items-center gap-2 px-2 py-1">
@@ -1422,12 +1422,12 @@ ChatBox.propTypes = {
   chatEnabled: PropTypes.bool.isRequired,
   userId: PropTypes.string,
   isScheduled: PropTypes.bool,
-  streamData: PropTypes.object, // <-- Ajout ici
+  streamData: PropTypes.object,
 };
 
 LiveViewer.propTypes = {
   authToken: PropTypes.string.isRequired,
-  userRole: PropTypes.string, // Added for moderation features
+  userRole: PropTypes.string,
 };
 
 export default LiveViewer;

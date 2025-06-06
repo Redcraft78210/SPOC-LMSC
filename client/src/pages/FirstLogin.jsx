@@ -70,7 +70,7 @@ const FirstLogin = ({ token, setAuth }) => {
       try {
         const response = await refreshTwoFASetup({
           tempToken: tempToken,
-          twoFASetup: {} // Add any required setup data
+          twoFASetup: {}
         });
 
         if (response.status === 201) {
@@ -126,7 +126,7 @@ const FirstLogin = ({ token, setAuth }) => {
   }, [setTempToken, manualSecret, qrCodeData, tempToken]);
 
   useEffect(() => {
-    // Check if 2FA is already configured for the user
+
     const check2FAStatusForUser = async () => {
       try {
         const response = await check2FAStatus({ token });
@@ -165,7 +165,7 @@ const FirstLogin = ({ token, setAuth }) => {
       const response = await firstLogin({ username, password, token });
 
       if (response.status === 200) {
-        // Si 2FA déjà configuré, stocke le token selon rememberMe
+
         if (is2FAAlreadySetup) {
           if (rememberMe) {
             localStorage.setItem('authToken', response.data.token);
@@ -175,7 +175,7 @@ const FirstLogin = ({ token, setAuth }) => {
             localStorage.removeItem('authToken');
           }
           
-          // Clean up all temporary tokens
+
           localStorage.removeItem('token');
           localStorage.removeItem('tempToken');
           localStorage.removeItem('QrCodeData');
@@ -224,51 +224,51 @@ const FirstLogin = ({ token, setAuth }) => {
   const allDigitsFilled = () => twoFADigits.every(digit => digit !== '');
 
   const handleDigitChange = (index, value) => {
-    // Vérifier que la valeur est un chiffre unique ou vide
+
     if (!/^[0-9]?$/.test(value)) return;
 
     const newDigits = [...twoFADigits];
     newDigits[index] = value;
     setTwoFADigits(newDigits);
 
-    // Si une valeur est entrée (pas vide), passer au champ suivant
+
     if (value && index < 5) {
       digitsRefs.current[index + 1].focus();
     }
   };
 
   const handleDigitKeyDown = (index, e) => {
-    // Pour les touches de navigation
+
     if (e.key === 'Backspace') {
-      // Si le champ actuel a une valeur, simplement l'effacer
+
       if (twoFADigits[index] !== '') {
         const newDigits = [...twoFADigits];
         newDigits[index] = '';
         setTwoFADigits(newDigits);
-        // Garder le focus sur le champ actuel
+
       }
-      // Si le champ actuel est vide et qu'on n'est pas sur le premier champ, aller au champ précédent
+
       else if (index > 0) {
         const newDigits = [...twoFADigits];
-        newDigits[index - 1] = ''; // Effacer le champ précédent
+        newDigits[index - 1] = '';
         setTwoFADigits(newDigits);
         digitsRefs.current[index - 1].focus();
       }
     } else if (e.key === 'ArrowLeft' && index > 0) {
-      // Déplacer le focus au champ précédent
+
       digitsRefs.current[index - 1].focus();
     } else if (e.key === 'ArrowRight' && index < 5) {
-      // Déplacer le focus au champ suivant
+
       digitsRefs.current[index + 1].focus();
     } else if (/^[0-9]$/.test(e.key)) {
-      // Si on tape un nouveau chiffre sur un champ déjà rempli, remplacer la valeur et passer au suivant
+
       const newDigits = [...twoFADigits];
       newDigits[index] = e.key;
       setTwoFADigits(newDigits);
 
-      // Passer au champ suivant si possible
+
       if (index < 5) {
-        e.preventDefault(); // Empêcher la saisie par défaut
+        e.preventDefault();
         digitsRefs.current[index + 1].focus();
       }
     }
@@ -370,7 +370,7 @@ const FirstLogin = ({ token, setAuth }) => {
           <div className="text-center mb-4">
             {/* Ensure the Base64 string is used correctly */}
             <img
-              src={qrCodeData} // Base64 string for the QR code
+              src={qrCodeData}
               alt="QR Code 2FA"
               className="mx-auto w-48 h-48 rounded-lg shadow-md"
             />

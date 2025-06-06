@@ -20,7 +20,7 @@ const StreamReader = ({ authToken, controls, status }) => {
   const [isMuted, setIsMuted] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
-  // const [bufferingState, setBufferingState] = useState(0);
+
   const [connectionStatus, setConnectionStatus] = useState('connecting');
   const wsRef = useRef(null);
   const audioDecoderRef = useRef(null);
@@ -40,15 +40,15 @@ const StreamReader = ({ authToken, controls, status }) => {
 
   const togglePlay = () => {
     setIsPlaying(!isPlaying);
-    // If we're pausing/resuming, we could add logic here to handle that
-    // For example, stop receiving or processing frames when paused
+
+
   };
 
   const toggleMute = () => {
     setIsMuted(!isMuted);
-    // Add actual mute logic here
-    // For audio context this might look like:
-    // audioContext.destination.gain.value = isMuted ? 0 : 1;
+
+
+
   };
 
   const toggleFullScreen = () => {
@@ -64,7 +64,7 @@ const StreamReader = ({ authToken, controls, status }) => {
   };
 
   useEffect(() => {
-    // Monitor fullscreen changes
+
     const handleFullScreenChange = () => {
       setIsFullScreen(!!document.fullscreenElement);
     };
@@ -76,38 +76,38 @@ const StreamReader = ({ authToken, controls, status }) => {
   }, []);
 
   useEffect(() => {
-    // Constants
+
     const WSURL = `${WSS_BASE_URL}/stream?token=${authToken}`;
 
-    // Create the Broadway player
+
     const player = new Player({
       useWorker: true,
       workerFile: '/Decoder.js',
       webgl: true,
     });
 
-    // Add the Broadway canvas to the DOM
+
     if (containerRef.current) {
-      // Check if a canvas already exists
+
       const existingCanvas = containerRef.current.querySelector('canvas');
       if (existingCanvas) {
-        // Replace the existing canvas
+
         containerRef.current.removeChild(existingCanvas);
       }
       containerRef.current.appendChild(player.canvas);
       player.canvas.classList.add('videoPlayer');
 
-      // Style the canvas to fit properly
+
       player.canvas.style.width = '100%';
       player.canvas.style.height = '100%';
       player.canvas.style.objectFit = 'contain';
     }
 
-    // Initialize audio decoder
+
     const audioContext = new (window.AudioContext ||
       window.webkitAudioContext)();
 
-    // Resume audio context after user interaction
+
     document.addEventListener(
       'click',
       function () {
@@ -121,17 +121,17 @@ const StreamReader = ({ authToken, controls, status }) => {
 
     const audioDecoder = new AudioDecoder({
       onSamplesDecoded: function (samples, sampleRate, channels) {
-        // Only process audio if we're playing and not muted
+
         if (!isPlaying) return;
 
-        // Create an audio buffer from the decoded samples
+
         const audioBuffer = audioContext.createBuffer(
           channels,
           samples.length / channels,
           sampleRate
         );
 
-        // Fill the audio buffer with the samples
+
         for (let channel = 0; channel < channels; channel++) {
           const channelData = audioBuffer.getChannelData(channel);
           for (let i = 0; i < samples.length / channels; i++) {
@@ -139,7 +139,7 @@ const StreamReader = ({ authToken, controls, status }) => {
           }
         }
 
-        // Create a buffer source and play it
+
         const source = audioContext.createBufferSource();
         source.buffer = audioBuffer;
         source.connect(audioContext.destination);
@@ -153,7 +153,7 @@ const StreamReader = ({ authToken, controls, status }) => {
 
     audioDecoderRef.current = audioDecoder;
 
-    // WebSocket connection to receive the stream
+
     const ws = new WebSocket(WSURL);
     ws.binaryType = 'arraybuffer';
     wsRef.current = ws;
@@ -173,27 +173,31 @@ const StreamReader = ({ authToken, controls, status }) => {
       setConnectionStatus('error');
     };
 
-    // Handle incoming messages (H264 fragments)
+
     ws.onmessage = event => {
-      if (!isPlaying) return; // Skip processing if paused
+      if (!isPlaying) return;
 
       const data = new Uint8Array(event.data);
 
-      // Simple protocol: first byte indicates content type
-      // 0 = video, 1 = audio
+
+
       if (data[0] === 1) {
-        // Decode audio (remove 1-byte header)
-        // audioDecoder.decode(data.slice(1));
+        // Handle audio data
+        if (audioDecoderRef.current) {
+          audioDecoderRef.current.decode(data.slice(1));
+        } else {
+          console.error('Audio decoder not initialized');
+        }
       } else {
-        // Decode video (remove 1-byte header)
+
         player.decode(data);
       }
     };
 
-    // Capture refs for cleanup
+
     const container = containerRef.current;
 
-    // Cleanup function
+
     return () => {
       ws.close();
       if (container && player.canvas) {

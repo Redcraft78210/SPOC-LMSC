@@ -51,7 +51,7 @@ const CourseVisibilityManager = ({ courses, classes, onSave }) => {
               value={selectedCourseId}
               onChange={e => {
                 setSelectedCourseId(e.target.value);
-                setAllowedClasses({}); // reset
+                setAllowedClasses({});
               }}
               className="w-full mb-4 p-2 border border-gray-300 rounded"
             >

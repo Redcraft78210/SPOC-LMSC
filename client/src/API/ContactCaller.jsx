@@ -7,7 +7,7 @@ import PropTypes from 'prop-types';
  * @returns {Object} - Objet d'erreur formaté
  */
 const handleError = (error) => {
-  // Si l'API a répondu avec une erreur
+
   if (error.response) {
     return {
       status: error.response.status,
@@ -15,7 +15,7 @@ const handleError = (error) => {
       message: error.response.data?.message || error.message,
     };
   }
-  // Si l'erreur est liée à la configuration de la requête
+
   if (error.request) {
     return {
       status: 500,
@@ -23,7 +23,7 @@ const handleError = (error) => {
       message: 'Aucune réponse reçue du serveur',
     };
   }
-  // Pour les autres types d'erreurs
+
   return {
     status: 500,
     data: null,
@@ -31,7 +31,7 @@ const handleError = (error) => {
   };
 };
 
-// Envoyer un message de contact
+
 const sendContactMessage = async ({ name, email, motif, objet, message, attachments = [] }) => {
   try {
     const formData = new FormData();
@@ -41,7 +41,7 @@ const sendContactMessage = async ({ name, email, motif, objet, message, attachme
     formData.append('objet', objet);
     formData.append('message', message);
     
-    // Ajouter les pièces jointes s'il y en a
+
     if (attachments && attachments.length > 0) {
       Array.from(attachments).forEach(file => {
         formData.append('attachments', file);
@@ -67,7 +67,7 @@ const sendContactMessage = async ({ name, email, motif, objet, message, attachme
   }
 };
 
-// Pour l'administration - Récupérer tous les messages de contact
+
 const getAllContactMessages = async ({ page = 1, limit = 20 }) => {
   try {
     const response = await api.get(`/admin/contact-messages?page=${page}&limit=${limit}`);
@@ -81,7 +81,7 @@ const getAllContactMessages = async ({ page = 1, limit = 20 }) => {
   }
 };
 
-// Pour l'administration - Récupérer un message de contact spécifique
+
 const getContactMessage = async ({ messageId }) => {
   try {
     const response = await api.get(`/admin/contact-messages/${messageId}`);
@@ -95,7 +95,7 @@ const getContactMessage = async ({ messageId }) => {
   }
 };
 
-// Pour l'administration - Marquer un message comme traité
+
 const markContactMessageAsProcessed = async ({ messageId }) => {
   try {
     const response = await api.patch(`/admin/contact-messages/${messageId}/processed`);
@@ -109,7 +109,7 @@ const markContactMessageAsProcessed = async ({ messageId }) => {
   }
 };
 
-// Pour l'administration - Supprimer un message de contact
+
 const deleteContactMessage = async ({ messageId }) => {
   try {
     const response = await api.delete(`/admin/contact-messages/${messageId}`);
@@ -123,7 +123,7 @@ const deleteContactMessage = async ({ messageId }) => {
   }
 };
 
-// PropTypes
+
 sendContactMessage.propTypes = {
   name: PropTypes.string.isRequired,
   email: PropTypes.string.isRequired,
@@ -132,7 +132,7 @@ sendContactMessage.propTypes = {
   message: PropTypes.string.isRequired,
   attachments: PropTypes.oneOfType([
     PropTypes.arrayOf(PropTypes.instanceOf(File)),
-    PropTypes.object, // FileList
+    PropTypes.object,
   ]),
 };
 

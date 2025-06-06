@@ -6,7 +6,7 @@ import {
   CreateCourse,
   UpdateCourse,
   DeleteCourse,
-} from '../../API/ProfGestion'; // Import de GetCourses et UpdateCourse
+} from '../../API/ProfGestion';
 
 const matièresDisponibles = [
   { value: 'math_info', label: 'Mathématiques & Informatique' },
@@ -17,7 +17,7 @@ const matièresDisponibles = [
 
 const CoursesManagement = ({ token }) => {
   const [classes, setClasses] = useState([]);
-  const [courses, setCourses] = useState([]); // Initialisation avec un tableau vide
+  const [courses, setCourses] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCourseId, setEditingCourseId] = useState(null);
   const [formData, setFormData] = useState({
@@ -25,11 +25,11 @@ const CoursesManagement = ({ token }) => {
     chapitre: '',
     titre: '',
     description: '',
-    teacher_name: '', // Ajout du champ teacher_name
+    teacher_name: '',
     allowedClasses: {},
   });
 
-  // Récupération des classes
+
   useEffect(() => {
     const fetchClasses = async () => {
       const result = await GetClasses(token);
@@ -40,12 +40,12 @@ const CoursesManagement = ({ token }) => {
     fetchClasses();
   }, [token]);
 
-  // Récupération des cours via l'API
+
   useEffect(() => {
     const fetchCourses = async () => {
       const result = await GetCourses();
       if (result && result.status === 200) {
-        setCourses(result.data); // Mise à jour des cours avec les données de l'API
+        setCourses(result.data);
       }
     };
     fetchCourses();
@@ -76,16 +76,16 @@ const CoursesManagement = ({ token }) => {
         }, {})
       : {};
 
-    // Mise à jour pour correspondre à la structure de l'API
+
     setFormData({
       chapitre: course.chapitre,
       titre: course.titre,
       description: course.description,
-      teacher_name: course.teacher_name, // Ajout du champ teacher_name
+      teacher_name: course.teacher_name,
       allowedClasses: allowed,
     });
 
-    setEditingCourseId(course.id); // Utilisation de course.id au lieu de course.ID_cours
+    setEditingCourseId(course.id);
     setIsModalOpen(true);
   };
 
@@ -96,7 +96,7 @@ const CoursesManagement = ({ token }) => {
       chapitre: '',
       titre: '',
       description: '',
-      teacher_name: '', // Réinitialisation du champ teacher_name
+      teacher_name: '',
       allowedClasses: {},
     });
     setIsModalOpen(true);
@@ -108,11 +108,11 @@ const CoursesManagement = ({ token }) => {
     );
 
     const courseData = {
-      matiere: formData.matière, // Pour nouveau cours seulement
+      matiere: formData.matière,
       chapitre: formData.chapitre,
       titre: formData.titre,
       description: formData.description,
-      teacher_name: formData.teacher_name, // Ajout du champ teacher_name
+      teacher_name: formData.teacher_name,
       date_creation: new Date().toISOString(),
       allowed_classes: selectedClasses.length > 0 ? selectedClasses : 'ALL',
     };
@@ -121,21 +121,21 @@ const CoursesManagement = ({ token }) => {
       let result;
 
       if (editingCourseId) {
-        // Mise à jour d'un cours existant
+
         result = await UpdateCourse(editingCourseId, courseData);
       } else {
-        // Création d'un nouveau cours
+
         result = await CreateCourse(courseData);
       }
 
       if (result && (result.status === 200 || result.status === 201)) {
-        // Rafraîchir la liste des cours
+
         const coursesResult = await GetCourses();
         if (coursesResult && coursesResult.status === 200) {
           setCourses(coursesResult.data);
         }
 
-        // Réinitialiser le formulaire et fermer la modal
+
         setIsModalOpen(false);
         setEditingCourseId(null);
         setFormData({
@@ -143,11 +143,11 @@ const CoursesManagement = ({ token }) => {
           chapitre: '',
           titre: '',
           description: '',
-          teacher_name: '', // Réinitialisation du champ teacher_name
+          teacher_name: '',
           allowedClasses: {},
         });
 
-        // Notification de succès
+
         alert(
           editingCourseId
             ? 'Cours mis à jour avec succès'
@@ -167,7 +167,7 @@ const CoursesManagement = ({ token }) => {
       try {
         const result = await DeleteCourse(courseId);
         if (result && result.status === 200) {
-          // Rafraîchir la liste des cours
+
           const coursesResult = await GetCourses();
           if (coursesResult && coursesResult.status === 200) {
             setCourses(coursesResult.data);

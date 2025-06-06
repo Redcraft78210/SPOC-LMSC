@@ -69,7 +69,7 @@ const ProfilePhotoSelector = ({ onUploadSuccess, onClose }) => {
       const response = await uploadAvatar({ file });
 
       if (response.status >= 200 && response.status < 400) {
-        // Appeler le callback pour informer le parent qu'un nouvel avatar a été téléchargé
+
         onUploadSuccess(response.data);
       } else {
         throw new Error(response.message || "Erreur lors du téléchargement de l'avatar");
@@ -89,11 +89,11 @@ const ProfilePhotoSelector = ({ onUploadSuccess, onClose }) => {
     setError(null);
 
     try {
-      // Utiliser le caller au lieu de fetch direct
+
       const response = await uploadIllustrationAvatar({ imagePath });
       
       if (response.status >= 200 && response.status < 400) {
-        // Appeler le callback pour informer le parent qu'un nouvel avatar a été téléchargé
+
         onUploadSuccess(response.data);
       } else {
         throw new Error(response.message || "Erreur lors du téléchargement de l'illustration");
@@ -106,7 +106,7 @@ const ProfilePhotoSelector = ({ onUploadSuccess, onClose }) => {
     }
   };
 
-  // Composant d'icône réutilisable
+
   const IconButton = ({ icon: Icon, ...props }) => (
     <button
       {...props}
@@ -120,7 +120,7 @@ const ProfilePhotoSelector = ({ onUploadSuccess, onClose }) => {
     icon: PropTypes.elementType.isRequired,
   };
 
-  // Composant d'onglet Illustrations mis à jour
+
   const IllustrationsTab = ({
     search,
     onSearchChange,
@@ -187,7 +187,7 @@ const ProfilePhotoSelector = ({ onUploadSuccess, onClose }) => {
     isLoading: PropTypes.bool,
   };
 
-  // Mise à jour de la grille d'images
+
   const ImageGrid = ({ images, className, onSelectImage }) => (
     <div className={`grid ${className}`}>
       {images.map(src => (
@@ -217,7 +217,7 @@ const ProfilePhotoSelector = ({ onUploadSuccess, onClose }) => {
     onSelectImage: PropTypes.func,
   };
 
-  // Mise à jour du composant FileUploadTab
+
   const FileUploadTab = ({ onFileUpload, isLoading }) => {
     const [selectedFile, setSelectedFile] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
@@ -276,7 +276,7 @@ const ProfilePhotoSelector = ({ onUploadSuccess, onClose }) => {
       const files = e.dataTransfer.files;
       if (files && files.length > 0) {
         const file = files[0];
-        // Vérifier que c'est bien une image
+
         if (file.type.startsWith('image/')) {
           processFile(file);
         } else {
@@ -383,7 +383,7 @@ const ProfilePhotoSelector = ({ onUploadSuccess, onClose }) => {
     isLoading: PropTypes.bool,
   };
 
-  // Afficher un message d'erreur si nécessaire
+
   if (error) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto bg-gray-900/80 backdrop-blur-md">
@@ -491,7 +491,7 @@ const PictureModal = ({
   refreshAvatar,
   authToken,
 }) => {
-  // Ajoutez l'état local pour stocker temporairement l'URL de l'avatar dans ce composant
+
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [showProfilePhotoSelector, setShowProfilePhotoSelector] =
     useState(false);
@@ -501,7 +501,7 @@ const PictureModal = ({
   const decodedToken = jwtDecode(authToken);
   const user = decodedToken;
 
-  // Load user avatar when component mounts
+
   useEffect(() => {
     const fetchAvatar = async () => {
       try {
@@ -529,7 +529,7 @@ const PictureModal = ({
 
     fetchAvatar();
 
-    // Clean up the object URL when component unmounts
+
     return () => {
       if (avatarUrl) {
         URL.revokeObjectURL(avatarUrl);
@@ -537,7 +537,7 @@ const PictureModal = ({
     };
   }, [authToken]);
 
-  // Fonction pour supprimer l'avatar
+
   const handleDeleteAvatar = async () => {
     if (
       !window.confirm(
@@ -554,13 +554,13 @@ const PictureModal = ({
       const response = await deleteAvatar();
 
       if (response.status >= 200 && response.status < 400) {
-        // Réinitialiser l'avatar local
+
         setAvatarUrl(null);
 
-        // Informer le parent de rafraîchir l'avatar
+
         refreshAvatar();
 
-        // Notification de succès
+
         toast.success('Votre photo de profil a été supprimée avec succès.');
       } else {
         throw new Error(response.message || "Erreur lors de la suppression de l'avatar");
@@ -579,14 +579,14 @@ const PictureModal = ({
     setShowProfilePhotoSelector(false);
   };
 
-  // Fonction appelée lorsqu'un nouvel avatar est téléchargé avec succès
+
   const handleAvatarUploadSuccess = async () => {
     try {
-      // Mettre à jour l'avatar local immédiatement
+
       const response = await getAvatar();
 
       if (response.status >= 200 && response.status < 400) {
-        // Révoquer l'ancienne URL avant de la remplacer
+
         if (avatarUrl) {
           URL.revokeObjectURL(avatarUrl);
         }
@@ -596,25 +596,25 @@ const PictureModal = ({
         throw new Error(response.message || 'Failed to update avatar');
       }
 
-      // Informer le parent (Dashboard) de rafraîchir l'avatar
+
       refreshAvatar();
       setShowProfilePhotoSelector(false);
 
-      // Notification de succès
+
       toast.success('Votre photo de profil a été mise à jour avec succès.');
     } catch (error) {
       console.error(
         "Erreur lors de la mise à jour de l'aperçu de l'avatar:",
         error
       );
-      // Même en cas d'erreur pour l'aperçu, informer le parent
+
       refreshAvatar();
       setShowProfilePhotoSelector(false);
       toast.success('Votre photo de profil a été mise à jour avec succès.');
     }
   };
 
-  // Afficher le sélecteur de photo si demandé
+
   if (showProfilePhotoSelector) {
     return (
       <ProfilePhotoSelector
@@ -675,7 +675,7 @@ const PictureModal = ({
                 alt="Avatar"
                 className="w-full h-full object-cover"
                 onError={() => {
-                  // En cas d'erreur de chargement, afficher l'initiale
+
                   setAvatarUrl(null);
                 }}
               />

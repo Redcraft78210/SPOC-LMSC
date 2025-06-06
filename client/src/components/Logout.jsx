@@ -4,10 +4,10 @@ import PropTypes from "prop-types";
 
 const Logout = ({ onLogout }) => {
   useEffect(() => {
-    onLogout(); // Call the logout function when this component mounts.
+    onLogout();
   }, [onLogout]);
 
-  return <Navigate to="/sign" replace />; // Redirect to login page after logging out.
+  return <Navigate to="/sign" replace />;
 };
 
 Logout.propTypes = {

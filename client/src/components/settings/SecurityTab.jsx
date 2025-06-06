@@ -3,9 +3,9 @@ import PropTypes from 'prop-types';
 import { Lock, Loader2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import {
-  // Lazy load these CAPTCHA elements when needed
-  // LoadCanvasTemplate,
-  // loadCaptchaEnginge as loadCaptchaEngine,
+
+
+
   validateCaptcha,
 } from 'react-simple-captcha';
 
@@ -21,15 +21,15 @@ const loadCaptchaEngine = lazy(() =>
   import('react-simple-captcha').then(module => ({ default: module.loadCaptchaEnginge }))
 );
 
-// Spinner component
+
 const Spinner = () => (
   <Loader2 className="h-4 w-4 animate-spin" />
 );
 
-// Lazy load the TwoFASetupModal component
+
 const TwoFASetupModal = lazy(() => {
   return new Promise(resolve => {
-    // Small delay to ensure smoother transition
+
     setTimeout(() => {
       resolve({
         default: ({ qrCodeData, manualSecret, handle2FASubmit, countEchec2FACode,
@@ -43,7 +43,7 @@ const TwoFASetupModal = lazy(() => {
                   src={qrCodeData}
                   alt="QR Code 2FA"
                   className="mx-auto w-48 h-48 rounded-3xl shadow-lg mb-4 bg-white p-1 border-2 border-gray-200"
-                  loading="lazy" // Add native lazy loading for the image
+                  loading="lazy"
                 />
                 <p className="text-sm text-gray-600">
                   Scannez le QR Code avec votre application d&apos;authentification ou
@@ -124,7 +124,7 @@ const SecurityTab = ({ user, handleInputChange }) => {
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    // Initialiser l'état 2FA basé sur les données utilisateur
+
     if (user && user.twoFAEnabled !== undefined) {
       setTwoFactorAuth(user.twoFAEnabled);
     }
@@ -132,10 +132,10 @@ const SecurityTab = ({ user, handleInputChange }) => {
 
   useEffect(() => {
     if (countEchec2FACode >= 2) {
-      // Use the lazy-loaded component within a Suspense boundary
+
       const initCaptcha = async () => {
         try {
-          // Need to await the lazy-loaded component and then call it
+
           const LoadCaptchaEngineFn = await loadCaptchaEngine;
           LoadCaptchaEngineFn(6, '#f9fafb');
         } catch (error) {
@@ -148,51 +148,51 @@ const SecurityTab = ({ user, handleInputChange }) => {
   }, [countEchec2FACode]);
 
   const handleDigitChange = (index, value) => {
-    // Vérifier que la valeur est un chiffre unique ou vide
+
     if (!/^[0-9]?$/.test(value)) return;
 
     const newDigits = [...twoFADigits];
     newDigits[index] = value;
     setTwoFADigits(newDigits);
 
-    // Si une valeur est entrée (pas vide), passer au champ suivant
+
     if (value && index < 5) {
       digitsRefs.current[index + 1].focus();
     }
   };
 
   const handleDigitKeyDown = (index, e) => {
-    // Pour les touches de navigation
+
     if (e.key === 'Backspace') {
-      // Si le champ actuel a une valeur, simplement l'effacer
+
       if (twoFADigits[index] !== '') {
         const newDigits = [...twoFADigits];
         newDigits[index] = '';
         setTwoFADigits(newDigits);
-        // Garder le focus sur le champ actuel
+
       }
-      // Si le champ actuel est vide et qu'on n'est pas sur le premier champ, aller au champ précédent
+
       else if (index > 0) {
         const newDigits = [...twoFADigits];
-        newDigits[index - 1] = ''; // Effacer le champ précédent
+        newDigits[index - 1] = '';
         setTwoFADigits(newDigits);
         digitsRefs.current[index - 1].focus();
       }
     } else if (e.key === 'ArrowLeft' && index > 0) {
-      // Déplacer le focus au champ précédent
+
       digitsRefs.current[index - 1].focus();
     } else if (e.key === 'ArrowRight' && index < 5) {
-      // Déplacer le focus au champ suivant
+
       digitsRefs.current[index + 1].focus();
     } else if (/^[0-9]$/.test(e.key)) {
-      // Si on tape un nouveau chiffre sur un champ déjà rempli, remplacer la valeur et passer au suivant
+
       const newDigits = [...twoFADigits];
       newDigits[index] = e.key;
       setTwoFADigits(newDigits);
 
-      // Passer au champ suivant si possible
+
       if (index < 5) {
-        e.preventDefault(); // Empêcher la saisie par défaut
+        e.preventDefault();
         digitsRefs.current[index + 1].focus();
       }
     }
@@ -236,14 +236,14 @@ const SecurityTab = ({ user, handleInputChange }) => {
       }
     }
 
-    // Join twoFADigits array to get the complete code
+
     const fullCode = twoFADigits.join('');
 
     if (fullCode.length !== 6) {
       return toast.error('Veuillez entrer un code à 6 chiffres');
     }
 
-    setLoading(true); // Début du chargement
+    setLoading(true);
     try {
       const { data } = await verify2FASetup({ code: fullCode, tempToken });
 
@@ -263,7 +263,7 @@ const SecurityTab = ({ user, handleInputChange }) => {
       console.error('Erreur lors de la vérification 2FA:', error);
       toast.error('Code 2FA invalide. Veuillez réessayer.');
     } finally {
-      setLoading(false); // Fin du chargement
+      setLoading(false);
     }
   };
 
@@ -321,7 +321,7 @@ const SecurityTab = ({ user, handleInputChange }) => {
   };
 
   const handleSavePassword = async () => {
-    // Clear previous errors
+
     setErrors({});
 
     const currentPassword = document.querySelector(
@@ -334,19 +334,19 @@ const SecurityTab = ({ user, handleInputChange }) => {
       'input[placeholder="Confirmez le nouveau mot de passe"]'
     ).value;
 
-    // Validate all fields are filled
+
     if (!currentPassword || !newPassword || !confirmPassword) {
       setErrors({ general: 'Veuillez remplir tous les champs.' });
       return toast.error('Veuillez remplir tous les champs.');
     }
 
-    // Validate passwords match
+
     if (newPassword !== confirmPassword) {
       setErrors({ confirmPassword: 'Les nouveaux mots de passe ne correspondent pas.' });
       return toast.error('Les nouveaux mots de passe ne correspondent pas.');
     }
 
-    // Validate new password is different from current
+
     if (newPassword === currentPassword) {
       setErrors({ newPassword: 'Mot de passe identique au mot de passe actuel. Veuillez choisir un autre mot de passe.' });
       return toast.error(
@@ -354,7 +354,7 @@ const SecurityTab = ({ user, handleInputChange }) => {
       );
     }
 
-    // Validate minimum length
+
     if (newPassword.length < 12) {
       setErrors({ newPassword: 'Le nouveau mot de passe doit contenir au moins 12 caractères.' });
       return toast.error(
@@ -364,11 +364,11 @@ const SecurityTab = ({ user, handleInputChange }) => {
 
     setLoading(true);
     try {
-      // Replaced zxcvbn with owasp-password-strength-test
+
       const owaspModule = await import('owasp-password-strength-test');
       const passwordTest = owaspModule.default;
       
-      // Configure OWASP test if needed
+
       passwordTest.config({
         minLength: 12,
         minOptionalTestsToPass: 3
@@ -387,7 +387,7 @@ const SecurityTab = ({ user, handleInputChange }) => {
       await changePassword(currentPassword, newPassword);
       toast.success('Mot de passe mis à jour avec succès.');
 
-      // Clear form fields after successful change
+
       document.querySelector('input[placeholder="Entrez votre mot de passe actuel"]').value = '';
       document.querySelector('input[placeholder="Entrez un nouveau mot de passe"]').value = '';
       document.querySelector('input[placeholder="Confirmez le nouveau mot de passe"]').value = '';
@@ -432,7 +432,7 @@ const SecurityTab = ({ user, handleInputChange }) => {
     disabled: PropTypes.bool,
   };
 
-  // Helper component for form errors
+
   const ErrorMessage = ({ field }) => {
     if (!errors[field]) return null;
 

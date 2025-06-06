@@ -19,7 +19,7 @@ const Tutorial = ({
     if (run && !isTutorialCompleted(tutorialId)) {
       setRunTutorial(true);
     }
-  }, [run, tutorialId, isTutorialCompleted]); // test
+  }, [run, tutorialId, isTutorialCompleted]);
 
   const handleJoyrideCallback = (data) => {
     const { status } = data;
@@ -34,8 +34,8 @@ const Tutorial = ({
   const defaultStyles = {
     options: {
       zIndex: 10000,
-      primaryColor: '#3b82f6', // blue-500
-      textColor: '#1f2937',    // gray-800
+      primaryColor: '#3b82f6',
+      textColor: '#1f2937',   
       backgroundColor: '#ffffff',
       arrowColor: '#ffffff',
     },

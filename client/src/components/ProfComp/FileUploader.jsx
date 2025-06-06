@@ -38,7 +38,7 @@ const FileUploader = ({ onUploadSuccess }) => {
       const formData = new FormData();
       formData.append('video', file);
 
-      // Add metadata as JSON string
+
       const metadata = {
         cours_id: courseId,
         description: description,
@@ -51,12 +51,12 @@ const FileUploader = ({ onUploadSuccess }) => {
       const response = await uploadVideo(formData);
 
       if (response?.status === 201) {
-        // Reset form
+
         setFile(null);
         setDescription('');
         setIsMain(false);
         setCourseId('');
-        // Show success toast instead of alert
+
         toast.success('Vidéo téléversée avec succès');
         onUploadSuccess();
       }

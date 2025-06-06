@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { Check, Send } from "lucide-react";
-import PropTypes from "prop-types"; // Ajout pour la validation des props
+import PropTypes from "prop-types";
 
 const SubmitButton = ({ onSubmission }) => {
-  const [status, setStatus] = useState("idle"); // 'idle' | 'pending' | 'success' | 'error'
+  const [status, setStatus] = useState("idle");
   const [isHovered, setIsHovered] = useState(false);
   const [timeoutId, setTimeoutId] = useState(null);
 
-  // Nettoyage des timeouts
+
   useEffect(() => () => clearTimeout(timeoutId), [timeoutId]);
 
   const handleClick = async (e) => {

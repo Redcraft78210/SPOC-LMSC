@@ -7,7 +7,7 @@ import PropTypes from 'prop-types';
  * @returns {Object} - Objet d'erreur formaté
  */
 const handleError = (error) => {
-  // Si l'API a répondu avec une erreur
+
   if (error.response) {
     return {
       status: error.response.status,
@@ -15,7 +15,7 @@ const handleError = (error) => {
       message: error.response.data?.message || error.message,
     };
   }
-  // Si l'erreur est liée à la configuration de la requête
+
   if (error.request) {
     return {
       status: 500,
@@ -23,7 +23,7 @@ const handleError = (error) => {
       message: 'Aucune réponse reçue du serveur',
     };
   }
-  // Pour les autres types d'erreurs
+
   return {
     status: 500,
     data: null,
@@ -31,7 +31,7 @@ const handleError = (error) => {
   };
 };
 
-// Récupérer tous les documents
+
 const GetAll_Document = async () => {
   try {
     const response = await api.get('/document/all/');
@@ -45,7 +45,7 @@ const GetAll_Document = async () => {
   }
 };
 
-// Envoyer un document
+
 const SendDocument = async ({ file, title }) => {
   const formData = new FormData();
   formData.append('document', file);
@@ -67,16 +67,16 @@ const SendDocument = async ({ file, title }) => {
   }
 };
 
-// Récupérer un document spécifique
+
 const Get_special_Document = async ({ document_id }) => {
   try {
     const response = await api.get(`/documents/${document_id}`, {
-      responseType: 'blob', // This tells axios to return the data as a Blob
+      responseType: 'blob',
     });
 
     return {
       status: response.status,
-      data: response.data, // This should now be a Blob
+      data: response.data,
       message: 'Success',
     };
   } catch (error) {
@@ -84,7 +84,7 @@ const Get_special_Document = async ({ document_id }) => {
   }
 };
 
-// Récupérer les informations d'un document
+
 const Get_Document_Information = async ({ document_id }) => {
   try {
     const response = await api.get(`/document/document-info/${document_id}`);
@@ -98,7 +98,7 @@ const Get_Document_Information = async ({ document_id }) => {
   }
 };
 
-// Mettre à jour un document
+
 const UpdateDocument = async ({ document_id, updatedData }) => {
   try {
     const response = await api.put(`/document/update/${document_id}/`, updatedData);
@@ -112,7 +112,7 @@ const UpdateDocument = async ({ document_id, updatedData }) => {
   }
 };
 
-// Supprimer un document
+
 const DeleteDocument = async ({ document_id }) => {
   try {
     const response = await api.delete(`/document/delete/${document_id}`);
@@ -126,7 +126,7 @@ const DeleteDocument = async ({ document_id }) => {
   }
 };
 
-// PropTypes
+
 SendDocument.propTypes = {
   file: PropTypes.oneOfType([PropTypes.instanceOf(File), PropTypes.string])
     .isRequired,

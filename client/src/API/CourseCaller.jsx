@@ -7,7 +7,7 @@ import PropTypes from 'prop-types';
  * @returns {Object} - Objet d'erreur formaté
  */
 const handleError = (error) => {
-  // Si l'API a répondu avec une erreur
+
   if (error.response) {
     return {
       status: error.response.status,
@@ -15,7 +15,7 @@ const handleError = (error) => {
       message: error.response.data?.message || error.message,
     };
   }
-  // Si l'erreur est liée à la configuration de la requête
+
   if (error.request) {
     return {
       status: 500,
@@ -23,7 +23,7 @@ const handleError = (error) => {
       message: 'Aucune réponse reçue du serveur',
     };
   }
-  // Pour les autres types d'erreurs
+
   return {
     status: 500,
     data: null,
@@ -31,7 +31,7 @@ const handleError = (error) => {
   };
 };
 
-// Récupérer tous les cours
+
 const getAllCourses = async () => {
   try {
     const response = await api.get('/courses/all');
@@ -45,7 +45,7 @@ const getAllCourses = async () => {
   }
 };
 
-// Récupérer un cours spécifique
+
 const getCourseById = async ({ courseId }) => {
   try {
     const response = await api.get(`/courses/${courseId}/main`);
@@ -59,7 +59,7 @@ const getCourseById = async ({ courseId }) => {
   }
 };
 
-// Créer un cours
+
 const createCourse = async (courseData) => {
   try {
     const response = await api.post('/courses/', courseData);
@@ -73,7 +73,7 @@ const createCourse = async (courseData) => {
   }
 };
 
-// Désapprouver un cours
+
 const disapproveCourse = async ({ courseId, justification }) => {
   try {
     const response = await api.post(`/courses/${courseId}/block`,
@@ -102,7 +102,7 @@ const unblockCourse = async (courseId) => {
   }
 };
 
-// Mettre à jour un cours
+
 const updateCourse = async ({ courseId, courseData }) => {
   try {
     const response = await api.put(`/courses/${courseId}`, courseData);
@@ -116,7 +116,7 @@ const updateCourse = async ({ courseId, courseData }) => {
   }
 };
 
-// Supprimer un cours
+
 const deleteCourse = async (courseId) => {
   try {
     const response = await api.delete(`/courses/${courseId}`);
@@ -130,7 +130,7 @@ const deleteCourse = async (courseId) => {
   }
 };
 
-// Récupérer les détails complets d'un cours (avec vidéos et documents)
+
 const getCourseDetails = async ({ courseId }) => {
   try {
     const response = await api.get(`/courses/${courseId}/details`);
@@ -144,7 +144,7 @@ const getCourseDetails = async ({ courseId }) => {
   }
 };
 
-// Récupérer les cours d'une classe spécifique
+
 const getCoursesByClass = async ({ classId }) => {
   try {
     const response = await api.get(`/courses/class/${classId}`);
@@ -158,7 +158,7 @@ const getCoursesByClass = async ({ classId }) => {
   }
 };
 
-// Marquer un cours comme terminé
+
 const markCourseAsCompleted = async ({ courseId, userId }) => {
   try {
     const response = await api.post(`/progress/course-progress/${courseId}`, {
@@ -175,7 +175,7 @@ const markCourseAsCompleted = async ({ courseId, userId }) => {
   }
 };
 
-// Marquer un cours comme en cours
+
 const markCourseAsInProgress = async ({ courseId, userId }) => {
   try {
     const response = await api.post(`/progress/course-progress/${courseId}`, {
@@ -192,7 +192,7 @@ const markCourseAsInProgress = async ({ courseId, userId }) => {
   }
 };
 
-// Récupérer les statistiques de progression d'un étudiant
+
 const getStudentProgress = async () => {
   try {
     const response = await api.get(`/progress/stats`);
@@ -206,7 +206,7 @@ const getStudentProgress = async () => {
   }
 };
 
-// Récupérer la progression du cours pour l'utilisateur connecté
+
 const getCourseProgress = async ({ courseId }) => {
   try {
     const response = await api.get(`/progress/course-progress/${courseId}`);
@@ -220,7 +220,7 @@ const getCourseProgress = async ({ courseId }) => {
   }
 };
 
-// PropTypes
+
 getAllCourses.propTypes = {};
 
 getCourseById.propTypes = {

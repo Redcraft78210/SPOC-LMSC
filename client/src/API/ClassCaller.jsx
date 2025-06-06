@@ -7,7 +7,7 @@ import PropTypes from 'prop-types';
  * @returns {Object} - Objet d'erreur formaté
  */
 const handleError = (error) => {
-  // Si l'API a répondu avec une erreur
+
   if (error.response) {
     return {
       status: error.response.status,
@@ -15,7 +15,7 @@ const handleError = (error) => {
       message: error.response.data?.message || error.message,
     };
   }
-  // Si l'erreur est liée à la configuration de la requête
+
   if (error.request) {
     return {
       status: 500,
@@ -23,7 +23,7 @@ const handleError = (error) => {
       message: 'Aucune réponse reçue du serveur',
     };
   }
-  // Pour les autres types d'erreurs
+
   return {
     status: 500,
     data: null,
@@ -31,7 +31,7 @@ const handleError = (error) => {
   };
 };
 
-// Récupérer toutes les classes
+
 const getAllClasses = async () => {
   try {
     const response = await api.get('/classes/');
@@ -45,7 +45,7 @@ const getAllClasses = async () => {
   }
 };
 
-// Récupérer une classe spécifique
+
 const getClassById = async ({ classId }) => {
   try {
     const response = await api.get(`/classes/${classId}`);
@@ -59,7 +59,7 @@ const getClassById = async ({ classId }) => {
   }
 };
 
-// Créer une classe
+
 const createClass = async (classData) => {
   try {
     const response = await api.post('/classes/', classData);
@@ -73,7 +73,7 @@ const createClass = async (classData) => {
   }
 };
 
-// Mettre à jour une classe
+
 const updateClass = async ({ classId, classData }) => {
   try {
     const response = await api.put(`/classes/${classId}`, classData);
@@ -87,7 +87,7 @@ const updateClass = async ({ classId, classData }) => {
   }
 };
 
-// Supprimer une classe
+
 const deleteClass = async ({ classId }) => {
   try {
     const response = await api.delete(`/classes/${classId}`);
@@ -101,7 +101,7 @@ const deleteClass = async ({ classId }) => {
   }
 };
 
-// Ajouter un étudiant à une classe
+
 const addStudentToClass = async ({ classId, studentId }) => {
   try {
     const response = await api.post(`/classes/${classId}/students`, { studentId });
@@ -115,7 +115,7 @@ const addStudentToClass = async ({ classId, studentId }) => {
   }
 };
 
-// Retirer un étudiant d'une classe
+
 const removeStudentFromClass = async ({ classId, studentId }) => {
   try {
     const response = await api.delete(`/classes/${classId}/students/${studentId}`);
@@ -129,7 +129,7 @@ const removeStudentFromClass = async ({ classId, studentId }) => {
   }
 };
 
-// Récupérer les étudiants d'une classe
+
 const getClassStudents = async ({ classId }) => {
   try {
     const response = await api.get(`/classes/${classId}/students`);
@@ -143,7 +143,7 @@ const getClassStudents = async ({ classId }) => {
   }
 };
 
-// Changer le professeur principal d'une classe
+
 const setMainTeacher = async ({ classId, teacherId }) => {
   try {
     const response = await api.put(`/classes/${classId}/main-teacher`, { teacherId });
@@ -157,7 +157,7 @@ const setMainTeacher = async ({ classId, teacherId }) => {
   }
 };
 
-// PropTypes
+
 getAllClasses.propTypes = {};
 
 getClassById.propTypes = {

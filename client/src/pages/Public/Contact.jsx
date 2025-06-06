@@ -5,7 +5,7 @@ import { Paperclip, X } from 'lucide-react';
 import { sendContactMessage } from '../../API/ContactCaller';
 import toast, { Toaster } from 'react-hot-toast';
 
-// Ajouter ces imports pour Toast UI Editor
+
 import { Editor } from '@toast-ui/react-editor';
 import '@toast-ui/editor/dist/toastui-editor.css';
 
@@ -24,7 +24,7 @@ const Contact = () => {
   const [status, setStatus] = useState('');
   const fileInputRef = useRef(null);
 
-  // Expressions régulières pour détecter les mentions de pièces jointes
+
   const attachmentRegexList = [
     /ci-joint/i,
     /pièce[s]? jointe[s]?/i,
@@ -46,7 +46,7 @@ const Contact = () => {
     /joint.*document/i,
   ];
 
-  // Fonction pour vérifier si le contenu mentionne des pièces jointes
+
   const checkForAttachmentMention = (text) => {
     return attachmentRegexList.some(regex => regex.test(text));
   };
@@ -62,7 +62,7 @@ const Contact = () => {
   const handleFileChange = e => {
     const files = Array.from(e.target.files);
 
-    // Check file size limit (10MB per file)
+
     const validFiles = files.filter(file => file.size <= 10 * 1024 * 1024);
     const invalidFiles = files.filter(file => file.size > 10 * 1024 * 1024);
 
@@ -70,7 +70,7 @@ const Contact = () => {
       alert(`${invalidFiles.length} fichier(s) dépassent la limite de 10 Mo`);
     }
 
-    // Add valid files to attachments
+
     setAttachments([...attachments, ...validFiles]);
   };
 
@@ -82,23 +82,23 @@ const Contact = () => {
     e.preventDefault();
     setStatus('loading');
 
-    // Vérifier si l'utilisateur mentionne des pièces jointes mais n'en a pas ajouté
+
     if (attachments.length === 0 && checkForAttachmentMention(formData.message)) {
       const confirmSend = window.confirm(
         "Vous semblez mentionner des pièces jointes dans votre message, mais aucun fichier n'a été ajouté. Souhaitez-vous quand même envoyer le message sans pièces jointes?"
       );
 
       if (!confirmSend) {
-        setStatus(''); // Reset status
+        setStatus('');
         return;
       }
     }
 
-    // Obtenir le contenu de l'éditeur au format markdown
+
     const editorContent = editorRef.current?.getInstance().getMarkdown() || '';
 
     try {
-      // Use the sendContactMessage function from ContactCaller
+
       const response = await sendContactMessage({
         name: formData.name,
         email: formData.email,
@@ -112,7 +112,7 @@ const Contact = () => {
         setStatus('success');
         toast.success('Votre message a été envoyé avec succès !');
         setFormData({ name: '', email: '', motif: '', objet: '', message: '' });
-        setAttachments([]); // Clear attachments
+        setAttachments([]);
       } else {
         console.error("Erreur lors de l'envoi du formulaire :", response.message);
         setStatus('error');
@@ -126,7 +126,7 @@ const Contact = () => {
   };
 
 
-  // Configuration du hook pour le glisser-déposer
+
   useEffect(() => {
     if (editorRef.current) {
       const editorInstance = editorRef.current.getInstance();
@@ -148,26 +148,26 @@ const Contact = () => {
 
           if (e.dataTransfer.files.length) {
             const files = Array.from(e.dataTransfer.files);
-            // Filtrer uniquement les images et les autres fichiers
+
             const validFiles = files.filter(file => file.size <= 10 * 1024 * 1024);
 
-            // Séparer les images des autres fichiers
+
             const imageFiles = validFiles.filter(file => file.type.startsWith('image/'));
             const otherFiles = validFiles.filter(file => !file.type.startsWith('image/'));
 
-            // Ajouter les fichiers non-image aux pièces jointes
+
             if (otherFiles.length > 0) {
               setAttachments(prev => [...prev, ...otherFiles]);
               toast.success(`${otherFiles.length} fichier(s) ajouté(s) aux pièces jointes`);
             }
 
-            // Insérer les images directement dans l'éditeur
+
             if (imageFiles.length > 0) {
-              // Pour chaque image, l'insérer dans l'éditeur
+
               imageFiles.forEach(file => {
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                  // Insérer l'image à la position du curseur
+
                   editorInstance.insertImage({
                     src: e.target.result,
                     alt: file.name
@@ -182,7 +182,7 @@ const Contact = () => {
         });
       }
 
-      // Nettoyer les event listeners lors du démontage du composant
+
       return () => {
         if (dropZone) {
           dropZone.removeEventListener('dragover', () => { });

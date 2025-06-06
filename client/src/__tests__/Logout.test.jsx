@@ -1,9 +1,9 @@
-// src/__tests__/Logout.test.jsx
-import React from 'react'; // Ajout de l'import de React
+
+import React from 'react';
 import { vi } from 'vitest';
 import { render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import Logout from '../components/Logout'; // Assurez-vous que le chemin est correct
+import Logout from '../components/Logout';
 
 describe('Logout Component', () => {
   it('appelle la fonction onLogout et redirige vers /sign', () => {

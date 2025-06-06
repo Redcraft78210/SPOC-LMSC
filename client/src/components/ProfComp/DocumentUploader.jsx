@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { SendDocument } from '../../API/DocumentCaller'; // Changé de uploadDocument à SendDocument
+import { SendDocument } from '../../API/DocumentCaller';
 import { GetCourses } from '../../API/ProfGestion';
 import PropTypes from 'prop-types';
 import { toast } from 'react-hot-toast';

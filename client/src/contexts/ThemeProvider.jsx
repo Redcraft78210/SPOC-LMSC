@@ -1,4 +1,4 @@
-// src/contexts/ThemeContext.js
+
 import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 
@@ -18,7 +18,7 @@ export const ThemeProvider = ({ children }) => {
   useEffect(() => {
     document.documentElement.setAttribute('data-bs-theme', darkMode ? 'dark' : 'light');
     localStorage.setItem('darkMode', darkMode);
-  }, [darkMode]); // Runs whenever darkMode changes
+  }, [darkMode]);
 
   const toggleDarkMode = () => {
     setDarkMode(prevMode => !prevMode);

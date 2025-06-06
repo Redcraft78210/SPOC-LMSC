@@ -9,7 +9,7 @@ const baseURL = '/api';
  * @returns {Object} - Objet d'erreur formaté
  */
 const handleError = (error) => {
-  // Si l'API a répondu avec une erreur
+
   if (error.response) {
     return {
       status: error.response.status,
@@ -17,7 +17,7 @@ const handleError = (error) => {
       message: error.response.data?.message || error.message,
     };
   }
-  // Si l'erreur est liée à la configuration de la requête
+
   if (error.request) {
     return {
       status: 500,
@@ -25,7 +25,7 @@ const handleError = (error) => {
       message: 'Aucune réponse reçue du serveur',
     };
   }
-  // Pour les autres types d'erreurs
+
   return {
     status: 500,
     data: null,
@@ -33,7 +33,7 @@ const handleError = (error) => {
   };
 };
 
-// Récupérer tous les lives disponibles
+
 const getAllLives = async () => {
   try {
     const response = await api.get('/lives/all');
@@ -47,7 +47,7 @@ const getAllLives = async () => {
   }
 };
 
-// Récupérer les lives d'une classe spécifique
+
 const getLivesByClass = async (classId) => {
   try {
     const response = await api.get(`/lives/class/${classId}`);
@@ -61,7 +61,7 @@ const getLivesByClass = async (classId) => {
   }
 };
 
-// Récupérer un live spécifique
+
 const getLiveById = async (liveId) => {
   try {
     const response = await api.get(`/lives/${liveId}`);
@@ -75,7 +75,7 @@ const getLiveById = async (liveId) => {
   }
 };
 
-// Créer un nouveau live
+
 const createLive = async (liveData) => {
   try {
     const response = await api.post('/lives/', liveData);
@@ -89,7 +89,7 @@ const createLive = async (liveData) => {
   }
 };
 
-// Mettre à jour un live
+
 const updateLive = async ({ liveId, liveData }) => {
   try {
     const response = await api.put(`/lives/${liveId}`, liveData);
@@ -103,7 +103,7 @@ const updateLive = async ({ liveId, liveData }) => {
   }
 };
 
-// Supprimer un live
+
 const deleteLive = async (liveId) => {
   try {
     const response = await api.delete(`/lives/${liveId}`);
@@ -117,7 +117,7 @@ const deleteLive = async (liveId) => {
   }
 };
 
-// Démarrer un live
+
 const startLive = async (liveId) => {
   try {
     const response = await api.patch(`/lives/${liveId}/start`);
@@ -131,7 +131,7 @@ const startLive = async (liveId) => {
   }
 };
 
-// Terminer un live
+
 const endLive = async (liveId) => {
   try {
     const response = await api.patch(`/lives/${liveId}/end`);
@@ -184,7 +184,7 @@ const unblockLive = async (liveId) => {
   }
 };
 
-// Récupérer les messages du chat d'un live
+
 const getLiveMessages = async (liveId) => {
   try {
     const response = await api.get(`/${liveId}/chat`);
@@ -198,7 +198,7 @@ const getLiveMessages = async (liveId) => {
   }
 };
 
-// Envoyer un message dans le chat d'un live
+
 const sendLiveMessage = async ({ liveId, message }) => {
   try {
     const response = await api.post(`/${liveId}/chat`, { message });
@@ -212,12 +212,12 @@ const sendLiveMessage = async ({ liveId, message }) => {
   }
 };
 
-// Générer l'URL de streaming d'un live
+
 const getLiveStreamUrl = (liveId) => {
   return `${baseURL}/api/stream/${liveId}`;
 };
 
-// Log view engagement (mark attendance or update engagement time)
+
 const logViewEngagement = async ({ streamId, activeViewTime }) => {
   try {
     const response = await api.post('/attendance', {
@@ -234,7 +234,7 @@ const logViewEngagement = async ({ streamId, activeViewTime }) => {
   }
 };
 
-// PropTypes
+
 getAllLives.propTypes = {};
 
 getLivesByClass.propTypes = {

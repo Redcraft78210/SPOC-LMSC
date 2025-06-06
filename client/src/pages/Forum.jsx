@@ -19,7 +19,7 @@ import {
 } from '../API/ModerationCaller';
 
 const Forum = ({ userRole }) => {
-  // Existing state variables
+
   const [threads, setThreads] = useState([]);
   const [selectedThread, setSelectedThread] = useState(null);
   const [newThreadTitle, setNewThreadTitle] = useState('');
@@ -34,7 +34,7 @@ const Forum = ({ userRole }) => {
     totalPages: 1,
   });
 
-  // Search and filters state
+
   const [searchQuery, setSearchQuery] = useState('');
   const [activeSearchQuery, setActiveSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('newest');
@@ -42,22 +42,22 @@ const Forum = ({ userRole }) => {
   const [isSearching, setIsSearching] = useState(false);
   const [showCreateThreadModal, setShowCreateThreadModal] = useState(false);
   
-  // Moderation state variables
+
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
-  const [deleteType, setDeleteType] = useState(''); // 'thread' or 'comment'
+  const [deleteType, setDeleteType] = useState('');
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [warningMessage, setWarningMessage] = useState('');
   const [userToWarn, setUserToWarn] = useState(null);
   const [flaggedItems, setFlaggedItems] = useState(new Set());
   const [showFlagModal, setShowFlagModal] = useState(false);
   const [itemToFlag, setItemToFlag] = useState(null);
-  const [flagType, setFlagType] = useState(''); // 'thread' or 'comment'
+  const [flagType, setFlagType] = useState('');
   const [flagReason, setFlagReason] = useState('');
   
   useEffect(() => {
     fetchThreads();
-  }, [pagination.currentPage, sortBy, authorFilter, activeSearchQuery, isSearching]); // Replace searchQuery with activeSearchQuery
+  }, [pagination.currentPage, sortBy, authorFilter, activeSearchQuery, isSearching]);
 
   const fetchThreads = async () => {
     try {
@@ -65,17 +65,17 @@ const Forum = ({ userRole }) => {
       console.log("Paramètres de recherche:", {
         page: pagination.currentPage,
         limit: 10,
-        search: activeSearchQuery, // Use activeSearchQuery instead of searchQuery
+        search: activeSearchQuery,
         sortBy: sortBy,
         author: authorFilter || undefined
       });
       const response = await getThreads({
         page: pagination.currentPage,
         limit: 10,
-        search: activeSearchQuery, // Use activeSearchQuery instead of searchQuery
+        search: activeSearchQuery,
         sortBy: sortBy,
         author: authorFilter || undefined,
-        searchSubmitted: activeSearchQuery ? 'true' : 'false' // Add parameter for the backend
+        searchSubmitted: activeSearchQuery ? 'true' : 'false'
       });
 
       if (response.status === 200) {
@@ -140,7 +140,7 @@ const Forum = ({ userRole }) => {
         setNewThreadTitle('');
         setNewThreadContent('');
         setError('');
-        setShowCreateThreadModal(false); // Fermer la modale après création réussie
+        setShowCreateThreadModal(false);
         toast.success('Discussion créée avec succès');
       } else {
         if (response.message?.includes('forbidden words')) {
@@ -199,24 +199,24 @@ const Forum = ({ userRole }) => {
     }
   };
 
-  // Modifie la fonction handleSearch pour mettre à jour activeSearchQuery
+
   const handleSearch = (e) => {
     e.preventDefault();
-    setActiveSearchQuery(searchQuery); // Set the active search query when search button is clicked
+    setActiveSearchQuery(searchQuery);
     setPagination(prev => ({ ...prev, currentPage: 1 }));
     setIsSearching(prev => !prev);
   };
 
-  // Mettre à jour clearSearch pour réinitialiser activeSearchQuery aussi
+
   const clearSearch = () => {
     setSearchQuery('');
-    setActiveSearchQuery(''); // Clear the active search query
+    setActiveSearchQuery('');
     setPagination(prev => ({ ...prev, currentPage: 1 }));
     setIsSearching(prev => !prev);
   };
 
   const handleFilterChange = (filter, value) => {
-    setPagination(prev => ({ ...prev, currentPage: 1 })); // Reset to first page when changing filters
+    setPagination(prev => ({ ...prev, currentPage: 1 }));
 
     switch (filter) {
       case 'sort':
@@ -230,7 +230,7 @@ const Forum = ({ userRole }) => {
     }
   };
 
-  // Moderation Functions
+
   const handleDeleteThread = async (threadId) => {
     try {
       setLoading(true);
@@ -238,11 +238,11 @@ const Forum = ({ userRole }) => {
       
       if (response.status === 200) {
         toast.success("Discussion supprimée avec succès");
-        // If in thread detail view, go back to list
+
         if (selectedThread && selectedThread.id === threadId) {
           setSelectedThread(null);
         }
-        // Refresh thread list
+
         await fetchThreads();
       } else {
         toast.error(response.message || "Erreur lors de la suppression de la discussion");
@@ -265,7 +265,7 @@ const Forum = ({ userRole }) => {
       
       if (response.status === 200) {
         toast.success("Commentaire supprimé avec succès");
-        // Refresh thread details to update comment list
+
         if (selectedThread) {
           await fetchThreadDetails(selectedThread.id);
         }
@@ -302,7 +302,7 @@ const Forum = ({ userRole }) => {
     setShowWarningModal(true);
   };
   
-  // Rename the local function to avoid naming conflict
+
   const handleSendWarning = async () => {
     if (!warningMessage.trim()) {
       toast.error("Veuillez saisir un message d'avertissement");
@@ -311,7 +311,7 @@ const Forum = ({ userRole }) => {
     
     try {
       setLoading(true);
-      // Now properly calling the imported sendWarning function
+
       const response = await sendWarning({
         userId: userToWarn.id,
         message: warningMessage.trim()
@@ -354,7 +354,7 @@ const Forum = ({ userRole }) => {
       });
       
       if (response.status === 201) {
-        // Ajouter l'élément aux éléments signalés localement
+
         setFlaggedItems(prev => new Set([...prev, itemToFlag]));
         toast.success(`${flagType === 'thread' ? 'Discussion' : 'Commentaire'} signalé pour révision`);
         setShowFlagModal(false);
@@ -372,7 +372,7 @@ const Forum = ({ userRole }) => {
     }
   };
 
-  // Update the renderModerationControls function to include the flag button
+
   const renderModerationControls = (threadId, userId, username) => {
     if (userRole !== 'Administrateur') return null;
     
@@ -417,7 +417,7 @@ const Forum = ({ userRole }) => {
     );
   };
   
-  // Update the renderCommentModerationControls function similarly
+
   const renderCommentModerationControls = (commentId, userId, username) => {
     if (userRole !== 'Administrateur') return null;
     
@@ -905,7 +905,7 @@ const Forum = ({ userRole }) => {
                     <button
                       onClick={() => {
                         setSearchQuery('');
-                        setActiveSearchQuery(''); // Reset active search query
+                        setActiveSearchQuery('');
                         setSortBy('newest');
                         setAuthorFilter('');
                         setPagination(prev => ({ ...prev, currentPage: 1 }));
@@ -1000,7 +1000,7 @@ const Forum = ({ userRole }) => {
             </div>
           </>
         ) : (
-          // Thread detail view - existing code
+
           <div>
             <button
               onClick={() => {

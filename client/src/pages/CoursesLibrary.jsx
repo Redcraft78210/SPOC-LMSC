@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { Toaster, toast } from 'react-hot-toast';
-import { FileText, SquarePlay, Radio, ShieldEllipsis, ShieldBan } from 'lucide-react'; // Ajout de ShieldEllipsis
+import { FileText, SquarePlay, Radio, ShieldEllipsis, ShieldBan } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getAllCourses, disapproveCourse, unblockCourse, deleteCourse } from '../API/CourseCaller';
 import { getAllLives, endLive, disapproveLive, blockLive, unblockLive, deleteLive } from '../API/LiveCaller';
@@ -17,7 +17,7 @@ const Courses = ({ authToken, userRole }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Déplacez fetchData ici
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -69,7 +69,7 @@ const Courses = ({ authToken, userRole }) => {
     fetchData();
   }, [authToken]);
 
-  // Filtrage et tri
+
   const filteredContent = content
     .filter(item => {
       const matchesType =
@@ -101,7 +101,7 @@ const Courses = ({ authToken, userRole }) => {
 
   console.log(content);
 
-  // Récupère les filtres uniques
+
   const professors = [...new Set(content.map(item => item.professor))];
   const subjects = [...new Set(content.map(item => item.subject))];
 
@@ -226,7 +226,7 @@ const Courses = ({ authToken, userRole }) => {
                 item={item}
                 userRole={userRole}
                 onActionDone={fetchData}
-                className="course-card" // Add this class for the tutorial
+                className="course-card"
               />
             ))}
           </div>
@@ -246,12 +246,12 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
   const hoverTimeout = useRef(null);
   const menuRef = useRef(null);
 
-  // Ajout pour le message flottant
+
   const [showBlockedTooltip, setShowBlockedTooltip] = useState(false);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
   const [modButtonHovered, setModButtonHovered] = useState(false);
 
-  // Gestion du survol pour le tooltip bloqué
+
   const handleBlockedMouseMove = (e) => {
     setTooltipPos({ x: e.clientX, y: e.clientY });
     if (!showBlockedTooltip) setShowBlockedTooltip(true);
@@ -346,7 +346,7 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
         console.log('Désapprobation réussie:', response.data);
         setShowDisapproveModal(false);
         setJustification('');
-        onActionDone(); // <-- Ajoutez ceci pour rafraîchir la liste
+        onActionDone();
       } else {
         throw new Error(response.message || 'Erreur lors de la désapprobation du cours');
       }
@@ -377,7 +377,7 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
         console.log('Désapprobation réussie:', response.data);
         setShowDisapproveModal(false);
         setJustification('');
-        onActionDone(); // <-- Ajoutez ceci pour rafraîchir la liste
+        onActionDone();
       } else {
         throw new Error(response.message || 'Erreur lors de la désapprobation du live');
       }
@@ -406,7 +406,7 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
         console.log('Arrêt réussi:', response.data);
         setShowStopModal(false);
         setJustification('');
-        onActionDone(); // <-- Ajoutez ceci pour rafraîchir la liste
+        onActionDone();
       } else {
         throw new Error(response.message || 'Erreur lors de l\'arrêt du live');
       }
@@ -425,7 +425,7 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
       if (response.status === 200) {
         toast.success('Cours débloqué avec succès');
         console.log('Déblocage réussi:', response.data);
-        onActionDone(); // <-- Ajoutez ceci pour rafraîchir la liste
+        onActionDone();
       } else {
         throw new Error(response.message || 'Erreur lors du déblocage du cours');
       }
@@ -448,7 +448,7 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
       if (response.status === 200) {
         toast.success('Cours supprimé avec succès');
         console.log('Suppression réussie:', response.data);
-        onActionDone(); // <-- Ajoutez ceci pour rafraîchir la liste
+        onActionDone();
       } else {
         throw new Error(response.message || 'Erreur lors de la suppression du cours');
       }
@@ -472,7 +472,7 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
       if (response.status === 200) {
         toast.success('Live débloqué avec succès');
         console.log('Déblocage réussi:', response.data);
-        onActionDone(); // <-- Ajoutez ceci pour rafraîchir la liste
+        onActionDone();
       } else {
         throw new Error(response.message || 'Erreur lors du déblocage du cours');
       }
@@ -495,7 +495,7 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
       if (response.status === 200) {
         toast.success('Live supprimé avec succès');
         console.log('Suppression réussie:', response.data);
-        onActionDone(); // <-- Ajoutez ceci pour rafraîchir la liste
+        onActionDone();
       } else {
         throw new Error(response.message || 'Erreur lors de la suppression du live');
       }
@@ -510,7 +510,7 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
   };
 
   const disapproveCourseModal = (item) => {
-    // Modale de désapprobation de cours avec justification
+
     return (
       <div
         className="fixed inset-0 flex items-center justify-center bg-gray-800/50 backdrop-blur-sm z-100"
@@ -521,7 +521,7 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
       >
         <div
           className="bg-white p-6 rounded-lg shadow-lg"
-          onClick={e => e.stopPropagation()} // Empêche la propagation vers le fond
+          onClick={e => e.stopPropagation()}
         >
           <h2 className="text-xl font-semibold mb-4">Désapprouver le {item.type}</h2>
           <p>Êtes-vous sûr de vouloir désapprouver le {item.type} &quot;{item.titre}&quot; ?</p>
@@ -559,7 +559,7 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
   };
 
   const stopLiveModal = ({ live }) => {
-    // Modale d'arrêt de live avec justification
+
     return (
       <div
         className="fixed inset-0 flex items-center justify-center bg-gray-800/50 backdrop-blur-sm z-100"
@@ -570,7 +570,7 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
       >
         <div
           className="bg-white p-6 rounded-lg shadow-lg"
-          onClick={e => e.stopPropagation()} // Empêche la propagation vers le fond
+          onClick={e => e.stopPropagation()}
         >
           <h2 className="text-xl font-semibold mb-4">Arrêter le live</h2>
           <p>Êtes-vous sûr de vouloir arrêter le live &quot;{live.titre}&quot; ?</p>
@@ -912,19 +912,19 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
   );
 };
 
-// PropTypes définis à l'extérieur du composant
+
 ContentCard.propTypes = {
   item: PropTypes.shape({
-    id: PropTypes.string.isRequired, // Changé de id_cours à id
+    id: PropTypes.string.isRequired,
     titre: PropTypes.string.isRequired,
     date_creation: PropTypes.string.isRequired,
-    status: PropTypes.string, // Ajouté pour les administrateurs
-    block_reason: PropTypes.string, // Ajouté pour les administrateurs
+    status: PropTypes.string,
+    block_reason: PropTypes.string,
     type: PropTypes.oneOf(['cours', 'live']).isRequired,
     live: PropTypes.shape({
       date_debut: PropTypes.string,
       statut: PropTypes.string,
-      block_reason: PropTypes.string, // Ajouté pour les administrateurs
+      block_reason: PropTypes.string,
     }),
     description: PropTypes.string,
     video: PropTypes.shape({
@@ -938,11 +938,11 @@ ContentCard.propTypes = {
     professor: PropTypes.string.isRequired,
     subject: PropTypes.string,
   }).isRequired,
-  userRole: PropTypes.string, // Ajout de la prop userRole
-  onActionDone: PropTypes.func, // Ajoutez ceci
+  userRole: PropTypes.string,
+  onActionDone: PropTypes.func,
 };
 
-// Composant de filtre déroulant
+
 const FilterDropdown = ({ items, selected, setSelected }) => (
   <select
     className="p-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
@@ -965,7 +965,7 @@ FilterDropdown.propTypes = {
 
 Courses.propTypes = {
   authToken: PropTypes.string.isRequired,
-  userRole: PropTypes.string, // Ajout de la prop userRole
+  userRole: PropTypes.string,
 };
 
 export default Courses;

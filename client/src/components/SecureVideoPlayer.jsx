@@ -21,7 +21,7 @@ const SecureVideoPlayer = ({ videoId, authToken, posterUrl, onError }) => {
       authToken
     )}`;
 
-    // Clear existing sources
+
     videoRef.current.innerHTML = "";
     const source = document.createElement("source");
     source.src = src;
@@ -80,7 +80,7 @@ const SecureVideoPlayer = ({ videoId, authToken, posterUrl, onError }) => {
         ref={videoRef}
         className="plyr"
         playsInline
-        // crossOrigin
+
       />
       <button
         ref={playButtonRef}

@@ -7,7 +7,7 @@ import PropTypes from 'prop-types';
  * @returns {Object} - Objet d'erreur formaté
  */
 const handleError = (error) => {
-  // Si l'API a répondu avec une erreur
+
   if (error.response) {
     return {
       status: error.response.status,
@@ -15,7 +15,7 @@ const handleError = (error) => {
       message: error.response.data?.message || error.message,
     };
   }
-  // Si l'erreur est liée à la configuration de la requête
+
   if (error.request) {
     return {
       status: 500,
@@ -23,7 +23,7 @@ const handleError = (error) => {
       message: 'Aucune réponse reçue du serveur',
     };
   }
-  // Pour les autres types d'erreurs
+
   return {
     status: 500,
     data: null,
@@ -31,7 +31,7 @@ const handleError = (error) => {
   };
 };
 
-// Récupérer le profil de l'utilisateur connecté
+
 const getUserProfile = async () => {
   try {
     const response = await api.get('/users/profile');
@@ -45,7 +45,7 @@ const getUserProfile = async () => {
   }
 };
 
-// Mettre à jour le profil utilisateur
+
 const updateUserProfile = async (profileData) => {
   try {
     const response = await api.put('/users/profile/', profileData);
@@ -59,7 +59,7 @@ const updateUserProfile = async (profileData) => {
   }
 };
 
-// Télécharger un avatar
+
 const uploadAvatar = async ({ file }) => {
   try {
     const formData = new FormData();
@@ -80,7 +80,7 @@ const uploadAvatar = async ({ file }) => {
   }
 };
 
-// Récupérer l'avatar
+
 const getAvatar = async () => {
   try {
     const response = await api.get('/avatars', {
@@ -96,7 +96,7 @@ const getAvatar = async () => {
   }
 };
 
-// Supprimer l'avatar
+
 const deleteAvatar = async () => {
   try {
     const response = await api.delete('/avatars');
@@ -110,7 +110,7 @@ const deleteAvatar = async () => {
   }
 };
 
-// Récupérer les préférences de notification
+
 const getNotificationPreferences = async () => {
   try {
     const response = await api.get('/users/profile/notifications');
@@ -124,7 +124,7 @@ const getNotificationPreferences = async () => {
   }
 };
 
-// Mettre à jour les préférences de notification
+
 const updateNotificationPreferences = async (preferences) => {
   try {
     const response = await api.put('/users/profile/notifications', preferences);
@@ -140,7 +140,7 @@ const updateNotificationPreferences = async (preferences) => {
 
 export const uploadIllustrationAvatar = async ({ imagePath }) => {
   try {
-    // Télécharger l'image depuis le chemin fourni avec fetch
+
     const imageResponse = await fetch(imagePath);
     if (!imageResponse.ok) {
       throw new Error('Erreur lors du téléchargement de l\'image');
@@ -148,7 +148,7 @@ export const uploadIllustrationAvatar = async ({ imagePath }) => {
     const blob = await imageResponse.blob();
     const file = new File([blob], 'illustration.jpg', { type: blob.type || 'image/jpeg' });
 
-    // Utiliser la fonction uploadAvatar existante
+
     return await uploadAvatar({ file });
   } catch (error) {
     console.error("Erreur lors du traitement de l'illustration:", error);
@@ -156,7 +156,7 @@ export const uploadIllustrationAvatar = async ({ imagePath }) => {
   }
 };
 
-// PropTypes
+
 getUserProfile.propTypes = {};
 
 updateUserProfile.propTypes = {

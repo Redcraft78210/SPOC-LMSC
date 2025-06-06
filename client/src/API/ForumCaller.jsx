@@ -7,7 +7,7 @@ import PropTypes from 'prop-types';
  * @returns {Object} - Objet d'erreur formaté
  */
 const handleError = (error) => {
-  // Si l'API a répondu avec une erreur
+
   if (error.response) {
     return {
       status: error.response.status,
@@ -15,7 +15,7 @@ const handleError = (error) => {
       message: error.response.data?.message || error.message,
     };
   }
-  // Si l'erreur est liée à la configuration de la requête
+
   if (error.request) {
     return {
       status: 500,
@@ -23,7 +23,7 @@ const handleError = (error) => {
       message: 'Aucune réponse reçue du serveur',
     };
   }
-  // Pour les autres types d'erreurs
+
   return {
     status: 500,
     data: null,
@@ -31,21 +31,21 @@ const handleError = (error) => {
   };
 };
 
-// Récupérer tous les threads du forum (paginés)
+
 const getThreads = async ({ page = 1, limit = 10, search = '', sortBy = 'newest', category = '', author = '' }) => {
   try {
-    // Construire les paramètres de requête
+
     const params = new URLSearchParams();
     params.append('page', page);
     params.append('limit', limit);
     
-    // Ajouter les paramètres de filtrage seulement s'ils ont une valeur
+
     if (search) params.append('search', search);
     if (sortBy) params.append('sortBy', sortBy);
     if (category && category !== 'all') params.append('category', category);
     if (author) params.append('author', author);
     
-    // Faire la requête avec tous les paramètres
+
     const response = await api.get(`/forum/threads?${params.toString()}`);
     
     return {
@@ -58,7 +58,7 @@ const getThreads = async ({ page = 1, limit = 10, search = '', sortBy = 'newest'
   }
 };
 
-// Récupérer un thread spécifique avec ses commentaires
+
 const getThreadById = async ({ threadId }) => {
   try {
     const response = await api.get(`/forum/threads/${threadId}`);
@@ -72,7 +72,7 @@ const getThreadById = async ({ threadId }) => {
   }
 };
 
-// Créer un nouveau thread
+
 const createThread = async ({ title, content }) => {
   try {
     const response = await api.post('/forum/threads', { title, content });
@@ -86,7 +86,7 @@ const createThread = async ({ title, content }) => {
   }
 };
 
-// Mettre à jour un thread
+
 const updateThread = async ({ threadId, title, content }) => {
   try {
     const response = await api.put(`/forum/threads/${threadId}`, { title, content });
@@ -100,7 +100,7 @@ const updateThread = async ({ threadId, title, content }) => {
   }
 };
 
-// Supprimer un thread
+
 const deleteThread = async ({ threadId }) => {
   try {
     const response = await api.delete(`/forum/threads/${threadId}`);
@@ -114,7 +114,7 @@ const deleteThread = async ({ threadId }) => {
   }
 };
 
-// Ajouter un commentaire à un thread
+
 const addComment = async ({ threadId, content }) => {
   try {
     const response = await api.post(`/forum/threads/${threadId}/comments`, { content });
@@ -128,7 +128,7 @@ const addComment = async ({ threadId, content }) => {
   }
 };
 
-// Mettre à jour un commentaire
+
 const updateComment = async ({ commentId, content }) => {
   try {
     const response = await api.put(`/forum/comments/${commentId}`, { content });
@@ -142,7 +142,7 @@ const updateComment = async ({ commentId, content }) => {
   }
 };
 
-// Supprimer un commentaire
+
 const deleteComment = async ({ commentId }) => {
   try {
     const response = await api.delete(`/forum/comments/${commentId}`);
@@ -156,7 +156,7 @@ const deleteComment = async ({ commentId }) => {
   }
 };
 
-// PropTypes
+
 getThreads.propTypes = {
   page: PropTypes.number,
   limit: PropTypes.number,

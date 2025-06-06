@@ -8,7 +8,7 @@ export const useTutorial = () => useContext(TutorialContext);
 export const TutorialProvider = ({ children }) => {
   const [completedTutorials, setCompletedTutorials] = useState({});
   
-  // Load completed tutorials from localStorage on mount
+
   useEffect(() => {
     const savedTutorials = localStorage.getItem('completedTutorials');
     if (savedTutorials) {
@@ -16,12 +16,12 @@ export const TutorialProvider = ({ children }) => {
     }
   }, []);
   
-  // Save completed tutorials to localStorage
+
   useEffect(() => {
     localStorage.setItem('completedTutorials', JSON.stringify(completedTutorials));
   }, [completedTutorials]);
   
-  // Mark a tutorial as completed
+
   const completeTutorial = (tutorialId) => {
     setCompletedTutorials(prev => ({
       ...prev,
@@ -29,12 +29,12 @@ export const TutorialProvider = ({ children }) => {
     }));
   };
   
-  // Check if a tutorial has been completed
+
   const isTutorialCompleted = (tutorialId) => {
     return !!completedTutorials[tutorialId];
   };
   
-  // Reset tutorial progress
+
   const resetTutorial = (tutorialId) => {
     setCompletedTutorials(prev => {
       const newState = { ...prev };
@@ -43,7 +43,7 @@ export const TutorialProvider = ({ children }) => {
     });
   };
   
-  // Reset all tutorials
+
   const resetAllTutorials = () => {
     setCompletedTutorials({});
   };

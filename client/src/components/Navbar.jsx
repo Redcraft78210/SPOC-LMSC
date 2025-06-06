@@ -4,7 +4,7 @@ import {
   LibraryBig,
   BookOpen,
   Settings,
-  // Sun,
+
   User,
   Users,
   FileVideo2,
@@ -23,7 +23,7 @@ const NavigationBar = ({ isAdmin = false, isProf = false }) => {
   const [activeRoute, setActiveRoute] = React.useState(location.pathname);
 
   React.useEffect(() => {
-    // Ignore query parameters when setting the active route
+
     const currentPath = location.pathname;
     setActiveRoute(currentPath);
   }, [location.pathname]);
@@ -81,7 +81,7 @@ const NavigationBar = ({ isAdmin = false, isProf = false }) => {
         },
       ]
       : []),
-    // { icon: Sun, path: '/theme-settings', label: 'Thème' },
+
     { icon: Settings, path: '/settings', label: 'Paramètres', className: 'settings' },
   ];
 

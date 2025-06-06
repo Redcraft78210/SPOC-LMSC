@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { toast, Toaster } from 'react-hot-toast';
 import { Play, Square, Video } from 'lucide-react';
-// import {
-//   startRecording,
-//   stopRecording,
-//   getRecordingStatus,
-// } from '../../API/RecordCaller';
+
+
+
+
+
 import { GetCourses } from '../../API/ProfGestion';
 import { StreamReader } from '../StreamReader';
 
@@ -18,7 +18,7 @@ const Recording = () => {
   const [authToken, setAuthToken] = useState('');
 
   useEffect(() => {
-    // Récupérer le token depuis le localStorage
+
     const token = sessionStorage.getItem('authToken') || localStorage.getItem('authToken');
     if (token) {
       setAuthToken(token);
@@ -40,7 +40,7 @@ const Recording = () => {
 
     const checkStatus = async () => {
       try {
-        // const status = await getRecordingStatus();
+
         setIsRecording(true);
       } catch (error) {
         console.error('Erreur lors de la vérification du statut:', error);
@@ -58,7 +58,7 @@ const Recording = () => {
 
     setLoading(true);
     try {
-      // await startRecording(selectedCourse, description);
+
       setIsRecording(true);
       toast.success('Enregistrement démarré');
     } catch (error) {
@@ -72,10 +72,10 @@ const Recording = () => {
   const handleStop = async () => {
     setLoading(true);
     try {
-      // await stopRecording();
+
       setIsRecording(false);
       toast.success('Enregistrement arrêté');
-      // Reset form
+
       setDescription('');
       setSelectedCourse('');
     } catch (error) {

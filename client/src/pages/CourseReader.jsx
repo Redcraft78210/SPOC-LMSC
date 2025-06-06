@@ -26,7 +26,7 @@ const CourseReader = ({ authToken, userRole }) => {
   const courseId = new URLSearchParams(window.location.search).get('courseId');
   const [completed, setCompleted] = useState(false);
 
-  // Moderation UI state
+
   const [showModMenu, setShowModMenu] = useState(false);
   const [showDisapproveModal, setShowDisapproveModal] = useState(false);
   const [justification, setJustification] = useState('');
@@ -43,7 +43,7 @@ const CourseReader = ({ authToken, userRole }) => {
         return;
       }
 
-      // Marquer le cours comme commencé
+
       if (!completed) {
         try {
           const progressResponse = await markCourseAsInProgress({ courseId });
@@ -87,7 +87,7 @@ const CourseReader = ({ authToken, userRole }) => {
         if (response.status === 200) {
           setCompleted(response.data.status === 'completed');
         } else if (response.status !== 404) {
-          // 404 expected if no progress record exists
+
           throw new Error(response.message || 'Erreur lors de la vérification');
         }
       } catch (err) {
@@ -101,7 +101,7 @@ const CourseReader = ({ authToken, userRole }) => {
     }
   }, [courseId, authToken]);
 
-  // Close menu when clicking outside
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -138,7 +138,7 @@ const CourseReader = ({ authToken, userRole }) => {
         throw new Error(response.message || 'Erreur lors du téléchargement');
       }
 
-      // Traitement du blob retourné
+
       const blob = response.data;
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -152,7 +152,7 @@ const CourseReader = ({ authToken, userRole }) => {
 
       setDocumentError(null);
 
-      // Cleanup
+
       setTimeout(() => {
         document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
@@ -163,7 +163,7 @@ const CourseReader = ({ authToken, userRole }) => {
     }
   };
 
-  // Moderation functions
+
   const handleMenuToggle = (e) => {
     e.stopPropagation();
     setShowModMenu((prev) => !prev);
@@ -541,7 +541,7 @@ const CourseReader = ({ authToken, userRole }) => {
 
 CourseReader.propTypes = {
   authToken: PropTypes.string.isRequired,
-  userRole: PropTypes.string, // Added for moderation features
+  userRole: PropTypes.string,
 };
 
 export default CourseReader;

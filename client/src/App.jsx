@@ -9,7 +9,7 @@ import {
 import { jwtDecode } from 'jwt-decode';
 import { TutorialProvider } from './contexts/TutorialContext';
 
-// Replace static imports with lazy imports
+
 const About = React.lazy(() => import('./pages/Public/About'));
 const Contact = React.lazy(() => import('./pages/Public/Contact'));
 const Terms = React.lazy(() => import('./pages/Public/TermsOfUse'));
@@ -23,7 +23,7 @@ const MaintenanceBanner = React.lazy(() => import('./pages/Public/Maintenance'))
 const NotFound = React.lazy(() => import('./pages/Public/NotFound'));
 const Sign = React.lazy(() => import('./pages/Public/Sign'));
 
-// Add a loading fallback component
+
 const LoadingFallback = () => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-white bg-opacity-50 backdrop-blur-sm">
     <div className="flex flex-col items-center space-y-4">
@@ -34,39 +34,39 @@ const LoadingFallback = () => (
 );
 
 
-let APP_STATUS = '';
-// Uncomment the following line to enable maintenance mode
-// APP_STATUS = 'MAINTENANCE'; // Set to "MAINTENANCE" for maintenance mode
+let APP_STATUS = 'MAINTENANCE';
+
+
 
 const routeConfig = [
-  // Dashboard and Home
+
   { path: '/dashboard', content: 'Home' },
 
-  // Course-related routes
+
   { path: '/course-reader', content: 'CourseReader' },
   { path: '/courses-library', content: 'CoursesLibrary' },
   { path: '/courses-managment', content: 'CoursesManagement' },
 
-  // Class-related routes
+
   { path: '/classes-management', content: 'ClassManagement' },
 
-  // User-related routes
+
   { path: '/users-management', content: 'UserManagement' },
   { path: '/profile', content: 'Profile' },
 
-  // Media-related routes
+
   { path: '/video-manager', content: 'VideoManager' },
   { path: '/document-manager', content: 'DocumentManager' },
   { path: '/video-recording', content: 'VideoRecording' },
 
-  // Communication-related routes
+
   { path: '/forum', content: 'Forum' },
   { path: '/mailbox', content: 'Mailbox' },
 
-  // Live-related routes
+
   { path: '/liveViewer', content: 'LiveViewer' },
 
-  // Settings
+
   { path: '/theme-settings', content: 'ThemeSettings' },
   { path: '/settings', content: 'Settings' },
 ];
@@ -134,7 +134,7 @@ function App() {
       const decodedToken = jwtDecode(token);
       setAuth(decodedToken);
       setRole(decodedToken.role);
-      // Ne rien stocker ici, c'est handleAuthSuccess qui gère le stockage
+
     } catch (error) {
       console.error('Error decoding token:', error);
       handleLogout();

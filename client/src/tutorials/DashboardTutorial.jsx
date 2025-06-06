@@ -8,14 +8,14 @@ const DashboardTutorial = ({ userRole, name }) => {
   const { isTutorialCompleted, completeTutorial } = useTutorial();
   const tutorialId = `dashboard-${userRole.toLowerCase()}`;
   
-  // Run the tutorial automatically for first-time users
+
   useEffect(() => {
     if (!isTutorialCompleted(tutorialId)) {
       setRunTutorial(true);
     }
   }, [isTutorialCompleted, tutorialId]);
   
-  // Define steps based on user role
+
   const getStepsForRole = () => {
     const commonSteps = [
       {
@@ -36,7 +36,7 @@ const DashboardTutorial = ({ userRole, name }) => {
       }
     ];
     
-    // Role-specific steps
+
     if (userRole === 'Etudiant') {
       return [
         ...commonSteps,
@@ -95,7 +95,7 @@ const DashboardTutorial = ({ userRole, name }) => {
       tutorialId={tutorialId} 
       run={runTutorial}
       onFinish={() => {
-        // You could save a user preference here
+
         completeTutorial(tutorialId);
       }}
     />

@@ -47,7 +47,7 @@ const DocumentUpdater = ({ documentData, onUpdate }) => {
         return;
       }
 
-      // Créer une promesse pour la confirmation
+
       const confirmed = await new Promise(resolve => {
         toast(
           t => (

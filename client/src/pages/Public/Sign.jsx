@@ -11,7 +11,7 @@ import Logo from '../../Logo';
 import SubmitButton from '../../components/SubmitButton';
 import PropTypes from 'prop-types';
 
-// Importer les fonctions du AuthCaller
+
 import {
   login,
   register,
@@ -92,13 +92,13 @@ const Sign = ({ setAuth }) => {
   const [isSignUpForm, setIsSignUpForm] = useState(false);
   const [authStep, setAuthStep] = useState('initial');
   const [tempToken, setTempToken] = useState(null);
-  // Replace single string state with array of 6 digits
+
   const [twoFADigits, setTwoFADigits] = useState(['', '', '', '', '', '']);
   const digitsRefs = useRef([]);
   const [countEchec2FACode, setCountEchec2FACode] = useState(0);
   const [username, setUsername] = useState('');
-  const [emailOrUsername, setEmailOrUsername] = useState(''); // Renamed from email for login form
-  const [email, setEmail] = useState(''); // Keep this for registration form
+  const [emailOrUsername, setEmailOrUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
@@ -153,7 +153,7 @@ const Sign = ({ setAuth }) => {
 
     const refresh2FASetup = async () => {
       try {
-        // Utiliser le AuthCaller au lieu d'axios
+
         const response = await refreshTwoFASetup({
           tempToken: tempToken?.value,
           twoFASetup: { qrCode: qrCodeData, manualSecret }
@@ -210,13 +210,13 @@ const Sign = ({ setAuth }) => {
   };
 
   const handleError = error => {
-    // Gestion de l'erreur 403 côté catch (au cas où)
+
     if (error?.response?.status === 403 || error?.status === 403) {
       setShowAccountDisabledModal(true);
       return false;
     }
     setError(() => {
-      // Find if any errorMessages key is included in error.data?.message
+
       if (error.message) {
         const matchingKey = Object.keys(errorMessages).find(key =>
           key !== 'default' && error.message.includes(key)
@@ -227,7 +227,7 @@ const Sign = ({ setAuth }) => {
         }
       }
 
-      // Fall back to original behavior if no matching key found
+
       return errorMessages[error.data?.message] ||
         error.data?.message ||
         errorMessages.default;
@@ -242,7 +242,7 @@ const Sign = ({ setAuth }) => {
     setError(null);
 
     if (isSignUpForm) {
-      // Pour l'inscription
+
       if (!email.trim() || !password.trim() || !username.trim()) {
         return setError('Veuillez remplir tous les champs requis');
       }
@@ -259,13 +259,13 @@ const Sign = ({ setAuth }) => {
         return setError(errorMessages['auth/weak-password']);
       }
     } else {
-      // Pour la connexion
+
       if (!emailOrUsername.trim() || !password.trim()) {
         return setError('Veuillez remplir tous les champs requis');
       }
     }
 
-    // Validation CAPTCHA
+
     if (captchaValue.trim() === '') {
       return setError('Veuillez entrer le code de vérification (CAPTCHA)');
     }
@@ -276,14 +276,14 @@ const Sign = ({ setAuth }) => {
 
     try {
       if (isSignUpForm) {
-        // Vérifier le code d'inscription
+
         const codeCheckResponse = await checkRegisterCode({ code });
 
         if (!codeCheckResponse.data.isValid) {
           throw new Error(codeCheckResponse.message || errorMessages['auth/invalid-register-code']);
         }
 
-        // Enregistrer l'utilisateur
+
         const registerResponse = await register({
           email: email.trim(),
           username: username.trim(),
@@ -314,11 +314,11 @@ const Sign = ({ setAuth }) => {
           handleAuthSuccess(data.token);
         }
       } else {
-        // Connexion avec email ou username
+
         const isEmail = emailOrUsername.includes('@');
 
         const loginResponse = await login({
-          // Si c'est un email, envoyez-le comme email, sinon comme username
+
           ...(isEmail ? { email: emailOrUsername.trim() } : { username: emailOrUsername.trim() }),
           password: password.trim(),
         });
@@ -355,55 +355,55 @@ const Sign = ({ setAuth }) => {
     }
   };
 
-  // Helper to check if all digits are filled
+
   const allDigitsFilled = () => twoFADigits.every(digit => digit !== '');
 
   const handleDigitChange = (index, value) => {
-    // Vérifier que la valeur est un chiffre unique ou vide
+
     if (!/^[0-9]?$/.test(value)) return;
 
     const newDigits = [...twoFADigits];
     newDigits[index] = value;
     setTwoFADigits(newDigits);
 
-    // Si une valeur est entrée (pas vide), passer au champ suivant
+
     if (value && index < 5) {
       digitsRefs.current[index + 1].focus();
     }
   };
 
   const handleDigitKeyDown = (index, e) => {
-    // Pour les touches de navigation
+
     if (e.key === 'Backspace') {
-      // Si le champ actuel a une valeur, simplement l'effacer
+
       if (twoFADigits[index] !== '') {
         const newDigits = [...twoFADigits];
         newDigits[index] = '';
         setTwoFADigits(newDigits);
-        // Garder le focus sur le champ actuel
+
       }
-      // Si le champ actuel est vide et qu'on n'est pas sur le premier champ, aller au champ précédent
+
       else if (index > 0) {
         const newDigits = [...twoFADigits];
-        newDigits[index - 1] = ''; // Effacer le champ précédent
+        newDigits[index - 1] = '';
         setTwoFADigits(newDigits);
         digitsRefs.current[index - 1].focus();
       }
     } else if (e.key === 'ArrowLeft' && index > 0) {
-      // Déplacer le focus au champ précédent
+
       digitsRefs.current[index - 1].focus();
     } else if (e.key === 'ArrowRight' && index < 5) {
-      // Déplacer le focus au champ suivant
+
       digitsRefs.current[index + 1].focus();
     } else if (/^[0-9]$/.test(e.key)) {
-      // Si on tape un nouveau chiffre sur un champ déjà rempli, remplacer la valeur et passer au suivant
+
       const newDigits = [...twoFADigits];
       newDigits[index] = e.key;
       setTwoFADigits(newDigits);
 
-      // Passer au champ suivant si possible
+
       if (index < 5) {
-        e.preventDefault(); // Empêcher la saisie par défaut
+        e.preventDefault();
         digitsRefs.current[index + 1].focus();
       }
     }
@@ -435,18 +435,18 @@ const Sign = ({ setAuth }) => {
     }
   };
 
-  // Update the 2FA submit handler to use joined digits
+
   const handle2FASubmit = async e => {
     e.preventDefault();
     if (Date.now() - lastSubmit < 2000) return;
     setLastSubmit(Date.now());
     setError(null);
 
-    // Get the full 2FA code by joining the digits
+
     const fullCode = twoFADigits.join('');
 
     if (countEchec2FACode >= 2) {
-      // Validation CAPTCHA
+
       if (captchaValue.trim() === '') {
         return setError('Veuillez entrer le code de vérification (CAPTCHA)');
       }
@@ -460,7 +460,7 @@ const Sign = ({ setAuth }) => {
     }
 
     try {
-      // Utiliser le AuthCaller au lieu d'axios
+
       const response = await verifyTwoFA({
         tempToken: tempToken?.value,
         code: fullCode,
@@ -491,10 +491,10 @@ const Sign = ({ setAuth }) => {
     setAuth(token);
     if (rememberMe) {
       localStorage.setItem('authToken', token);
-      sessionStorage.removeItem('authToken'); // Nettoie sessionStorage si besoin
+      sessionStorage.removeItem('authToken');
     } else {
       sessionStorage.setItem('authToken', token);
-      localStorage.removeItem('authToken'); // Nettoie localStorage si besoin
+      localStorage.removeItem('authToken');
     }
     navigate('/dashboard');
   };
@@ -508,7 +508,7 @@ const Sign = ({ setAuth }) => {
     }
 
     try {
-      // Vérifier si c'est un email ou un nom d'utilisateur
+
       const isEmail = emailOrUsername.includes('@');
 
       const response = await forgotPassword({
@@ -534,10 +534,10 @@ const Sign = ({ setAuth }) => {
       setName('');
       setSurname('');
       setConfirmPassword('');
-      // Réinitialiser le champ email/username pour connexion
-      setEmailOrUsername(email); // Conserver l'email s'il a déjà été saisi
+
+      setEmailOrUsername(email);
     } else {
-      setEmail(emailOrUsername); // Conserver le email/username comme email pour inscription
+      setEmail(emailOrUsername);
       setEmailOrUsername('');
     }
   };
@@ -769,7 +769,7 @@ const Sign = ({ setAuth }) => {
       )}
 
       {isSignUpForm && (
-        // code d'inscription
+
         <div className="relative">
           <input
             id="code"

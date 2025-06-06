@@ -19,7 +19,7 @@ import {
 import PictureModal from '../components/PictureModal';
 import { useTutorial } from '../contexts/TutorialContext';
 
-// Lazy load the tab components
+
 const SecurityTab = lazy(() => import('../components/settings/SecurityTab'));
 const PrivacyTab = lazy(() => import('../components/settings/PrivacyTab'));
 
@@ -72,7 +72,7 @@ const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
     const { id, value } = e.target;
     setUser(prevUser => ({
       ...prevUser,
-      [id]: value, // Met à jour la propriété correspondante
+      [id]: value,
     }));
     setHasUnsavedChanges(true);
   };
@@ -397,7 +397,7 @@ const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
                   <button
                     onClick={() => {
                       setShowDeleteModal(false);
-                      // Ajouter logique de suppression ici
+
                     }}
                     className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
                   >
@@ -457,7 +457,7 @@ const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
 Settings.propTypes = {
   authToken: PropTypes.string.isRequired,
   refreshAvatar: PropTypes.func.isRequired,
-  userAvatar: PropTypes.string, // Peut être null
+  userAvatar: PropTypes.string,
   loadingAvatar: PropTypes.bool.isRequired,
 };
 export default Settings;

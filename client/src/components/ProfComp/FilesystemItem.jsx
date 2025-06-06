@@ -3,14 +3,14 @@ import { ChevronRight, File, Folder } from 'lucide-react';
 import PropTypes from 'prop-types';
 
 const FilesystemItem = ({ node, setId }) => {
-  // L'état isOpen est toujours appelé au même niveau, même pour la récursion.
+
   const [isOpen, setIsOpen] = useState(false);
 
   const handleClickVideo = () => {
     setId(node.video_id);
   };
 
-  // Si c'est une vidéo, on affiche l'icône File avec le titre provenant de node.name
+
   if (node.type === 'video') {
     return (
       <li>
@@ -27,7 +27,7 @@ const FilesystemItem = ({ node, setId }) => {
     );
   }
 
-  // Sinon, c'est un dossier
+
   const hasChildren = node.nodes && node.nodes.length > 0;
 
   return (
@@ -69,7 +69,7 @@ FilesystemItem.propTypes = {
         video_id: PropTypes.string,
         type: PropTypes.string.isRequired,
         name: PropTypes.string.isRequired,
-        nodes: PropTypes.array, // Si certains n'ont pas de "nodes"
+        nodes: PropTypes.array,
       })
     ),
   }).isRequired,

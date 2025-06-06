@@ -12,7 +12,7 @@ const VideoUpdater = ({ videoData, onUpdate }) => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Charger la liste des cours
+
     const fetchCourses = async () => {
       try {
         const result = await GetCourses();
@@ -61,7 +61,7 @@ const VideoUpdater = ({ videoData, onUpdate }) => {
         return;
       }
 
-      // Créer une promesse pour la confirmation
+
       const confirmed = await new Promise(resolve => {
         toast(
           t => (

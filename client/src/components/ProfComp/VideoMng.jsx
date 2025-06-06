@@ -9,7 +9,7 @@ import VideoPlayer from './VideoPlayer';
 import VideoUpdater from './VideoUpdater';
 import FileUploader from './FileUploader';
 import PropTypes from 'prop-types';
-import { toast, Toaster } from 'react-hot-toast'; // Add Toaster to the import
+import { toast, Toaster } from 'react-hot-toast';
 
 const VideoMng = () => {
   const [data, setData] = useState({});

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
-import { getStudentProgress } from '../../API/CourseCaller'; // Ajout de cette fonction dans CourseCaller
+import { getStudentProgress } from '../../API/CourseCaller';
 
-// Tutorial component
+
 import DashboardTutorial from '../../tutorials/DashboardTutorial';
 
 

@@ -1,21 +1,21 @@
-// api.js
+
 import axios from 'axios';
 
 const baseURL = '/api';
 
-// Create an Axios instance
+
 const api = axios.create({
   baseURL,
-  timeout: 10000, // 10 seconds timeout
+  timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Optional: Add a request interceptor
+
 api.interceptors.request.use(
   config => {
-    // Example: Add auth token from localStorage/sessionStorage
+
     const token = sessionStorage.getItem('authToken') || localStorage.getItem('authToken');
 
     if (token) {
@@ -27,20 +27,20 @@ api.interceptors.request.use(
   error => Promise.reject(error)
 );
 
-// Optional: Add a response interceptor
+
 api.interceptors.response.use(
   response => response,
   error => {
-    // Handle errors globally (e.g., unauthorized, server errors)
+
     if (error.response?.data?.message?.includes("invalid") && error.response?.data?.message?.includes("token")) {
-      // Handle unauthorized access
+
       console.warn('Unauthorized. Redirecting to login...');
 
-      window.location.href = '/logout'; // Redirect to login page
+      window.location.href = '/logout';
     } else if (error.response?.data?.message?.includes("User has already completed first login.")) {
-      // Handle user already completed first login
+
       console.warn('User has already completed first login. Redirecting to dashboard...');
-      window.location.href = '/logout'; // Redirect to dashboard
+      window.location.href = '/logout';
     }
     return Promise.reject(error);
   }

@@ -9,10 +9,10 @@ const FIleUploader = () => {
   const [courses, setCourses] = useState([]);
 
   useEffect(() => {
-    // Simulation d'un appel API pour récupérer la liste des cours
+
     const fetchCourses = async () => {
       try {
-        // Remplace ça par un vrai appel API (ex: await GetCourses())
+
         const mockCourses = [
           {
             ID_cours: 'cours_07e6094f-d32e-466c-b34f-fadc92fd9ab5',
@@ -94,7 +94,7 @@ const FIleUploader = () => {
           const selectedFile = e.target.files[0];
           if (selectedFile && selectedFile.type !== 'video/mp4') {
             alert('Seuls les fichiers .mp4 sont autorisés.');
-            e.target.value = ''; // reset le champ fichier
+            e.target.value = '';
             setFile(null);
             return;
           }

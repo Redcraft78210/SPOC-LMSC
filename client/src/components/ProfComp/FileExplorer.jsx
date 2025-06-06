@@ -10,7 +10,7 @@ export default function FileExplorer({ setIdVideo, onVideoSelect }) {
   const [selectedVideo, setSelectedVideo] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Charger la liste des cours
+
   useEffect(() => {
     const fetchCourses = async () => {
       try {
@@ -25,7 +25,7 @@ export default function FileExplorer({ setIdVideo, onVideoSelect }) {
     fetchCourses();
   }, []);
 
-  // Mettre à jour la liste des vidéos quand un cours est sélectionné
+
   useEffect(() => {
     if (selectedCourseId) {
       const selectedCourse = courses.find(
@@ -36,14 +36,14 @@ export default function FileExplorer({ setIdVideo, onVideoSelect }) {
       } else {
         setVideos([]);
       }
-      // Reset selected video when changing course
+
       setSelectedVideo(null);
       setIdVideo(null);
     }
   }, [selectedCourseId, courses, setIdVideo]);
 
   const handleVideoClick = async videoId => {
-    // Debug log for video ID
+
     
 
     if (!videoId) {
@@ -59,17 +59,17 @@ export default function FileExplorer({ setIdVideo, onVideoSelect }) {
       if (detailsResponse?.status === 200) {
         const videoDetails = detailsResponse.data;
 
-        // Set selected video and ID
+
         setSelectedVideo(videoDetails);
         setIdVideo(videoId);
 
-        // Construct stream URL
+
         const streamUrl = getVideoStreamUrl(videoId);
 
-        // Pass complete details to parent
+
         onVideoSelect({
           ...videoDetails,
-          id: videoId, // Ensure ID is included
+          id: videoId,
           streamUrl,
           courseId: selectedCourseId,
         });
@@ -116,7 +116,7 @@ export default function FileExplorer({ setIdVideo, onVideoSelect }) {
         {videos.map(video => (
           <li
             key={`video-${video.id}`}
-            onClick={() => !loading && handleVideoClick(video.id)} // Utilisez video.id au lieu de video.video_id
+            onClick={() => !loading && handleVideoClick(video.id)}
             className={`
               cursor-pointer p-2 hover:bg-gray-50 rounded-md flex items-center
               ${loading ? 'opacity-50' : ''}

@@ -7,7 +7,7 @@ const ClassManagementTutorial = () => {
     const [runTutorial, setRunTutorial] = useState(false);
     const { resetTutorial } = useTutorial();
 
-    // Définition des étapes du tutoriel
+
     const tutorialSteps = [
         {
             target: 'body',

@@ -16,9 +16,9 @@ const DocumentMng = () => {
   };
 
   const handleRefresh = () => {
-    // Just refresh the document list without showing a toast
+
     if (documentData?.id) {
-      // Refresh document details if needed
+
       handleDocumentSelect(documentData);
     }
   };

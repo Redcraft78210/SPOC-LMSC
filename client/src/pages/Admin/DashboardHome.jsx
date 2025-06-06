@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 
 
-// Tutorial component
+
 import DashboardTutorial from '../../tutorials/DashboardTutorial';
 import PropTypes from 'prop-types';
 
