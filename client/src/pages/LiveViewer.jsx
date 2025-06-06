@@ -22,7 +22,7 @@ import { ShieldEllipsis, ShieldBan, ShieldAlert } from 'lucide-react';
 const INACTIVITY_THRESHOLD = 60000; // 1 minute in ms
 const TEN_MINUTES = 600; // 600 seconds
 
-const WSS_BASE_URL = "wss://172.20.10.5:8443"
+const WSS_BASE_URL = "wss://172.16.87.30/api"
 
 // Extracted loading spinner component
 const LoadingSpinner = () => (

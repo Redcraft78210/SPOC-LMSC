@@ -89,7 +89,7 @@ app.use(express.urlencoded({ limit: '300mb', extended: true }));
 // const allowedOrigins = ["https://your-production-domain.com"];
 
 const allowedOrigins = ["https://localhost", "https://172.20.10.3",
-  "https://172.20.10.5", "https://172.16.84.14"];
+  "https://172.16.87.30", "https://172.16.84.14"];
 
 // Middleware
 app.use(cors({

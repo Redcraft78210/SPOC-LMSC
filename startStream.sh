@@ -305,7 +305,7 @@ find_optimal_packet_size() {
 
 setup_packet_sizes() {
   echo "🌐 Configuring packet sizes…"
-  local dest=${DEST_IP:-"172.20.10.5"}
+  local dest=${DEST_IP:-"172.16.87.30"}
 
   # Capture the output of find_optimal_packet_size instead of its return code
   local size=$(find_optimal_packet_size "$dest" | grep -oP '(?<=Optimal packet size: )\d+')

@@ -10,7 +10,7 @@ import {
   Shrink,
 } from 'lucide-react';
 
-const WSS_BASE_URL = 'wss://172.20.10.5:8443/api';
+const WSS_BASE_URL = 'wss://172.16.87.30/api';
 
 const StreamReader = ({ authToken, controls, status }) => {
   const containerRef = useRef();

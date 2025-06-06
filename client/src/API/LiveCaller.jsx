@@ -1,7 +1,7 @@
 import api from './api';
 import PropTypes from 'prop-types';
 
-const baseURL = 'https://172.20.10.5:8443/api';
+const baseURL = '/api';
 
 /**
  * Fonction générique de gestion des erreurs
