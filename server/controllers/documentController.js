@@ -1,14 +1,34 @@
+/**
+ * @fileoverview Contrôleur de gestion des documents PDF pour l'application SPOC-LMSC.
+ * Ce module gère le téléchargement, la récupération et la suppression des documents PDF,
+ * avec vérifications de sécurité et association aux cours.
+ * 
+ * @module documentController
+ * @requires fs/promises
+ * @requires fs
+ * @requires path
+ * @requires crypto
+ * @requires ../models
+ */
+
 const fs = require('fs/promises');
 const fsSync = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { Document, Course, CourseDocument } = require('../models');
 
+/**
+ * Chemin absolu vers le répertoire de stockage des documents
+ * @constant {string}
+ */
 const documentsDirectory = path.resolve(__dirname, '..', 'documents');
 
 console.log(`documentsDirectory: ${documentsDirectory}`);
 
-// Common headers
+/**
+ * En-têtes HTTP communs pour la sécurité des documents servis
+ * @constant {Object}
+ */
 const COMMON_HEADERS = {
     'Cache-Control': 'public, max-age=3600',
     'Content-Security-Policy': "default-src 'none'",
@@ -18,9 +38,15 @@ const COMMON_HEADERS = {
 };
 
 /**
- * Check if the provided file path is inside the documents directory.
- * @param {string} filePath 
- * @returns {boolean}
+ * Vérifie si le chemin de fichier fourni est à l'intérieur du répertoire de documents.
+ * Protection contre les attaques de traversée de répertoire.
+ * 
+ * @param {string} filePath - Chemin du fichier à vérifier
+ * @returns {boolean} Vrai si le fichier est dans le répertoire autorisé, faux sinon
+ * 
+ * @example
+ * // Retourne true si le fichier est dans le répertoire documents
+ * isInsideDocumentsDir('/path/to/documents/file.pdf');
  */
 const isInsideDocumentsDir = (filePath) => {
     const relative = path.relative(documentsDirectory, filePath);
@@ -28,9 +54,10 @@ const isInsideDocumentsDir = (filePath) => {
 };
 
 /**
- * Generate ETag from file content
- * @param {Buffer} fileData
- * @returns {string}
+ * Génère un ETag à partir du contenu d'un fichier pour la gestion du cache HTTP
+ * 
+ * @param {Buffer} fileData - Contenu du fichier en mémoire
+ * @returns {string} ETag généré (hash SHA-1 du contenu)
  */
 const generateETag = (fileData) => {
     const hash = crypto.createHash('sha1');
@@ -38,27 +65,35 @@ const generateETag = (fileData) => {
     return hash.digest('hex');
 };
 
-// Ajouter une fonction pour générer le chemin de fichier basé sur l'ID
+/**
+ * Génère le chemin absolu vers un document PDF
+ * 
+ * @param {string} id - Identifiant unique du document
+ * @param {string} fingerprint - Empreinte unique du document
+ * @returns {string} Chemin complet vers le fichier PDF
+ */
 const generateDocumentPath = (id, fingerprint) => {
-    // Le chemin est fixe, le nom du fichier est basé sur l'ID
     return path.resolve(documentsDirectory, `${id}-${fingerprint}.pdf`);
 };
 
 /**
- * Get document as blob with additional security headers.
- * @param {Object} req - Express request object.
- * @param {Object} res - Express response object.
+ * Récupère un document PDF et le renvoie au client avec les en-têtes de sécurité appropriés
+ * 
+ * @param {Object} req - Objet requête Express
+ * @param {Object} res - Objet réponse Express
+ * @throws {Error} En cas d'erreur lors de la lecture du fichier ou de problème serveur
+ * 
+ * @example
+ * // Route: GET /api/documents/:id
  */
 const getBlobDocument = async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Validate ID format more thoroughly
         if (!id || typeof id !== 'string' || !/^[a-zA-Z0-9_-]+$/.test(id)) {
             return res.status(400).json({ message: 'Invalid document ID' });
         }
 
-        // Check if document is in database
         const document = await Document.findOne({
             where: { id },
             include: {
@@ -72,11 +107,7 @@ const getBlobDocument = async (req, res) => {
         }
 
         const fingerprint = document.fingerprint;
-
-        // Use path.join for better path construction
         const documentPath = generateDocumentPath(id, fingerprint)
-
-        // Safely access document title
         const documentTitle = document.Course?.title;
 
         const escapedFilename = documentTitle 
@@ -92,13 +123,11 @@ const getBlobDocument = async (req, res) => {
             return res.status(404).json({ message: 'Document not found' });
         }
 
-        // Use fs.promises to avoid callback hell
         const handle = await fs.open(documentPath, 'r');
         try {
             const stats = await handle.stat();
             const buffer = await handle.readFile();
 
-            // Set proper PDF content type without charset
             res.writeHead(200, {
                 ...COMMON_HEADERS,
                 'Content-Length': buffer.length,
@@ -122,9 +151,20 @@ const getBlobDocument = async (req, res) => {
     }
 };
 
+/**
+ * Télécharge un nouveau document PDF ou met à jour un document existant
+ * 
+ * @param {Object} req - Objet requête Express
+ * @param {Object} res - Objet réponse Express
+ * @throws {Error} En cas d'erreur lors de l'écriture du fichier ou problème serveur
+ * 
+ * @example
+ * // Route: POST /api/documents/:id
+ * // Corps: données binaires du PDF avec Content-Type: application/pdf
+ * // + métadonnées en formdata (courseId, isMain, title, description, fingerprint)
+ */
 const uploadDocument = async (req, res) => {
     try {
-        // Auth
         if (!req.user) {
             return res.status(403).json({ message: 'Accès non autorisé' });
         }
@@ -134,22 +174,18 @@ const uploadDocument = async (req, res) => {
             return res.status(400).json({ message: 'ID invalide' });
         }
 
-        // Récupérer le fingerprint depuis la base de données ou en générer un nouveau
         let fingerprint = req.body.fingerprint || crypto.randomBytes(8).toString('hex');
         const courseId = req.body.courseId; // Récupérer l'ID du cours associé
         const isMain = req.body.isMain || false; // Document principal ou non
         
-        // Utiliser generateDocumentPath pour la cohérence
         const documentPath = generateDocumentPath(id, fingerprint);
         
         if (!isInsideDocumentsDir(documentPath)) {
             return res.status(400).json({ message: 'Chemin invalide' });
         }
 
-        // Créer le répertoire parent si nécessaire
         await fs.mkdir(path.dirname(documentPath), { recursive: true });
 
-        // Gestion de l'upload de fichier
         const fileData = [];
         req.on('data', (chunk) => {
             fileData.push(chunk);
@@ -160,7 +196,6 @@ const uploadDocument = async (req, res) => {
                 const buffer = Buffer.concat(fileData);
                 await fs.writeFile(documentPath, buffer);
                 
-                // Enregistrer ou mettre à jour le document dans la base de données
                 const [document, created] = await Document.upsert({
                     id,
                     fingerprint,
@@ -168,7 +203,6 @@ const uploadDocument = async (req, res) => {
                     description: req.body.description
                 }, { returning: true });
                 
-                // Créer l'association avec le cours si un courseId est fourni
                 if (courseId) {
                     await CourseDocument.upsert({
                         course_id: courseId,
@@ -200,9 +234,18 @@ const uploadDocument = async (req, res) => {
     }
 };
 
+/**
+ * Supprime un document PDF et ses associations dans la base de données
+ * 
+ * @param {Object} req - Objet requête Express
+ * @param {Object} res - Objet réponse Express
+ * @throws {Error} En cas d'erreur lors de la suppression du fichier ou problème serveur
+ * 
+ * @example
+ * // Route: DELETE /api/documents/:id
+ */
 const deleteDocument = async (req, res) => {
     try {
-        // Auth
         if (!req.user) {
             return res.status(403).json({ message: 'Accès non autorisé' });
         }
@@ -212,20 +255,17 @@ const deleteDocument = async (req, res) => {
             return res.status(400).json({ message: 'ID invalide' });
         }
 
-        // Récupérer le document de la base de données pour obtenir le fingerprint
         const document = await Document.findByPk(id);
         if (!document) {
             return res.status(404).json({ message: 'Document non trouvé' });
         }
 
-        // Utiliser generateDocumentPath pour la cohérence
         const documentPath = generateDocumentPath(id, document.fingerprint);
         
         if (!isInsideDocumentsDir(documentPath)) {
             return res.status(400).json({ message: 'Chemin invalide' });
         }
 
-        // Vérifier si le fichier existe avant de le supprimer
         try {
             await fs.access(documentPath);
             await fs.unlink(documentPath);
@@ -233,14 +273,11 @@ const deleteDocument = async (req, res) => {
             if (error.code !== 'ENOENT') {
                 throw error;
             }
-            // Si le fichier n'existe pas, on continue avec la suppression en base
         }
         
-        // Supprimer les associations dans CourseDocument
         const { CourseDocument } = require('../models');
         await CourseDocument.destroy({ where: { document_id: id }});
         
-        // Supprimer le document de la base de données
         await document.destroy();
         
         res.status(200).json({ message: 'Document supprimé avec succès' });
@@ -255,6 +292,10 @@ const deleteDocument = async (req, res) => {
     }
 };
 
+/**
+ * Exporte les fonctions du contrôleur de documents
+ * @exports documentController
+ */
 module.exports = {
     getBlobDocument,
     uploadDocument,

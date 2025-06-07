@@ -1,18 +1,65 @@
-const { User, UserAvatar } = require('../models');
+/**
+ * @fileoverview Contrôleur pour la gestion des avatars utilisateurs.
+ * Fournit des fonctionnalités pour télécharger, récupérer, optimiser et supprimer
+ * des avatars utilisateur avec optimisation d'image automatique.
+ * 
+ * @module controllers/avatarController
+ * @requires models
+ * @requires sharp
+ * @requires uuid
+ * @requires fs.promises
+ * @requires path
+ */
+
+const { UserAvatar } = require('../models');
 const sharp = require('sharp');
-const { v4: uuidv4 } = require('uuid');
 const fs = require('fs').promises;
 const path = require('path');
 
-// Configuration
+/**
+ * Taille maximale de fichier autorisée pour les avatars (5MB)
+ * @constant {number}
+ */
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB max
+
+/**
+ * Types MIME autorisés pour les avatars
+ * @constant {string[]}
+ */
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+/**
+ * Répertoire temporaire pour le traitement des images
+ * @constant {string}
+ */
 const TEMP_DIR = path.join(__dirname, '..', 'temp');
+
+/**
+ * Qualité de compression par défaut pour les images
+ * @constant {number}
+ */
 const COMPRESSION_QUALITY = 85; // Qualité de compression par défaut (%)
+
+/**
+ * Largeur maximale autorisée pour les avatars
+ * @constant {number}
+ */
 const MAX_WIDTH = 400; // Largeur maximale de l'avatar
+
+/**
+ * Hauteur maximale autorisée pour les avatars
+ * @constant {number}
+ */
 const MAX_HEIGHT = 400; // Hauteur maximale de l'avatar
 
-// Assurez-vous que le répertoire temporaire existe
+/**
+ * Vérifie l'existence du répertoire temporaire et le crée si nécessaire
+ * 
+ * @async
+ * @function ensureTempDir
+ * @returns {Promise<void>}
+ * @throws {Error} Si la création du répertoire échoue
+ */
 const ensureTempDir = async () => {
   try {
     await fs.access(TEMP_DIR);
@@ -21,22 +68,36 @@ const ensureTempDir = async () => {
   }
 };
 
-// Fonction pour compresser l'image avec la meilleure qualité possible
+/**
+ * Optimise une image en redimensionnant et compressant selon les paramètres
+ * 
+ * @async
+ * @function optimizeImage
+ * @param {Buffer} buffer - Buffer contenant les données de l'image
+ * @param {string} mimeType - Type MIME de l'image
+ * @param {number} [quality=COMPRESSION_QUALITY] - Qualité de compression (0-100)
+ * @returns {Promise<Object>} Objet contenant le buffer optimisé et les métadonnées
+ * @returns {Buffer} buffer - Buffer contenant l'image optimisée
+ * @returns {number} width - Largeur de l'image optimisée
+ * @returns {number} height - Hauteur de l'image optimisée
+ * @returns {string} format - Format de l'image optimisée
+ * @throws {Error} Si l'optimisation de l'image échoue
+ */
 const optimizeImage = async (buffer, mimeType, quality = COMPRESSION_QUALITY) => {
   try {
     const image = sharp(buffer);
     const metadata = await image.metadata();
 
-    // Format de sortie basé sur le type MIME
+
     let format = 'webp'; // Par défaut, utiliser WebP pour une meilleure compression
     let formatOptions = { quality };
 
-    // Utiliser le format d'origine si c'est préférable
+
     if (mimeType === 'image/png' && metadata.hasAlpha) {
       format = 'png';
       formatOptions = { compressionLevel: 9, palette: true }; // Meilleure compression pour PNG
     } else if (mimeType === 'image/gif' && metadata.pages > 1) {
-      // Pour les GIF animés, on ne peut pas facilement les compresser, alors on retourne le buffer original
+
       return {
         buffer,
         width: metadata.width,
@@ -45,7 +106,7 @@ const optimizeImage = async (buffer, mimeType, quality = COMPRESSION_QUALITY) =>
       };
     }
 
-    // Redimensionnement proportionnel si nécessaire
+
     let width = metadata.width;
     let height = metadata.height;
 
@@ -55,7 +116,7 @@ const optimizeImage = async (buffer, mimeType, quality = COMPRESSION_QUALITY) =>
       height = Math.floor(height * ratio);
     }
 
-    // Compresser l'image
+
     const optimizedBuffer = await image
       .resize(width, height, { fit: 'inside', withoutEnlargement: true })
       .toFormat(format, formatOptions)
@@ -73,7 +134,24 @@ const optimizeImage = async (buffer, mimeType, quality = COMPRESSION_QUALITY) =>
   }
 };
 
-// Upload d'un avatar
+/**
+ * Télécharge et enregistre un avatar utilisateur
+ * Optimise l'image avant de l'enregistrer dans la base de données
+ * 
+ * @async
+ * @function uploadAvatar
+ * @param {Object} req - Objet requête Express
+ * @param {Object} req.file - Fichier téléchargé via multer
+ * @param {string} req.file.mimetype - Type MIME du fichier
+ * @param {number} req.file.size - Taille du fichier en octets
+ * @param {Buffer} req.file.buffer - Contenu du fichier
+ * @param {string} req.file.originalname - Nom original du fichier
+ * @param {Object} req.user - Informations de l'utilisateur authentifié
+ * @param {number} req.user.id - ID de l'utilisateur
+ * @param {Object} res - Objet réponse Express
+ * @returns {Promise<Object>} Réponse HTTP avec les détails de l'avatar
+ * @throws {Error} Si le téléchargement ou le traitement de l'avatar échoue
+ */
 const uploadAvatar = async (req, res) => {
   try {
     await ensureTempDir();
@@ -84,33 +162,33 @@ const uploadAvatar = async (req, res) => {
 
     const { mimetype, size, buffer, originalname } = req.file;
 
-    // Valider le type MIME
+
     if (!ALLOWED_MIME_TYPES.includes(mimetype)) {
       return res.status(400).json({
         message: 'Format de fichier non pris en charge. Utilisez JPG, PNG, WebP ou GIF.'
       });
     }
 
-    // Vérifier la taille du fichier
+
     if (size > MAX_FILE_SIZE) {
       return res.status(400).json({
         message: `La taille du fichier ne doit pas dépasser ${MAX_FILE_SIZE / 1024 / 1024}MB.`
       });
     }
 
-    // Optimiser l'image
+
     const { buffer: optimizedBuffer, width, height, format } = await optimizeImage(buffer, mimetype);
 
-    // Récupérer l'utilisateur connecté
+
     const userId = req.user.id;
 
-    // Vérifier si l'utilisateur a déjà un avatar
+
     const existingAvatar = await UserAvatar.findOne({
       where: { user_id: userId }
     });
 
     if (existingAvatar) {
-      // Mettre à jour l'avatar existant
+
       existingAvatar.mime_type = `image/${format}`;
       existingAvatar.file_name = originalname;
       existingAvatar.original_size = size;
@@ -133,7 +211,7 @@ const uploadAvatar = async (req, res) => {
         }
       });
     } else {
-      // Créer un nouvel avatar
+
       const newAvatar = await UserAvatar.create({
         user_id: userId,
         mime_type: `image/${format}`,
@@ -163,7 +241,18 @@ const uploadAvatar = async (req, res) => {
   }
 };
 
-// Récupérer l'avatar d'un utilisateur
+/**
+ * Récupère l'avatar d'un utilisateur spécifique
+ * 
+ * @async
+ * @function getAvatar
+ * @param {Object} req - Objet requête Express
+ * @param {Object} req.params - Paramètres de la requête
+ * @param {string} req.params.userId - ID de l'utilisateur dont on veut récupérer l'avatar
+ * @param {Object} res - Objet réponse Express
+ * @returns {Promise<Object>} Données binaires de l'avatar avec les en-têtes appropriés
+ * @throws {Error} Si la récupération de l'avatar échoue
+ */
 const getAvatar = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -187,7 +276,18 @@ const getAvatar = async (req, res) => {
   }
 };
 
-// Récupérer l'avatar de l'utilisateur connecté
+/**
+ * Récupère l'avatar de l'utilisateur authentifié
+ * 
+ * @async
+ * @function getMyAvatar
+ * @param {Object} req - Objet requête Express
+ * @param {Object} req.user - Informations de l'utilisateur authentifié
+ * @param {number} req.user.id - ID de l'utilisateur
+ * @param {Object} res - Objet réponse Express
+ * @returns {Promise<Object>} Données binaires de l'avatar avec les en-têtes appropriés
+ * @throws {Error} Si la récupération de l'avatar échoue
+ */
 const getMyAvatar = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -211,7 +311,18 @@ const getMyAvatar = async (req, res) => {
   }
 };
 
-// Supprimer l'avatar d'un utilisateur
+/**
+ * Supprime l'avatar de l'utilisateur authentifié
+ * 
+ * @async
+ * @function deleteAvatar
+ * @param {Object} req - Objet requête Express
+ * @param {Object} req.user - Informations de l'utilisateur authentifié
+ * @param {number} req.user.id - ID de l'utilisateur
+ * @param {Object} res - Objet réponse Express
+ * @returns {Promise<Object>} Message de confirmation de suppression
+ * @throws {Error} Si la suppression de l'avatar échoue
+ */
 const deleteAvatar = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -234,7 +345,18 @@ const deleteAvatar = async (req, res) => {
   }
 };
 
-// Supprimer l'avatar d'un utilisateur spécifique (admin)
+/**
+ * Supprime l'avatar d'un utilisateur spécifique (probablement réservé aux administrateurs)
+ * 
+ * @async
+ * @function deleteUserAvatar
+ * @param {Object} req - Objet requête Express
+ * @param {Object} req.params - Paramètres de la requête
+ * @param {string} req.params.userId - ID de l'utilisateur dont on veut supprimer l'avatar
+ * @param {Object} res - Objet réponse Express
+ * @returns {Promise<Object>} Message de confirmation de suppression
+ * @throws {Error} Si la suppression de l'avatar échoue
+ */
 const deleteUserAvatar = async (req, res) => {
   try {
     const userId = req.params.userId;

@@ -1,5 +1,22 @@
+/**
+ * @fileoverview Contrôleur pour la gestion des classes dans l'application.
+ * Fournit des fonctions pour créer, lire, mettre à jour et supprimer des classes,
+ * ainsi que pour gérer les relations entre les classes et les étudiants.
+ * @module controllers/classController
+ */
 const { Classe, StudentClass, Student } = require('../models');
 
+/**
+ * Récupère toutes les classes avec leurs étudiants associés.
+ * Renvoie un tableau de classes trié par ordre alphabétique, avec le nombre d'étudiants
+ * et la liste des IDs des étudiants pour chaque classe.
+ *
+ * @async
+ * @param {Object} req - L'objet de requête Express.
+ * @param {Object} res - L'objet de réponse Express.
+ * @returns {Promise<void>} - Envoie une réponse JSON avec les données des classes.
+ * @throws {Error} - Si une erreur survient lors de la récupération des classes.
+ */
 const getAllClasses = async (req, res) => {
   try {
     const classes = await Classe.findAll({
@@ -38,7 +55,17 @@ const getAllClasses = async (req, res) => {
   }
 };
 
-
+/**
+ * Récupère une classe spécifique par son ID.
+ *
+ * @async
+ * @param {Object} req - L'objet de requête Express.
+ * @param {Object} req.params - Les paramètres de la requête.
+ * @param {string} req.params.id - L'ID de la classe à récupérer.
+ * @param {Object} res - L'objet de réponse Express.
+ * @returns {Promise<void>} - Envoie une réponse JSON avec les données de la classe.
+ * @throws {Error} - Si une erreur survient lors de la récupération de la classe.
+ */
 const getClassById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -52,6 +79,21 @@ const getClassById = async (req, res) => {
   }
 };
 
+/**
+ * Crée une nouvelle classe avec les informations fournies.
+ * Si une liste d'étudiants est fournie, crée également les associations entre la classe et les étudiants.
+ *
+ * @async
+ * @param {Object} req - L'objet de requête Express.
+ * @param {Object} req.body - Le corps de la requête.
+ * @param {string} req.body.name - Le nom de la classe (obligatoire).
+ * @param {string} [req.body.description] - La description de la classe.
+ * @param {number} req.body.main_teacher_id - L'ID de l'enseignant principal (obligatoire).
+ * @param {Array<number>} [req.body.students] - Liste des IDs des étudiants à associer à la classe.
+ * @param {Object} res - L'objet de réponse Express.
+ * @returns {Promise<void>} - Envoie une réponse JSON confirmant la création de la classe.
+ * @throws {Error} - Si une erreur survient lors de la création de la classe.
+ */
 const createClass = async (req, res) => {
   try {
     const { name, description, main_teacher_id, students } = req.body;
@@ -64,10 +106,10 @@ const createClass = async (req, res) => {
       return res.status(400).json({ message: 'Missing required field: main_teacher_id' });
     }
 
-    // Créer la classe
+
     const newClass = await Classe.create({ name, description, main_teacher_id });
 
-    // Ajouter les étudiants à la classe via StudentClass
+
     if (students && students.length > 0) {
       const studentClassEntries = students.map((studentId) => ({
         "student_id": studentId,
@@ -86,6 +128,24 @@ const createClass = async (req, res) => {
   }
 };
 
+/**
+ * Met à jour une classe existante avec les informations fournies.
+ * Si une liste d'étudiants est fournie, remplace les associations actuelles
+ * entre la classe et les étudiants par les nouvelles associations.
+ *
+ * @async
+ * @param {Object} req - L'objet de requête Express.
+ * @param {Object} req.params - Les paramètres de la requête.
+ * @param {string} req.params.id - L'ID de la classe à mettre à jour.
+ * @param {Object} req.body - Le corps de la requête.
+ * @param {string} [req.body.name] - Le nouveau nom de la classe.
+ * @param {string} [req.body.description] - La nouvelle description de la classe.
+ * @param {number} [req.body.main_teacher_id] - Le nouvel ID de l'enseignant principal.
+ * @param {Array<number>} [req.body.students] - Nouvelle liste des IDs des étudiants.
+ * @param {Object} res - L'objet de réponse Express.
+ * @returns {Promise<void>} - Envoie une réponse JSON avec les données de la classe mise à jour.
+ * @throws {Error} - Si une erreur survient lors de la mise à jour de la classe.
+ */
 const updateClass = async (req, res) => {
   try {
     const { id } = req.params;
@@ -122,6 +182,17 @@ const updateClass = async (req, res) => {
   }
 };
 
+/**
+ * Supprime une classe existante par son ID.
+ *
+ * @async
+ * @param {Object} req - L'objet de requête Express.
+ * @param {Object} req.params - Les paramètres de la requête.
+ * @param {string} req.params.id - L'ID de la classe à supprimer.
+ * @param {Object} res - L'objet de réponse Express.
+ * @returns {Promise<void>} - Envoie une réponse avec le statut 204 si la suppression est réussie.
+ * @throws {Error} - Si une erreur survient lors de la suppression de la classe.
+ */
 const deleteClass = async (req, res) => {
   try {
     const { id } = req.params;

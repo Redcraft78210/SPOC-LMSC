@@ -1,16 +1,24 @@
-// controllers/messageController.js
-const { Message, User, Attachment, sequelize, TrashMessage, Recipient } = require('../models');
-const { scanAttachment } = require('../services/virusScanService');
-const fs = require('fs');
-const path = require('path');
-const { v4: uuidv4 } = require('uuid');
+/**
+ * @fileoverview Contrôleur de gestion des messages pour l'application SPOC-LMSC
+ * Gère toutes les opérations liées aux messages : consultation, envoi, suppression, 
+ * restauration, téléchargement des pièces jointes et traitement des messages de contact.
+ * @module controllers/messageController
+ * @requires models
+ * @requires services/virusScanService
+ * @requires fs
+ * @requires path
+ * @requires uuid
+ */
 
-const UPLOADS_DIR = path.join(__dirname, '../uploads');
-
-// Get inbox messages
-const { Op } = require('sequelize');
-
-// Helper pour construire le whereClause
+/**
+ * Construit une clause WHERE pour filtrer les messages selon le rôle de l'utilisateur
+ * et les IDs des messages dont il est destinataire.
+ * 
+ * @param {string} role - Le rôle de l'utilisateur ('Etudiant', 'Professeur', 'Administrateur')
+ * @param {Array<number>} recipientMessageIds - IDs des messages où l'utilisateur est destinataire
+ * @returns {Object} Une clause WHERE pour Sequelize
+ * @private
+ */
 function buildWhereClause(role, recipientMessageIds) {
   const baseOr = [
     {
@@ -37,6 +45,22 @@ function buildWhereClause(role, recipientMessageIds) {
   return { [Op.or]: baseOr };
 }
 
+/**
+ * Récupère les messages de la boîte de réception de l'utilisateur connecté
+ * avec pagination et filtres optionnels.
+ * 
+ * @param {Object} req - La requête Express
+ * @param {Object} req.user - L'utilisateur authentifié
+ * @param {number} req.user.id - ID de l'utilisateur
+ * @param {Object} req.query - Paramètres de requête
+ * @param {number} [req.query.page=1] - Numéro de page pour la pagination
+ * @param {string} [req.query.unread] - Filtre pour les messages non lus ('true'/'false')
+ * @param {string} [req.query.hasAttachments] - Filtre pour les messages avec pièces jointes ('true'/'false')
+ * @param {string} [req.query.fromContact] - Filtre pour les messages du formulaire de contact ('true'/'false')
+ * @param {Object} res - La réponse Express
+ * @returns {Promise<Object>} Messages paginés avec métadonnées
+ * @throws {Error} Si une erreur se produit lors de la récupération des messages
+ */
 const getInboxMessages = async (req, res) => {
   try {
     const { page = 1, unread, hasAttachments, fromContact } = req.query;
@@ -50,7 +74,7 @@ const getInboxMessages = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Get trash message IDs
+
     const trashMessageIds = await TrashMessage.findAll({
       attributes: ['originalMessageId'],
       where: {
@@ -59,7 +83,7 @@ const getInboxMessages = async (req, res) => {
       raw: true
     }).then(records => records.map(r => r.originalMessageId));
 
-    // Get recipient message IDs
+
     const recipientMessageIds = await Recipient.findAll({
       attributes: ['MessageId'],
       where: {
@@ -77,7 +101,7 @@ const getInboxMessages = async (req, res) => {
       raw: true
     }).then(records => records.map(r => r.MessageId));
 
-    // Get unread message IDs if unread filter is active
+
     let unreadMessageIds = [];
     if (unread === 'true') {
       unreadMessageIds = await Recipient.findAll({
@@ -90,37 +114,37 @@ const getInboxMessages = async (req, res) => {
       }).then(records => records.map(r => r.MessageId));
     }
 
-    // Start building base where clause from buildWhereClause function
+
     const baseWhereClause = buildWhereClause(
       currentUser.role,
       recipientMessageIds,
     );
     
-    // Initialize an array to collect all filter conditions
+
     const filterConditions = [];
     
-    // Always exclude trash messages
+
     if (trashMessageIds.length > 0) {
       filterConditions.push({
         id: { [Op.notIn]: trashMessageIds }
       });
     }
     
-    // Apply unread filter strictly if active
+
     if (unread === 'true') {
       filterConditions.push({
         id: { [Op.in]: unreadMessageIds }
       });
     }
     
-    // Apply fromContact filter strictly if active
+
     if (fromContact === 'true') {
       filterConditions.push({
         fromContactForm: true
       });
     }
     
-    // Combine all filters with base where clause using AND
+
     const whereClause = {
       [Op.and]: [
         baseWhereClause,
@@ -128,7 +152,7 @@ const getInboxMessages = async (req, res) => {
       ]
     };
 
-    // Build includes array
+
     const includes = [
       {
         model: User,
@@ -137,7 +161,7 @@ const getInboxMessages = async (req, res) => {
       }
     ];
     
-    // Apply hasAttachments filter strictly if active
+
     if (hasAttachments === 'true') {
       includes.push({
         model: Attachment,
@@ -191,7 +215,21 @@ const getInboxMessages = async (req, res) => {
   }
 };
 
-// Get sent messages
+
+/**
+ * Récupère les messages envoyés par l'utilisateur connecté
+ * avec pagination et filtres optionnels.
+ * 
+ * @param {Object} req - La requête Express
+ * @param {Object} req.user - L'utilisateur authentifié
+ * @param {number} req.user.id - ID de l'utilisateur
+ * @param {Object} req.query - Paramètres de requête
+ * @param {number} [req.query.page=1] - Numéro de page pour la pagination
+ * @param {string} [req.query.hasAttachments] - Filtre pour les messages avec pièces jointes ('true'/'false')
+ * @param {Object} res - La réponse Express
+ * @returns {Promise<Object>} Messages envoyés paginés avec métadonnées
+ * @throws {Error} Si une erreur se produit lors de la récupération des messages
+ */
 const getSentMessages = async (req, res) => {
   try {
     const { page = 1, hasAttachments } = req.query;
@@ -202,7 +240,7 @@ const getSentMessages = async (req, res) => {
       senderId: req.user.id
     };
 
-    // First, get the IDs of messages in trash
+
     const trashMessageIds = await TrashMessage.findAll({
       attributes: ['originalMessageId'],
       where: {
@@ -211,7 +249,7 @@ const getSentMessages = async (req, res) => {
       raw: true
     }).then(records => records.map(r => r.originalMessageId));
 
-    // Now exclude those IDs from the main query
+
     if (trashMessageIds.length > 0) {
       whereClause.id = {
         [sequelize.Op.notIn]: trashMessageIds
@@ -237,7 +275,7 @@ const getSentMessages = async (req, res) => {
       distinct: true
     });
 
-    // For each message, get recipients
+
     const messagesWithRecipients = await Promise.all(rows.map(async (message) => {
       const messageObj = message.toJSON();
 
@@ -267,14 +305,26 @@ const getSentMessages = async (req, res) => {
   }
 };
 
-// Get deleted messages (trash)
+
+/**
+ * Récupère les messages dans la corbeille de l'utilisateur connecté.
+ * 
+ * @param {Object} req - La requête Express
+ * @param {Object} req.user - L'utilisateur authentifié
+ * @param {number} req.user.id - ID de l'utilisateur
+ * @param {Object} req.query - Paramètres de requête
+ * @param {number} [req.query.page=1] - Numéro de page pour la pagination
+ * @param {Object} res - La réponse Express
+ * @returns {Promise<Object>} Messages dans la corbeille paginés avec métadonnées
+ * @throws {Error} Si une erreur se produit lors de la récupération des messages
+ */
 const getTrashMessages = async (req, res) => {
   try {
     const { page = 1 } = req.query;
     const limit = 20;
     const offset = (page - 1) * limit;
 
-    // Get all messages in trash for this user
+
     const trashMessages = await TrashMessage.findAll({
       attributes: ['originalMessageId'],
       where: {
@@ -315,7 +365,7 @@ const getTrashMessages = async (req, res) => {
       distinct: true
     });
 
-    // For each message, get recipients if needed
+
     const messagesWithRecipients = await Promise.all(rows.map(async (message) => {
       const messageObj = message.toJSON();
 
@@ -345,7 +395,20 @@ const getTrashMessages = async (req, res) => {
   }
 };
 
-// Get specific message
+
+/**
+ * Récupère un message spécifique avec ses détails complets.
+ * Marque automatiquement le message comme lu si l'utilisateur est destinataire.
+ * 
+ * @param {Object} req - La requête Express
+ * @param {Object} req.user - L'utilisateur authentifié
+ * @param {number} req.user.id - ID de l'utilisateur
+ * @param {Object} req.params - Paramètres de route
+ * @param {string} req.params.messageId - ID du message à récupérer
+ * @param {Object} res - La réponse Express
+ * @returns {Promise<Object>} Le message avec tous ses détails
+ * @throws {Error} Si le message n'existe pas ou si l'utilisateur n'a pas la permission
+ */
 const getMessage = async (req, res) => {
   try {
     const { messageId } = req.params;
@@ -421,7 +484,23 @@ const getMessage = async (req, res) => {
   }
 };
 
-// Send message
+
+/**
+ * Envoie un nouveau message avec des pièces jointes optionnelles.
+ * 
+ * @param {Object} req - La requête Express
+ * @param {Object} req.user - L'utilisateur authentifié
+ * @param {number} req.user.id - ID de l'expéditeur
+ * @param {Object} req.body - Corps de la requête
+ * @param {string} req.body.subject - Sujet du message
+ * @param {Array<number>} [req.body.recipients] - IDs des destinataires (obligatoire pour types 'individual' et 'multiple')
+ * @param {string} req.body.recipientType - Type de destinataires ('individual', 'multiple', 'all-admins', 'all-students', 'all-teachers')
+ * @param {string} req.body.content - Contenu du message
+ * @param {Array<Object>} [req.files] - Pièces jointes
+ * @param {Object} res - La réponse Express
+ * @returns {Promise<Object>} Confirmation de l'envoi avec l'ID du message
+ * @throws {Error} Si les données sont invalides ou si l'envoi échoue
+ */
 const sendMessage = async (req, res) => {
   const transaction = await sequelize.transaction();
   const attachmentsToScan = [];
@@ -429,32 +508,32 @@ const sendMessage = async (req, res) => {
   try {
     const { subject, recipients, recipientType, content } = req.body;
 
-    // Validate required fields
+
     if (!recipientType) {
       return res.status(400).json({ message: 'Recipient type is required' });
     }
 
-    // Ensure subject and content are provided
+
     if (!subject || !content) {
       return res.status(400).json({ message: 'Subject and content are required' });
     }
 
-    // Validate subject length
+
     if (subject.length > 255) {
       return res.status(400).json({ message: 'Subject must be less than 255 characters' });
     }
 
-    // Validate content length to 250MB
+
     if (content.length > 250 * 1024 * 1024) { // 250MB
       return res.status(400).json({ message: 'Content must be less than 250MB' });
     }
 
-    // Validate recipientType against model's enum values
+
     if (!['individual', 'multiple', 'all-admins', 'all-students', 'all-teachers'].includes(recipientType)) {
       return res.status(400).json({ message: 'Invalid recipient type' });
     }
 
-    // Validate recipients based on type
+
     if (recipientType === 'individual') {
       if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
         return res.status(400).json({ message: 'At least one recipient is required for individual messages' });
@@ -468,7 +547,7 @@ const sendMessage = async (req, res) => {
     const files = req.files || [];
     const senderId = req.user.id;
 
-    // Create message
+
     const createdMessage = await Message.create({
       subject,
       content,
@@ -477,9 +556,9 @@ const sendMessage = async (req, res) => {
       fromContactForm: false
     }, { transaction });
 
-    // Handle recipients based on type
+
     if (recipientType === 'individual' || recipientType === 'multiple') {
-      // Add entries to Recipients table for each recipient
+
       for (const userId of recipients) {
         await Recipient.create({
           MessageId: createdMessage.id,
@@ -488,19 +567,19 @@ const sendMessage = async (req, res) => {
         }, { transaction });
       }
     } else if (recipientType === 'all-admins' || recipientType === 'all-students' || recipientType === 'all-teachers') {
-      // Determine which role to fetch
+
       let targetRole;
       if (recipientType === 'all-admins') targetRole = 'Administrateur';
       else if (recipientType === 'all-teachers') targetRole = 'Professeur';
       else if (recipientType === 'all-students') targetRole = 'Etudiant';
 
-      // Fetch all users with the target role
+
       const targetUsers = await User.findAll({
         where: { role: targetRole },
         attributes: ['id']
       }, { transaction });
 
-      // Create a recipient entry for each user
+
       for (const user of targetUsers) {
         await Recipient.create({
           MessageId: createdMessage.id,
@@ -510,16 +589,16 @@ const sendMessage = async (req, res) => {
       }
     }
 
-    // Process attachments
+
     for (const file of files) {
       const uuid = uuidv4();
       const originalFilename = file.originalname;
       const filePath = path.join(UPLOADS_DIR, uuid);
 
-      // Save file
+
       fs.writeFileSync(filePath, file.buffer);
 
-      // Create attachment record
+
       const attachment = await Attachment.create({
         id: uuid,
         MessageId: createdMessage.id,
@@ -529,13 +608,13 @@ const sendMessage = async (req, res) => {
         scanStatus: 'pending'
       }, { transaction });
 
-      // Store for scanning after transaction commits
+
       attachmentsToScan.push(attachment.id);
     }
 
     await transaction.commit();
 
-    // Scan attachments after transaction is committed
+
     for (const attachmentId of attachmentsToScan) {
       scanAttachment(attachmentId);
     }
@@ -551,7 +630,19 @@ const sendMessage = async (req, res) => {
   }
 };
 
-// Mark message as read - updated to use Recipient table
+
+/**
+ * Marque un message comme lu pour l'utilisateur connecté.
+ * 
+ * @param {Object} req - La requête Express
+ * @param {Object} req.user - L'utilisateur authentifié
+ * @param {number} req.user.id - ID de l'utilisateur
+ * @param {Object} req.params - Paramètres de route
+ * @param {string} req.params.messageId - ID du message à marquer comme lu
+ * @param {Object} res - La réponse Express
+ * @returns {Promise<Object>} Confirmation que le message a été marqué comme lu
+ * @throws {Error} Si le message n'existe pas ou si l'utilisateur n'est pas destinataire
+ */
 const markMessageAsRead = async (req, res) => {
   try {
     const { messageId } = req.params;
@@ -577,14 +668,27 @@ const markMessageAsRead = async (req, res) => {
   }
 };
 
-// Delete message (move to trash)
+
+/**
+ * Déplace un message vers la corbeille pour l'utilisateur connecté.
+ * Le message n'est pas supprimé définitivement, mais marqué comme supprimé.
+ * 
+ * @param {Object} req - La requête Express
+ * @param {Object} req.user - L'utilisateur authentifié
+ * @param {number} req.user.id - ID de l'utilisateur
+ * @param {Object} req.params - Paramètres de route
+ * @param {string} req.params.messageId - ID du message à supprimer
+ * @param {Object} res - La réponse Express
+ * @returns {Promise<Object>} Confirmation que le message a été déplacé vers la corbeille
+ * @throws {Error} Si le message n'existe pas ou si l'utilisateur n'a pas la permission
+ */
 const deleteMessage = async (req, res) => {
   const transaction = await sequelize.transaction();
 
   try {
     const { messageId } = req.params;
 
-    // Check if message exists
+
     const message = await Message.findByPk(messageId);
 
     if (!message) {
@@ -614,7 +718,7 @@ const deleteMessage = async (req, res) => {
       return res.status(403).json({ message: 'You do not have permission to delete this message' });
     }
 
-    // Check if message is already in trash
+
     const existingTrash = await TrashMessage.findOne({
       where: { originalMessageId: messageId, deletedBy: req.user.id }
     }, { transaction });
@@ -624,7 +728,7 @@ const deleteMessage = async (req, res) => {
       return res.status(400).json({ message: 'Message already in trash' });
     }
 
-    // Create entry in TrashMessage table
+
     await TrashMessage.create({
       originalMessageId: message.id,
       deletedBy: req.user.id,
@@ -641,14 +745,26 @@ const deleteMessage = async (req, res) => {
   }
 };
 
-// Permanently delete message
+
+/**
+ * Marque un message comme définitivement supprimé dans la corbeille.
+ * 
+ * @param {Object} req - La requête Express
+ * @param {Object} req.user - L'utilisateur authentifié
+ * @param {number} req.user.id - ID de l'utilisateur
+ * @param {Object} req.params - Paramètres de route
+ * @param {string} req.params.messageId - ID du message à supprimer définitivement
+ * @param {Object} res - La réponse Express
+ * @returns {Promise<Object>} Confirmation que le message a été définitivement supprimé
+ * @throws {Error} Si le message n'existe pas dans la corbeille
+ */
 const permanentlyDeleteMessage = async (req, res) => {
   const transaction = await sequelize.transaction();
 
   try {
     const { messageId } = req.params;
 
-    // Find the message in trash by checking TrashMessage table
+
     const trashRecord = await TrashMessage.findOne({
       where: {
         originalMessageId: messageId,
@@ -661,7 +777,7 @@ const permanentlyDeleteMessage = async (req, res) => {
       return res.status(404).json({ message: 'Message not found in trash' });
     }
 
-    // Update TrashMessage record
+
     trashRecord.permanentlyDeleted = true;
     await trashRecord.save({ transaction });
 
@@ -674,7 +790,21 @@ const permanentlyDeleteMessage = async (req, res) => {
   }
 };
 
-// Download attachment
+
+/**
+ * Télécharge une pièce jointe d'un message.
+ * Vérifie que l'utilisateur a le droit d'accéder à cette pièce jointe
+ * et que le fichier a passé le scan antivirus.
+ * 
+ * @param {Object} req - La requête Express
+ * @param {Object} req.user - L'utilisateur authentifié
+ * @param {number} req.user.id - ID de l'utilisateur
+ * @param {Object} req.params - Paramètres de route
+ * @param {string} req.params.attachmentId - ID de la pièce jointe à télécharger
+ * @param {Object} res - La réponse Express
+ * @returns {Promise<Stream>} Le fichier en streaming
+ * @throws {Error} Si la pièce jointe n'existe pas, est infectée ou si l'utilisateur n'a pas la permission
+ */
 const downloadAttachment = async (req, res) => {
   try {
     const { attachmentId } = req.params;
@@ -704,14 +834,14 @@ const downloadAttachment = async (req, res) => {
       return res.status(403).json({ message: 'You do not have permission to download this attachment' });
     }
 
-    // Don't allow download of infected files
+
     if (attachment.scanStatus === 'infected') {
       return res.status(403).json({
         message: 'This file has been identified as potentially malicious and cannot be downloaded'
       });
     }
 
-    // Don't allow download of files that are still being scanned
+
     if (attachment.scanStatus === 'pending') {
       return res.status(400).json({
         message: 'This file is still being scanned and cannot be downloaded yet'
@@ -735,7 +865,22 @@ const downloadAttachment = async (req, res) => {
   }
 };
 
-// Create message from contact form
+
+/**
+ * Crée un message à partir d'un formulaire de contact pour les administrateurs.
+ * 
+ * @param {Object} req - La requête Express
+ * @param {Object} req.body - Corps de la requête
+ * @param {string} req.body.name - Nom de l'expéditeur
+ * @param {string} req.body.email - Email de l'expéditeur
+ * @param {string} [req.body.motif] - Motif du contact
+ * @param {string} req.body.objet - Objet du message
+ * @param {string} req.body.message - Contenu du message
+ * @param {Array<Object>} [req.files] - Pièces jointes
+ * @param {Object} res - La réponse Express
+ * @returns {Promise<Object>} Confirmation de l'envoi avec l'ID du message
+ * @throws {Error} Si les données sont invalides ou si l'envoi échoue
+ */
 const createContactMessage = async (req, res) => {
   const transaction = await sequelize.transaction();
   const attachmentsToScan = [];
@@ -744,18 +889,18 @@ const createContactMessage = async (req, res) => {
     const { name, email, motif, objet, message } = req.body;
     const files = req.files || [];
 
-    // Validate required fields
+
     if (!name || !email || !message || !objet) {
       return res.status(400).json({ message: 'Tous les champs obligatoires doivent être remplis' });
     }
 
-    // Email format validation
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return res.status(400).json({ message: 'Format d\'email invalide' });
     }
 
-    // Find admin users to send the message to
+
     const admins = await User.findAll({
       where: { role: 'Administrateur' },
       attributes: ['id']
@@ -766,7 +911,7 @@ const createContactMessage = async (req, res) => {
       return res.status(500).json({ message: 'Aucun administrateur trouvé pour recevoir ce message' });
     }
 
-    // Create a formatted message content
+
     const formattedContent = `
 📩 **Nouveau message de contact**
 
@@ -782,7 +927,7 @@ const createContactMessage = async (req, res) => {
 ${message}
 `;
 
-    // Create messages for each admin
+
     const adminMessage = await Message.create({
       subject: `Contact: ${objet}`,
       content: formattedContent,
@@ -790,8 +935,8 @@ ${message}
       fromContactForm: true,
     }, { transaction });
 
-    // Add entries in the Recipients table for each admin
-    // This allows tracking read status for each admin individually
+
+
     for (const admin of admins) {
       await Recipient.create({
         MessageId: adminMessage.id,
@@ -800,17 +945,17 @@ ${message}
       }, { transaction });
     }
 
-    // Process attachments for each message
+
     for (const file of files) {
-      // Generate unique filename
+
       const uuid = uuidv4();
       const filename = file.originalname;
       const filePath = path.join(UPLOADS_DIR, uuid);
 
-      // Save file to storage
+
       fs.writeFileSync(filePath, file.buffer);
 
-      // Create attachment record
+
       const attachment = await Attachment.create({
         id: uuid,
         MessageId: adminMessage.id,
@@ -820,13 +965,13 @@ ${message}
         scanStatus: 'pending'
       }, { transaction });
 
-      // Store for scanning after transaction commits
+
       attachmentsToScan.push(attachment.id);
     }
 
     await transaction.commit();
 
-    // Scan attachments after transaction is committed
+
     for (const attachmentId of attachmentsToScan) {
       scanAttachment(attachmentId);
     }
@@ -839,7 +984,7 @@ ${message}
     await transaction.rollback();
     console.error('Erreur lors de la création du message de contact:', error);
 
-    // More specific error handling
+
     if (error.name === 'SequelizeValidationError') {
       return res.status(400).json({ error: 'Données invalides', details: error.errors.map(e => e.message) });
     }
@@ -848,14 +993,26 @@ ${message}
   }
 };
 
-// Restore message from trash
+
+/**
+ * Restaure un message depuis la corbeille.
+ * 
+ * @param {Object} req - La requête Express
+ * @param {Object} req.user - L'utilisateur authentifié
+ * @param {number} req.user.id - ID de l'utilisateur
+ * @param {Object} req.params - Paramètres de route
+ * @param {string} req.params.messageId - ID du message à restaurer
+ * @param {Object} res - La réponse Express
+ * @returns {Promise<Object>} Confirmation que le message a été restauré
+ * @throws {Error} Si le message n'existe pas dans la corbeille ou si l'utilisateur n'a pas la permission
+ */
 const restoreMessage = async (req, res) => {
   const transaction = await sequelize.transaction();
 
   try {
     const { messageId } = req.params;
 
-    // Find the trash record
+
     const trashRecord = await TrashMessage.findOne({
       where: {
         originalMessageId: messageId,
@@ -868,14 +1025,14 @@ const restoreMessage = async (req, res) => {
       return res.status(404).json({ message: 'Message not found in trash' });
     }
 
-    // Verify message exists and user is sender or recipient
+
     const message = await Message.findByPk(messageId, { transaction });
     if (!message) {
       await transaction.rollback();
       return res.status(404).json({ message: 'Message not found' });
     }
 
-    // Check if user is sender or recipient
+
     const isSender = message.senderId === req.user.id;
     const isRecipient = await Recipient.findOne({
       where: {
@@ -890,7 +1047,7 @@ const restoreMessage = async (req, res) => {
       return res.status(403).json({ message: 'You do not have permission to restore this message' });
     }
 
-    // Delete the trash record to restore the message
+
     await trashRecord.destroy({ transaction });
 
     await transaction.commit();

@@ -1,24 +1,49 @@
+/**
+ * @fileoverview Contrôleur pour la gestion de la modération de la plateforme.
+ * Gère les avertissements aux utilisateurs, les signalements de contenu et 
+ * leur résolution par les administrateurs.
+ * @module controllers/moderationController
+ */
 const { Warning, Flag, User, Thread, Comment } = require('../models');
 
 /**
- * Envoyer un avertissement à un utilisateur
+ * Envoie un avertissement à un utilisateur
+ * 
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.body - Corps de la requête
+ * @param {string} req.body.userId - L'identifiant de l'utilisateur à avertir
+ * @param {string} req.body.message - Le message d'avertissement
+ * @param {Object} req.user - L'utilisateur qui fait la requête (administrateur)
+ * @param {string} req.user.id - L'identifiant de l'administrateur
+ * @param {string} req.user.role - Le rôle de l'utilisateur
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} Réponse JSON avec message de confirmation et données de l'avertissement
+ * @throws {Error} Erreur serveur lors de l'envoi de l'avertissement
+ * 
+ * @example
+ * // Envoi d'un avertissement
+ * POST /api/moderation/warnings
+ * {
+ *   "userId": "123",
+ *   "message": "Comportement inapproprié dans le forum"
+ * }
  */
 const sendWarning = async (req, res) => {
   try {
     const { userId, message } = req.body;
     
-    // Vérifier que l'expéditeur est un administrateur
+
     if (req.user.role !== 'Administrateur') {
       return res.status(403).json({ message: 'Accès non autorisé. Seuls les administrateurs peuvent envoyer des avertissements.' });
     }
     
-    // Vérifier que l'utilisateur existe
+
     const user = await User.findByPk(userId);
     if (!user) {
       return res.status(404).json({ message: 'Utilisateur non trouvé' });
     }
     
-    // Créer l'avertissement
+
     const warning = await Warning.create({
       userId,
       adminId: req.user.id,
@@ -36,18 +61,38 @@ const sendWarning = async (req, res) => {
 };
 
 /**
- * Signaler un contenu (thread ou commentaire)
+ * Signale un contenu problématique (thread ou commentaire)
+ * 
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.body - Corps de la requête
+ * @param {string} req.body.itemId - L'identifiant de l'élément à signaler
+ * @param {string} req.body.itemType - Le type d'élément ("thread" ou "comment")
+ * @param {string} req.body.reason - La raison du signalement
+ * @param {Object} req.user - L'utilisateur qui fait le signalement
+ * @param {string} req.user.id - L'identifiant de l'utilisateur
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} Réponse JSON avec message de confirmation et données du signalement
+ * @throws {Error} Erreur serveur lors du signalement du contenu
+ * 
+ * @example
+ * // Signaler un commentaire
+ * POST /api/moderation/flags
+ * {
+ *   "itemId": "456",
+ *   "itemType": "comment",
+ *   "reason": "Contenu offensant"
+ * }
  */
 const flagContent = async (req, res) => {
   try {
     const { itemId, itemType, reason } = req.body;
     
-    // Vérifier que le type d'élément est valide
+
     if (!['thread', 'comment'].includes(itemType)) {
       return res.status(400).json({ message: 'Type d\'élément invalide. Doit être "thread" ou "comment".' });
     }
     
-    // Vérifier que l'élément existe
+
     let item;
     if (itemType === 'thread') {
       item = await Thread.findByPk(itemId);
@@ -59,7 +104,7 @@ const flagContent = async (req, res) => {
       return res.status(404).json({ message: `${itemType === 'thread' ? 'Discussion' : 'Commentaire'} non trouvé` });
     }
     
-    // Vérifier si un signalement existe déjà pour cet élément par cet utilisateur
+
     const existingFlag = await Flag.findOne({
       where: {
         itemId,
@@ -73,7 +118,7 @@ const flagContent = async (req, res) => {
       return res.status(400).json({ message: 'Vous avez déjà signalé ce contenu' });
     }
     
-    // Créer le signalement
+
     const flag = await Flag.create({
       itemId,
       itemType,
@@ -92,11 +137,27 @@ const flagContent = async (req, res) => {
 };
 
 /**
- * Récupérer tous les signalements (admin seulement)
+ * Récupère tous les signalements (réservé aux administrateurs)
+ * 
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.query - Paramètres de requête
+ * @param {string} [req.query.status="pending"] - Statut des signalements à récupérer
+ * @param {Object} req.user - L'utilisateur qui fait la requête
+ * @param {string} req.user.role - Le rôle de l'utilisateur
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object[]} Liste des signalements avec informations sur les reporters et résolveurs
+ * @throws {Error} Erreur serveur lors de la récupération des signalements
+ * 
+ * @example
+ * // Récupérer tous les signalements en attente
+ * GET /api/moderation/flags
+ * 
+ * // Récupérer tous les signalements résolus
+ * GET /api/moderation/flags?status=resolved
  */
 const getFlags = async (req, res) => {
   try {
-    // Vérifier que l'utilisateur est un administrateur
+
     if (req.user.role !== 'Administrateur') {
       return res.status(403).json({ message: 'Accès non autorisé. Seuls les administrateurs peuvent voir les signalements.' });
     }
@@ -120,13 +181,27 @@ const getFlags = async (req, res) => {
 };
 
 /**
- * Résoudre un signalement (admin seulement)
+ * Résout un signalement (réservé aux administrateurs)
+ * 
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.params - Paramètres de route
+ * @param {string} req.params.id - L'identifiant du signalement à résoudre
+ * @param {Object} req.user - L'utilisateur qui fait la requête
+ * @param {string} req.user.id - L'identifiant de l'administrateur
+ * @param {string} req.user.role - Le rôle de l'utilisateur
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} Réponse JSON avec message de confirmation et données du signalement résolu
+ * @throws {Error} Erreur serveur lors de la résolution du signalement
+ * 
+ * @example
+ * // Résoudre un signalement
+ * PUT /api/moderation/flags/789/resolve
  */
 const resolveFlag = async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Vérifier que l'utilisateur est un administrateur
+
     if (req.user.role !== 'Administrateur') {
       return res.status(403).json({ message: 'Accès non autorisé. Seuls les administrateurs peuvent résoudre les signalements.' });
     }
@@ -152,13 +227,27 @@ const resolveFlag = async (req, res) => {
 };
 
 /**
- * Récupérer les avertissements d'un utilisateur
+ * Récupère les avertissements d'un utilisateur
+ * 
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.params - Paramètres de route
+ * @param {string} req.params.userId - L'identifiant de l'utilisateur
+ * @param {Object} req.user - L'utilisateur qui fait la requête
+ * @param {string} req.user.id - L'identifiant de l'utilisateur
+ * @param {string} req.user.role - Le rôle de l'utilisateur
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object[]} Liste des avertissements avec informations sur les administrateurs
+ * @throws {Error} Erreur serveur lors de la récupération des avertissements
+ * 
+ * @example
+ * // Récupérer les avertissements d'un utilisateur
+ * GET /api/moderation/users/123/warnings
  */
 const getUserWarnings = async (req, res) => {
   try {
     const { userId } = req.params;
     
-    // Vérifier si l'utilisateur actuel a le droit de voir ces avertissements
+
     if (req.user.id !== userId && req.user.role !== 'Administrateur') {
       return res.status(403).json({ message: 'Accès non autorisé' });
     }

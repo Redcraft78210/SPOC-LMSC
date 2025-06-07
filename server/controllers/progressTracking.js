@@ -1,11 +1,20 @@
+/**
+ * @fileoverview Contrôleur de suivi de progression pour gérer le progrès des étudiants dans les cours et la présence aux sessions Lives.
+ * @module controllers/progressTracking
+ */
+
 const { CourseProgress, Course, LiveAttendance, User, Lives, sequelize } = require('../models');
 
 /**
- * Progress tracking controller for managing student progress in courses and Lives session attendance
- */
-
-/**
- * Get course progress for a specific user
+ * Récupère la progression d'un cours pour un utilisateur spécifique
+ * @param {Object} req - Objet de requête Express
+ * @param {Object} req.user - Utilisateur authentifié
+ * @param {string} req.user.id - ID de l'utilisateur authentifié
+ * @param {Object} req.params - Paramètres de la requête
+ * @param {string} req.params.courseId - ID du cours dont on veut récupérer la progression
+ * @param {Object} res - Objet de réponse Express
+ * @returns {Promise<Object>} Objet JSON contenant la progression du cours ou un message d'erreur
+ * @throws {Error} Erreur lors de la récupération de la progression
  */
 const getUserCourseProgress = async (req, res) => {
     try {
@@ -29,7 +38,13 @@ const getUserCourseProgress = async (req, res) => {
 };
 
 /**
- * Get progress for a specific course
+ * Récupère la progression de tous les utilisateurs pour un cours spécifique
+ * @param {Object} req - Objet de requête Express
+ * @param {Object} req.params - Paramètres de la requête
+ * @param {string} req.params.courseId - ID du cours dont on veut récupérer les progressions
+ * @param {Object} res - Objet de réponse Express
+ * @returns {Promise<Object>} Tableau JSON contenant les progressions du cours pour tous les utilisateurs
+ * @throws {Error} Erreur lors de la récupération des progressions
  */
 const getCourseProgress = async (req, res) => {
     try {
@@ -53,7 +68,18 @@ const getCourseProgress = async (req, res) => {
 };
 
 /**
- * Update or create course progress entry
+ * Met à jour ou crée une entrée de progression pour un cours
+ * @param {Object} req - Objet de requête Express
+ * @param {Object} req.body - Corps de la requête
+ * @param {string} req.body.status - Statut de progression ('not_started', 'in_progress', 'completed')
+ * @param {Object} req.params - Paramètres de la requête
+ * @param {string} req.params.courseId - ID du cours à mettre à jour
+ * @param {string} [req.params.userId] - ID de l'utilisateur (optionnel, utilise req.user.id par défaut)
+ * @param {Object} req.user - Utilisateur authentifié
+ * @param {string} req.user.id - ID de l'utilisateur authentifié
+ * @param {Object} res - Objet de réponse Express
+ * @returns {Promise<Object>} Objet JSON avec un message de confirmation et la progression mise à jour
+ * @throws {Error} Erreur lors de la mise à jour de la progression
  */
 const updateCourseProgress = async (req, res) => {
     try {
@@ -75,13 +101,13 @@ const updateCourseProgress = async (req, res) => {
             return res.status(400).json({ message: 'Invalid status value' });
         }
 
-        // Check if the course exists
+
         const course = await Course.findOne({ where: { id: courseId } });
         if (!course) {
             return res.status(404).json({ message: 'Course not found' });
         }
 
-        // Check if the user exists
+
         const user = await User.findOne({ where: { id: userId } });
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
@@ -127,7 +153,15 @@ const updateCourseProgress = async (req, res) => {
 };
 
 /**
- * Get Lives session attendance for a user
+ * Récupère les enregistrements de présence aux sessions Lives pour un utilisateur
+ * @param {Object} req - Objet de requête Express
+ * @param {Object} req.params - Paramètres de la requête
+ * @param {string} [req.params.userId] - ID de l'utilisateur (optionnel, utilise req.user.id par défaut)
+ * @param {Object} req.user - Utilisateur authentifié
+ * @param {string} req.user.id - ID de l'utilisateur authentifié
+ * @param {Object} res - Objet de réponse Express
+ * @returns {Promise<Object>} Tableau JSON contenant les enregistrements de présence avec les détails des sessions Lives
+ * @throws {Error} Erreur lors de la récupération des enregistrements de présence
  */
 const getUserAttendance = async (req, res) => {
     try {
@@ -151,7 +185,15 @@ const getUserAttendance = async (req, res) => {
 };
 
 /**
- * Update or mark Lives session attendance
+ * Marque ou met à jour la présence d'un utilisateur à une session Lives
+ * @param {Object} req - Objet de requête Express
+ * @param {Object} req.body - Corps de la requête
+ * @param {string} req.body.userId - ID de l'utilisateur
+ * @param {string} req.body.LivesId - ID de la session Lives
+ * @param {string} req.body.status - Statut de présence ('attended', 'missed')
+ * @param {Object} res - Objet de réponse Express
+ * @returns {Promise<Object>} Objet JSON avec un message de confirmation et l'enregistrement de présence
+ * @throws {Error} Erreur lors de la mise à jour de l'enregistrement de présence
  */
 const markAttendance = async (req, res) => {
     try {
@@ -184,7 +226,13 @@ const markAttendance = async (req, res) => {
 };
 
 /**
- * Get attendance statistics for a Lives session
+ * Récupère les statistiques de présence pour une session Lives spécifique
+ * @param {Object} req - Objet de requête Express
+ * @param {Object} req.params - Paramètres de la requête
+ * @param {string} req.params.LivesId - ID de la session Lives
+ * @param {Object} res - Objet de réponse Express
+ * @returns {Promise<Object>} Objet JSON contenant les statistiques de présence groupées par statut
+ * @throws {Error} Erreur lors de la récupération des statistiques
  */
 const getLiveAttendanceStats = async (req, res) => {
     try {
@@ -213,7 +261,15 @@ const getLiveAttendanceStats = async (req, res) => {
 };
 
 /**
- * Get user statistics including course progress and Lives attendance
+ * Récupère les statistiques globales d'un utilisateur
+ * @param {Object} req - Objet de requête Express
+ * @param {Object} req.params - Paramètres de la requête
+ * @param {string} [req.params.userId] - ID de l'utilisateur (optionnel, utilise req.user.id par défaut)
+ * @param {Object} req.user - Utilisateur authentifié
+ * @param {string} req.user.id - ID de l'utilisateur authentifié
+ * @param {Object} res - Objet de réponse Express
+ * @returns {Promise<Object>} Objet JSON contenant le nombre de cours complétés, commencés et de sessions Lives suivies
+ * @throws {Error} Erreur lors de la récupération des statistiques
  */
 const getUserStats = async (req, res) => {
     try {

@@ -1,6 +1,12 @@
-// server.js
+/**
+ * @fileoverview Serveur principal de l'application SPOC-LMSC
+ * 
+ * Ce fichier configure et initialise le serveur Express, met en place les routes API,
+ * configure les WebSockets pour le chat et le streaming, et gère la redirection HTTP vers HTTPS.
+ * Il initialise également un conteneur Docker en quarantaine pour stocker les fichiers 
+ * uploadés qui ont été marqués comme infectés.
+ */
 
-// Required modules
 const { spawn } = require('child_process');
 const express = require("express");
 const cors = require("cors");
@@ -23,45 +29,35 @@ const {
 const { setupChatWebSocket } = require('./controllers/chatController');
 const { setupStreaming } = require('./controllers/socketController');
 
-// Import routes
-
-// Authentication and user management
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const avatarRoutes = require('./routes/avatarRoutes');
-
-// Course and class management
 const classRoutes = require('./routes/classRoutes');
 const courseRoutes = require('./routes/courseRoutes');
 const progressRoutes = require('./routes/progressTracking');
-
-// Content management
 const documentRoutes = require('./routes/documentRoutes');
 const videoRoutes = require('./routes/videoRoutes');
 const recordingRoutes = require('./routes/recordingRoutes');
-
-// Communication and interaction
 const forumRoutes = require('./routes/forumRoutes');
 const messageRoutes = require('./routes/messageRoutes');
-const contactRoutes = require('./routes/contactRoutes');
-
-// Live and streaming
 const liveRoutes = require('./routes/liveRoutes');
 const chatRoutes = require('./routes/chatRoutes');
-
-// Miscellaneous
 const codeRoutes = require('./routes/codeRoutes');
 const moderationRoutes = require('./routes/moderationRoutes');
 
-// Initialize environment variables
 dotenv.config();
 const PORT = process.env.PORT || 443;
 const HTTP_PORT = process.env.HTTP_PORT || 80;
 
-// Create an Express app
 const app = express();
 app.enable("trust proxy");
 
+/**
+ * @description Middleware qui redirige les requêtes HTTP vers HTTPS
+ * @param {Object} request - Objet requête Express
+ * @param {Object} response - Objet réponse Express
+ * @param {Function} next - Fonction middleware suivante
+ */
 app.use((request, response, next) => {
   if (request.secure) {
     next();
@@ -71,6 +67,15 @@ app.use((request, response, next) => {
   }
 });
 
+/**
+ * @const {Object} DEFAULTS
+ * @description Paramètres par défaut pour la création du conteneur Docker en quarantaine
+ * @property {string} imageName - Nom de l'image Docker à utiliser
+ * @property {string} containerName - Nom du conteneur Docker à créer
+ * @property {string} dockerfile - Nom du fichier Dockerfile à utiliser
+ * @property {number} buildTimeoutMs - Délai d'expiration pour la construction de l'image (en ms)
+ * @property {number} runTimeoutMs - Délai d'expiration pour l'exécution du conteneur (en ms)
+ */
 const DEFAULTS = {
   imageName: 'quarantine-image',
   containerName: 'quarantine_container',
@@ -82,15 +87,15 @@ const DEFAULTS = {
 app.use(express.json({ limit: '300mb' }));
 app.use(express.urlencoded({ limit: '300mb', extended: true }));
 
-// CORS configuration
-// Allowed origins for CORS
-// En développement, attention à autoriser le certificat auto-signé
-// En production, il faut ajouter le nom de domaine de l'application
-// const allowedOrigins = ["https://your-production-domain.com"];
-
+/**
+ * @const {string[]} allowedOrigins
+ * @description Liste des origines autorisées pour les requêtes CORS
+ */
 const allowedOrigins = ["https://localhost", "https://spoc.lmsc"];
 
-// Middleware
+/**
+ * @description Configuration du middleware CORS avec les paramètres de sécurité appropriés
+ */
 app.use(cors({
   exposedHeaders: [
     'Content-Range',
@@ -100,14 +105,13 @@ app.use(cors({
   ],
   origin: function (origin, callback) {
     console.log(`Checking origin: ${origin}`);
-    // Dé-commenter la ligne suivante pour autoriser les requêtes sans origin
+
     if (!origin || allowedOrigins.includes(origin)) {
-      // if (allowedOrigins.includes(origin)) {
       console.log(`Origin allowed: ${origin}`);
       callback(null, true);
     } else {
       console.warn(`Blocked origin: ${origin}`);
-      callback(null, false); // retourne "false" au lieu de lancer une erreur
+      callback(null, false);
     }
   },
   credentials: true,
@@ -116,84 +120,77 @@ app.use(cors({
   maxAge: 1728000
 }));
 
-app.use(morgan("dev")); // Log HTTP requests in the console
-app.use(express.json()); // Parse incoming JSON requests
-app.use(express.urlencoded({ extended: true })); // Parse URL-encoded data
+app.use(morgan("dev"));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Serve public static files
-app.use("/videos", express.static(path.join(__dirname, "public", "videos"))); // retirer dès que possible
+app.use("/videos", express.static(path.join(__dirname, "public", "videos")));
 
-// API routes
+// Configuration des routes API
+app.use('/api/auth', authRoutes.route);
+app.use('/api/users', userRoutes.route);
+app.use('/api/avatars', avatarRoutes.route);
+app.use('/api/classes', classRoutes.route);
+app.use('/api/courses', courseRoutes.route);
+app.use('/api/progress', progressRoutes.route);
+app.use('/api/documents', documentRoutes.route);
+app.use('/api/videos', videoRoutes.route);
+app.use('/api/recordings', recordingRoutes.route);
+app.use('/api/forum', forumRoutes.route);
+app.use('/api/messages', messageRoutes.route);
+app.use('/api/lives', liveRoutes.route);
+app.use('/api/streams', chatRoutes.route);
+app.use('/api/codes', codeRoutes.route);
+app.use('/api/moderation', moderationRoutes.route);
 
-// Authentication and user management
-app.use('/api/auth', authRoutes.route); // Authentication routes (login, register)
-app.use('/api/users', userRoutes.route); // User-related routes
-app.use('/api/avatars', avatarRoutes.route); // Avatar-related routes
-
-// Course and class management
-app.use('/api/classes', classRoutes.route); // Class-related routes
-app.use('/api/courses', courseRoutes.route); // Course-related routes
-app.use('/api/progress', progressRoutes.route); // Progress tracking routes
-
-// Content management
-app.use('/api/documents', documentRoutes.route); // Document-related routes
-app.use('/api/videos', videoRoutes.route); // Video-related routes
-app.use('/api/recordings', recordingRoutes.route); // Recording-related routes
-
-// Communication and interaction
-app.use('/api/forum', forumRoutes.route); // Forum-related routes
-app.use('/api/messages', messageRoutes.route); // Message-related routes
-app.use('/api/contact', contactRoutes.route); // Contact-related routes
-
-// Live and streaming
-app.use('/api/lives', liveRoutes.route); // Live session-related routes
-app.use('/api/streams', chatRoutes.route); // Streaming and chat-related routes
-
-// Miscellaneous
-app.use('/api/codes', codeRoutes.route); // Code-related routes
-app.use('/api/moderation', moderationRoutes.route); // Moderation-related routes
-
-// Serve React frontend (if applicable)
+/**
+ * @description Configuration des routes en fonction de l'environnement
+ */
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "../client/dist")));
 
-  // Serve all frontend routes as the index.html page for React Router to handle
   app.get("*path", (req, res) => {
     res.sendFile(path.resolve(__dirname, "../client/dist", "index.html"));
   });
 } else {
-  // In development mode, fallback to React's development server
   app.get("*path", (req, res) => {
     res.send("API is running");
   });
 }
 
-// Create HTTPS server
 const server = https.createServer(credentials, app);
 
-// Create WebSocket servers
 const chatWSS = createChatWSS();
 const streamWSS = createStreamWSS();
 
-// Set up central WebSocket routing
 setupWebSocketHandlers(server, chatWSS, streamWSS);
-
-// Initialize WebSocket handlers with their respective WSS instances
 setupChatWebSocket(chatWSS);
 setupStreaming(streamWSS);
 
+/**
+ * @description Serveur HTTP qui redirige vers HTTPS
+ */
 const httpServer = http.createServer((req, res) => {
   req.headers["host"] = req.headers["host"].replace(/:\d+/, ":" + PORT);
   res.writeHead(301, { "Location": "https://" + req.headers["host"] + req.url });
   res.end();
 });
 
+/**
+ * @function createQuarantineContainer
+ * @description Crée un conteneur Docker isolé pour stocker les fichiers uploadés marqués comme infectés
+ */
 const createQuarantineContainer = () => {
   /**
- * Runs a command and collects stdout/stderr.
- * Rejects on non-zero exit or spawn error.
- * @returns {Promise<{ code: number, stdout: string, stderr: string }>}
- */
+   * @function runCommand
+   * @description Exécute une commande système et collecte les sorties stdout/stderr
+   * @param {string} cmd - La commande à exécuter
+   * @param {string[]} [args=[]] - Les arguments de la commande
+   * @param {Object} [opts={}] - Options supplémentaires
+   * @param {string} [opts.label=''] - Préfixe à ajouter aux messages de log
+   * @returns {Promise<{code: number, stdout: string, stderr: string}>} Résultat de l'exécution
+   * @throws {Error} Si la commande se termine avec un code de sortie non nul ou si spawn échoue
+   */
   function runCommand(cmd, args = [], opts = {}) {
     const { label = '' } = opts;
     return new Promise((resolve, reject) => {
@@ -203,13 +200,11 @@ const createQuarantineContainer = () => {
       proc.stdout.on('data', chunk => {
         const str = chunk.toString();
         stdout += str;
-        // Only collect stdout, don't display it immediately
       });
 
       proc.stderr.on('data', chunk => {
         const str = chunk.toString();
         stderr += str;
-        // Only collect stderr, don't display it immediately
       });
 
       proc.once('error', reject);
@@ -217,7 +212,6 @@ const createQuarantineContainer = () => {
       proc.once('close', code => {
         const out = { code, stdout: stdout.trim(), stderr: stderr.trim() };
         if (code !== 0) {
-          // Only display logs on error
           process.stdout.write(label + out.stdout + '\n');
           process.stderr.write(label + out.stderr + '\n');
           return reject(new Error(`${label || cmd} exited ${code}\n${out.stderr}`));
@@ -227,15 +221,29 @@ const createQuarantineContainer = () => {
     });
   }
 
+  /**
+   * @async
+   * @function imageExists
+   * @description Vérifie si une image Docker existe localement
+   * @param {string} imageName - Nom de l'image Docker à vérifier
+   * @returns {Promise<boolean>} true si l'image existe, false sinon
+   */
   async function imageExists(imageName) {
     try {
       await runCommand('docker', ['image', 'inspect', `${imageName}`]);
-      return true;  // l'image existe
+      return true;
     } catch (err) {
-      return false; // l'image n'existe pas
+      return false;
     }
   }
 
+  /**
+   * @async
+   * @function buildAndRun
+   * @description Construit l'image Docker de quarantaine si nécessaire et lance un conteneur
+   *              isolé pour stocker les fichiers uploadés marqués comme infectés
+   * @throws {Error} Si la construction ou le lancement du conteneur échoue
+   */
   async function buildAndRun() {
     try {
       const imageName = DEFAULTS.imageName || 'quarantine-image';
@@ -243,7 +251,6 @@ const createQuarantineContainer = () => {
       const dockerfile = DEFAULTS.dockerfile || 'Quarantine.Dockerfile';
       console.log('🔨 Building image…');
 
-      // Check if the image already exists
       const exists = await imageExists(imageName);
       if (!exists) {
         console.log(`🖼️  Image "${imageName}" not found. Building...`);
@@ -253,7 +260,6 @@ const createQuarantineContainer = () => {
         console.log(`🖼️  Image "${imageName}" already exists. Skipping build.`);
       }
 
-
       console.log('🔍 Checking for existing container…');
       const { stdout: existing } = await runCommand('docker', [
         'ps', '-a',
@@ -262,7 +268,7 @@ const createQuarantineContainer = () => {
       ], { label: 'DOCKER-PS ' });
 
       if (existing === containerName) {
-        console.log(`⚠️  “${containerName}” exists—skipping creation.`);
+        console.log(`⚠️  "${containerName}" exists—skipping creation.`);
         return;
       }
 
@@ -284,15 +290,13 @@ const createQuarantineContainer = () => {
   buildAndRun();
 };
 
-// Create the Quarantine container
 createQuarantineContainer();
 
-// Start the HTTPS server
+// Démarrage des serveurs
 server.listen(PORT, () => {
   console.log(`HTTPS Server is running on port ${PORT}`);
 });
 
-// Start the HTTP server (redirects to HTTPS)
 httpServer.listen(HTTP_PORT, () => {
   console.log(
     `HTTP Server is running on port ${HTTP_PORT} and redirecting to HTTPS`

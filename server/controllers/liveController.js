@@ -1,10 +1,28 @@
+/**
+ * @fileoverview Contrôleur pour la gestion des sessions de diffusion en direct (lives).
+ * Fournit des fonctionnalités CRUD et de gestion d'état pour les sessions de diffusion.
+ * Inclut également des fonctionnalités pour générer des vignettes à partir des vidéos.
+ */
+
 const { Lives, ClassLives, Classe, Teacher } = require('../models');
 const ffmpeg = require('fluent-ffmpeg');
 const fs = require('fs');
 const path = require('path');
 const { Op } = require('sequelize');
 
-// Example controller functions
+/**
+ * Récupère une session de diffusion spécifique par son ID.
+ * Les étudiants ne peuvent voir que les sessions en cours ou planifiées.
+ * 
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.user - Les informations de l'utilisateur connecté
+ * @param {string} req.user.role - Le rôle de l'utilisateur (ex: 'Etudiant', 'Teacher')
+ * @param {Object} req.params - Les paramètres de la requête
+ * @param {string} req.params.id - L'ID de la session à récupérer
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} Les données de la session avec le nom du professeur
+ * @throws {Error} Erreur lors de la récupération des données
+ */
 const getLive = async (req, res) => {
     let userRole = req.user.role;
     let whereCondition;
@@ -31,6 +49,18 @@ const getLive = async (req, res) => {
     }
 };
 
+/**
+ * Récupère toutes les sessions de diffusion disponibles.
+ * Les étudiants ne peuvent voir que les sessions en cours ou planifiées.
+ * Structure les données par professeur, matière et chapitre.
+ * 
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.user - Les informations de l'utilisateur connecté
+ * @param {string} req.user.role - Le rôle de l'utilisateur
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} Les données structurées des sessions
+ * @throws {Error} Erreur lors de la récupération des données
+ */
 const getAllLives = async (req, res) => {
     let userRole = req.user.role;
     let whereCondition;
@@ -48,7 +78,7 @@ const getAllLives = async (req, res) => {
             ]
         });
 
-        // Transformation des données en structure imbriquée
+
         const structuredData = {};
 
         lives.forEach(live => {
@@ -90,6 +120,18 @@ const getAllLives = async (req, res) => {
     }
 };
 
+/**
+ * Récupère les sessions de diffusion pour une classe spécifique.
+ * Génère également des vignettes pour chaque vidéo si elles n'existent pas 
+ * ou sont trop anciennes.
+ * 
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.params - Les paramètres de la requête
+ * @param {string} req.params.classId - L'ID de la classe
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Array} Les sessions de diffusion pour la classe spécifiée
+ * @throws {Error} Erreur lors de la récupération ou du traitement des données
+ */
 const getLiveByClass = async (req, res) => {
     try {
         const { classId } = req.params;
@@ -109,7 +151,7 @@ const getLiveByClass = async (req, res) => {
                 attributes: ['username']
             }]
         });
-        // Définir le dossier racine de votre site
+
         const baseDir = process.cwd(); // ou __dirname selon votre configuration
 
         const promises = lives.map(async live => {
@@ -248,6 +290,15 @@ const getLiveByClass = async (req, res) => {
     }
 };
 
+/**
+ * Ajoute une nouvelle session de diffusion.
+ * 
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.body - Les données de la session à créer
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} La session nouvellement créée
+ * @throws {Error} Erreur lors de la création de la session
+ */
 const addLive = async (req, res) => {
     try {
         const live = await Lives.create(req.body);
@@ -257,6 +308,16 @@ const addLive = async (req, res) => {
     }
 };
 
+/**
+ * Démarre une session de diffusion en changeant son statut à 'ongoing'.
+ * 
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.params - Les paramètres de la requête
+ * @param {string} req.params.id - L'ID de la session à démarrer
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} La session mise à jour
+ * @throws {Error} Erreur lors de la mise à jour du statut
+ */
 const startLive = async (req, res) => {
     try {
         const { id } = req.params;
@@ -273,6 +334,16 @@ const startLive = async (req, res) => {
     }
 };
 
+/**
+ * Termine une session de diffusion en changeant son statut à 'completed'.
+ * 
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.params - Les paramètres de la requête
+ * @param {string} req.params.id - L'ID de la session à terminer
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} La session mise à jour
+ * @throws {Error} Erreur lors de la mise à jour du statut
+ */
 const endLive = async (req, res) => {
     try {
         const { id } = req.params;
@@ -289,6 +360,19 @@ const endLive = async (req, res) => {
     }
 };
 
+/**
+ * Désapprouve une session de diffusion en changeant son statut à 'disapproved'
+ * avec une justification.
+ * 
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.params - Les paramètres de la requête
+ * @param {string} req.params.id - L'ID de la session à désapprouver
+ * @param {Object} req.body - Les données de la requête
+ * @param {string} req.body.justification - La raison de la désapprobation
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} La session mise à jour
+ * @throws {Error} Erreur lors de la mise à jour du statut
+ */
 const disapproveLive = async (req, res) => {
     const { justification } = req.body;
     if (!justification) {
@@ -308,8 +392,18 @@ const disapproveLive = async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: 'Error disapproving live data', error });
     }
-}
+};
 
+/**
+ * Bloque une session de diffusion en changeant son statut à 'blocked'.
+ * 
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.params - Les paramètres de la requête
+ * @param {string} req.params.id - L'ID de la session à bloquer
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} La session mise à jour
+ * @throws {Error} Erreur lors de la mise à jour du statut
+ */
 const blockLive = async (req, res) => {
     try {
         const { id } = req.params;
@@ -326,6 +420,16 @@ const blockLive = async (req, res) => {
     }
 };
 
+/**
+ * Débloque une session de diffusion en changeant son statut à 'scheduled'.
+ * 
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.params - Les paramètres de la requête
+ * @param {string} req.params.id - L'ID de la session à débloquer
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} La session mise à jour
+ * @throws {Error} Erreur lors de la mise à jour du statut
+ */
 const unblockLive = async (req, res) => {
     try {
         const { id } = req.params;
@@ -342,6 +446,17 @@ const unblockLive = async (req, res) => {
     }
 };
 
+/**
+ * Modifie les détails d'une session de diffusion existante.
+ * 
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.params - Les paramètres de la requête
+ * @param {string} req.params.id - L'ID de la session à modifier
+ * @param {Object} req.body - Les nouvelles données de la session
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} La session mise à jour
+ * @throws {Error} Erreur lors de la mise à jour des données
+ */
 const editLive = async (req, res) => {
     try {
         const { id } = req.params;
@@ -359,6 +474,16 @@ const editLive = async (req, res) => {
     }
 };
 
+/**
+ * Supprime une session de diffusion.
+ * 
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.params - Les paramètres de la requête
+ * @param {string} req.params.id - L'ID de la session à supprimer
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} Message de confirmation de suppression
+ * @throws {Error} Erreur lors de la suppression
+ */
 const deleteLive = async (req, res) => {
     try {
         const { id } = req.params;

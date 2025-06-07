@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Contrôleur d'authentification gérant l'inscription, la connexion, 
+ * l'authentification à deux facteurs (2FA) et la vérification des codes d'enregistrement.
+ * @module controllers/authController
+ */
+
+// filepath: /home/816ctbe/Documents/SPOC-LMSC/server/controllers/authController.js
 const { User, Code, StudentClass } = require('../models');
 const { Op } = require('sequelize');
 const bcrypt = require('bcrypt');
@@ -5,6 +12,10 @@ const jwt = require('jsonwebtoken');
 const { authenticator } = require('otplib');
 const qrcode = require('qrcode');
 
+/**
+ * Messages d'erreur utilisés dans le contrôleur d'authentification
+ * @constant {Object}
+ */
 const ERROR_MESSAGES = {
   INVALID_2FA_CODE: 'auth/invalid-2fa-code',
   INVALID_REGISTER_CODE: 'auth/invalid-register-code',
@@ -18,6 +29,17 @@ const ERROR_MESSAGES = {
   SERVER_ERROR: 'default'
 };
 
+/**
+ * Génère un token temporaire pour l'authentification à deux facteurs
+ * 
+ * @param {number} userId - Identifiant de l'utilisateur
+ * @param {boolean} isSetup - Indique si le token est utilisé pour la configuration 2FA
+ * @returns {string} Token JWT temporaire
+ * 
+ * @example
+ * const tempToken = generateTempToken(123, true); // Pour configuration 2FA
+ * const tempToken = generateTempToken(123, false); // Pour vérification 2FA
+ */
 const generateTempToken = (userId, isSetup) => {
   return jwt.sign(
     { userId, purpose: isSetup ? 'Setup2FA' : '2FA' },
@@ -26,6 +48,17 @@ const generateTempToken = (userId, isSetup) => {
   );
 };
 
+/**
+ * Vérifie la validité d'un code d'enregistrement
+ * 
+ * @param {Object} req - Requête Express
+ * @param {Object} res - Réponse Express
+ * @param {Function|null} next - Middleware suivant
+ * @param {boolean} internal - Indique si l'appel est interne ou non
+ * @param {Object|null} registerCode - Code d'enregistrement en cas d'appel interne
+ * @returns {Object|undefined} Retourne un objet avec isValid si internal est true, sinon répond via res
+ * @throws {Error} En cas d'erreur serveur
+ */
 const checkRegisterCode = async (req, res, next = null, internal = false, registerCode = null) => {
   const code = registerCode?.code || req.body?.code;
 
@@ -55,6 +88,20 @@ const checkRegisterCode = async (req, res, next = null, internal = false, regist
   }
 }
 
+/**
+ * Inscrit un nouvel utilisateur
+ * 
+ * @param {Object} req - Requête Express contenant les informations d'inscription
+ * @param {string} req.body.email - Email de l'utilisateur
+ * @param {string} req.body.username - Nom d'utilisateur
+ * @param {string} req.body.registerCode - Code d'enregistrement
+ * @param {string} req.body.password - Mot de passe
+ * @param {string} req.body.name - Prénom
+ * @param {string} req.body.surname - Nom de famille
+ * @param {Object} res - Réponse Express
+ * @returns {Object} Retourne un token temporaire et les informations de configuration 2FA
+ * @throws {Error} En cas d'erreur d'inscription
+ */
 const register = async (req, res) => {
   const { email, username, registerCode, password, name, surname } = req.body;
   const requiredFields = ['email', 'username', 'registerCode', 'password', 'name', 'surname'];
@@ -121,6 +168,19 @@ const register = async (req, res) => {
   }
 };
 
+/**
+ * Inscrit manuellement un utilisateur (généralement utilisé par les administrateurs)
+ * 
+ * @param {Object} req - Requête Express
+ * @param {string} req.body.email - Email de l'utilisateur
+ * @param {string} req.body.password - Mot de passe
+ * @param {string} req.body.role - Rôle de l'utilisateur
+ * @param {string} req.body.name - Prénom
+ * @param {string} req.body.surname - Nom de famille
+ * @param {Object} res - Réponse Express
+ * @returns {Object} Retourne un token JWT
+ * @throws {Error} En cas d'erreur d'inscription
+ */
 const manualRegister = async (req, res) => {
   const { email, password, role, name, surname } = req.body;
   const requiredFields = ['email', 'password', 'role', 'name', 'surname'];
@@ -138,7 +198,7 @@ const manualRegister = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Ici, on suppose que le champ 'role' reçu est déjà en français
+
     const newUser = await User.create({
       email,
       password: hashedPassword,
@@ -165,6 +225,17 @@ const manualRegister = async (req, res) => {
   }
 };
 
+/**
+ * Authentifie un utilisateur existant
+ * 
+ * @param {Object} req - Requête Express
+ * @param {string} [req.body.email] - Email de l'utilisateur (optionnel si username est fourni)
+ * @param {string} [req.body.username] - Nom d'utilisateur (optionnel si email est fourni)
+ * @param {string} req.body.password - Mot de passe
+ * @param {Object} res - Réponse Express
+ * @returns {Object} Retourne un token JWT ou un token temporaire si 2FA est activé
+ * @throws {Error} En cas d'erreur d'authentification
+ */
 const login = async (req, res) => {
   const { email, username, password } = req.body;
 
@@ -215,6 +286,17 @@ const login = async (req, res) => {
   }
 };
 
+/**
+ * Vérifie un code d'authentification à deux facteurs
+ * 
+ * @param {Object} req - Requête Express
+ * @param {string} req.body.code - Code 2FA
+ * @param {string} req.body.tempToken - Token temporaire
+ * @param {boolean} [req.body.setup] - Indique si c'est pour la configuration initiale
+ * @param {Object} res - Réponse Express
+ * @returns {Object} Retourne un token JWT
+ * @throws {Error} En cas d'erreur de vérification
+ */
 const verify2FA = async (req, res) => {
   const { code, tempToken, setup } = req.body;
 
@@ -259,6 +341,16 @@ const verify2FA = async (req, res) => {
   }
 };
 
+/**
+ * Active l'authentification à deux facteurs pour un utilisateur
+ * 
+ * @param {Object} req - Requête Express
+ * @param {Object} req.user - Utilisateur authentifié
+ * @param {number} req.user.id - ID de l'utilisateur
+ * @param {Object} res - Réponse Express
+ * @returns {Object} Retourne un token temporaire et les informations de configuration 2FA
+ * @throws {Error} En cas d'erreur d'activation
+ */
 const activate2FA = async (req, res) => {
   const userId = req.user.id;
 
@@ -291,6 +383,15 @@ const activate2FA = async (req, res) => {
   }
 };
 
+/**
+ * Rafraîchit la configuration de l'authentification à deux facteurs
+ * 
+ * @param {Object} req - Requête Express
+ * @param {string} req.body.tempToken - Token temporaire
+ * @param {Object} res - Réponse Express
+ * @returns {Object} Retourne un nouveau token temporaire
+ * @throws {Error} En cas d'erreur de rafraîchissement
+ */
 const refresh2FASetup = async (req, res) => {
   const { tempToken } = req.body;
 
@@ -316,6 +417,18 @@ const refresh2FASetup = async (req, res) => {
   }
 };
 
+/**
+ * Gère la première connexion d'un utilisateur avec mise à jour des informations et configuration 2FA
+ * 
+ * @param {Object} req - Requête Express
+ * @param {string} req.body.username - Nouveau nom d'utilisateur
+ * @param {string} req.body.password - Nouveau mot de passe
+ * @param {Object} req.user - Utilisateur authentifié
+ * @param {number} req.user.id - ID de l'utilisateur
+ * @param {Object} res - Réponse Express
+ * @returns {Object} Retourne un token JWT ou des informations de configuration 2FA
+ * @throws {Error} En cas d'erreur de configuration
+ */
 const firstLogin = async (req, res) => {
   const { username, password } = req.body;
   const userId = req.user.id;
@@ -344,7 +457,7 @@ const firstLogin = async (req, res) => {
     user.password = await bcrypt.hash(password, 12);
     user.username = username;
 
-    // check if the user has 2FA enabled to direct login
+
     if (user.twoFAEnabled) {
       const tokenPayload = {
         id: user.id,

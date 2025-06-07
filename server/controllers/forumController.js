@@ -1,25 +1,49 @@
+/**
+ * @fileoverview Contrôleur pour gérer les fonctionnalités du forum, incluant les threads
+ * et les commentaires. Gère la création, la récupération et la modération du contenu.
+ * Utilise la bibliothèque leo-profanity pour filtrer les mots inappropriés en français.
+ * @module forumController
+ */
 const { Thread, Comment, User, sequelize } = require('../models');
 const { Op } = require('sequelize');
 
 const leoProfanity = require('leo-profanity');
 const frenchBadwordsList = require('french-badwords-list');
 
-// Configure leo-profanity to include French bad words
+
 leoProfanity.add(frenchBadwordsList.array);
 leoProfanity.loadDictionary('fr');
 
 
-// Helper function for input validation
+/**
+ * Valide la présence des champs requis dans une requête
+ * 
+ * @param {Object} req - L'objet requête Express
+ * @param {Array<string>} requiredFields - Tableau contenant les noms des champs requis
+ * @returns {Array<string>} Tableau des noms des champs manquants
+ */
 const validateRequiredFields = (req, requiredFields) => {
     return requiredFields.filter(field => !req.body[field]);
 };
 
-// Helper function to check for forbidden words
+
+/**
+ * Vérifie si un texte contient des mots interdits
+ * 
+ * @param {string} text - Le texte à vérifier
+ * @returns {boolean} True si le texte contient des mots interdits, sinon False
+ */
 const containsForbiddenWords = (text) => {
     return leoProfanity.check(text);
 };
 
-// Helper pour le tri
+
+/**
+ * Détermine l'ordre de tri des threads selon le critère spécifié
+ * 
+ * @param {string} sortBy - Critère de tri ('newest', 'oldest', 'popular', ou 'trending')
+ * @returns {Array} Configuration de tri compatible avec Sequelize
+ */
 const getSortOrder = (sortBy) => {
     const sortOptions = {
         newest: [['createdAt', 'DESC']],
@@ -32,10 +56,25 @@ const getSortOrder = (sortBy) => {
     return sortOptions[sortBy] || sortOptions.newest;
 };
 
-// Get all threads with pagination
+
+/**
+ * Récupère une liste paginée de threads avec options de filtrage et tri
+ * 
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.query - Paramètres de requête
+ * @param {number} [req.query.page=1] - Numéro de page pour la pagination
+ * @param {number} [req.query.limit=10] - Nombre d'éléments par page (max 100)
+ * @param {string} [req.query.sortBy='newest'] - Critère de tri ('newest', 'oldest', 'popular', 'trending')
+ * @param {string} [req.query.search=''] - Texte à rechercher dans les titres et contenus
+ * @param {string} [req.query.category=''] - Catégorie pour filtrer les threads
+ * @param {string} [req.query.author=''] - Nom d'utilisateur de l'auteur pour filtrer les threads
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} Réponse JSON contenant les threads et informations de pagination
+ * @throws {Error} Erreur serveur lors de la récupération des threads
+ */
 const getThreads = async (req, res) => {
     try {
-        // 1. Validation des paramètres
+
         const { 
             page = 1, 
             limit = 10, 
@@ -48,15 +87,15 @@ const getThreads = async (req, res) => {
         const pageNumber = Math.max(1, parseInt(page, 10));
         const limitNumber = Math.min(Math.max(1, parseInt(limit, 10)), 100);
 
-        // 2. Construction des conditions de recherche
+
         const whereConditions = {};
         
-        // Filtre par catégorie si spécifié
+
         if (category && category !== 'all') {
             whereConditions.category = category;
         }
         
-        // Recherche dans le titre et le contenu
+
         if (search) {
             whereConditions[Op.or] = [
                 { title: { [Op.iLike]: `%${search}%` } },
@@ -64,14 +103,14 @@ const getThreads = async (req, res) => {
             ];
         }
 
-        // 3. Construction dynamique des includes
+
         const userInclude = {
             model: User,
             attributes: ['id', 'username'],
             required: false
         };
         
-        // Filtre par auteur si spécifié
+
         if (author) {
             userInclude.where = {
                 username: { [Op.iLike]: `%${author}%` }
@@ -84,14 +123,14 @@ const getThreads = async (req, res) => {
             attributes: []
         };
 
-        // 4. Compter le total des threads (pour pagination)
+
         const totalItems = await Thread.count({
             where: whereConditions,
             include: [userInclude],
             distinct: true
         });
 
-        // 5. Récupération des threads paginés avec le nombre de commentaires
+
         const threads = await Thread.findAll({
             where: whereConditions,
             include: [
@@ -110,7 +149,7 @@ const getThreads = async (req, res) => {
             offset: (pageNumber - 1) * limitNumber
         });
 
-        // 6. Calcul de la pagination
+
         const totalPages = Math.ceil(totalItems / limitNumber);
         if (pageNumber > totalPages && totalPages > 0) {
             return res.status(400).json({
@@ -118,7 +157,7 @@ const getThreads = async (req, res) => {
             });
         }
 
-        // 7. Formatage de la réponse
+
         return res.json({
             threads,
             totalItems,
@@ -139,7 +178,19 @@ const getThreads = async (req, res) => {
 };
 
 
-// Create a new thread with validation
+/**
+ * Crée un nouveau thread dans le forum
+ * 
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.body - Corps de la requête
+ * @param {string} req.body.title - Titre du thread
+ * @param {string} req.body.content - Contenu du thread
+ * @param {Object} req.user - Informations de l'utilisateur authentifié
+ * @param {number} req.user.id - ID de l'utilisateur créant le thread
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} Réponse JSON avec le thread créé ou message d'erreur
+ * @throws {Error} Erreur serveur lors de la création du thread
+ */
 const createThread = async (req, res) => {
     try {
         const missingFields = validateRequiredFields(req, ['title', 'content']);
@@ -171,7 +222,17 @@ const createThread = async (req, res) => {
     }
 };
 
-// Get thread details with comments and authors
+
+/**
+ * Récupère les détails d'un thread spécifique avec ses commentaires
+ * 
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.params - Paramètres de la requête
+ * @param {string} req.params.threadId - ID du thread à récupérer
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} Réponse JSON avec les détails du thread et ses commentaires
+ * @throws {Error} Erreur serveur lors de la récupération des détails du thread
+ */
 const getThreadDetails = async (req, res) => {
     try {
         const { threadId } = req.params;
@@ -205,7 +266,21 @@ const getThreadDetails = async (req, res) => {
     }
 };
 
-// Add comment with validation
+
+/**
+ * Ajoute un commentaire à un thread spécifique
+ * 
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.params - Paramètres de la requête
+ * @param {string} req.params.threadId - ID du thread pour ajouter le commentaire
+ * @param {Object} req.body - Corps de la requête
+ * @param {string} req.body.content - Contenu du commentaire
+ * @param {Object} req.user - Informations de l'utilisateur authentifié
+ * @param {number} req.user.id - ID de l'utilisateur ajoutant le commentaire
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} Réponse JSON avec le commentaire créé ou message d'erreur
+ * @throws {Error} Erreur serveur lors de l'ajout du commentaire
+ */
 const addComment = async (req, res) => {
     try {
         const missingFields = validateRequiredFields(req, ['content']);
@@ -235,7 +310,7 @@ const addComment = async (req, res) => {
             threadId
         });
 
-        // Return comment with author details
+
         const newComment = await Comment.findByPk(comment.id, {
             include: [{
                 model: User,

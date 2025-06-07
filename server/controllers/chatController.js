@@ -1,23 +1,39 @@
+/**
+ * @fileoverview Contrôleur de chat pour la gestion des messages en temps réel via WebSocket
+ * et endpoints API REST. Gère l'authentification, la modération du contenu et les opérations CRUD
+ * sur les messages du chat.
+ * @module chatController
+ */
+
 const WebSocket = require('ws');
 const { ChatMessage, User, Lives } = require('../models');
 const leoProfanity = require('leo-profanity');
 const frenchBadwordsList = require('french-badwords-list');
 const jwt = require('jsonwebtoken');
 
+/** @constant {string} SECRET - Clé secrète pour la vérification des tokens JWT */
 const SECRET = process.env.JWT_SECRET;
 
-// Configure leo-profanity to include French bad words
+// Configuration du filtrage des mots inappropriés
 leoProfanity.add(frenchBadwordsList.array);
 leoProfanity.loadDictionary('fr');
 
-// WebSocket clients
+/** 
+ * @constant {Set} chatClients - Ensemble des clients WebSocket connectés au chat
+ * @private
+ */
 const chatClients = new Set();
 
+/**
+ * Configure et initialise la connexion WebSocket pour le chat
+ * 
+ * @param {WebSocket.Server} wss - Serveur WebSocket à configurer
+ */
 const setupChatWebSocket = (wss) => {
     wss.on('connection', async (ws, request) => {
         console.log('Client WebSocket connecté au chat');
 
-        // Parse and verify token
+
         try {
             const fullUrl = new URL(request.url, `https://${request.headers.host}`);
             const token = fullUrl.searchParams.get('token');
@@ -38,10 +54,10 @@ const setupChatWebSocket = (wss) => {
                 return;
             }
 
-            // Add to client set if authentication passed
+
             chatClients.add(ws);
 
-            // Handle WebSocket messages
+
             ws.on('message', async (data) => {
                 try {
                     const msgData = JSON.parse(data);
@@ -65,9 +81,9 @@ const setupChatWebSocket = (wss) => {
                             return;
                         }
 
-                        // Other validations...
 
-                        // Save to database
+
+
                         const chatMessage = await ChatMessage.create({
                             live_id: liveId,
                             user_id: ws.user.id,
@@ -86,13 +102,13 @@ const setupChatWebSocket = (wss) => {
                             }
                         };
 
-                        // IMPORTANT: Add a type to the response to differentiate it
+
                         response.type = 'new_message';
 
-                        // IMPORTANT: Add original sender information to identify messages sent by this user
+
                         response.sender_id = ws.user.id;
 
-                        // Broadcast to all clients EXCEPT the sender
+
                         broadcastMessage(response); 
                     }
                 } catch (err) {
@@ -121,27 +137,48 @@ const setupChatWebSocket = (wss) => {
     });
 };
 
-// Modifiez la fonction broadcastMessage pour diffuser à tous les clients
-
+/**
+ * Diffuse un message à tous les clients WebSocket connectés
+ * 
+ * @param {Object} message - Message à diffuser
+ * @param {WebSocket|null} [excludeWs=null] - Client WebSocket à exclure de la diffusion (optionnel)
+ * @private
+ */
 const broadcastMessage = (message, excludeWs = null) => {
-    // Ne pas modifier le type si un type existe déjà
+
     const messageToSend = message.type 
         ? message 
         : { ...message, type: 'new_message' };
     
     chatClients.forEach((client) => {
-        // Si un client spécifique doit être exclu, vérifiez
+
         if (client.readyState === WebSocket.OPEN && (excludeWs === null || client !== excludeWs)) {
             client.send(JSON.stringify(messageToSend));
         }
     });
 };
 
-// Helper function to check for forbidden words
+/**
+ * Vérifie si un texte contient des mots interdits
+ * 
+ * @param {string} text - Texte à vérifier
+ * @returns {boolean} true si le texte contient des mots interdits, false sinon
+ * @private
+ */
 const containsForbiddenWords = (text) => {
     return leoProfanity.check(text);
 };
 
+/**
+ * Récupère tous les messages d'un live
+ * 
+ * @param {Object} req - Requête Express
+ * @param {Object} req.params - Paramètres de la requête
+ * @param {string} req.params.liveId - ID du live dont on veut récupérer les messages
+ * @param {Object} res - Réponse Express
+ * @returns {Object} Messages formatés avec informations utilisateurs
+ * @throws {Error} Erreur 500 en cas de problème serveur
+ */
 const getMessages = async (req, res) => {
     try {
         const { liveId } = req.params;
@@ -173,6 +210,20 @@ const getMessages = async (req, res) => {
     }
 };
 
+/**
+ * Crée un nouveau message dans un live
+ * 
+ * @param {Object} req - Requête Express
+ * @param {Object} req.params - Paramètres de la requête
+ * @param {string} req.params.liveId - ID du live où publier le message
+ * @param {Object} req.body - Corps de la requête
+ * @param {string} req.body.message - Contenu du message
+ * @param {Object} req.user - Utilisateur authentifié
+ * @param {number} req.user.id - ID de l'utilisateur
+ * @param {Object} res - Réponse Express
+ * @returns {Object} Message créé avec informations utilisateur
+ * @throws {Error} Erreur 400 si le message est invalide ou 404 si le live n'existe pas
+ */
 const postMessage = async (req, res) => {
     try {
         const { liveId } = req.params;
@@ -194,7 +245,7 @@ const postMessage = async (req, res) => {
             return res.status(400).json({ error: 'Le message doit contenir au moins 1 caractère' });
         }
 
-        // Vérification de l'existence du live
+
         const liveExists = await Lives.findByPk(liveId);
         if (!liveExists) {
             return res.status(404).json({ error: 'Live non trouvé' });
@@ -212,7 +263,7 @@ const postMessage = async (req, res) => {
             attributes: ['name', 'role']
         });
 
-        // Ajout explicite des détails de l'utilisateur dans la réponse avec préfixe "Mr" pour les professeurs
+
         const response = {
             ...chatMessage.toJSON(),
             User: userDetails ? {
@@ -220,7 +271,7 @@ const postMessage = async (req, res) => {
             } : null
         };        
 
-        // broadcastMessage(response);
+
 
         res.status(201).json(response);
     } catch (err) {
@@ -228,13 +279,22 @@ const postMessage = async (req, res) => {
     }
 };
 
-// Supprimer un message
+/**
+ * Supprime un message spécifique et notifie tous les clients
+ * 
+ * @param {Object} req - Requête Express
+ * @param {Object} req.params - Paramètres de la requête
+ * @param {string} req.params.messageId - ID du message à supprimer
+ * @param {Object} res - Réponse Express
+ * @returns {undefined} Statut 204 en cas de succès
+ * @throws {Error} Erreur 500 en cas de problème serveur
+ */
 const deleteMessage = async (req, res) => {
     try {
         const { messageId } = req.params;
         await ChatMessage.destroy({ where: { id: messageId } });
 
-        // Notifier les clients de la suppression
+
         broadcastMessage({
             type: 'message_deleted',
             messageId
@@ -246,13 +306,22 @@ const deleteMessage = async (req, res) => {
     }
 };
 
-// Supprimer tous les messages d'un utilisateur
+/**
+ * Supprime tous les messages d'un utilisateur et notifie tous les clients
+ * 
+ * @param {Object} req - Requête Express
+ * @param {Object} req.params - Paramètres de la requête
+ * @param {string} req.params.userId - ID de l'utilisateur dont on veut supprimer les messages
+ * @param {Object} res - Réponse Express
+ * @returns {undefined} Statut 204 en cas de succès
+ * @throws {Error} Erreur 500 en cas de problème serveur
+ */
 const deleteUserMessages = async (req, res) => {
     try {
         const { userId } = req.params;
         await ChatMessage.destroy({ where: { user_id: userId } });
 
-        // Notifier les clients de la suppression des messages de l'utilisateur
+
         broadcastMessage({
             type: 'user_messages_deleted',
             userId
@@ -264,7 +333,16 @@ const deleteUserMessages = async (req, res) => {
     }
 };
 
-// Supprimer tous les messages d'un live
+/**
+ * Supprime tous les messages d'un live
+ * 
+ * @param {Object} req - Requête Express
+ * @param {Object} req.params - Paramètres de la requête
+ * @param {string} req.params.liveId - ID du live dont on veut supprimer les messages
+ * @param {Object} res - Réponse Express
+ * @returns {undefined} Statut 204 en cas de succès
+ * @throws {Error} Erreur 500 en cas de problème serveur
+ */
 const deleteLiveMessages = async (req, res) => {
     try {
         const { liveId } = req.params;
@@ -275,7 +353,17 @@ const deleteLiveMessages = async (req, res) => {
     }
 };
 
-// Supprimer tous les messages d'un utilisateur dans un live
+/**
+ * Supprime tous les messages d'un utilisateur dans un live spécifique
+ * 
+ * @param {Object} req - Requête Express
+ * @param {Object} req.params - Paramètres de la requête
+ * @param {string} req.params.liveId - ID du live concerné
+ * @param {string} req.params.userId - ID de l'utilisateur dont on veut supprimer les messages
+ * @param {Object} res - Réponse Express
+ * @returns {undefined} Statut 204 en cas de succès
+ * @throws {Error} Erreur 500 en cas de problème serveur
+ */
 const deleteUserLiveMessages = async (req, res) => {
     try {
         const { liveId, userId } = req.params;

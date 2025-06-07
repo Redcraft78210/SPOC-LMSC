@@ -1,26 +1,54 @@
+/**
+ * @fileoverview Contrôleur pour la gestion des vidéos de la plateforme.
+ * Fournit des fonctionnalités pour diffuser, télécharger, uploader, supprimer 
+ * et récupérer des informations sur les vidéos.
+ * @module videoController
+ */
+
 const fs = require('fs/promises');
 const path = require('path');
 const { createReadStream } = require('fs');
 const { constants } = require('fs');
 const { Video } = require('../models');
 
-const { spawn } = require('child_process'); // pour ffprobe si besoin
 const jwt = require('jsonwebtoken');
 
+/** 
+ * Chemin absolu vers le répertoire de stockage des vidéos
+ * @constant {string}
+ */
 const videosDirectory = path.resolve(__dirname, '..', 'videos');
 
-// Middleware CORS (manuel ou utiliser 'cors' dans Express)
+/**
+ * Configure les en-têtes CORS sur la réponse HTTP.
+ * @param {Object} res - L'objet réponse Express.
+ */
 const setCORSHeaders = (res) => {
     res.setHeader('Access-Control-Allow-Origin', '*'); // ajuster selon la politique de sécurité
     res.setHeader('Access-Control-Allow-Methods', 'GET');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
 };
 
+/**
+ * Vérifie si un chemin de fichier est contenu dans un répertoire de base.
+ * Utilisé comme mesure de sécurité pour prévenir les attaques de traversée de répertoire.
+ * @param {string} filePath - Le chemin du fichier à vérifier.
+ * @param {string} baseDirectory - Le répertoire de base qui devrait contenir le fichier.
+ * @returns {boolean} true si le fichier est à l'intérieur du répertoire, false sinon.
+ */
 const isInsideDirectory = (filePath, baseDirectory) => {
     const relative = path.relative(baseDirectory, filePath);
     return !relative.startsWith('..') && !path.isAbsolute(relative);
 };
 
+/**
+ * Analyse l'en-tête HTTP Range pour la diffusion de vidéo par morceaux.
+ * @param {string} rangeHeader - L'en-tête HTTP Range.
+ * @param {number} fileSize - La taille totale du fichier en octets.
+ * @returns {Object|null} Un objet contenant les positions de début et de fin, ou null si l'en-tête est invalide.
+ * @returns {number} start - Position de début en octets.
+ * @returns {number} end - Position de fin en octets.
+ */
 const parseRange = (rangeHeader, fileSize) => {
     if (!rangeHeader) return null;
 
@@ -35,17 +63,32 @@ const parseRange = (rangeHeader, fileSize) => {
     return { start, end };
 };
 
-// Ajouter une fonction pour générer le chemin de fichier basé sur l'ID
+/**
+ * Génère le chemin d'accès complet pour un fichier vidéo.
+ * @param {string} id - L'identifiant unique de la vidéo.
+ * @param {string} fingerprint - L'empreinte de sécurité de la vidéo.
+ * @returns {string} Le chemin d'accès complet au fichier vidéo.
+ */
 const generateVideoPath = (id, fingerprint) => {
-    // Le chemin est fixe, le nom du fichier est basé sur l'ID
     return path.resolve(videosDirectory, `${id}-${fingerprint}.mp4`);
 };
 
-// Mettre à jour la fonction getVideo pour utiliser la nouvelle fonction
+/**
+ * Récupère et diffuse une vidéo en streaming avec prise en charge des plages (ranges) HTTP.
+ * @param {Object} req - L'objet requête Express.
+ * @param {Object} req.params - Les paramètres de la requête.
+ * @param {string} req.params.id - L'identifiant de la vidéo.
+ * @param {Object} req.query - Les paramètres de la requête.
+ * @param {string} req.query.authToken - Le token d'authentification JWT.
+ * @param {Object} req.headers - Les en-têtes de la requête.
+ * @param {string} [req.headers.range] - L'en-tête HTTP Range pour la diffusion partielle.
+ * @param {Object} res - L'objet réponse Express.
+ * @throws {Error} Si la vidéo n'existe pas ou si l'accès est refusé.
+ */
 const getVideo = async (req, res) => {
     try {
         setCORSHeaders(res);
-        // Auth
+
         const { authToken } = req.query;
         if (!authToken) {
             return res.status(401).json({ message: 'Token manquant' });
@@ -63,7 +106,7 @@ const getVideo = async (req, res) => {
             return res.status(400).json({ message: 'ID invalide' });
         }
 
-        // Check if video exists in database
+
         const video = await Video.findOne({ where: { id } });
         if (!video) {
             return res.status(404).json({ message: 'Vidéo non trouvée' });
@@ -117,10 +160,21 @@ const getVideo = async (req, res) => {
     }
 };
 
+/**
+ * Permet le téléchargement complet d'une vidéo.
+ * @param {Object} req - L'objet requête Express.
+ * @param {Object} req.params - Les paramètres de la requête.
+ * @param {string} req.params.id - L'identifiant de la vidéo.
+ * @param {Object} req.user - Les informations de l'utilisateur authentifié.
+ * @param {Object} req.headers - Les en-têtes de la requête.
+ * @param {string} [req.headers.range] - L'en-tête HTTP Range pour le téléchargement partiel.
+ * @param {Object} res - L'objet réponse Express.
+ * @throws {Error} Si la vidéo n'existe pas ou si l'accès est refusé.
+ */
 const downloadVideo = async (req, res) => {
     try {
         setCORSHeaders(res);
-        // Auth
+
         if (!req.user) {
             return res.status(403).json({ message: 'Accès non autorisé' });
         }
@@ -159,11 +213,20 @@ const downloadVideo = async (req, res) => {
             });
         }
     }
-}
+};
 
+/**
+ * Téléverse une vidéo sur le serveur.
+ * @param {Object} req - L'objet requête Express contenant les données de la vidéo.
+ * @param {Object} req.params - Les paramètres de la requête.
+ * @param {string} req.params.id - L'identifiant à attribuer à la vidéo.
+ * @param {Object} req.user - Les informations de l'utilisateur authentifié.
+ * @param {Object} res - L'objet réponse Express.
+ * @throws {Error} Si l'ID est invalide ou si l'accès est refusé.
+ */
 const uploadVideo = async (req, res) => {
     try {
-        // Auth
+
         if (!req.user) {
             return res.status(403).json({ message: 'Accès non autorisé' });
         }
@@ -195,11 +258,20 @@ const uploadVideo = async (req, res) => {
             });
         }
     }
-}
+};
 
+/**
+ * Supprime une vidéo du serveur.
+ * @param {Object} req - L'objet requête Express.
+ * @param {Object} req.params - Les paramètres de la requête.
+ * @param {string} req.params.id - L'identifiant de la vidéo à supprimer.
+ * @param {Object} req.user - Les informations de l'utilisateur authentifié.
+ * @param {Object} res - L'objet réponse Express.
+ * @throws {Error} Si la vidéo n'existe pas ou si l'accès est refusé.
+ */
 const deleteVideo = async (req, res) => {
     try {
-        // Auth
+
         if (!req.user) {
             return res.status(403).json({ message: 'Accès non autorisé' });
         }
@@ -227,10 +299,21 @@ const deleteVideo = async (req, res) => {
     }
 };
 
+/**
+ * Récupère les métadonnées d'une vidéo.
+ * @param {Object} req - L'objet requête Express.
+ * @param {Object} req.params - Les paramètres de la requête.
+ * @param {string} req.params.id - L'identifiant de la vidéo.
+ * @param {Object} req.query - Les paramètres de la requête.
+ * @param {string} req.query.authToken - Le token d'authentification JWT.
+ * @param {Object} res - L'objet réponse Express.
+ * @returns {Object} Les informations de la vidéo, y compris le cours associé.
+ * @throws {Error} Si la vidéo n'existe pas ou si l'accès est refusé.
+ */
 const getVideoInfo = async (req, res) => {
     try {
         setCORSHeaders(res);
-        // Auth
+
         const { authToken } = req.query;
         if (!authToken) {
             return res.status(401).json({ message: 'Token manquant' });
@@ -248,10 +331,10 @@ const getVideoInfo = async (req, res) => {
             return res.status(400).json({ message: 'ID invalide' });
         }
 
-        // Récupération des informations de la vidéo depuis la base de données
+
         const video = await Video.findOne({ 
             where: { id },
-            // Inclure les relations si la vidéo est associée à un cours
+
             include: [
                 { 
                     association: 'course',
@@ -264,7 +347,7 @@ const getVideoInfo = async (req, res) => {
             return res.status(404).json({ message: 'Vidéo non trouvée' });
         }
 
-        // Retourner les informations de la vidéo
+
         res.status(200).json({
             id: video.id,
             title: video.title,
@@ -283,6 +366,10 @@ const getVideoInfo = async (req, res) => {
     }
 };
 
+/**
+ * Exporte les fonctions du contrôleur vidéo.
+ * @exports videoController
+ */
 module.exports = {
     getVideo,
     uploadVideo,

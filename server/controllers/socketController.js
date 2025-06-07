@@ -1,18 +1,36 @@
+/**
+ * @fileoverview Contrôleur de gestion du streaming vidéo et audio via WebSockets et UDP.
+ * Ce module reçoit des flux vidéo et audio sur des sockets UDP et les transmet
+ * aux clients connectés via WebSockets. Il inclut l'authentification par JWT
+ * et le traitement des unités NAL pour le streaming vidéo H.264.
+ */
+
 const dgram = require('dgram');
 const WebSocket = require('ws');
 const jwt = require('jsonwebtoken');
 const { Lives } = require('../models');
 const SECRET = process.env.JWT_SECRET
 
+/**
+ * Configure et initialise le serveur de streaming vidéo et audio.
+ * 
+ * @param {WebSocket.Server} wss - Serveur WebSocket où les clients se connecteront
+ */
 function setupStreaming(wss) {
   const videoSocket = dgram.createSocket('udp4');
   const audioSocket = dgram.createSocket('udp4');
-  // Buffer pour chaque client WebSocket
+
   const wsVideoBuffers = new Map();
 
-  // Serveur WebSocket pour le streaming video
+  /**
+   * Gestionnaire de connexion WebSocket - authentifie les clients et configure la session.
+   * 
+   * @param {WebSocket} ws - L'instance WebSocket du client
+   * @param {Object} req - La requête HTTP initiale
+   * @throws {Error} Erreurs possibles: token manquant, token invalide, pas de live en cours
+   */
   wss.on('connection', async (ws, req) => {
-    // 1) Récupération du token depuis l'URL : wss://localhost:8443/?token=xxx
+
     let token;
     try {
       const fullUrl = new URL(req.url, `https://${req.headers.host}`);
@@ -23,26 +41,22 @@ function setupStreaming(wss) {
         throw error;
       }
     } catch (e) {
-      // URL parsing failed or token missing
       const code = e.code || 4001;
       const msg = e.message || 'Mauvaise requête';
       return ws.close(code, msg);
     }
 
-    // 2) Vérification du token
     let payload;
     try {
       payload = jwt.verify(token, SECRET);
       ws.user = payload;  // Optionnel : attacher l'utilisateur à l'objet ws
       console.log('Token vérifié pour :', payload.role);
     } catch (err) {
-      // JWT errors
       const isJwtErr = err.name === 'TokenExpiredError' || err.name === 'JsonWebTokenError';
       console.error('Erreur de vérification du token JWT :', err.message);
       return ws.close(isJwtErr ? 4002 : 4003, isJwtErr ? 'Token invalide' : 'Erreur serveur');
     }
 
-    // 3) Contrôle d’accès pour les étudiants
     if (payload.role === 'Etudiant') {
       console.log('Étudiant connecté, vérification du live en cours');
       try {
@@ -60,10 +74,8 @@ function setupStreaming(wss) {
 
     console.log('Client WebSocket authentifié et connecté');
 
-    // 4) Événements WebSocket
     ws.on('message', (message) => {
       console.log(`← Message du client : ${message}`);
-      // … traiter ou répondre au message ici …
     });
 
     ws.on('close', (code, reason) => {
@@ -74,7 +86,6 @@ function setupStreaming(wss) {
       console.error('Erreur WebSocket :', error);
     });
 
-    // Après l'authentification réussie:
     wsVideoBuffers.set(ws, []);
 
     ws.on('close', () => {
@@ -83,9 +94,15 @@ function setupStreaming(wss) {
     });
   });
 
-  // Buffer global pour accumuler les données vidéo entre les paquets UDP
   let videoBuffer = Buffer.alloc(0);
 
+  /**
+   * Recherche un code de début NALU (0x00 0x00 0x00 0x01) dans un buffer.
+   * 
+   * @param {Buffer} buffer - Buffer dans lequel rechercher
+   * @param {number} fromIndex - Index à partir duquel commencer la recherche
+   * @returns {number} L'index où le code de début a été trouvé, ou -1 si non trouvé
+   */
   function findStartCode(buffer, fromIndex) {
     for (let i = fromIndex; i <= buffer.length - 4; i++) {
       if (buffer[i] === 0x00 &&
@@ -98,10 +115,23 @@ function setupStreaming(wss) {
     return -1;
   }
 
+  /**
+   * Vérifie si l'unité NAL est un délimiteur d'unité d'accès (type 9).
+   * 
+   * @param {Buffer} nal - Unité NAL à vérifier
+   * @returns {boolean} Vrai si l'unité est un délimiteur d'unité d'accès
+   */
   function isAccessUnitDelimiter(nal) {
     return nal.length > 4 && (nal[4] & 0x1F) === 0x09;
   }
 
+  /**
+   * Détermine si l'unité NAL représente le début d'une nouvelle image.
+   * Vérifie si le type est 5 (IDR, image I) ou 1 (non-IDR, image P).
+   * 
+   * @param {Buffer} nal - Unité NAL à vérifier
+   * @returns {boolean} Vrai si l'unité représente une nouvelle image
+   */
   function isNewPicture(nal) {
     if (nal.length > 4) {
       const type = nal[4] & 0x1F;
@@ -110,10 +140,15 @@ function setupStreaming(wss) {
     return false;
   }
 
-  // Configuration des sockets UDP
   videoSocket.bind(8082);
   audioSocket.bind(8083);
-  // Gestion des paquets vidéo
+
+  /**
+   * Gestionnaire de réception des données vidéo UDP.
+   * Accumule les données et recherche les unités NAL complètes.
+   * 
+   * @param {Buffer} msg - Le paquet UDP reçu
+   */
   videoSocket.on('message', (msg) => {
     videoBuffer = Buffer.concat([videoBuffer, msg]);
     let startPos = 0;
@@ -142,6 +177,12 @@ function setupStreaming(wss) {
     console.error('Erreur sur le socket audio UDP :', err);
   });
 
+  /**
+   * Traite une unité NAL reçue et l'envoie aux clients WebSocket connectés.
+   * Gère le regroupement des NAL units en unités d'accès complètes avant l'envoi.
+   * 
+   * @param {Buffer} nal - Unité NAL à traiter et envoyer
+   */
   function processNalUnit(nal) {
     const fullNal = Buffer.concat([Buffer.from([0x00, 0x00, 0x00, 0x01]), nal]);
 
@@ -171,7 +212,12 @@ function setupStreaming(wss) {
     });
   }
 
-  // Gestion des paquets audio
+  /**
+   * Gestionnaire de réception des données audio UDP.
+   * Envoie immédiatement les données audio reçues à tous les clients connectés.
+   * 
+   * @param {Buffer} msg - Le paquet UDP audio reçu
+   */
   audioSocket.on('message', (msg) => {
     wss.clients.forEach((ws) => {
       if (ws.readyState === WebSocket.OPEN) {

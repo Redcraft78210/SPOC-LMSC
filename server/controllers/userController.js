@@ -1,8 +1,27 @@
+/**
+ * @fileoverview Contrôleur pour la gestion des utilisateurs
+ * Ce module contient des fonctions pour gérer les profils utilisateurs, les permissions,
+ * l'authentification à deux facteurs, et les opérations administratives sur les comptes.
+ * @module controllers/userController
+ * @requires models
+ * @requires bcrypt
+ * @requires zxcvbn
+ */
 const { User, sequelize } = require('../models');
 const bcrypt = require('bcrypt');
 const zxcvbn = require('zxcvbn');
 
-// Get the authenticated user's profile
+/**
+ * Récupère le profil de l'utilisateur actuellement authentifié
+ * @async
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.user - L'utilisateur authentifié
+ * @param {number} req.user.id - L'ID de l'utilisateur authentifié
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} Données du profil utilisateur
+ * @throws {Error} Erreur 404 si l'utilisateur n'est pas trouvé
+ * @throws {Error} Erreur 500 en cas d'erreur serveur
+ */
 const getProfile = async (req, res) => {
     try {
         const user = await User.findByPk(req.user.id);
@@ -23,7 +42,24 @@ const getProfile = async (req, res) => {
     }
 };
 
-// Update user's profile
+
+/**
+ * Met à jour le profil de l'utilisateur authentifié
+ * @async
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.user - L'utilisateur authentifié
+ * @param {number} req.user.id - L'ID de l'utilisateur authentifié
+ * @param {Object} req.body - Les données à mettre à jour
+ * @param {string} [req.body.name] - Le nouveau prénom
+ * @param {string} [req.body.surname] - Le nouveau nom de famille
+ * @param {string} [req.body.username] - Le nouveau nom d'utilisateur
+ * @param {string} [req.body.email] - La nouvelle adresse email
+ * @param {string} [req.body.password] - Le nouveau mot de passe
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} Message de confirmation et données mises à jour
+ * @throws {Error} Erreur 404 si l'utilisateur n'est pas trouvé
+ * @throws {Error} Erreur 500 en cas d'erreur serveur
+ */
 const updateProfile = async (req, res) => {
     const { name, surname, username, email, password } = req.body;
 
@@ -60,11 +96,25 @@ const updateProfile = async (req, res) => {
     }
 };
 
+/**
+ * Change le statut d'un utilisateur entre 'actif' et 'inactif'
+ * @async
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.user - L'utilisateur authentifié
+ * @param {number} req.user.id - L'ID de l'utilisateur authentifié
+ * @param {Object} req.params - Les paramètres de la requête
+ * @param {number} req.params.id - L'ID de l'utilisateur dont le statut doit être modifié
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} Message de confirmation
+ * @throws {Error} Erreur 403 si l'utilisateur tente de modifier son propre statut
+ * @throws {Error} Erreur 404 si l'utilisateur cible n'est pas trouvé
+ * @throws {Error} Erreur 500 en cas d'erreur serveur
+ */
 const changeStatus = async (req, res) => {
     try {
         const user = await User.findByPk(req.params.id);
         const newStatus = user.statut === 'actif' ? 'inactif' : 'actif';
-        // Check if the user is trying to change their own status
+
         if (req.user.id === user.id) {
             return res.status(403).json({ message: 'You cannot change your own status' });
         }
@@ -83,6 +133,17 @@ const changeStatus = async (req, res) => {
     }
 };
 
+/**
+ * Récupère le statut de l'authentification à deux facteurs pour l'utilisateur authentifié
+ * @async
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.user - L'utilisateur authentifié
+ * @param {number} req.user.id - L'ID de l'utilisateur authentifié
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} Statut d'activation de la 2FA
+ * @throws {Error} Erreur 404 si l'utilisateur n'est pas trouvé
+ * @throws {Error} Erreur 500 en cas d'erreur serveur
+ */
 const get2FAStatus = async (req, res) => {
     try {
         const userId = req.user.id
@@ -97,6 +158,17 @@ const get2FAStatus = async (req, res) => {
     }
 };
 
+/**
+ * Désactive l'authentification à deux facteurs pour l'utilisateur authentifié
+ * @async
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.user - L'utilisateur authentifié
+ * @param {number} req.user.id - L'ID de l'utilisateur authentifié
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} Message de confirmation
+ * @throws {Error} Erreur 404 si l'utilisateur n'est pas trouvé
+ * @throws {Error} Erreur 500 en cas d'erreur serveur
+ */
 const disable2FA = async (req, res) => {
     try {
         const userId = req.user.id
@@ -118,7 +190,21 @@ const disable2FA = async (req, res) => {
     }
 };
 
-// Change user's password
+/**
+ * Change le mot de passe de l'utilisateur authentifié après validation
+ * @async
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.user - L'utilisateur authentifié
+ * @param {number} req.user.id - L'ID de l'utilisateur authentifié
+ * @param {Object} req.body - Les données de la requête
+ * @param {string} req.body.oldPassword - L'ancien mot de passe
+ * @param {string} req.body.newPassword - Le nouveau mot de passe
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} Message de confirmation
+ * @throws {Error} Erreur 400 si l'ancien mot de passe est incorrect ou si le nouveau est trop faible
+ * @throws {Error} Erreur 404 si l'utilisateur n'est pas trouvé
+ * @throws {Error} Erreur 500 en cas d'erreur serveur
+ */
 const changePassword = async (req, res) => {
     const { oldPassword, newPassword } = req.body;
 
@@ -133,7 +219,7 @@ const changePassword = async (req, res) => {
             return res.status(400).json({ message: 'Old password is incorrect' });
         }
 
-        // Check password strength
+
         const passwordStrength = zxcvbn(newPassword);
         if (passwordStrength.score < 3) {
             return res.status(400).json({
@@ -153,7 +239,17 @@ const changePassword = async (req, res) => {
     }
 };
 
-// Delete user's profile
+/**
+ * Supprime le profil de l'utilisateur authentifié
+ * @async
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.user - L'utilisateur authentifié
+ * @param {number} req.user.id - L'ID de l'utilisateur authentifié
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} Message de confirmation
+ * @throws {Error} Erreur 404 si l'utilisateur n'est pas trouvé
+ * @throws {Error} Erreur 500 en cas d'erreur serveur
+ */
 const deleteProfile = async (req, res) => {
     try {
         const user = await User.findByPk(req.user.id);
@@ -169,37 +265,50 @@ const deleteProfile = async (req, res) => {
     }
 };
 
-// Get all users
+/**
+ * Récupère la liste de tous les utilisateurs avec filtrage optionnel par rôle
+ * @async
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.user - L'utilisateur authentifié
+ * @param {string} req.user.role - Le rôle de l'utilisateur authentifié
+ * @param {Object} req.query - Les paramètres de requête
+ * @param {string} [req.query.role] - Filtre par rôle
+ * @param {boolean} [req.query.mailboxrecipients] - Format spécial pour les destinataires de messages
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Array} Liste des utilisateurs filtrés
+ * @throws {Error} Erreur 404 si aucun utilisateur n'est trouvé
+ * @throws {Error} Erreur 500 en cas d'erreur serveur
+ */
 const getAllUsers = async (req, res) => {
     const { role, mailboxrecipients } = req.query;
     const userRole = req.user.role;
     console.log(userRole);
 
     try {
-        // Build filter only if role is provided
-        // Uniformise les rôles en français côté filtre
+
+
         let where = {};
         if (role) {
             where.role = role;
         }
 
-        // Si l'utilisateur courant est un étudiant, exclure les comptes Administrateur
+
         if (userRole === 'Etudiant') {
             where.role = { [sequelize.Op.ne]: 'Administrateur' }; // Exclure 'Administrateur'
         }
 
         const users = await User.findAll({ where });
 
-        // Sequelize returns an array, even if empty
+
         if (!users.length) {
             return res.status(404).json({ message: 'No users found' });
         }
 
         const result = users.map(({ id, name, surname, email, statut, role }) => {
-            // Always include id/name/surname/role
+
             const output = { id, surname, role };
 
-            // If not for mailbox recipients, also include email + active status
+
             if (!mailboxrecipients) {
                 output.name = name;
                 output.email = email;
@@ -218,8 +327,17 @@ const getAllUsers = async (req, res) => {
     }
 };
 
-
-// Get user by ID
+/**
+ * Récupère un utilisateur par son ID
+ * @async
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.params - Les paramètres de la requête
+ * @param {number} req.params.id - L'ID de l'utilisateur à récupérer
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} Données de l'utilisateur
+ * @throws {Error} Erreur 404 si l'utilisateur n'est pas trouvé
+ * @throws {Error} Erreur 500 en cas d'erreur serveur
+ */
 const getUserById = async (req, res) => {
     try {
         const user = await User.findByPk(req.params.id);
@@ -233,7 +351,26 @@ const getUserById = async (req, res) => {
     }
 };
 
-// Update user by ID
+/**
+ * Met à jour un utilisateur par son ID
+ * @async
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.params - Les paramètres de la requête
+ * @param {number} req.params.id - L'ID de l'utilisateur à mettre à jour
+ * @param {Object} req.body - Les données à mettre à jour
+ * @param {string} [req.body.name] - Le nouveau prénom
+ * @param {string} [req.body.surname] - Le nouveau nom de famille
+ * @param {string} [req.body.email] - La nouvelle adresse email
+ * @param {string} [req.body.currentPassword] - Le mot de passe actuel
+ * @param {string} [req.body.newPassword] - Le nouveau mot de passe
+ * @param {string} [req.body.role] - Le nouveau rôle
+ * @param {boolean} [req.body.isPasswordGeneratedByAdmin] - Indique si le mot de passe a été généré par un admin
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} Message de confirmation et données mises à jour
+ * @throws {Error} Erreur 400 si le mot de passe actuel est incorrect
+ * @throws {Error} Erreur 404 si l'utilisateur n'est pas trouvé
+ * @throws {Error} Erreur 500 en cas d'erreur serveur
+ */
 const updateUserById = async (req, res) => {
     const { name, surname, email, currentPassword, newPassword, password, role, isPasswordGeneratedByAdmin } = req.body;
 
@@ -278,7 +415,17 @@ const updateUserById = async (req, res) => {
     }
 };
 
-// Delete user by ID
+/**
+ * Supprime un utilisateur par son ID
+ * @async
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.params - Les paramètres de la requête
+ * @param {number} req.params.id - L'ID de l'utilisateur à supprimer
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} Message de confirmation
+ * @throws {Error} Erreur 404 si l'utilisateur n'est pas trouvé
+ * @throws {Error} Erreur 500 en cas d'erreur serveur
+ */
 const deleteUserById = async (req, res) => {
     try {
         const user = await User.findByPk(req.params.id);
@@ -294,6 +441,17 @@ const deleteUserById = async (req, res) => {
     }
 };
 
+/**
+ * Rétrograde le rôle d'un utilisateur (Administrateur → Professeur → Etudiant)
+ * @async
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.params - Les paramètres de la requête
+ * @param {number} req.params.id - L'ID de l'utilisateur à rétrograder
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} Message de confirmation
+ * @throws {Error} Erreur 404 si l'utilisateur n'est pas trouvé
+ * @throws {Error} Erreur 500 en cas d'erreur serveur
+ */
 const retrogradeUser = async (req, res) => {
     try {
         const user = await User.findByPk(req.params.id);
@@ -301,7 +459,7 @@ const retrogradeUser = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Utilise les rôles en français
+
         switch (user.role) {
             case 'Administrateur':
                 user.role = 'Professeur';
@@ -318,6 +476,17 @@ const retrogradeUser = async (req, res) => {
     }
 };
 
+/**
+ * Promeut le rôle d'un utilisateur (Etudiant → Professeur → Administrateur)
+ * @async
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.params - Les paramètres de la requête
+ * @param {number} req.params.id - L'ID de l'utilisateur à promouvoir
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} Message de confirmation
+ * @throws {Error} Erreur 404 si l'utilisateur n'est pas trouvé
+ * @throws {Error} Erreur 500 en cas d'erreur serveur
+ */
 const upgradeUser = async (req, res) => {
     try {
         const user = await User.findByPk(req.params.id);
@@ -325,7 +494,7 @@ const upgradeUser = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Utilise les rôles en français
+
         switch (user.role) {
             case 'Etudiant':
                 user.role = 'Professeur';
