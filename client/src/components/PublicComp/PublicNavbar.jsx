@@ -2,22 +2,60 @@ import { useNavigate } from 'react-router-dom';
 import Logo from '../../Logo';
 import { useState } from 'react';
 
+/**
+ * @component PublicNavbar
+ * @description Barre de navigation principale pour les sections publiques de l'application.
+ * Affiche différentes options de menu et boutons selon que l'utilisateur est authentifié ou non.
+ * S'adapte aux écrans mobiles avec un menu hamburger.
+ * @returns {JSX.Element} Composant de barre de navigation responsive
+ */
 const PublicNavbar = () => {
+  /**
+   * @state {boolean} mobileMenuOpen - État contrôlant l'affichage du menu mobile
+   */
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  /**
+   * @const {string|null} authToken - Jeton d'authentification récupéré du stockage de session ou local
+   */
   const authToken = sessionStorage.getItem('authToken') || localStorage.getItem('authToken');
+  
+  /**
+   * @function handleLogout
+   * @description Gère la déconnexion de l'utilisateur en redirigeant vers la page de déconnexion
+   * @returns {void}
+   */
   const handleLogout = () => {
     window.location.href = '/logout';
   };
 
+  /**
+   * @const {Function} navigate - Hook de navigation de React Router
+   */
   const navigate = useNavigate();
+  
+  /**
+   * @const {boolean} isAuthenticated - Indique si l'utilisateur est authentifié
+   */
   const isAuthenticated = !!authToken;
 
+  /**
+   * @const {Array<Object>} navItems - Éléments de navigation principaux
+   * @property {string} href - URL de destination
+   * @property {string} label - Texte affiché pour le lien
+   */
   const navItems = [
     { href: '/courses-library', label: 'Cours' },
     { href: '/about', label: 'À propos' },
     { href: '/contact', label: 'Contact' },
   ];
 
+  /**
+   * @const {Array<Object>} signButtons - Boutons pour les utilisateurs non authentifiés
+   * @property {string} href - URL de destination
+   * @property {string} label - Texte affiché sur le bouton
+   * @property {string} className - Classes CSS pour le style du bouton
+   */
   const signButtons = [
     {
       href: '/sign',
@@ -31,6 +69,13 @@ const PublicNavbar = () => {
     },
   ];
 
+  /**
+   * @const {Array<Object>} authenticatedButtons - Boutons pour les utilisateurs authentifiés
+   * @property {string} [href] - URL de destination (optionnel)
+   * @property {Function} [onClick] - Fonction à exécuter au clic (optionnel)
+   * @property {string} label - Texte affiché sur le bouton
+   * @property {string} className - Classes CSS pour le style du bouton
+   */
   const authenticatedButtons = [
     {
       href: '/dashboard',
@@ -44,6 +89,11 @@ const PublicNavbar = () => {
     },
   ];
 
+  /**
+   * @function toggleMobileMenu
+   * @description Bascule l'état d'ouverture/fermeture du menu mobile
+   * @returns {void}
+   */
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
   };

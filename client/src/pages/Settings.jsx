@@ -1,3 +1,12 @@
+/**
+ * @fileoverview
+ * Interface pour gérer les paramètres utilisateur,
+ * y compris les informations de profil, les préférences de sécurité et les options de confidentialité. 
+ * Elle inclut également des fonctionnalités pour mettre à jour les profils utilisateurs, 
+ * gérer les modifications non enregistrées et administrer les tutoriels utilisateur.
+ * 
+ */
+
 import { useState, useEffect, lazy, Suspense } from 'react'; 
 import PropTypes from 'prop-types';
 import {
@@ -23,6 +32,18 @@ import { useTutorial } from '../contexts/TutorialContext';
 const SecurityTab = lazy(() => import('../components/settings/SecurityTab'));
 const PrivacyTab = lazy(() => import('../components/settings/PrivacyTab'));
 
+/**
+ * Composant de gestion des paramètres utilisateur permettant de modifier le profil,
+ * la sécurité et les préférences de confidentialité.
+ * 
+ * @component
+ * @param {Object} props - Les propriétés du composant
+ * @param {string} props.authToken - Token d'authentification de l'utilisateur
+ * @param {Function} props.refreshAvatar - Fonction pour rafraîchir l'avatar de l'utilisateur
+ * @param {string} [props.userAvatar] - URL de l'avatar de l'utilisateur
+ * @param {boolean} props.loadingAvatar - Indicateur de chargement de l'avatar
+ * @returns {JSX.Element} Interface des paramètres utilisateur
+ */
 const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
   const [activeTab, setActiveTab] = useState('general');
   const [dataSharing, setDataSharing] = useState({
@@ -68,6 +89,14 @@ const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
     fetchUserProfile();
   }, [authToken]);
 
+  /**
+   * Gère les changements dans les champs de formulaire
+   * 
+   * @function handleInputChange
+   * @param {Object} e - Événement de changement
+   * @param {string} e.target.id - Identifiant du champ modifié
+   * @param {string} e.target.value - Nouvelle valeur du champ
+   */
   const handleInputChange = e => {
     const { id, value } = e.target;
     setUser(prevUser => ({
@@ -77,6 +106,12 @@ const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
     setHasUnsavedChanges(true);
   };
 
+  /**
+   * Change l'onglet actif et affiche une confirmation si des modifications non enregistrées existent
+   * 
+   * @function handleTabChange
+   * @param {string} tab - Identifiant de l'onglet à afficher ('general', 'security', ou 'privacy')
+   */
   const handleTabChange = tab => {
     if (hasUnsavedChanges) {
       const confirmChange = window.confirm(
@@ -95,6 +130,12 @@ const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
     }
   };
 
+  /**
+   * Valide les données du formulaire utilisateur
+   * 
+   * @function validateForm
+   * @returns {boolean} Vrai si les données sont valides, faux sinon
+   */
   const validateForm = () => {
     const newErrors = {};
     if (!user.name) newErrors.name = 'Le prénom est requis.';
@@ -107,6 +148,13 @@ const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
     return Object.keys(newErrors).length === 0;
   };
 
+  /**
+   * Met à jour le profil utilisateur avec les données du formulaire
+   * 
+   * @async
+   * @function updateUserProfileHandler
+   * @throws {Error} Erreur lors de la mise à jour du profil
+   */
   const updateUserProfileHandler = async () => {
     try {
       if (!validateForm()) {
@@ -135,6 +183,12 @@ const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
     }
   };
 
+  /**
+   * Affiche le contenu correspondant à l'onglet actif
+   * 
+   * @function renderContent
+   * @returns {JSX.Element} Contenu de l'onglet sélectionné
+   */
   const renderContent = () => {
     switch (activeTab) {
       case 'general':
@@ -283,6 +337,12 @@ const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
     }
   };
 
+  /**
+   * Composant d'indicateur de chargement
+   * 
+   * @function Spinner
+   * @returns {JSX.Element} Animation de chargement
+   */
   const Spinner = () => (
     <div className="flex justify-center items-center">
       <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
@@ -454,10 +514,16 @@ const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
   );
 };
 
+/**
+ * Validation des types de propriétés pour le composant Settings
+ * 
+ * @type {Object}
+ */
 Settings.propTypes = {
   authToken: PropTypes.string.isRequired,
   refreshAvatar: PropTypes.func.isRequired,
   userAvatar: PropTypes.string,
   loadingAvatar: PropTypes.bool.isRequired,
 };
+
 export default Settings;

@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Composant de bibliothèque de cours affichant les cours et lives disponibles
+ * avec filtrage, recherche et fonctionnalités de modération.
+ */
+
 import { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { Toaster, toast } from 'react-hot-toast';
@@ -7,6 +12,14 @@ import { getAllCourses, disapproveCourse, unblockCourse, deleteCourse } from '..
 import { getAllLives, endLive, disapproveLive, blockLive, unblockLive, deleteLive } from '../API/LiveCaller';
 import CoursesLibraryTutorial from '../tutorials/CoursesLibraryTutorial';
 
+/**
+ * Composant principal pour afficher la bibliothèque de cours et lives.
+ * 
+ * @param {Object} props - Les propriétés du composant
+ * @param {string} props.authToken - Token d'authentification de l'utilisateur
+ * @param {string} props.userRole - Rôle de l'utilisateur (Administrateur, Professeur, Etudiant)
+ * @returns {JSX.Element} Composant de bibliothèque de cours rendu
+ */
 const Courses = ({ authToken, userRole }) => {
   const [selectedProfessor, setSelectedProfessor] = useState('Tous');
   const [selectedSubject, setSelectedSubject] = useState('Tous');
@@ -18,6 +31,14 @@ const Courses = ({ authToken, userRole }) => {
   const [error, setError] = useState(null);
 
 
+  /**
+   * Récupère les données des cours et lives depuis l'API.
+   * 
+   * @async
+   * @function fetchData
+   * @throws {Error} Lance une erreur en cas d'échec de récupération des données
+   * @returns {Promise<void>} Ne retourne rien
+   */
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -70,6 +91,11 @@ const Courses = ({ authToken, userRole }) => {
   }, [authToken]);
 
 
+  /**
+   * Filtre et trie le contenu en fonction des critères sélectionnés.
+   * 
+   * @type {Array<Object>}
+   */
   const filteredContent = content
     .filter(item => {
       const matchesType =
@@ -236,6 +262,28 @@ const Courses = ({ authToken, userRole }) => {
   );
 };
 
+/**
+ * Composant d'affichage d'une carte de contenu (cours ou live).
+ * Gère l'affichage des détails et les actions de modération.
+ * 
+ * @param {Object} props - Les propriétés du composant
+ * @param {Object} props.item - Objet contenant les détails du cours ou live
+ * @param {string} props.item.id - Identifiant unique du contenu
+ * @param {string} props.item.titre - Titre du contenu
+ * @param {string} props.item.date_creation - Date de création du contenu
+ * @param {string} props.item.status - Statut du contenu
+ * @param {string} props.item.block_reason - Raison du blocage (si bloqué)
+ * @param {('cours'|'live')} props.item.type - Type de contenu
+ * @param {Object} [props.item.live] - Détails du live (uniquement pour les lives)
+ * @param {string} props.item.description - Description du contenu
+ * @param {Object} [props.item.video] - Détails de la vidéo (uniquement pour les cours)
+ * @param {number} props.item.nombre_de_documents - Nombre de documents associés
+ * @param {string} props.item.professor - Nom du professeur
+ * @param {string} props.item.subject - Matière du cours
+ * @param {string} props.userRole - Rôle de l'utilisateur (Administrateur, Professeur, Etudiant)
+ * @param {Function} props.onActionDone - Fonction à appeler après une action réussie
+ * @returns {JSX.Element} Carte de contenu rendue
+ */
 const ContentCard = ({ item, userRole, onActionDone }) => {
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
@@ -252,26 +300,43 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
   const [modButtonHovered, setModButtonHovered] = useState(false);
 
 
+  /**
+   * Gère le déplacement de la souris sur un élément bloqué pour afficher l'infobulle.
+   * 
+   * @param {React.MouseEvent} e - Événement de mouvement de souris
+   */
   const handleBlockedMouseMove = (e) => {
     setTooltipPos({ x: e.clientX, y: e.clientY });
     if (!showBlockedTooltip) setShowBlockedTooltip(true);
   };
 
+  /**
+   * Gère la sortie de la souris d'un élément bloqué pour masquer l'infobulle.
+   */
   const handleBlockedMouseLeave = () => {
     setShowBlockedTooltip(false);
   };
 
+  /**
+   * Gère l'entrée de la souris sur la carte pour afficher des détails supplémentaires.
+   */
   const handleMouseEnter = () => {
     hoverTimeout.current = setTimeout(() => {
       setIsHovered(true);
     }, 300);
   };
 
+  /**
+   * Gère la sortie de la souris de la carte.
+   */
   const handleMouseLeave = () => {
     clearTimeout(hoverTimeout.current);
     setIsHovered(false);
   };
 
+  /**
+   * Gère le clic sur la carte pour naviguer vers la page de détail.
+   */
   const handleClick = () => {
     if (item.type === 'live') {
       navigate('/liveViewer?liveid=' + item.id);
@@ -280,11 +345,22 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
     }
   };
 
+  /**
+   * Gère l'ouverture/fermeture du menu de modération.
+   * 
+   * @param {React.MouseEvent} e - Événement de clic
+   */
   const handleMenuToggle = (e) => {
     e.stopPropagation();
     setShowModMenu((prev) => !prev);
   };
 
+  /**
+   * Gère les actions de modération (désapprouver, arrêter, débloquer, supprimer).
+   * 
+   * @param {string} action - Action à effectuer
+   * @param {React.MouseEvent} e - Événement de clic
+   */
   const handleModAction = (action, e) => {
     e.stopPropagation();
     setShowModMenu(false);
@@ -316,6 +392,12 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
     };
   }, []);
 
+  /**
+   * Formate une durée en secondes au format HH:MM:SS.
+   * 
+   * @param {number} seconds - Durée en secondes
+   * @returns {string} Durée formatée
+   */
   const formatDuration = seconds => {
     if (isNaN(seconds) || seconds < 0) {
       return 'NaN';
@@ -330,6 +412,13 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
     ].join(':');
   };
 
+  /**
+   * Désapprouve un cours avec justification.
+   * 
+   * @async
+   * @throws {Error} Lance une erreur si la désapprobation échoue
+   * @returns {Promise<void>} Ne retourne rien
+   */
   const handleCourseDisapproval = async () => {
     if (!justification.trim() || justification.length < 50) {
       toast.error('Veuillez fournir une justification d\'au moins 50 caractères pour la désapprobation.');
@@ -356,6 +445,12 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
     }
   };
 
+  /**
+   * Vérifie si une justification est valide (au moins 50 caractères).
+   * 
+   * @param {string} justification - Texte de justification
+   * @returns {boolean} Vrai si la justification est valide
+   */
   const isValidJustification = (justification) => {
     if (!justification.trim() || justification.length < 50) {
       toast.error('Veuillez fournir une justification d\'au moins 50 caractères.');
@@ -365,6 +460,13 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
   };
 
 
+  /**
+   * Désapprouve un live avec justification.
+   * 
+   * @async
+   * @throws {Error} Lance une erreur si la désapprobation échoue
+   * @returns {Promise<void>} Ne retourne rien
+   */
   const handleLiveDisapproval = async () => {
     if (!isValidJustification(justification)) return;
     try {
@@ -387,6 +489,13 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
     }
   };
 
+  /**
+   * Arrête un live en cours avec justification et le bloque.
+   * 
+   * @async
+   * @throws {Error} Lance une erreur si l'arrêt ou le blocage échoue
+   * @returns {Promise<void>} Ne retourne rien
+   */
   const handleStopLive = async () => {
     if (!isValidJustification(justification)) return;
 
@@ -416,6 +525,13 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
     }
   };
 
+  /**
+   * Débloque un cours précédemment bloqué.
+   * 
+   * @async
+   * @throws {Error} Lance une erreur si le déblocage échoue
+   * @returns {Promise<void>} Ne retourne rien
+   */
   const handleUnblockCourse = async () => {
     if (!window.confirm('Êtes-vous sûr de vouloir débloquer ce cours ?')) {
       return;
@@ -439,6 +555,13 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
     }
   };
 
+  /**
+   * Supprime définitivement un cours.
+   * 
+   * @async
+   * @throws {Error} Lance une erreur si la suppression échoue
+   * @returns {Promise<void>} Ne retourne rien
+   */
   const handleDeleteCourse = async () => {
     if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce cours ?')) {
       return;
@@ -463,6 +586,13 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
   };
 
 
+  /**
+   * Débloque un live précédemment bloqué.
+   * 
+   * @async
+   * @throws {Error} Lance une erreur si le déblocage échoue
+   * @returns {Promise<void>} Ne retourne rien
+   */
   const handleUnblockLive = async () => {
     if (!window.confirm('Êtes-vous sûr de vouloir débloquer ce live ?')) {
       return;
@@ -486,6 +616,13 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
     }
   };
 
+  /**
+   * Supprime définitivement un live.
+   * 
+   * @async
+   * @throws {Error} Lance une erreur si la suppression échoue
+   * @returns {Promise<void>} Ne retourne rien
+   */
   const handleDeleteLive = async () => {
     if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce live ?')) {
       return;
@@ -509,6 +646,12 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
     }
   };
 
+  /**
+   * Génère la modale de désapprobation d'un cours ou live.
+   * 
+   * @param {Object} item - Élément à désapprouver
+   * @returns {JSX.Element} Modale de désapprobation rendue
+   */
   const disapproveCourseModal = (item) => {
 
     return (
@@ -558,6 +701,13 @@ const ContentCard = ({ item, userRole, onActionDone }) => {
     );
   };
 
+  /**
+   * Génère la modale d'arrêt d'un live.
+   * 
+   * @param {Object} params - Paramètres de la modale
+   * @param {Object} params.live - Données du live à arrêter
+   * @returns {JSX.Element} Modale d'arrêt de live rendue
+   */
   const stopLiveModal = ({ live }) => {
 
     return (
@@ -943,6 +1093,15 @@ ContentCard.propTypes = {
 };
 
 
+/**
+ * Composant de liste déroulante pour les filtres.
+ * 
+ * @param {Object} props - Les propriétés du composant
+ * @param {string[]} props.items - Liste des options disponibles
+ * @param {string} props.selected - Option actuellement sélectionnée
+ * @param {Function} props.setSelected - Fonction pour mettre à jour l'option sélectionnée
+ * @returns {JSX.Element} Liste déroulante rendue
+ */
 const FilterDropdown = ({ items, selected, setSelected }) => (
   <select
     className="p-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"

@@ -4,7 +4,6 @@ import {
   LibraryBig,
   BookOpen,
   Settings,
-
   User,
   Users,
   FileVideo2,
@@ -17,17 +16,58 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import PropTypes from 'prop-types';
 
+/**
+ * Navigation bar component that displays different navigation items based on user role.
+ * 
+ * @component
+ * @param {Object} props - Component props
+ * @param {boolean} [props.isAdmin=false] - Flag indicating if the user has admin privileges
+ * @param {boolean} [props.isProf=false] - Flag indicating if the user has professor privileges
+ * @returns {JSX.Element} Rendered navigation bar component
+ * 
+ * @example
+ * // For a standard user
+ * <NavigationBar />
+ * 
+ * @example
+ * // For an admin user
+ * <NavigationBar isAdmin={true} />
+ * 
+ * @example
+ * // For a professor
+ * <NavigationBar isProf={true} />
+ */
 const NavigationBar = ({ isAdmin = false, isProf = false }) => {
+  /**
+   * Hook for programmatic navigation
+   * @type {function}
+   */
   const navigate = useNavigate();
+  
+  /**
+   * Hook to access the current location
+   * @type {Object}
+   */
   const location = useLocation();
+  
+  /**
+   * State to track the currently active route
+   * @type {[string, function]}
+   */
   const [activeRoute, setActiveRoute] = React.useState(location.pathname);
 
+  /**
+   * Effect hook to update the active route when location changes
+   */
   React.useEffect(() => {
-
     const currentPath = location.pathname;
     setActiveRoute(currentPath);
   }, [location.pathname]);
 
+  /**
+   * Navigation items configuration based on user role
+   * @type {Array<Object>}
+   */
   const navItems = [
     { icon: Home, path: '/dashboard', label: 'Home' },
     { icon: LibraryBig, path: '/courses-library', label: 'Cours' },
@@ -85,6 +125,11 @@ const NavigationBar = ({ isAdmin = false, isProf = false }) => {
     { icon: Settings, path: '/settings', label: 'Paramètres', className: 'settings' },
   ];
 
+  /**
+   * Handles navigation to the specified path
+   * 
+   * @param {string} path - The route path to navigate to
+   */
   const handleNavigation = path => {
     navigate(path);
   };

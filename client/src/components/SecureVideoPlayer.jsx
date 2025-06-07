@@ -6,8 +6,32 @@ import "./style/plyr.css";
 import Logo from "../Logo";
 import { Play } from "lucide-react";
 
+/**
+ * URL de base pour les requêtes API
+ * @constant {string}
+ */
 const BASE_URL = "/api";
 
+/**
+ * Composant de lecteur vidéo sécurisé utilisant Plyr avec authentification par token
+ *
+ * @component
+ * @param {Object} props - Les propriétés du composant
+ * @param {string} props.videoId - Identifiant unique de la vidéo à afficher
+ * @param {string} props.authToken - Token d'authentification pour accéder à la vidéo
+ * @param {string} [props.posterUrl] - URL optionnelle de l'image d'aperçu de la vidéo
+ * @param {Function} [props.onError] - Fonction de rappel optionnelle appelée en cas d'erreur de lecture
+ * @returns {JSX.Element} Composant de lecteur vidéo sécurisé
+ *
+ * @example
+ * // Exemple d'utilisation de base
+ * <SecureVideoPlayer
+ *   videoId="123456"
+ *   authToken="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *   posterUrl="/images/video-poster.jpg"
+ *   onError={(error) => console.error("Erreur de lecture:", error)}
+ * />
+ */
 const SecureVideoPlayer = ({ videoId, authToken, posterUrl, onError }) => {
   const videoRef = useRef(null);
   const wrapperRef = useRef(null);
@@ -21,7 +45,6 @@ const SecureVideoPlayer = ({ videoId, authToken, posterUrl, onError }) => {
       authToken
     )}`;
 
-
     videoRef.current.innerHTML = "";
     const source = document.createElement("source");
     source.src = src;
@@ -30,7 +53,7 @@ const SecureVideoPlayer = ({ videoId, authToken, posterUrl, onError }) => {
 
     videoRef.current.poster = posterUrl || "";
 
-    playerRef.current = new Plyr('video', {
+    playerRef.current = new Plyr("video", {
       controls: [
         "play",
         "progress",
@@ -44,7 +67,7 @@ const SecureVideoPlayer = ({ videoId, authToken, posterUrl, onError }) => {
         enabled: true,
         fallback: true,
         iosNative: false,
-        container: '.player-wrapper',
+        container: ".player-wrapper",
       },
     });
 
@@ -76,12 +99,7 @@ const SecureVideoPlayer = ({ videoId, authToken, posterUrl, onError }) => {
       ref={wrapperRef}
       className="player-wrapper video-player-wrapper rounded-lg overflow-hidden shadow-md relative"
     >
-      <video
-        ref={videoRef}
-        className="plyr"
-        playsInline
-
-      />
+      <video ref={videoRef} className="plyr" playsInline />
       <button
         ref={playButtonRef}
         className="custom-play-btn"
@@ -99,6 +117,9 @@ const SecureVideoPlayer = ({ videoId, authToken, posterUrl, onError }) => {
   );
 };
 
+/**
+ * Validation des types de propriétés pour le composant SecureVideoPlayer
+ */
 SecureVideoPlayer.propTypes = {
   videoId: PropTypes.string.isRequired,
   authToken: PropTypes.string.isRequired,

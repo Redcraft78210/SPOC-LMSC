@@ -4,6 +4,10 @@ import { jwtDecode } from 'jwt-decode';
 import PropTypes from 'prop-types';
 import { verifyTwoFA, refreshTwoFASetup, firstLogin, check2FAStatus } from '../API/AuthCaller';
 
+/**
+ * @constant {Object} errorMessages
+ * @description Dictionnaire des messages d'erreur correspondant aux différents codes d'authentification.
+ */
 const errorMessages = {
   'auth/invalid-credentials': 'Identifiants incorrects',
   'auth/missing-fields': 'Veuillez remplir tous les champs',
@@ -20,6 +24,16 @@ const errorMessages = {
   default: 'Une erreur est survenue. Veuillez réessayer.',
 };
 
+/**
+ * @component FirstLogin
+ * @description Composant qui gère la première connexion d'un utilisateur, incluant la définition d'un
+ * mot de passe et la configuration de l'authentification à deux facteurs (2FA).
+ * 
+ * @param {Object} props - Propriétés du composant
+ * @param {string} props.token - Token d'authentification pour la première connexion
+ * @param {Function} props.setAuth - Fonction pour mettre à jour l'état d'authentification
+ * @returns {JSX.Element} Interface de première connexion ou de configuration 2FA
+ */
 const FirstLogin = ({ token, setAuth }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -57,10 +71,24 @@ const FirstLogin = ({ token, setAuth }) => {
     !!localStorage.getItem('authToken')
   );
 
+  /**
+   * @function validatePassword
+   * @description Vérifie si le mot de passe respecte les critères de sécurité (au moins 12 caractères, 
+   * une majuscule et un caractère spécial).
+   * 
+   * @param {string} pw - Mot de passe à valider
+   * @returns {boolean} Indique si le mot de passe est valide
+   */
   const validatePassword = pw => {
     return /^(?=.*[A-Z])(?=.*[!@#$%^&*])(?=.{12,})/.test(pw);
   };
 
+  /**
+   * @function useEffect
+   * @description Gère le rafraîchissement périodique du token temporaire pour la configuration 2FA.
+   * 
+   * @throws {Error} Erreur si le rafraîchissement du token échoue
+   */
   useEffect(() => {
     let intervalId;
     let timeoutId;
@@ -125,6 +153,10 @@ const FirstLogin = ({ token, setAuth }) => {
     };
   }, [setTempToken, manualSecret, qrCodeData, tempToken]);
 
+  /**
+   * @function useEffect
+   * @description Vérifie si l'utilisateur a déjà configuré l'authentification à deux facteurs.
+   */
   useEffect(() => {
 
     const check2FAStatusForUser = async () => {
@@ -143,6 +175,14 @@ const FirstLogin = ({ token, setAuth }) => {
     check2FAStatusForUser();
   }, [token]);
 
+  /**
+   * @function handleSubmit
+   * @description Gère la soumission du formulaire de première connexion avec validation du nom 
+   * d'utilisateur et du mot de passe.
+   * 
+   * @param {Event} e - Événement de soumission du formulaire
+   * @throws {Error} Erreur si la création du compte échoue
+   */
   const handleSubmit = async e => {
     e.preventDefault();
     setError(null);
@@ -221,8 +261,21 @@ const FirstLogin = ({ token, setAuth }) => {
     }
   };
 
+  /**
+   * @function allDigitsFilled
+   * @description Vérifie si tous les champs du code 2FA sont remplis.
+   * 
+   * @returns {boolean} True si tous les chiffres sont remplis
+   */
   const allDigitsFilled = () => twoFADigits.every(digit => digit !== '');
 
+  /**
+   * @function handleDigitChange
+   * @description Gère le changement de valeur dans un champ du code 2FA et déplace le focus.
+   * 
+   * @param {number} index - Index du chiffre modifié
+   * @param {string} value - Nouvelle valeur du chiffre
+   */
   const handleDigitChange = (index, value) => {
 
     if (!/^[0-9]?$/.test(value)) return;
@@ -237,6 +290,13 @@ const FirstLogin = ({ token, setAuth }) => {
     }
   };
 
+  /**
+   * @function handleDigitKeyDown
+   * @description Gère les événements clavier pour la navigation entre les champs du code 2FA.
+   * 
+   * @param {number} index - Index du champ actuel
+   * @param {KeyboardEvent} e - Événement clavier
+   */
   const handleDigitKeyDown = (index, e) => {
 
     if (e.key === 'Backspace') {
@@ -274,6 +334,14 @@ const FirstLogin = ({ token, setAuth }) => {
     }
   };
 
+  /**
+   * @function handleDigitPaste
+   * @description Gère le collage d'un code dans les champs de saisie 2FA, en distribuant 
+   * automatiquement les chiffres.
+   * 
+   * @param {number} index - Index du champ où le collage est effectué
+   * @param {ClipboardEvent} e - Événement de collage
+   */
   const handleDigitPaste = (index, e) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text').trim();
@@ -300,6 +368,13 @@ const FirstLogin = ({ token, setAuth }) => {
     }
   };
 
+  /**
+   * @function handle2FASubmit
+   * @description Gère la vérification du code 2FA saisi par l'utilisateur.
+   * 
+   * @param {Event} e - Événement de soumission du formulaire
+   * @throws {Error} Erreur si la vérification du code échoue
+   */
   const handle2FASubmit = async e => {
     e.preventDefault();
     setError(null);
@@ -344,6 +419,7 @@ const FirstLogin = ({ token, setAuth }) => {
     }
   };
 
+  // Rendu conditionnel selon l'état de la configuration 2FA
   if (is2FARefreshing) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">

@@ -1,6 +1,22 @@
+/**
+ * @fileoverview
+ * Composant qui affiche les conditions d'utilisation de la plateforme SPOC-LMSC.
+ * Présente l'ensemble des conditions générales régissant l'utilisation de la plateforme,
+ * organisées par sections thématiques incluant présentation de l'application, inscription,
+ * droits et responsabilités, propriété intellectuelle, et autres dispositions légales.
+ */
+
 import PublicNavbar from '../../components/PublicComp/PublicNavbar';
 import Footer from '../../components/PublicComp/Footer';
 
+/**
+ * Composant de page affichant les conditions générales d'utilisation complètes
+ * de la plateforme SPOC-LMSC. La page est structurée avec une bannière d'en-tête,
+ * des sections détaillées pour chaque aspect des conditions, et un pied de page.
+ * 
+ * @component
+ * @returns {JSX.Element} Page complète des conditions d'utilisation avec sections détaillées
+ */
 const TermsOfUse = () => {
   return (
     <div className="min-h-screen bg-gray-50">

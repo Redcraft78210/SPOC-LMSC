@@ -1,6 +1,21 @@
+/**
+ * @fileoverview
+ * Composant affichant les mentions légales complètes de la plateforme SPOC-LMSC.
+ * Inclut des informations sur l'éditeur du site, l'hébergement, la propriété intellectuelle,
+ * la protection des données personnelles, les conditions d'utilisation, les cookies,
+ * les limitations de responsabilité et les informations de contact.
+ */
 import PublicNavbar from '../../components/PublicComp/PublicNavbar';
 import Footer from '../../components/PublicComp/Footer';
 
+
+/**
+ * Composant de page affichant les mentions légales de la plateforme.
+ * Structure les informations légales en sections distinctes avec une mise en forme claire.
+ * 
+ * @component
+ * @returns {JSX.Element} Page complète des mentions légales avec en-tête, contenu et pied de page
+ */
 const LegalNotice = () => {
   return (
     <div className="min-h-screen bg-gray-50">
@@ -23,7 +38,7 @@ const LegalNotice = () => {
           <h2 className="text-3xl font-bold text-gray-800 mb-8 text-center">
             Mentions Légales SPOC-LMSC
           </h2>
-          
+
           {/* Legal sections */}
           <div className="space-y-10">
             <div>
@@ -63,18 +78,18 @@ const LegalNotice = () => {
               <h3 className="text-2xl font-bold text-gray-800 mb-4">3. Propriété intellectuelle</h3>
               <div className="pl-6 space-y-3">
                 <p className="text-gray-700">
-                  L&apos;ensemble des éléments constituant le site SPOC-LMSC (textes, graphismes, logiciels, images, 
-                  vidéos, sons, plans, logos, marques, etc.) sont la propriété exclusive de SPOC-LMSC ou 
-                  font l&apos;objet d&apos;une autorisation d&apos;utilisation. Ces éléments sont protégés par les lois 
+                  L&apos;ensemble des éléments constituant le site SPOC-LMSC (textes, graphismes, logiciels, images,
+                  vidéos, sons, plans, logos, marques, etc.) sont la propriété exclusive de SPOC-LMSC ou
+                  font l&apos;objet d&apos;une autorisation d&apos;utilisation. Ces éléments sont protégés par les lois
                   relatives à la propriété intellectuelle.
                 </p>
                 <p className="text-gray-700">
-                  Ce logiciel est distribué sous licence GNU General Public License v3, dont les termes 
+                  Ce logiciel est distribué sous licence GNU General Public License v3, dont les termes
                   complets sont disponibles dans le fichier LICENSE.
                 </p>
                 <p className="text-gray-700">
-                  Toute reproduction, représentation, modification, publication, adaptation, totale ou 
-                  partielle des éléments du site, quel que soit le moyen ou le procédé utilisé, est 
+                  Toute reproduction, représentation, modification, publication, adaptation, totale ou
+                  partielle des éléments du site, quel que soit le moyen ou le procédé utilisé, est
                   interdite sans autorisation préalable.
                 </p>
               </div>
@@ -86,7 +101,7 @@ const LegalNotice = () => {
                 <div>
                   <h4 className="text-xl font-semibold text-gray-800 mb-2">4.1 Collecte des données personnelles</h4>
                   <p className="text-gray-700 mb-2">
-                    Dans le cadre de l&apos;utilisation de SPOC-LMSC, nous collectons et traitons les données 
+                    Dans le cadre de l&apos;utilisation de SPOC-LMSC, nous collectons et traitons les données
                     personnelles suivantes :
                   </p>
                   <ul className="list-disc pl-6 space-y-1">
@@ -127,8 +142,8 @@ const LegalNotice = () => {
                 <div>
                   <h4 className="text-xl font-semibold text-gray-800 mb-2">4.4 Durée de conservation</h4>
                   <p className="text-gray-700">
-                    Les données personnelles sont conservées pour la durée nécessaire à la fourniture des 
-                    services. En cas de suppression de compte, vos données seront anonymisées dans un délai 
+                    Les données personnelles sont conservées pour la durée nécessaire à la fourniture des
+                    services. En cas de suppression de compte, vos données seront anonymisées dans un délai
                     de 30 jours conformément à notre politique de suppression.
                   </p>
                 </div>
@@ -136,7 +151,7 @@ const LegalNotice = () => {
                 <div>
                   <h4 className="text-xl font-semibold text-gray-800 mb-2">4.5 Droits des utilisateurs</h4>
                   <p className="text-gray-700 mb-2">
-                    Conformément au Règlement Général sur la Protection des Données (RGPD), vous disposez 
+                    Conformément au Règlement Général sur la Protection des Données (RGPD), vous disposez
                     des droits suivants :
                   </p>
                   <ul className="list-disc pl-6 space-y-1 mb-3">
@@ -159,7 +174,7 @@ const LegalNotice = () => {
                 <div>
                   <h4 className="text-xl font-semibold text-gray-800 mb-2">4.6 Transferts de données</h4>
                   <p className="text-gray-700">
-                    Nous nous engageons à ne pas transférer vos données personnelles en dehors de l&apos;Union 
+                    Nous nous engageons à ne pas transférer vos données personnelles en dehors de l&apos;Union
                     Européenne sans garanties appropriées.
                   </p>
                 </div>
@@ -167,7 +182,7 @@ const LegalNotice = () => {
                 <div>
                   <h4 className="text-xl font-semibold text-gray-800 mb-2">4.7 Sécurité des données</h4>
                   <p className="text-gray-700 mb-2">
-                    Nous mettons en œuvre des mesures techniques et organisationnelles appropriées pour 
+                    Nous mettons en œuvre des mesures techniques et organisationnelles appropriées pour
                     protéger vos données personnelles, notamment :
                   </p>
                   <ul className="list-disc pl-6 space-y-1">
@@ -185,7 +200,7 @@ const LegalNotice = () => {
                 <div>
                   <h4 className="text-xl font-semibold text-gray-800 mb-2">5.1 Accès au service</h4>
                   <p className="text-gray-700">
-                    L&apos;accès à SPOC-LMSC nécessite un code d&apos;invitation valide et la création d&apos;un compte 
+                    L&apos;accès à SPOC-LMSC nécessite un code d&apos;invitation valide et la création d&apos;un compte
                     utilisateur. L&apos;inscription est soumise à l&apos;acceptation des présentes conditions.
                   </p>
                 </div>
@@ -205,7 +220,7 @@ const LegalNotice = () => {
                 <div>
                   <h4 className="text-xl font-semibold text-gray-800 mb-2">5.3 Modération et sanctions</h4>
                   <p className="text-gray-700 mb-2">
-                    En cas de non-respect des règles d&apos;utilisation, les modérateurs peuvent prendre les 
+                    En cas de non-respect des règles d&apos;utilisation, les modérateurs peuvent prendre les
                     mesures suivantes :
                   </p>
                   <ul className="list-disc pl-6 space-y-1">
@@ -219,8 +234,8 @@ const LegalNotice = () => {
                 <div>
                   <h4 className="text-xl font-semibold text-gray-800 mb-2">5.4 Suppression de compte</h4>
                   <p className="text-gray-700">
-                    Vous pouvez demander la suppression de votre compte depuis les paramètres. La suppression 
-                    sera effective 30 jours après votre demande. Pendant cette période, vous pouvez annuler 
+                    Vous pouvez demander la suppression de votre compte depuis les paramètres. La suppression
+                    sera effective 30 jours après votre demande. Pendant cette période, vous pouvez annuler
                     la suppression en vous reconnectant.
                   </p>
                 </div>
@@ -233,8 +248,8 @@ const LegalNotice = () => {
                 <div>
                   <h4 className="text-xl font-semibold text-gray-800 mb-2">6.1 Qu&apos;est-ce qu&apos;un cookie ?</h4>
                   <p className="text-gray-700">
-                    Un cookie est un petit fichier texte déposé sur votre appareil lors de votre visite sur 
-                    notre plateforme. Les cookies nous permettent de reconnaître votre appareil et de stocker 
+                    Un cookie est un petit fichier texte déposé sur votre appareil lors de votre visite sur
+                    notre plateforme. Les cookies nous permettent de reconnaître votre appareil et de stocker
                     des informations sur vos préférences.
                   </p>
                 </div>
@@ -252,7 +267,7 @@ const LegalNotice = () => {
                 <div>
                   <h4 className="text-xl font-semibold text-gray-800 mb-2">6.3 Gestion des cookies</h4>
                   <p className="text-gray-700">
-                    Vous pouvez configurer votre navigateur pour refuser les cookies. Cependant, certaines 
+                    Vous pouvez configurer votre navigateur pour refuser les cookies. Cependant, certaines
                     fonctionnalités essentielles pourraient ne pas fonctionner correctement.
                   </p>
                 </div>
@@ -265,8 +280,8 @@ const LegalNotice = () => {
                 <div>
                   <h4 className="text-xl font-semibold text-gray-800 mb-2">7.1 Disponibilité du service</h4>
                   <p className="text-gray-700">
-                    SPOC-LMSC s&apos;efforce d&apos;assurer la disponibilité du service 24h/24 et 7j/7. Toutefois, 
-                    nous ne pouvons garantir une disponibilité sans interruption et déclinons toute 
+                    SPOC-LMSC s&apos;efforce d&apos;assurer la disponibilité du service 24h/24 et 7j/7. Toutefois,
+                    nous ne pouvons garantir une disponibilité sans interruption et déclinons toute
                     responsabilité en cas d&apos;indisponibilité temporaire.
                   </p>
                 </div>
@@ -274,8 +289,8 @@ const LegalNotice = () => {
                 <div>
                   <h4 className="text-xl font-semibold text-gray-800 mb-2">7.2 Contenu généré par les utilisateurs</h4>
                   <p className="text-gray-700">
-                    SPOC-LMSC n&apos;exerce pas de contrôle préalable sur le contenu publié par les utilisateurs 
-                    et ne peut être tenu responsable des contenus illicites ou inappropriés avant leur 
+                    SPOC-LMSC n&apos;exerce pas de contrôle préalable sur le contenu publié par les utilisateurs
+                    et ne peut être tenu responsable des contenus illicites ou inappropriés avant leur
                     signalement.
                   </p>
                 </div>
@@ -283,10 +298,10 @@ const LegalNotice = () => {
                 <div>
                   <h4 className="text-xl font-semibold text-gray-800 mb-2">7.3 Garanties et responsabilités</h4>
                   <p className="text-gray-700">
-                    Conformément à la licence GNU GPL v3, le programme est fourni &quot;tel quel&quot;, sans aucune 
-                    garantie, explicite ou implicite, concernant sa qualité et ses performances. Les auteurs 
-                    ou détenteurs du copyright ne pourront être tenus responsables des dommages, de quelque 
-                    nature qu&apos;ils soient, causés par l&apos;utilisation ou l&apos;impossibilité d&apos;utilisation du 
+                    Conformément à la licence GNU GPL v3, le programme est fourni &quot;tel quel&quot;, sans aucune
+                    garantie, explicite ou implicite, concernant sa qualité et ses performances. Les auteurs
+                    ou détenteurs du copyright ne pourront être tenus responsables des dommages, de quelque
+                    nature qu&apos;ils soient, causés par l&apos;utilisation ou l&apos;impossibilité d&apos;utilisation du
                     programme.
                   </p>
                 </div>
@@ -297,7 +312,7 @@ const LegalNotice = () => {
               <h3 className="text-2xl font-bold text-gray-800 mb-4">8. Loi applicable et juridiction</h3>
               <div className="pl-6">
                 <p className="text-gray-700">
-                  Les présentes mentions légales sont soumises au droit français. En cas de litige, les 
+                  Les présentes mentions légales sont soumises au droit français. En cas de litige, les
                   tribunaux français seront seuls compétents.
                 </p>
               </div>
@@ -307,7 +322,7 @@ const LegalNotice = () => {
               <h3 className="text-2xl font-bold text-gray-800 mb-4">9. Contact</h3>
               <div className="pl-6">
                 <p className="text-gray-700">
-                  Pour toute question concernant ces mentions légales, vous pouvez nous contacter à l&apos;adresse 
+                  Pour toute question concernant ces mentions légales, vous pouvez nous contacter à l&apos;adresse
                   suivante : support@spoc-lmsc.com
                 </p>
               </div>

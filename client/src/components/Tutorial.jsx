@@ -1,8 +1,43 @@
+/**
+ * @module Tutorial
+ * @description Un composant React qui intègre react-joyride pour créer des tutoriels interactifs
+ * dans l'application. Gère automatiquement le suivi des tutoriels complétés via TutorialContext.
+ */
 import { useState, useEffect } from 'react';
 import Joyride, { STATUS } from 'react-joyride';
 import PropTypes from 'prop-types';
 import { useTutorial } from '../contexts/TutorialContext';
 
+/**
+ * Composant de tutoriel interactif pour guider les utilisateurs
+ * 
+ * @component
+ * @param {Object} props - Propriétés du composant
+ * @param {Array} props.steps - Étapes du tutoriel au format react-joyride
+ * @param {string} props.tutorialId - Identifiant unique du tutoriel pour suivre son état de complétion
+ * @param {boolean} [props.run=false] - Détermine si le tutoriel doit démarrer automatiquement
+ * @param {boolean} [props.continuous=true] - Si true, navigation continue entre les étapes
+ * @param {boolean} [props.showSkipButton=true] - Affiche ou masque le bouton pour ignorer le tutoriel
+ * @param {Function} [props.onFinish=()=>{}] - Fonction appelée lorsque le tutoriel est terminé ou ignoré
+ * @param {Object} [props.styles={}] - Styles personnalisés pour le tutoriel
+ * @returns {React.Component} Composant Joyride configuré
+ * 
+ * @example
+ * // Utilisation basique du tutoriel
+ * const steps = [
+ *   {
+ *     target: '.mon-element',
+ *     content: 'Voici comment utiliser cette fonctionnalité',
+ *     disableBeacon: true
+ *   }
+ * ];
+ * 
+ * <Tutorial 
+ *   steps={steps}
+ *   tutorialId="tutoriel-accueil"
+ *   run={isFirstVisit}
+ * />
+ */
 const Tutorial = ({
   steps,
   tutorialId,
@@ -15,12 +50,21 @@ const Tutorial = ({
   const [runTutorial, setRunTutorial] = useState(false);
   const { isTutorialCompleted, completeTutorial } = useTutorial();
 
+  /**
+   * Démarre le tutoriel s'il doit être exécuté et n'a pas déjà été complété
+   */
   useEffect(() => {
     if (run && !isTutorialCompleted(tutorialId)) {
       setRunTutorial(true);
     }
   }, [run, tutorialId, isTutorialCompleted]);
 
+  /**
+   * Gère les événements de callback de Joyride
+   * 
+   * @param {Object} data - Données de l'événement Joyride
+   * @param {string} data.status - Statut actuel du tutoriel
+   */
   const handleJoyrideCallback = (data) => {
     const { status } = data;
 
@@ -31,6 +75,10 @@ const Tutorial = ({
     }
   };
 
+  /**
+   * Styles par défaut pour le tutoriel
+   * @type {Object}
+   */
   const defaultStyles = {
     options: {
       zIndex: 10000,
@@ -58,6 +106,10 @@ const Tutorial = ({
     },
   };
 
+  /**
+   * Fusion des styles par défaut avec les styles personnalisés
+   * @type {Object}
+   */
   const mergedStyles = {
     ...defaultStyles,
     ...styles

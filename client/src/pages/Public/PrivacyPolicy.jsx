@@ -1,6 +1,22 @@
+/**
+ * @fileoverview
+ * Composant affichant la politique de confidentialité de la plateforme SPOC-LMSC.
+ * Présente en détail comment les données personnelles des utilisateurs sont collectées,
+ * utilisées, partagées et protégées.
+ */
+
 import PublicNavbar from '../../components/PublicComp/PublicNavbar';
 import Footer from '../../components/PublicComp/Footer';
 
+/**
+ * Composant de page pour la politique de confidentialité.
+ * Affiche une page structurée contenant les différentes sections de la politique de confidentialité,
+ * notamment l'introduction, la collecte des données, l'utilisation, le partage,
+ * la sécurité, la conservation, les droits des utilisateurs et les informations de contact.
+ * 
+ * @component
+ * @returns {JSX.Element} Page complète de la politique de confidentialité
+ */
 const PrivacyPolicy = () => {
   return (
     <div className="min-h-screen bg-gray-50">

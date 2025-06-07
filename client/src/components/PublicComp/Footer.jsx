@@ -1,18 +1,35 @@
 import { useNavigate } from 'react-router-dom';
 
+/**
+ * Footer component that displays navigation links, legal information, and social media icons.
+ * 
+ * @returns {JSX.Element} A footer element with navigation, legal links and social media icons
+ */
 const Footer = () => {
+  /**
+   * Array of primary navigation items for the footer
+   * @type {Array<{name: string, href: string}>}
+   */
   const navItems = [
     { name: 'À propos', href: '/about' },
     { name: 'Tous les cours', href: '/courses-library' },
     { name: 'Contact', href: '/contact' },
   ];
 
+  /**
+   * Array of legal page links for the footer
+   * @type {Array<{name: string, href: string}>}
+   */
   const footerPages = [
     { name: 'Politique de Confidentialité', href: '/privacy' },
     { name: 'Conditions d\'Utilisation', href: '/terms' },
     { name: 'Mentions Légales', href: '/legal' },
   ];
 
+  /**
+   * React Router's navigation function
+   * @type {Function}
+   */
   const navigate = useNavigate();
 
   return (

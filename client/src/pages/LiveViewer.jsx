@@ -19,12 +19,28 @@ import {
 import { Toaster, toast } from 'react-hot-toast';
 import { ShieldEllipsis, ShieldBan, ShieldAlert } from 'lucide-react';
 
+/**
+ * Seuil d'inactivité de l'utilisateur en millisecondes (1 minute)
+ * @constant {number}
+ */
 const INACTIVITY_THRESHOLD = 60000;
+
+/**
+ * Durée de dix minutes en secondes pour le suivi d'engagement
+ * @constant {number}
+ */
 const TEN_MINUTES = 600;
 
-const WSS_BASE_URL = "wss://172.16.87.30/api"
+/**
+ * URL de base pour les connexions WebSocket
+ * @constant {string}
+ */
+const WSS_BASE_URL = "wss://172.16.87.30/api";
 
-
+/**
+ * Composant d'affichage d'un spinner de chargement
+ * @returns {JSX.Element} Élément JSX représentant un spinner animé
+ */
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center h-screen" role="status">
     <svg
@@ -51,7 +67,13 @@ const LoadingSpinner = () => (
   </div>
 );
 
-
+/**
+ * Composant d'affichage d'un message d'erreur avec option de retry
+ * @param {Object} props - Propriétés du composant
+ * @param {string} props.message - Message d'erreur à afficher
+ * @param {Function} [props.onRetry] - Fonction appelée lors du clic sur "Réessayer"
+ * @returns {JSX.Element} Élément JSX représentant le message d'erreur
+ */
 const ErrorMessage = ({ message, onRetry }) => (
   <div className="flex flex-col items-center justify-center h-screen gap-4">
     <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative max-w-md">
@@ -69,11 +91,16 @@ const ErrorMessage = ({ message, onRetry }) => (
     )}
   </div>
 );
+
 ErrorMessage.propTypes = {
   message: PropTypes.string.isRequired,
   onRetry: PropTypes.func,
 };
 
+/**
+ * Composant affiché lorsqu'un live n'est pas trouvé
+ * @returns {JSX.Element} Élément JSX représentant la page "Live non trouvé"
+ */
 const LiveNotFound = () => {
   const navigate = useNavigate();
   return (
@@ -95,7 +122,15 @@ const LiveNotFound = () => {
   );
 };
 
+/**
+ * Composant principal pour visualiser un live streaming
+ * @param {Object} props - Propriétés du composant
+ * @param {string} props.authToken - Token d'authentification JWT
+ * @param {string} props.userRole - Rôle de l'utilisateur (ex: 'Administrateur')
+ * @returns {JSX.Element} Élément JSX représentant la page de visualisation du live
+ */
 const LiveViewer = ({ authToken, userRole }) => {
+  // États pour la gestion du stream
   const [streamData, setStreamData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -104,12 +139,19 @@ const LiveViewer = ({ authToken, userRole }) => {
   const userActivityTimeout = useRef();
   const navigate = useNavigate();
 
-
+  // États pour le suivi d'engagement
   const [activeViewTime, setActiveViewTime] = useState(0);
   const [isPageVisible, setIsPageVisible] = useState(true);
   const [hasReachedTenMinutes, setHasReachedTenMinutes] = useState(false);
 
 
+  /**
+   * Effect pour décoder le token JWT et extraire l'ID utilisateur
+   * Se déclenche lors du changement du token d'authentification
+   * @effect
+   * @listens {string} authToken - Token JWT à décoder
+   * @throws {Error} Si le décodage du token échoue
+   */
   useEffect(() => {
     try {
       const decodedToken = jwtDecode(authToken);
@@ -121,6 +163,12 @@ const LiveViewer = ({ authToken, userRole }) => {
   }, [authToken]);
 
 
+  /**
+   * Effect pour extraire l'ID du stream depuis les paramètres d'URL
+   * Se déclenche une seule fois au montage du composant
+   * @effect
+   * @listens {} - Exécuté uniquement au montage (tableau de dépendances vide)
+   */
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const liveId = params.get('liveid');
@@ -128,6 +176,17 @@ const LiveViewer = ({ authToken, userRole }) => {
   }, []);
 
 
+  /**
+   * Effect pour gérer le suivi d'engagement utilisateur et les événements d'activité
+   * Configure les listeners d'événements pour détecter l'activité utilisateur,
+   * gère la visibilité de la page et démarre le tracking du temps de visionnage actif
+   * @effect
+   * @listens {Object} streamData - Données du stream pour vérifier la disponibilité
+   * @listens {boolean} isPageVisible - État de visibilité de la page
+   * @listens {boolean} hasReachedTenMinutes - Flag pour éviter les logs multiples
+   * @listens {string} authToken - Token d'authentification pour les logs
+   * @listens {string} streamId - ID du stream pour les logs d'engagement
+   */
   useEffect(() => {
     if (!streamData) return;
 
@@ -198,6 +257,11 @@ const LiveViewer = ({ authToken, userRole }) => {
     }
   }, [authToken, streamId, activeViewTime]);
 
+  /**
+   * Récupère les données du stream depuis l'API
+   * @param {AbortSignal} signal - Signal d'annulation pour la requête
+   * @throws {Error} En cas d'échec de récupération des données
+   */
   const fetchStreamData = useCallback(async signal => {
     try {
       setLoading(true);
@@ -222,6 +286,14 @@ const LiveViewer = ({ authToken, userRole }) => {
     }
   }, [streamId]);
 
+  /**
+   * Effect pour récupérer les données du stream depuis l'API
+   * Se déclenche quand l'ID du stream est disponible ou change
+   * @effect
+   * @listens {Function} fetchStreamData - Fonction de récupération des données
+   * @listens {string} streamId - ID du stream à récupérer
+   * @returns {Function} Fonction de nettoyage pour annuler la requête
+   */
   useEffect(() => {
     if (!streamId) return;
 
@@ -249,7 +321,14 @@ const LiveViewer = ({ authToken, userRole }) => {
     };
   }, []);
 
-
+  /**
+   * Calcule le temps restant avant le début d'un live programmé
+   * @param {string} dateString - Date de début au format ISO string
+   * @returns {Object|null} Objet contenant les jours, heures et minutes restants, ou null si la date est passée
+   * @returns {number} returns.days - Nombre de jours restants
+   * @returns {number} returns.hours - Nombre d'heures restantes
+   * @returns {number} returns.minutes - Nombre de minutes restantes
+   */
   const calculateTimeRemaining = useCallback((dateString) => {
     const now = new Date();
     const scheduledDate = new Date(dateString);
@@ -277,6 +356,11 @@ const LiveViewer = ({ authToken, userRole }) => {
     setShowModMenu((prev) => !prev);
   };
 
+  /**
+   * Gère les actions de modération depuis le menu
+   * @param {string} action - Type d'action ('disapprove', 'stop', 'unblock', 'delete')
+   * @param {Event} e - Événement de clic
+   */
   const handleModAction = (action, e) => {
     e.stopPropagation();
     setShowModMenu(false);
@@ -291,6 +375,10 @@ const LiveViewer = ({ authToken, userRole }) => {
     }
   };
 
+  /**
+   * Gère la désapprobation d'un live avec justification
+   * @throws {Error} En cas d'échec de la désapprobation
+   */
   const handleLiveDisapproval = async () => {
     if (!justification.trim() || justification.length < 50) {
       toast.error('Veuillez fournir une justification d\'au moins 50 caractères pour la désapprobation.');
@@ -315,6 +403,10 @@ const LiveViewer = ({ authToken, userRole }) => {
     }
   };
 
+  /**
+   * Gère l'arrêt forcé d'un live en cours avec justification
+   * @throws {Error} En cas d'échec de l'arrêt du live
+   */
   const handleStopLive = async () => {
     if (!justification.trim() || justification.length < 50) {
       toast.error('Veuillez fournir une justification d\'au moins 50 caractères.');
@@ -346,6 +438,10 @@ const LiveViewer = ({ authToken, userRole }) => {
     }
   };
 
+  /**
+   * Gère le déblocage d'un live bloqué
+   * @throws {Error} En cas d'échec du déblocage
+   */
   const handleUnblockLive = async () => {
     if (!window.confirm('Êtes-vous sûr de vouloir débloquer ce live ?')) {
       return;
@@ -368,6 +464,10 @@ const LiveViewer = ({ authToken, userRole }) => {
     }
   };
 
+  /**
+   * Gère la suppression définitive d'un live
+   * @throws {Error} En cas d'échec de la suppression
+   */
   const handleDeleteLive = async () => {
     if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce live ?')) {
       return;
@@ -390,16 +490,30 @@ const LiveViewer = ({ authToken, userRole }) => {
     }
   };
 
+  /**
+   * Gère le mouvement de la souris sur un live bloqué pour afficher le tooltip
+   * @param {MouseEvent} e - Événement de mouvement de souris
+   */
   const handleBlockedMouseMove = (e) => {
     setTooltipPos({ x: e.clientX, y: e.clientY });
     if (!showBlockedTooltip) setShowBlockedTooltip(true);
   };
 
+  /**
+   * Gère la sortie de la souris d'un live bloqué pour masquer le tooltip
+   */
   const handleBlockedMouseLeave = () => {
     setShowBlockedTooltip(false);
   };
 
 
+  /**
+   * Effect pour gérer les clics en dehors du menu de modération
+   * Ferme automatiquement le menu quand l'utilisateur clique ailleurs
+   * @effect
+   * @listens {} - Exécuté uniquement au montage (tableau de dépendances vide)
+   * @returns {Function} Fonction de nettoyage pour retirer l'event listener
+   */
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -412,17 +526,334 @@ const LiveViewer = ({ authToken, userRole }) => {
     };
   }, []);
 
-  if (error === 'Stream non trouvé') return <LiveNotFound />;
-  if (loading) return <LoadingSpinner />;
-  if (error)
-    return (
-      <ErrorMessage message={error} onRetry={() => window.location.reload()} />
-    );
-  if (!streamData) return null;
+  // Dans le composant ChatBox :
 
-  const isScheduled = streamData.status === 'scheduled';
-  const scheduledDate = isScheduled ? formatScheduledDate(streamData.start_time) : null;
-  const timeRemaining = isScheduled ? calculateTimeRemaining(streamData.start_time) : null;
+  /**
+   * Effect pour récupérer l'historique des messages du chat
+   * Se déclenche quand le chat est activé et que les conditions sont remplies
+   * @effect
+   * @listens {string} streamId - ID du stream pour récupérer les messages
+   * @listens {string} authToken - Token d'authentification
+   * @listens {boolean} chatEnabled - État d'activation du chat
+   * @listens {boolean} isScheduled - Flag indiquant si le live est programmé
+   * @listens {Object} streamData - Données du stream pour vérifier le statut
+   */
+  useEffect(() => {
+    const fetchChatHistory = async () => {
+      if (!streamId || !authToken) return;
+
+      setLoadingMessages(true);
+      try {
+        const response = await getLiveMessages(streamId);
+
+        if (response.status === 200) {
+          setMessages(response.data.messages || []);
+          setError(null);
+        } else {
+          setError(response.message || "Erreur lors du chargement des messages");
+        }
+      } catch (err) {
+        console.error("Erreur lors de la récupération de l'historique du chat:", err);
+        setError('Impossible de charger les messages précédents.');
+      } finally {
+        setLoadingMessages(false);
+      }
+    };
+
+    if (chatEnabled && !isScheduled && streamData && streamData.status !== 'blocked' && streamData.status !== 'disapproved') {
+      fetchChatHistory();
+    }
+  }, [streamId, authToken, chatEnabled, isScheduled]);
+
+
+  /**
+   * Effect pour gérer la connexion WebSocket du chat en temps réel
+   * Établit la connexion WebSocket pour recevoir les messages en temps réel
+   * et gère les différents types de messages reçus
+   * @effect
+   * @listens {string} authToken - Token d'authentification pour la connexion WebSocket
+   * @listens {string} userId - ID de l'utilisateur pour filtrer ses propres messages
+   * @listens {Object} streamData - Données du stream pour vérifier les conditions de connexion
+   * @returns {Function} Fonction de nettoyage pour fermer la connexion WebSocket
+   */
+  useEffect(() => {
+    if (
+      streamData &&
+      (streamData.status === "blocked" || streamData.status === "disapproved")
+    ) {
+      return;
+    }
+
+    const connectWebSocket = () => {
+      const ws = new WebSocket(`${WSS_BASE_URL}/chat?token=${authToken}`);
+      wsRef.current = ws;
+
+
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        return;
+      }
+
+      ws.onopen = () => {
+
+        setError(null);
+      };
+
+      ws.onmessage = event => {
+        try {
+          const data = JSON.parse(event.data);
+
+
+          switch (data.type) {
+            case 'new_message':
+
+              if (data.user_id === userId) {
+
+                break;
+              }
+
+              setMessages(prevMessages => [...prevMessages, data]);
+              break;
+            case 'error':
+              setError(data.message);
+              break;
+
+            case 'message_deleted':
+              setMessages(prev =>
+                prev.filter(msg => msg.id !== data.messageId)
+              );
+              break;
+
+            case 'user_messages_deleted':
+              setMessages(prev =>
+                prev.filter(msg => msg.user_id !== data.userId)
+              );
+              break;
+
+            default:
+
+          }
+        } catch (err) {
+          console.error('Erreur lors du traitement du message WebSocket:', err);
+        }
+      };
+
+      ws.onclose = () => {
+
+      };
+
+      ws.onerror = error => {
+        console.error('WebSocket Error:', error);
+        setError('Erreur de connexion au chat.');
+      };
+
+      return ws;
+    };
+
+    const ws = connectWebSocket();
+
+    return () => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+    };
+  }, [authToken, userId, streamData]);
+
+
+  /**
+   * Effect pour récupérer la liste des participants pour les mentions
+   * Charge les utilisateurs disponibles pour les fonctionnalités de mention dans le chat
+   * @effect
+   * @listens {string} streamId - ID du stream pour récupérer les participants
+   * @listens {string} authToken - Token d'authentification pour l'API
+   * @todo Implémenter l'appel API réel pour récupérer les participants
+   */
+  useEffect(() => {
+    const fetchParticipants = async () => {
+      if (!streamId || !authToken) return;
+
+      try {
+
+
+
+
+
+
+
+
+        const data = [
+          { id: '1', display: 'Alice Dupont' },
+          { id: '2', display: 'Bob Martin' },
+          { id: '3', display: 'Charlie Dupont' },
+        ];
+
+        setParticipants(data);
+      } catch (err) {
+        console.error('Erreur lors de la récupération des participants:', err);
+      }
+    };
+
+    fetchParticipants();
+  }, [streamId, authToken]);
+
+
+  /**
+   * Effect pour gérer le défilement automatique vers le dernier message
+   * Fait défiler la zone de chat vers le bas à chaque nouveau message
+   * @effect
+   * @listens {Array} messages - Liste des messages pour déclencher le défilement
+   */
+  useEffect(() => {
+    try {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    } catch (err) {
+      console.error('Erreur lors du défilement automatique:', err);
+      setError('Erreur lors du défilement des messages.');
+    }
+  }, [messages]);
+
+  /**
+   * Gère l'envoi d'un message dans le chat
+   * @param {Event} e - Événement de soumission du formulaire
+   * @throws {Error} En cas d'échec de l'envoi du message
+   */
+  const handleSend = async e => {
+    e.preventDefault();
+    if (!input.trim() || sending) return;
+
+    setSending(true);
+    const tempId = Date.now().toString();
+
+
+    setMessages(prev => [
+      ...prev,
+      {
+        tempId,
+        content: input.trim(),
+        user_id: userId,
+        createdAt: new Date().toISOString(),
+        User: { name: 'Vous' },
+      },
+    ]);
+
+    try {
+      const message = input.trim();
+      setInput('');
+
+      const response = await sendLiveMessage({
+        liveId: streamId,
+        message: message,
+        tempId: tempId
+      });
+
+      if (response.status !== 201) {
+        if (response.message?.includes('forbidden words')) {
+          setShowDisciplinaryWarning(true);
+          setDisciplinaryWarning(response.message);
+        } else {
+          setError(response.message || "Erreur lors de l'envoi du message");
+        }
+
+        setMessages(prev => prev.filter(msg => msg.tempId !== tempId));
+      }
+    } catch (error) {
+      console.error("Erreur lors de l'envoi du message:", error);
+      setError("Erreur lors de l'envoi du message");
+
+      setMessages(prev => prev.filter(msg => msg.tempId !== tempId));
+    } finally {
+      setSending(false);
+    }
+  };
+
+
+  const mentionsInputStyle = {
+    control: {
+      backgroundColor: 'transparent',
+      border: 'none',
+      width: '100%',
+      maxHeight: '8rem',
+      overflowX: 'auto',
+      padding: '0.5rem 1rem',
+      resize: 'none',
+    },
+    highlighter: {
+      backgroundColor: 'red',
+      padding: '0.5rem 1rem',
+      borderRadius: '9999px',
+      whiteSpace: 'pre-wrap',
+      overflowWrap: 'break-word',
+      wordBreak: 'break-all',
+    },
+    input: {
+      padding: '0.5rem 1rem',
+      maxHeight: '8rem',
+      whiteSpace: 'pre-wrap',
+      overflowWrap: 'break-word',
+      wordBreak: 'break-all',
+      overflowY: 'auto',
+      border: '1px solid #e2e8f0',
+      borderRadius: '0.375rem',
+      backgroundColor: 'white',
+    },
+    suggestions: {
+      list: {
+        backgroundColor: 'white',
+        border: '1px solid #e2e8f0',
+        borderRadius: '0.375rem',
+        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+        fontSize: '0.875rem',
+      },
+      item: {
+        padding: '0.5rem 0.75rem',
+        borderBottom: '1px solid #e2e8f0',
+        '&focused': {
+          backgroundColor: '#EBF4FF',
+        },
+      },
+    },
+  };
+
+
+  /**
+   * Rendu du contenu d'un message avec support des mentions
+   * @param {string} content - Contenu du message à traiter
+   * @returns {JSX.Element|string} Contenu rendu avec les mentions formatées
+   */
+  const renderMessageContent = content => {
+
+    const mentionPattern = /@\[([^\]]+)\]\((\d+)\)/g;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+
+
+    while ((match = mentionPattern.exec(content)) !== null) {
+
+      if (match.index > lastIndex) {
+        parts.push(content.substring(lastIndex, match.index));
+      }
+
+
+      const [, display, id] = match;
+      parts.push(
+        <span
+          key={`mention-${id}-${match.index}`}
+          className="font-medium text-blue-600 bg-blue-50 px-1 rounded"
+        >
+          @{display}
+        </span>
+      );
+
+      lastIndex = match.index + match[0].length;
+    }
+
+
+    if (lastIndex < content.length) {
+      parts.push(content.substring(lastIndex));
+    }
+
+    return parts.length ? parts : content;
+  };
 
   return (
     <div className="space-y-6 p-4 max-w-7xl mx-auto">
@@ -740,14 +1171,20 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled, stream
   const [disciplinaryWarning, setDisciplinaryWarning] = useState(null);
   const [showDisciplinaryWarning, setShowDisciplinaryWarning] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
-  const [participants, setParticipants] = useState([
-
-
-  ]);
+  const [participants, setParticipants] = useState([]);
 
   const wsRef = useRef(null);
 
-
+  /**
+   * Effect pour récupérer l'historique des messages du chat
+   * Se déclenche quand le chat est activé et que les conditions sont remplies
+   * @effect
+   * @listens {string} streamId - ID du stream pour récupérer les messages
+   * @listens {string} authToken - Token d'authentification
+   * @listens {boolean} chatEnabled - État d'activation du chat
+   * @listens {boolean} isScheduled - Flag indiquant si le live est programmé
+   * @listens {Object} streamData - Données du stream pour vérifier le statut
+   */
   useEffect(() => {
     const fetchChatHistory = async () => {
       if (!streamId || !authToken) return;
@@ -776,8 +1213,17 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled, stream
   }, [streamId, authToken, chatEnabled, isScheduled]);
 
 
+  /**
+   * Effect pour gérer la connexion WebSocket du chat en temps réel
+   * Établit la connexion WebSocket pour recevoir les messages en temps réel
+   * et gère les différents types de messages reçus
+   * @effect
+   * @listens {string} authToken - Token d'authentification pour la connexion WebSocket
+   * @listens {string} userId - ID de l'utilisateur pour filtrer ses propres messages
+   * @listens {Object} streamData - Données du stream pour vérifier les conditions de connexion
+   * @returns {Function} Fonction de nettoyage pour fermer la connexion WebSocket
+   */
   useEffect(() => {
-
     if (
       streamData &&
       (streamData.status === "blocked" || streamData.status === "disapproved")
@@ -860,6 +1306,14 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled, stream
   }, [authToken, userId, streamData]);
 
 
+  /**
+   * Effect pour récupérer la liste des participants pour les mentions
+   * Charge les utilisateurs disponibles pour les fonctionnalités de mention dans le chat
+   * @effect
+   * @listens {string} streamId - ID du stream pour récupérer les participants
+   * @listens {string} authToken - Token d'authentification pour l'API
+   * @todo Implémenter l'appel API réel pour récupérer les participants
+   */
   useEffect(() => {
     const fetchParticipants = async () => {
       if (!streamId || !authToken) return;
@@ -889,6 +1343,12 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled, stream
   }, [streamId, authToken]);
 
 
+  /**
+   * Effect pour gérer le défilement automatique vers le dernier message
+   * Fait défiler la zone de chat vers le bas à chaque nouveau message
+   * @effect
+   * @listens {Array} messages - Liste des messages pour déclencher le défilement
+   */
   useEffect(() => {
     try {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -898,6 +1358,11 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled, stream
     }
   }, [messages]);
 
+  /**
+   * Gère l'envoi d'un message dans le chat
+   * @param {Event} e - Événement de soumission du formulaire
+   * @throws {Error} En cas d'échec de l'envoi du message
+   */
   const handleSend = async e => {
     e.preventDefault();
     if (!input.trim() || sending) return;
@@ -996,6 +1461,11 @@ const ChatBox = ({ streamId, authToken, chatEnabled, userId, isScheduled, stream
   };
 
 
+  /**
+   * Rendu du contenu d'un message avec support des mentions
+   * @param {string} content - Contenu du message à traiter
+   * @returns {JSX.Element|string} Contenu rendu avec les mentions formatées
+   */
   const renderMessageContent = content => {
 
     const mentionPattern = /@\[([^\]]+)\]\((\d+)\)/g;

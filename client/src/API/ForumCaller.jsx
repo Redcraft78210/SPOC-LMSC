@@ -2,9 +2,10 @@ import api from './api';
 import PropTypes from 'prop-types';
 
 /**
- * Fonction générique de gestion des erreurs
- * @param {Error} error - L'erreur à traiter
- * @returns {Object} - Objet d'erreur formaté
+ * Gère uniformément les erreurs d'API
+ * 
+ * @param {Error} error - L'objet erreur capturé dans le bloc catch
+ * @returns {Object} Objet formaté contenant le statut, les données et le message d'erreur
  */
 const handleError = (error) => {
 
@@ -32,6 +33,18 @@ const handleError = (error) => {
 };
 
 
+/**
+ * Récupère une liste paginée de threads avec filtres optionnels
+ * 
+ * @param {Object} options - Options de requête
+ * @param {number} [options.page=1] - Numéro de page pour la pagination
+ * @param {number} [options.limit=10] - Nombre de threads par page
+ * @param {string} [options.search=''] - Terme de recherche
+ * @param {string} [options.sortBy='newest'] - Critère de tri ('newest', etc.)
+ * @param {string} [options.category=''] - Catégorie pour filtrer les threads
+ * @param {string} [options.author=''] - Auteur pour filtrer les threads
+ * @returns {Promise<Object>} Promesse résolue avec {status, data, message}
+ */
 const getThreads = async ({ page = 1, limit = 10, search = '', sortBy = 'newest', category = '', author = '' }) => {
   try {
 
@@ -59,6 +72,13 @@ const getThreads = async ({ page = 1, limit = 10, search = '', sortBy = 'newest'
 };
 
 
+/**
+ * Récupère un thread spécifique par son identifiant
+ * 
+ * @param {Object} options - Options de requête
+ * @param {(string|number)} options.threadId - L'identifiant du thread à récupérer
+ * @returns {Promise<Object>} Promesse résolue avec {status, data, message}
+ */
 const getThreadById = async ({ threadId }) => {
   try {
     const response = await api.get(`/forum/threads/${threadId}`);
@@ -73,6 +93,14 @@ const getThreadById = async ({ threadId }) => {
 };
 
 
+/**
+ * Crée un nouveau thread dans le forum
+ * 
+ * @param {Object} options - Données du thread
+ * @param {string} options.title - Titre du thread
+ * @param {string} options.content - Contenu du thread
+ * @returns {Promise<Object>} Promesse résolue avec {status, data, message}
+ */
 const createThread = async ({ title, content }) => {
   try {
     const response = await api.post('/forum/threads', { title, content });
@@ -87,6 +115,15 @@ const createThread = async ({ title, content }) => {
 };
 
 
+/**
+ * Met à jour un thread existant
+ * 
+ * @param {Object} options - Données de mise à jour
+ * @param {(string|number)} options.threadId - Identifiant du thread à mettre à jour
+ * @param {string} [options.title] - Nouveau titre du thread
+ * @param {string} [options.content] - Nouveau contenu du thread
+ * @returns {Promise<Object>} Promesse résolue avec {status, data, message}
+ */
 const updateThread = async ({ threadId, title, content }) => {
   try {
     const response = await api.put(`/forum/threads/${threadId}`, { title, content });
@@ -101,6 +138,13 @@ const updateThread = async ({ threadId, title, content }) => {
 };
 
 
+/**
+ * Supprime un thread
+ * 
+ * @param {Object} options - Options de suppression
+ * @param {(string|number)} options.threadId - Identifiant du thread à supprimer
+ * @returns {Promise<Object>} Promesse résolue avec {status, data, message}
+ */
 const deleteThread = async ({ threadId }) => {
   try {
     const response = await api.delete(`/forum/threads/${threadId}`);
@@ -115,6 +159,14 @@ const deleteThread = async ({ threadId }) => {
 };
 
 
+/**
+ * Ajoute un commentaire à un thread
+ * 
+ * @param {Object} options - Données du commentaire
+ * @param {(string|number)} options.threadId - Identifiant du thread parent
+ * @param {string} options.content - Contenu du commentaire
+ * @returns {Promise<Object>} Promesse résolue avec {status, data, message}
+ */
 const addComment = async ({ threadId, content }) => {
   try {
     const response = await api.post(`/forum/threads/${threadId}/comments`, { content });
@@ -129,6 +181,14 @@ const addComment = async ({ threadId, content }) => {
 };
 
 
+/**
+ * Met à jour un commentaire existant
+ * 
+ * @param {Object} options - Données de mise à jour
+ * @param {(string|number)} options.commentId - Identifiant du commentaire à mettre à jour
+ * @param {string} options.content - Nouveau contenu du commentaire
+ * @returns {Promise<Object>} Promesse résolue avec {status, data, message}
+ */
 const updateComment = async ({ commentId, content }) => {
   try {
     const response = await api.put(`/forum/comments/${commentId}`, { content });
@@ -143,6 +203,13 @@ const updateComment = async ({ commentId, content }) => {
 };
 
 
+/**
+ * Supprime un commentaire
+ * 
+ * @param {Object} options - Options de suppression
+ * @param {(string|number)} options.commentId - Identifiant du commentaire à supprimer
+ * @returns {Promise<Object>} Promesse résolue avec {status, data, message}
+ */
 const deleteComment = async ({ commentId }) => {
   try {
     const response = await api.delete(`/forum/comments/${commentId}`);

@@ -2,9 +2,12 @@ import api from './api';
 import PropTypes from 'prop-types';
 
 /**
- * Fonction générique de gestion des erreurs
- * @param {Error} error - L'erreur à traiter
- * @returns {Object} - Objet d'erreur formaté
+ * Gère les erreurs provenant des appels API
+ * @param {Error} error - L'objet d'erreur à traiter
+ * @returns {Object} Objet contenant les détails de l'erreur formatés
+ * @returns {number} returns.status - Code HTTP de l'erreur
+ * @returns {Object|null} returns.data - Données de la réponse si disponibles
+ * @returns {string} returns.message - Message d'erreur descriptif
  */
 const handleError = (error) => {
 
@@ -32,11 +35,20 @@ const handleError = (error) => {
 };
 
 /**
- * Envoyer un avertissement à un utilisateur
- * @param {Object} params - Paramètres de la requête
- * @param {string} params.userId - ID de l'utilisateur à avertir
- * @param {string} params.message - Message d'avertissement
- * @returns {Promise<Object>} - Réponse formatée
+ * Envoie un avertissement à un utilisateur
+ * @param {Object} params - Paramètres de la fonction
+ * @param {string} params.userId - Identifiant de l'utilisateur à avertir
+ * @param {string} params.message - Message d'avertissement à envoyer
+ * @returns {Promise<Object>} Résultat de l'opération
+ * @returns {number} returns.status - Code HTTP de la réponse
+ * @returns {Object} returns.data - Données retournées par le serveur
+ * @returns {string} returns.message - Message descriptif du résultat
+ * @example
+ * // Envoyer un avertissement à un utilisateur
+ * const result = await sendWarning({
+ *   userId: '12345',
+ *   message: 'Votre comportement enfreint nos règles communautaires.'
+ * });
  */
 const sendWarning = async ({ userId, message }) => {
   try {
@@ -52,12 +64,22 @@ const sendWarning = async ({ userId, message }) => {
 };
 
 /**
- * Signaler un contenu (thread ou commentaire)
- * @param {Object} params - Paramètres de la requête
- * @param {string} params.itemId - ID de l'élément à signaler
- * @param {string} params.itemType - Type d'élément ('thread' ou 'comment')
+ * Signale un contenu pour modération
+ * @param {Object} params - Paramètres de la fonction
+ * @param {string} params.itemId - Identifiant de l'élément signalé
+ * @param {('thread'|'comment')} params.itemType - Type d'élément signalé
  * @param {string} params.reason - Raison du signalement
- * @returns {Promise<Object>} - Réponse formatée
+ * @returns {Promise<Object>} Résultat de l'opération
+ * @returns {number} returns.status - Code HTTP de la réponse
+ * @returns {Object} returns.data - Données retournées par le serveur
+ * @returns {string} returns.message - Message descriptif du résultat
+ * @example
+ * // Signaler un commentaire inapproprié
+ * const result = await flagContent({
+ *   itemId: '67890',
+ *   itemType: 'comment',
+ *   reason: 'Contenu offensant'
+ * });
  */
 const flagContent = async ({ itemId, itemType, reason }) => {
   try {
@@ -73,10 +95,19 @@ const flagContent = async ({ itemId, itemType, reason }) => {
 };
 
 /**
- * Récupérer tous les signalements (admin seulement)
- * @param {Object} params - Paramètres de la requête
- * @param {string} [params.status='pending'] - Statut des signalements à récupérer
- * @returns {Promise<Object>} - Réponse formatée
+ * Récupère les signalements selon leur statut
+ * @param {Object} [params={}] - Paramètres de la fonction
+ * @param {('pending'|'resolved')} [params.status='pending'] - Statut des signalements à récupérer
+ * @returns {Promise<Object>} Résultat de l'opération
+ * @returns {number} returns.status - Code HTTP de la réponse
+ * @returns {Object} returns.data - Données retournées par le serveur
+ * @returns {string} returns.message - Message descriptif du résultat
+ * @example
+ * // Récupérer tous les signalements en attente
+ * const pendingFlags = await getFlags();
+ * 
+ * // Récupérer tous les signalements résolus
+ * const resolvedFlags = await getFlags({ status: 'resolved' });
  */
 const getFlags = async ({ status = 'pending' } = {}) => {
   try {
@@ -92,10 +123,16 @@ const getFlags = async ({ status = 'pending' } = {}) => {
 };
 
 /**
- * Résoudre un signalement (admin seulement)
- * @param {Object} params - Paramètres de la requête
- * @param {string} params.flagId - ID du signalement à résoudre
- * @returns {Promise<Object>} - Réponse formatée
+ * Marque un signalement comme résolu
+ * @param {Object} params - Paramètres de la fonction
+ * @param {string} params.flagId - Identifiant du signalement à résoudre
+ * @returns {Promise<Object>} Résultat de l'opération
+ * @returns {number} returns.status - Code HTTP de la réponse
+ * @returns {Object} returns.data - Données retournées par le serveur
+ * @returns {string} returns.message - Message descriptif du résultat
+ * @example
+ * // Résoudre un signalement
+ * const result = await resolveFlag({ flagId: '12345' });
  */
 const resolveFlag = async ({ flagId }) => {
   try {
@@ -111,10 +148,16 @@ const resolveFlag = async ({ flagId }) => {
 };
 
 /**
- * Récupérer les avertissements d'un utilisateur
- * @param {Object} params - Paramètres de la requête
- * @param {string} params.userId - ID de l'utilisateur
- * @returns {Promise<Object>} - Réponse formatée
+ * Récupère les avertissements d'un utilisateur spécifique
+ * @param {Object} params - Paramètres de la fonction
+ * @param {string} params.userId - Identifiant de l'utilisateur
+ * @returns {Promise<Object>} Résultat de l'opération
+ * @returns {number} returns.status - Code HTTP de la réponse
+ * @returns {Object} returns.data - Données retournées par le serveur
+ * @returns {string} returns.message - Message descriptif du résultat
+ * @example
+ * // Récupérer l'historique des avertissements d'un utilisateur
+ * const warnings = await getUserWarnings({ userId: '12345' });
  */
 const getUserWarnings = async ({ userId }) => {
   try {

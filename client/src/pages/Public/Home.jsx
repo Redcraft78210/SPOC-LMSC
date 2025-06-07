@@ -1,8 +1,26 @@
+/**
+ * @fileoverview
+ * Page d'accueil publique de l'application SPOC-LMSC.
+ * Présente les fonctionnalités principales, des cours populaires et des appels à l'action
+ * pour les utilisateurs non connectés.
+ */
+
 import { useNavigate } from 'react-router-dom';
 import PublicNavbar from '../../components/PublicComp/PublicNavbar';
 import Footer from '../../components/PublicComp/Footer';
 
+/**
+ * Composant de la page d'accueil.
+ * Inclut une section héro, une présentation des fonctionnalités, et des cartes de cours populaires.
+ * 
+ * @component
+ * @returns {JSX.Element} Élément JSX représentant la page d'accueil
+ */
 const Home = () => {
+  /**
+   * Hook de navigation pour rediriger l'utilisateur vers différentes pages
+   * @type {Function}
+   */
   const navigate = useNavigate();
 
   return (

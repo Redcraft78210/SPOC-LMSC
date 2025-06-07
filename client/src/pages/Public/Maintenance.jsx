@@ -1,5 +1,33 @@
+/**
+ * @fileoverview 
+ * Maintenance banner component that displays a full-screen overlay when the application
+ * is undergoing maintenance. Includes animated elements, maintenance information, 
+ * and contact details.
+ */
 import PropTypes from 'prop-types';
 
+/**
+ * Renders a full-screen maintenance banner with animated elements and maintenance information.
+ * 
+ * @component
+ * @param {Object} props - Component props
+ * @param {string} [props.companyName] - The name of the company/platform undergoing maintenance
+ * @param {string} [props.estimatedDuration] - The estimated duration of the maintenance period
+ * @param {string} [props.contactEmail] - Email address for support contact during maintenance
+ * @returns {JSX.Element} A maintenance banner overlay with animation, text and contact information
+ * 
+ * @example
+ * // Basic usage
+ * <MaintenanceBanner 
+ *   companyName="SPOC Platform" 
+ *   estimatedDuration="2 hours" 
+ *   contactEmail="support@example.com" 
+ * />
+ * 
+ * @example
+ * // Minimal usage with default values
+ * <MaintenanceBanner />
+ */
 const MaintenanceBanner = ({ companyName, estimatedDuration, contactEmail }) => {
   return (
     <div 

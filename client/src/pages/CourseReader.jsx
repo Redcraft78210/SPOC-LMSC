@@ -17,6 +17,18 @@ import {
 import { Get_special_Document } from '../API/DocumentCaller';
 import CourseReaderTutorial from '../tutorials/CourseReaderTutorial';
 
+/**
+ * Composant d'affichage et d'interaction avec un cours spécifique.
+ * 
+ * Permet aux utilisateurs de visualiser un cours avec ses vidéos et documents.
+ * Les étudiants peuvent marquer un cours comme terminé tandis que les administrateurs
+ * et professeurs peuvent modérer le contenu (désapprobation, déblocage, suppression).
+ * 
+ * @param {Object} props - Les propriétés du composant
+ * @param {string} props.authToken - Token d'authentification de l'utilisateur actuel
+ * @param {string} props.userRole - Rôle de l'utilisateur ('Etudiant', 'Professeur', 'Administrateur')
+ * @returns {JSX.Element} Le composant d'affichage du cours
+ */
 const CourseReader = ({ authToken, userRole }) => {
   const navigate = useNavigate();
   const [courseData, setCourseData] = useState(null);
@@ -34,6 +46,14 @@ const CourseReader = ({ authToken, userRole }) => {
   const [showBlockedTooltip, setShowBlockedTooltip] = useState(false);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
 
+  /**
+   * Récupère les données du cours depuis l'API et met à jour l'état.
+   * Marque également le cours comme "en cours" pour l'utilisateur courant si nécessaire.
+   * 
+   * @async
+   * @function fetchCourseData
+   * @throws {Error} Si la récupération des données échoue
+   */
   const fetchCourseData = async () => {
     try {
       const response = await getCourseById({ courseId });
@@ -114,6 +134,13 @@ const CourseReader = ({ authToken, userRole }) => {
     };
   }, []);
 
+  /**
+   * Marque le cours comme terminé pour l'utilisateur actuel.
+   * 
+   * @async
+   * @function handleCompleteCourse
+   * @throws {Error} Si la mise à jour du statut échoue
+   */
   const handleCompleteCourse = async () => {
     try {
       const response = await markCourseAsCompleted({ courseId });
@@ -130,6 +157,14 @@ const CourseReader = ({ authToken, userRole }) => {
     }
   };
 
+  /**
+   * Télécharge un document associé au cours.
+   * 
+   * @async
+   * @function handleDownloadDocument
+   * @param {string} document_id - L'identifiant du document à télécharger
+   * @throws {Error} Si le téléchargement échoue
+   */
   const handleDownloadDocument = async document_id => {
     try {
       const response = await Get_special_Document({ document_id });
@@ -164,11 +199,24 @@ const CourseReader = ({ authToken, userRole }) => {
   };
 
 
+  /**
+   * Affiche ou masque le menu de modération.
+   * 
+   * @function handleMenuToggle
+   * @param {React.MouseEvent} e - L'événement de clic
+   */
   const handleMenuToggle = (e) => {
     e.stopPropagation();
     setShowModMenu((prev) => !prev);
   };
 
+  /**
+   * Gère les actions de modération (désapprouver, débloquer, supprimer).
+   * 
+   * @function handleModAction
+   * @param {string} action - L'action à effectuer ('disapprove', 'unblock', 'delete')
+   * @param {React.MouseEvent} e - L'événement de clic
+   */
   const handleModAction = (action, e) => {
     e.stopPropagation();
     setShowModMenu(false);
@@ -181,6 +229,14 @@ const CourseReader = ({ authToken, userRole }) => {
     }
   };
 
+  /**
+   * Désapprouve un cours avec une justification.
+   * Nécessite une justification d'au moins 50 caractères.
+   * 
+   * @async
+   * @function handleCourseDisapproval
+   * @throws {Error} Si la désapprobation échoue
+   */
   const handleCourseDisapproval = async () => {
     if (!justification.trim() || justification.length < 50) {
       toast.error('Veuillez fournir une justification d\'au moins 50 caractères pour la désapprobation.');
@@ -206,6 +262,14 @@ const CourseReader = ({ authToken, userRole }) => {
     }
   };
 
+  /**
+   * Débloque un cours préalablement bloqué.
+   * Demande une confirmation à l'utilisateur avant de procéder.
+   * 
+   * @async
+   * @function handleUnblockCourse
+   * @throws {Error} Si le déblocage échoue
+   */
   const handleUnblockCourse = async () => {
     if (!window.confirm('Êtes-vous sûr de vouloir débloquer ce cours ?')) {
       return;
@@ -228,6 +292,14 @@ const CourseReader = ({ authToken, userRole }) => {
     }
   };
 
+  /**
+   * Supprime définitivement un cours.
+   * Demande une confirmation à l'utilisateur avant de procéder.
+   * 
+   * @async
+   * @function handleDeleteCourse
+   * @throws {Error} Si la suppression échoue
+   */
   const handleDeleteCourse = async () => {
     if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce cours ?')) {
       return;
@@ -250,11 +322,23 @@ const CourseReader = ({ authToken, userRole }) => {
     }
   };
 
+  /**
+   * Gère l'affichage du tooltip lors du survol d'un cours bloqué.
+   * Met à jour la position du tooltip et l'affiche.
+   * 
+   * @function handleBlockedMouseMove
+   * @param {React.MouseEvent} e - L'événement de mouvement de souris
+   */
   const handleBlockedMouseMove = (e) => {
     setTooltipPos({ x: e.clientX, y: e.clientY });
     if (!showBlockedTooltip) setShowBlockedTooltip(true);
   };
 
+  /**
+   * Masque le tooltip lorsque la souris quitte la zone du cours bloqué.
+   * 
+   * @function handleBlockedMouseLeave
+   */
   const handleBlockedMouseLeave = () => {
     setShowBlockedTooltip(false);
   };
@@ -539,6 +623,11 @@ const CourseReader = ({ authToken, userRole }) => {
   );
 };
 
+/**
+ * Validation des types de propriétés pour le composant CourseReader.
+ * 
+ * @type {Object}
+ */
 CourseReader.propTypes = {
   authToken: PropTypes.string.isRequired,
   userRole: PropTypes.string,

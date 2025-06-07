@@ -1,12 +1,17 @@
 import api from './api';
 import PropTypes from 'prop-types';
 
+/**
+ * URL de base pour les requêtes API vidéo
+ * @constant {string}
+ */
 const baseURL = '/api';
 
 /**
- * Fonction générique de gestion des erreurs
+ * Gère les erreurs d'API de manière uniforme
+ * 
  * @param {Error} error - L'erreur à traiter
- * @returns {Object} - Objet d'erreur formaté
+ * @returns {Object} Objet contenant le statut, les données et le message d'erreur formatés
  */
 const handleError = (error) => {
 
@@ -34,6 +39,13 @@ const handleError = (error) => {
 };
 
 
+/**
+ * Récupère toutes les données de structure vidéo disponibles
+ * 
+ * @async
+ * @returns {Promise<Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ */
 const GetAll_DataStructure = async () => {
   try {
     const response = await api.get('/video/all/');
@@ -48,6 +60,16 @@ const GetAll_DataStructure = async () => {
 };
 
 
+/**
+ * Envoie une vidéo au serveur
+ * 
+ * @async
+ * @param {Object} params - Paramètres de la fonction
+ * @param {(File|string)} params.file - Fichier vidéo à envoyer
+ * @param {string} params.title - Titre de la vidéo
+ * @returns {Promise<Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ */
 const SendVideo = async ({ file, title }) => {
   const formData = new FormData();
   formData.append('video', file);
@@ -70,6 +92,15 @@ const SendVideo = async ({ file, title }) => {
 };
 
 
+/**
+ * Récupère une vidéo spécifique par son identifiant
+ * 
+ * @async
+ * @param {Object} params - Paramètres de la fonction
+ * @param {(string|number)} params.video_id - Identifiant de la vidéo à récupérer
+ * @returns {Promise<Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ */
 const Get_special_Video = async ({ video_id }) => {
   try {
     const response = await api.get(`/video/get/${video_id}`);
@@ -84,6 +115,15 @@ const Get_special_Video = async ({ video_id }) => {
 };
 
 
+/**
+ * Récupère les informations d'une vidéo spécifique
+ * 
+ * @async
+ * @param {Object} params - Paramètres de la fonction
+ * @param {(string|number)} params.video_id - Identifiant de la vidéo
+ * @returns {Promise<Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ */
 const Get_Video_Information = async ({ video_id }) => {
   try {
     const response = await api.get(`/video/video-info/${video_id}`);
@@ -98,6 +138,16 @@ const Get_Video_Information = async ({ video_id }) => {
 };
 
 
+/**
+ * Met à jour les informations d'une vidéo existante
+ * 
+ * @async
+ * @param {Object} params - Paramètres de la fonction
+ * @param {(string|number)} params.video_id - Identifiant de la vidéo à mettre à jour
+ * @param {Object} params.updatedData - Nouvelles données de la vidéo
+ * @returns {Promise<Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ */
 const updateVideo = async ({ video_id, updatedData }) => {
   try {
     const response = await api.put(`/video/update/${video_id}/`, updatedData);
@@ -112,6 +162,15 @@ const updateVideo = async ({ video_id, updatedData }) => {
 };
 
 
+/**
+ * Supprime une vidéo du système
+ * 
+ * @async
+ * @param {Object} params - Paramètres de la fonction
+ * @param {(string|number)} params.video_id - Identifiant de la vidéo à supprimer
+ * @returns {Promise<Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ */
 const DeleteVideo = async ({ video_id }) => {
   try {
     const response = await api.delete(`/video/delete/${video_id}`);
@@ -126,16 +185,34 @@ const DeleteVideo = async ({ video_id }) => {
 };
 
 
+/**
+ * Récupère les détails d'une vidéo (alias pour Get_Video_Information)
+ * 
+ * @async
+ * @param {Object} params - Paramètres de la fonction
+ * @param {(string|number)} params.video_id - Identifiant de la vidéo
+ * @returns {Promise<Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ */
 const getVideoDetails = async ({ video_id }) => {
   return Get_Video_Information({ video_id });
 };
 
 
+/**
+ * Génère l'URL de streaming pour une vidéo
+ * 
+ * @param {(string|number)} videoId - Identifiant de la vidéo
+ * @returns {string} URL complète pour le streaming de la vidéo
+ */
 const getVideoStreamUrl = videoId => {
   return `${baseURL}/api/video/stream/${videoId}`;
 };
 
 
+/**
+ * Définitions des PropTypes pour les paramètres des fonctions
+ */
 SendVideo.propTypes = {
   file: PropTypes.oneOfType([PropTypes.instanceOf(File), PropTypes.string])
     .isRequired,

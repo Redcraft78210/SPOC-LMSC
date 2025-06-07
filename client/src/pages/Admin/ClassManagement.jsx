@@ -18,8 +18,22 @@ import {
 import { getAllUsers } from '../../API/UserCaller';
 import ClassManagementTutorial from '../../tutorials/ClassManagementTutorial';
 
+/**
+ * Composant de gestion des classes pour l'interface d'administration.
+ * Permet la visualisation, création, modification et suppression de classes,
+ * ainsi que l'assignation d'enseignants et d'étudiants.
+ * 
+ * @returns {JSX.Element} Interface complète de gestion des classes
+ */
 const ClasseManagement = () => {
 
+  /**
+   * Récupère toutes les classes depuis l'API
+   * 
+   * @async
+   * @function fetchClasses
+   * @throws {Error} Si la requête échoue
+   */
   const fetchClasses = async () => {
     try {
       const response = await getAllClasses();
@@ -34,6 +48,13 @@ const ClasseManagement = () => {
     }
   };
 
+  /**
+   * Récupère tous les utilisateurs depuis l'API et les filtre par rôle
+   * 
+   * @async
+   * @function fetchUsers
+   * @throws {Error} Si la requête échoue
+   */
   const fetchUsers = async () => {
     try {
       const response = await getAllUsers();
@@ -53,7 +74,12 @@ const ClasseManagement = () => {
     }
   };
 
-
+  /**
+   * Détermine le mode d'affichage initial en fonction de la largeur de l'écran
+   * 
+   * @function getInitialViewMode
+   * @returns {string} Mode d'affichage ('list' ou 'grid')
+   */
   const getInitialViewMode = () => {
     if (typeof window !== 'undefined') {
       return window.innerWidth < 640 ? 'grid' : 'list';
@@ -94,14 +120,22 @@ const ClasseManagement = () => {
     setShowCreateModal(searchParams.get('create-class') === 'true');
   }, []);
 
-
+  /**
+   * Filtre les classes en fonction de la requête de recherche
+   * 
+   * @type {Array<Object>}
+   */
   const filteredClasses = classes.filter(
     Classe =>
       Classe.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       Classe.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-
+  /**
+   * Sélectionne ou désélectionne toutes les classes filtrées
+   * 
+   * @function toggleAll
+   */
   const toggleAll = () => {
     setSelectedClasses(prev =>
       prev.length === filteredClasses.length
@@ -110,6 +144,12 @@ const ClasseManagement = () => {
     );
   };
 
+  /**
+   * Bascule la sélection d'une classe spécifique
+   * 
+   * @function toggleClasse
+   * @param {number} ClasseId - Identifiant de la classe à sélectionner/désélectionner
+   */
   const toggleClasse = ClasseId => {
     setSelectedClasses(prev =>
       prev.includes(ClasseId)
@@ -118,11 +158,16 @@ const ClasseManagement = () => {
     );
   };
 
-
+  /**
+   * Supprime toutes les classes sélectionnées après confirmation utilisateur
+   * 
+   * @async
+   * @function bulkDelete
+   * @throws {Error} Si une suppression échoue
+   */
   const bulkDelete = async () => {
     if (window.confirm(`Supprimer ${selectedClasses.length} Classe(s) ?`)) {
       try {
-
         for (const classId of selectedClasses) {
           await deleteClass({ classId });
         }
@@ -136,7 +181,14 @@ const ClasseManagement = () => {
     }
   };
 
-
+  /**
+   * Supprime une classe spécifique après confirmation utilisateur
+   * 
+   * @async
+   * @function deleteClasseHandler
+   * @param {number} classId - Identifiant de la classe à supprimer
+   * @throws {Error} Si la suppression échoue
+   */
   const deleteClasseHandler = async classId => {
     if (window.confirm('Supprimer cette Classe ?')) {
       try {
@@ -154,7 +206,18 @@ const ClasseManagement = () => {
     }
   };
 
-
+  /**
+   * Crée ou met à jour une classe avec les données du formulaire
+   * 
+   * @async
+   * @function handleSubmitClasse
+   * @param {Object} formData - Données du formulaire de classe
+   * @param {string} formData.name - Nom de la classe
+   * @param {string} formData.description - Description de la classe
+   * @param {number} formData.main_teacher_id - ID de l'enseignant principal
+   * @param {Array<number>} formData.students - IDs des étudiants de la classe
+   * @throws {Error} Si la création ou mise à jour échoue
+   */
   const handleSubmitClasse = async formData => {
     const classData = {
       name: formData.name,
@@ -189,7 +252,12 @@ const ClasseManagement = () => {
     }
   };
 
-
+  /**
+   * Composant de barre de recherche pour filtrer les classes
+   * 
+   * @function SearchBar
+   * @returns {JSX.Element} Barre de recherche
+   */
   const SearchBar = () => (
     <div className="relative flex-1 max-w-xl">
       <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
@@ -203,6 +271,12 @@ const ClasseManagement = () => {
     </div>
   );
 
+  /**
+   * Composant de basculement entre les modes d'affichage liste et grille
+   * 
+   * @function ToggleView
+   * @returns {JSX.Element} Boutons de basculement de vue
+   */
   const ToggleView = () => (
     <div className="flex gap-2 toggleView">
       <button
@@ -222,6 +296,12 @@ const ClasseManagement = () => {
     </div>
   );
 
+  /**
+   * Composant affichant les actions en masse pour les classes sélectionnées
+   * 
+   * @function BulkActions
+   * @returns {JSX.Element|null} Actions en masse ou null si aucune classe n'est sélectionnée
+   */
   const BulkActions = () =>
     selectedClasses.length > 0 && (
       <div className="bg-blue-50 p-4 rounded-lg flex items-center gap-6">
@@ -238,6 +318,12 @@ const ClasseManagement = () => {
       </div>
     );
 
+  /**
+   * Composant d'affichage des classes en mode tableau
+   * 
+   * @function ClasseTable
+   * @returns {JSX.Element} Tableau des classes
+   */
   const ClasseTable = () => (
     <div className="bg-white rounded-lg shadow overflow-x-auto">
       <table className="min-w-full divide-y divide-gray-200">
@@ -334,6 +420,12 @@ const ClasseManagement = () => {
     </div>
   );
 
+  /**
+   * Composant d'affichage des classes en mode carte
+   * 
+   * @function ClasseCards
+   * @returns {JSX.Element} Grille de cartes représentant les classes
+   */
   const ClasseCards = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {filteredClasses.map(Classe => (
@@ -394,6 +486,12 @@ const ClasseManagement = () => {
       ))}
     </div>
   );
+  /**
+   * Modal de création ou d'édition d'une classe
+   * 
+   * @function ClasseCreationModal
+   * @returns {JSX.Element} Formulaire modal pour créer/éditer une classe
+   */
   const ClasseCreationModal = () => {
     const [formData, setFormData] = useState({
       name: '',
@@ -420,6 +518,12 @@ const ClasseManagement = () => {
       return () => setIsMounted(false);
     }, [setIsMounted]);
 
+    /**
+     * Valide les champs du formulaire et met à jour l'état des erreurs
+     * 
+     * @function validateForm
+     * @returns {boolean} Vrai si le formulaire est valide, faux sinon
+     */
     const validateForm = () => {
       const newErrors = {};
       if (!formData.name.trim()) {
@@ -437,6 +541,12 @@ const ClasseManagement = () => {
       return Object.keys(newErrors).length === 0;
     };
 
+    /**
+     * Bascule la sélection d'un étudiant dans la classe
+     * 
+     * @function toggleMember
+     * @param {number} userId - ID de l'utilisateur à ajouter/retirer
+     */
     const toggleMember = userId => {
       setFormData(prev => ({
         ...prev,
@@ -446,19 +556,31 @@ const ClasseManagement = () => {
       }));
     };
 
+    /**
+     * Filtre les utilisateurs en fonction de la requête de recherche
+     * 
+     * @type {Array<Object>}
+     */
     const filteredUsers = studentsUsers.filter(
       user =>
         user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         user.email.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
+    /**
+     * Gère la soumission du formulaire de création/édition de classe
+     * 
+     * @async
+     * @function handleSubmit
+     * @param {Event} e - Événement de soumission du formulaire
+     * @throws {Error} Si la soumission échoue
+     */
     const handleSubmit = async e => {
       e.preventDefault();
       if (!validateForm()) return;
 
       setIsLoading(true);
       try {
-
         await handleSubmitClasse(formData);
         if (isMounted) {
           setIsSuccess(true);
@@ -475,16 +597,25 @@ const ClasseManagement = () => {
       }
     };
 
+    /**
+     * Ferme le modal et réinitialise l'état de sélection
+     * 
+     * @function handleClose
+     */
     const handleClose = () => {
       setShowCreateModal(false);
       setSelectedClasse(null);
     };
 
-
+    /**
+     * Gère les clics sur l'arrière-plan pour fermer le modal
+     * 
+     * @function handleBackdropClick
+     * @param {Event} e - Événement de clic
+     */
     const handleBackdropClick = e => {
       if (e.target === e.currentTarget) handleClose();
     };
-
 
     useEffect(() => {
       const handleKeyDown = e => {

@@ -36,6 +36,12 @@ import {
 } from 'lucide-react';
 import UserManagementTutorial from '../../tutorials/UserManagementTutorial';
 
+/**
+ * Error message mapping for authentication and user management errors.
+ * Maps backend error codes to user-friendly messages in French.
+ * 
+ * @type {Object.<string, string>}
+ */
 const errorMessages = {
   'auth/invalid-credentials': 'Identifiants incorrects',
   'auth/missing-fields': 'Veuillez remplir tous les champs',
@@ -51,6 +57,15 @@ const errorMessages = {
 };
 
 
+/**
+ * A memoized search input component for filtering users.
+ * Includes a search icon and styled input field.
+ * 
+ * @param {Object} props - Component props
+ * @param {string} props.value - Current search query value
+ * @param {Function} props.onChange - Handler function called when input value changes
+ * @returns {JSX.Element} Rendered search input with icon
+ */
 const SearchUser = memo(function SearchUser({ value, onChange }) {
   return (
     <div className="searchuser relative flex-1 max-w-xl">
@@ -73,6 +88,12 @@ SearchUser.propTypes = {
 
 const UserManagement = () => {
 
+  /**
+   * Fetches all classes from the API.
+   * 
+   * @returns {Promise<void>}
+   * @throws {Error} When API request fails
+   */
   const fetchClasses = useCallback(async () => {
     try {
       const response = await getAllClasses();
@@ -87,6 +108,12 @@ const UserManagement = () => {
     }
   }, []);
 
+  /**
+   * Fetches all users from the API.
+   * 
+   * @returns {Promise<void>}
+   * @throws {Error} When API request fails
+   */
   const fetchUsers = useCallback(async () => {
     try {
       const response = await getAllUsers();
@@ -145,6 +172,12 @@ const UserManagement = () => {
   }, []);
 
 
+  /**
+   * Filters users based on the current search query.
+   * Searches across all user properties.
+   * 
+   * @type {Array<Object>}
+   */
   const filteredUsers = users.filter(user =>
     Object.values(user).some(value =>
       String(value).toLowerCase().includes(searchQuery.toLowerCase())
@@ -152,6 +185,12 @@ const UserManagement = () => {
   );
 
 
+  /**
+   * Toggles selection status of all users.
+   * If all filtered users are selected, clears selection; otherwise selects all.
+   * 
+   * @returns {void}
+   */
   const toggleAll = () => {
     if (selectedUsers.length === filteredUsers.length) {
       setSelectedUsers([]);
@@ -160,6 +199,12 @@ const UserManagement = () => {
     }
   };
 
+  /**
+   * Toggles selection status of a specific user.
+   * 
+   * @param {string|number} userId - ID of the user to toggle
+   * @returns {void}
+   */
   const toggleUser = userId => {
     setSelectedUsers(prev =>
       prev.includes(userId)
@@ -169,6 +214,12 @@ const UserManagement = () => {
   };
 
 
+  /**
+   * Deletes multiple selected users after confirmation.
+   * 
+   * @returns {Promise<void>}
+   * @throws {Error} When deletion API call fails
+   */
   const bulkDelete = async () => {
     if (window.confirm(`Supprimer ${selectedUsers.length} utilisateur(s) ?`)) {
       try {
@@ -185,6 +236,13 @@ const UserManagement = () => {
     }
   };
 
+  /**
+   * Activates or deactivates multiple selected users.
+   * 
+   * @param {boolean} status - True to activate, false to deactivate
+   * @returns {Promise<void>}
+   * @throws {Error} When API calls fail
+   */
   const bulkToggleStatus = async status => {
     try {
       for (const userId of selectedUsers) {
@@ -212,6 +270,14 @@ const UserManagement = () => {
     }
   };
 
+  /**
+   * Activates or deactivates a specific user.
+   * 
+   * @param {string|number} userId - ID of the user to update
+   * @param {boolean} status - True to activate, false to deactivate
+   * @returns {Promise<void>}
+   * @throws {Error} When API call fails
+   */
   const toggleStatus = async (userId, status) => {
     try {
       if (status) {
@@ -236,6 +302,13 @@ const UserManagement = () => {
     }
   };
 
+  /**
+   * Downgrades a user's role to a lower permission level.
+   * 
+   * @param {string|number} userId - ID of the user to downgrade
+   * @returns {Promise<void>}
+   * @throws {Error} When API call fails
+   */
   const retrogradeUser = async userId => {
     try {
       const response = await retrogradeUserRole({ userId });
@@ -251,6 +324,13 @@ const UserManagement = () => {
     }
   };
 
+  /**
+   * Upgrades a user's role to a higher permission level.
+   * 
+   * @param {string|number} userId - ID of the user to upgrade
+   * @returns {Promise<void>}
+   * @throws {Error} When API call fails
+   */
   const upgradeUser = async userId => {
     try {
       const response = await upgradeUserRole({ userId });
@@ -266,10 +346,22 @@ const UserManagement = () => {
     }
   };
 
+  /**
+   * Shows the invitation code management modal.
+   * 
+   * @returns {void}
+   */
   const manageInvitationCodes = () => {
     setShowInviteCodeModal(true);
   };
 
+  /**
+   * Handles user creation or update form submission.
+   * 
+   * @param {Object} userData - User data from the form
+   * @returns {Promise<void>}
+   * @throws {Error} When API call fails
+   */
   const handleUserSubmit = async userData => {
     try {
       let response;
@@ -297,6 +389,11 @@ const UserManagement = () => {
     }
   };
 
+  /**
+   * Component that renders view mode toggle buttons (list/grid).
+   * 
+   * @returns {JSX.Element} Rendered toggle buttons
+   */
   const ToggleView = () => {
     return (
       <div className="flex gap-2 toggleView">
@@ -318,6 +415,12 @@ const UserManagement = () => {
     );
   };
 
+  /**
+   * Component that renders bulk action buttons for selected users.
+   * Only visible when users are selected.
+   * 
+   * @returns {JSX.Element|null} Rendered bulk action buttons or null if no users selected
+   */
   const BulkActions = () => {
     return (
       selectedUsers.length > 0 && (
@@ -353,6 +456,11 @@ const UserManagement = () => {
     );
   };
 
+  /**
+   * Component that renders users in a table format.
+   * 
+   * @returns {JSX.Element} Rendered user table
+   */
   const UserTable = () => {
     return (
       <div className="bg-white rounded-lg shadow overflow-x-auto">
@@ -489,6 +597,11 @@ const UserManagement = () => {
     );
   };
 
+  /**
+   * Component that renders users in a card grid format.
+   * 
+   * @returns {JSX.Element} Rendered user cards
+   */
   const UserCards = () => {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -591,6 +704,12 @@ const UserManagement = () => {
     );
   };
 
+  /**
+   * Modal component for user creation and editing.
+   * Handles form state, validation, and submission.
+   * 
+   * @returns {JSX.Element} Rendered modal with user form
+   */
   const UserCreationModal = () => {
     const [formData, setFormData] = useState({
       name: '',
@@ -1002,6 +1121,14 @@ const UserManagement = () => {
     );
   };
 
+  /**
+   * Modal component for managing invitation codes.
+   * Handles code generation, listing, and deletion.
+   * 
+   * @param {Object} props - Component props
+   * @param {Function} props.onClose - Function to call when closing the modal
+   * @returns {JSX.Element} Rendered modal with invitation code management interface
+   */
   const InvitationCodeModal = ({ onClose }) => {
     const [copiedCode, setCopiedCode] = useState(null);
     const [showConfirm, setShowConfirm] = useState(false);

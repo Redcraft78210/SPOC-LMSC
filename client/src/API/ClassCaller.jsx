@@ -2,9 +2,10 @@ import api from './api';
 import PropTypes from 'prop-types';
 
 /**
- * Fonction générique de gestion des erreurs
+ * Gère de manière standardisée les erreurs des requêtes API
+ * 
  * @param {Error} error - L'erreur à traiter
- * @returns {Object} - Objet d'erreur formaté
+ * @returns {Object} Objet contenant le statut, les données et le message d'erreur formatés
  */
 const handleError = (error) => {
 
@@ -32,6 +33,19 @@ const handleError = (error) => {
 };
 
 
+/**
+ * Récupère toutes les classes disponibles
+ * 
+ * @async
+ * @returns {Promise<Object>} Objet contenant le statut, les données des classes et un message
+ * @throws {Error} Erreur gérée par handleError
+ * 
+ * @example
+ * const response = await getAllClasses();
+ * if (response.status === 200) {
+ *   const classes = response.data;
+ * }
+ */
 const getAllClasses = async () => {
   try {
     const response = await api.get('/classes/');
@@ -46,6 +60,18 @@ const getAllClasses = async () => {
 };
 
 
+/**
+ * Récupère une classe par son identifiant
+ * 
+ * @async
+ * @param {Object} params - Paramètres de la requête
+ * @param {string|number} params.classId - Identifiant de la classe à récupérer
+ * @returns {Promise<Object>} Objet contenant le statut, les données de la classe et un message
+ * @throws {Error} Erreur gérée par handleError
+ * 
+ * @example
+ * const response = await getClassById({ classId: '123' });
+ */
 const getClassById = async ({ classId }) => {
   try {
     const response = await api.get(`/classes/${classId}`);
@@ -60,6 +86,18 @@ const getClassById = async ({ classId }) => {
 };
 
 
+/**
+ * Crée une nouvelle classe
+ * 
+ * @async
+ * @param {Object} classData - Données de la classe à créer
+ * @param {string} classData.name - Nom de la classe
+ * @param {string} [classData.description] - Description de la classe
+ * @param {string|number} [classData.main_teacher_id] - Identifiant de l'enseignant principal
+ * @param {Array<string|number>} [classData.students] - Liste des identifiants des étudiants
+ * @returns {Promise<Object>} Objet contenant le statut, les données de la classe créée et un message
+ * @throws {Error} Erreur gérée par handleError
+ */
 const createClass = async (classData) => {
   try {
     const response = await api.post('/classes/', classData);
@@ -74,6 +112,16 @@ const createClass = async (classData) => {
 };
 
 
+/**
+ * Met à jour une classe existante
+ * 
+ * @async
+ * @param {Object} params - Paramètres de la requête
+ * @param {string|number} params.classId - Identifiant de la classe à mettre à jour
+ * @param {Object} params.classData - Nouvelles données de la classe
+ * @returns {Promise<Object>} Objet contenant le statut, les données mises à jour et un message
+ * @throws {Error} Erreur gérée par handleError
+ */
 const updateClass = async ({ classId, classData }) => {
   try {
     const response = await api.put(`/classes/${classId}`, classData);
@@ -88,6 +136,15 @@ const updateClass = async ({ classId, classData }) => {
 };
 
 
+/**
+ * Supprime une classe
+ * 
+ * @async
+ * @param {Object} params - Paramètres de la requête
+ * @param {string|number} params.classId - Identifiant de la classe à supprimer
+ * @returns {Promise<Object>} Objet contenant le statut, les données et un message de confirmation
+ * @throws {Error} Erreur gérée par handleError
+ */
 const deleteClass = async ({ classId }) => {
   try {
     const response = await api.delete(`/classes/${classId}`);
@@ -102,6 +159,16 @@ const deleteClass = async ({ classId }) => {
 };
 
 
+/**
+ * Ajoute un étudiant à une classe
+ * 
+ * @async
+ * @param {Object} params - Paramètres de la requête
+ * @param {string|number} params.classId - Identifiant de la classe
+ * @param {string|number} params.studentId - Identifiant de l'étudiant à ajouter
+ * @returns {Promise<Object>} Objet contenant le statut, les données et un message de confirmation
+ * @throws {Error} Erreur gérée par handleError
+ */
 const addStudentToClass = async ({ classId, studentId }) => {
   try {
     const response = await api.post(`/classes/${classId}/students`, { studentId });
@@ -116,6 +183,16 @@ const addStudentToClass = async ({ classId, studentId }) => {
 };
 
 
+/**
+ * Retire un étudiant d'une classe
+ * 
+ * @async
+ * @param {Object} params - Paramètres de la requête
+ * @param {string|number} params.classId - Identifiant de la classe
+ * @param {string|number} params.studentId - Identifiant de l'étudiant à retirer
+ * @returns {Promise<Object>} Objet contenant le statut, les données et un message de confirmation
+ * @throws {Error} Erreur gérée par handleError
+ */
 const removeStudentFromClass = async ({ classId, studentId }) => {
   try {
     const response = await api.delete(`/classes/${classId}/students/${studentId}`);
@@ -130,6 +207,15 @@ const removeStudentFromClass = async ({ classId, studentId }) => {
 };
 
 
+/**
+ * Récupère la liste des étudiants d'une classe
+ * 
+ * @async
+ * @param {Object} params - Paramètres de la requête
+ * @param {string|number} params.classId - Identifiant de la classe
+ * @returns {Promise<Object>} Objet contenant le statut, les données des étudiants et un message
+ * @throws {Error} Erreur gérée par handleError
+ */
 const getClassStudents = async ({ classId }) => {
   try {
     const response = await api.get(`/classes/${classId}/students`);
@@ -144,6 +230,16 @@ const getClassStudents = async ({ classId }) => {
 };
 
 
+/**
+ * Définit l'enseignant principal d'une classe
+ * 
+ * @async
+ * @param {Object} params - Paramètres de la requête
+ * @param {string|number} params.classId - Identifiant de la classe
+ * @param {string|number} params.teacherId - Identifiant de l'enseignant à définir comme principal
+ * @returns {Promise<Object>} Objet contenant le statut, les données et un message de confirmation
+ * @throws {Error} Erreur gérée par handleError
+ */
 const setMainTeacher = async ({ classId, teacherId }) => {
   try {
     const response = await api.put(`/classes/${classId}/main-teacher`, { teacherId });

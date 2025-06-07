@@ -1,22 +1,69 @@
+/**
+ * @fileoverview
+ * Composant qui gère l'affichage du tutoriel du tableau de bord.
+ * Ce tutoriel s'adapte au rôle de l'utilisateur (Etudiant, Professeur, Administrateur)
+ * et présente les fonctionnalités spécifiques à chaque rôle.
+ */
+
 import { useState, useEffect } from 'react';
 import Tutorial from '../components/Tutorial';
 import { useTutorial } from '../contexts/TutorialContext';
 import PropTypes from 'prop-types';
 
+/**
+ * Composant qui affiche un tutoriel guidé pour le tableau de bord
+ * adapté au rôle de l'utilisateur.
+ * 
+ * @component
+ * @param {Object} props - Les propriétés du composant
+ * @param {string} props.userRole - Le rôle de l'utilisateur ('Etudiant', 'Professeur', 'Administrateur')
+ * @param {string} props.name - Le nom de l'utilisateur à afficher dans le message de bienvenue
+ * @returns {JSX.Element} Composant de tutoriel pour le tableau de bord
+ */
 const DashboardTutorial = ({ userRole, name }) => {
+  /**
+   * État contrôlant si le tutoriel est en cours d'exécution
+   * @type {[boolean, Function]}
+   */
   const [runTutorial, setRunTutorial] = useState(false);
+  
+  /**
+   * Contexte fournissant les fonctions de gestion des tutoriels
+   * @type {Object}
+   */
   const { isTutorialCompleted, completeTutorial } = useTutorial();
+  
+  /**
+   * Identifiant unique pour ce tutoriel, généré à partir du rôle de l'utilisateur
+   * @type {string}
+   */
   const tutorialId = `dashboard-${userRole.toLowerCase()}`;
   
-
+  /**
+   * Effet qui lance automatiquement le tutoriel si l'utilisateur
+   * ne l'a pas encore complété
+   */
   useEffect(() => {
     if (!isTutorialCompleted(tutorialId)) {
       setRunTutorial(true);
     }
   }, [isTutorialCompleted, tutorialId]);
   
-
+  /**
+   * Génère les étapes du tutoriel en fonction du rôle de l'utilisateur
+   * 
+   * @returns {Array<Object>} Tableau d'objets représentant les étapes du tutoriel
+   * Chaque étape contient:
+   * - target: Le sélecteur CSS de l'élément cible
+   * - content: Le texte explicatif à afficher
+   * - placement: La position où afficher le tooltip (center, right, bottom, etc.)
+   * - disableBeacon: Option pour désactiver le point de repère (si true)
+   */
   const getStepsForRole = () => {
+    /**
+     * Étapes communes à tous les rôles d'utilisateurs
+     * @type {Array<Object>}
+     */
     const commonSteps = [
       {
         target: 'body',
@@ -95,7 +142,6 @@ const DashboardTutorial = ({ userRole, name }) => {
       tutorialId={tutorialId} 
       run={runTutorial}
       onFinish={() => {
-
         completeTutorial(tutorialId);
       }}
     />

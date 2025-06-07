@@ -8,12 +8,29 @@ import {
   PlusCircle,
 } from 'lucide-react';
 
-
-
 import DashboardTutorial from '../../tutorials/DashboardTutorial';
 import PropTypes from 'prop-types';
 
+/**
+ * Admin Dashboard Home component
+ *
+ * Renders the main dashboard interface for administrators with various
+ * management sections, notifications, and quick actions.
+ *
+ * @param {Object} props - Component props
+ * @param {Object} props.user - The current user information
+ * @param {string} props.user.role - The user's role in the system
+ * @param {string} props.user.name - The user's name
+ * @returns {JSX.Element} The rendered dashboard interface
+ *
+ * @example
+ * <DashboardHome user={{ role: 'admin', name: 'John Doe' }} />
+ */
 const DashboardHome = ({ user }) => {
+  /**
+   * React Router navigate function used for redirecting to different pages
+   * @type {Function}
+   */
   const navigate = useNavigate();
 
   return (
@@ -194,7 +211,6 @@ const DashboardHome = ({ user }) => {
     </div>
   );
 };
-
 
 DashboardHome.propTypes = {
   user: PropTypes.shape({

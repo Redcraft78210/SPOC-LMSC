@@ -21,6 +21,15 @@ import {
   forgotPassword
 } from '../../API/AuthCaller';
 
+/**
+ * @fileoverview Composant de gestion d'authentification permettant aux utilisateurs de se connecter,
+ * s'inscrire, configurer la double authentification et réinitialiser leur mot de passe.
+ */
+
+/**
+ * Messages d'erreur spécifiques pour les différents cas d'erreur d'authentification.
+ * @type {Object.<string, string>}
+ */
 const errorMessages = {
   'auth/invalid-credentials': 'Identifiants incorrects',
   'auth/invalid-register-code': "Code d'inscription invalide/expiré",
@@ -34,6 +43,15 @@ const errorMessages = {
   default: 'Une erreur est survenue. Veuillez réessayer.',
 };
 
+/**
+ * Affiche une modale informant l'utilisateur que son compte a été désactivé.
+ * 
+ * @component
+ * @param {Object} props - Propriétés du composant
+ * @param {boolean} props.open - Détermine si la modale est visible
+ * @param {Function} props.onClose - Fonction appelée pour fermer la modale
+ * @returns {JSX.Element|null} La modale si ouverte, sinon null
+ */
 const AccountDisabledModal = ({ open, onClose }) => {
   if (!open) return null;
 
@@ -86,6 +104,15 @@ AccountDisabledModal.propTypes = {
   onClose: PropTypes.func.isRequired,
 };
 
+/**
+ * Composant principal d'authentification gérant la connexion, l'inscription,
+ * la double authentification et la réinitialisation de mot de passe.
+ * 
+ * @component
+ * @param {Object} props - Propriétés du composant
+ * @param {Function} props.setAuth - Fonction pour définir l'état d'authentification
+ * @returns {JSX.Element} Interface d'authentification
+ */
 const Sign = ({ setAuth }) => {
   const navigate = useNavigate();
   const [error, setError] = useState(null);
@@ -205,10 +232,22 @@ const Sign = ({ setAuth }) => {
     };
   }, [tempToken?.value, qrCodeData, manualSecret]);
 
+  /**
+   * Valide la conformité du mot de passe selon les critères de sécurité.
+   * 
+   * @param {string} pw - Mot de passe à valider
+   * @returns {boolean} True si le mot de passe est valide, sinon False
+   */
   const validatePassword = pw => {
     return /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{12,}$/.test(pw);
   };
 
+  /**
+   * Gère les erreurs d'authentification et affiche le message approprié.
+   * 
+   * @param {Object} error - Objet d'erreur retourné par l'API
+   * @returns {boolean} Toujours false pour indiquer qu'une erreur s'est produite
+   */
   const handleError = error => {
 
     if (error?.response?.status === 403 || error?.status === 403) {
@@ -235,6 +274,14 @@ const Sign = ({ setAuth }) => {
     return false;
   };
 
+  /**
+   * Gère la soumission du formulaire de connexion ou d'inscription.
+   * 
+   * @async
+   * @param {Event} e - Événement de soumission du formulaire
+   * @returns {Promise<boolean>} Résultat de la tentative d'authentification
+   * @throws {Error} Erreur lors de l'authentification
+   */
   const handleSubmit = async e => {
     e.preventDefault();
     if (Date.now() - lastSubmit < 2000) return;
@@ -358,6 +405,12 @@ const Sign = ({ setAuth }) => {
 
   const allDigitsFilled = () => twoFADigits.every(digit => digit !== '');
 
+  /**
+   * Gère le changement de valeur dans les champs du code 2FA.
+   * 
+   * @param {number} index - Index du champ modifié
+   * @param {string} value - Nouvelle valeur du champ
+   */
   const handleDigitChange = (index, value) => {
 
     if (!/^[0-9]?$/.test(value)) return;
@@ -372,6 +425,12 @@ const Sign = ({ setAuth }) => {
     }
   };
 
+  /**
+   * Gère les événements clavier dans les champs du code 2FA.
+   * 
+   * @param {number} index - Index du champ actuel
+   * @param {KeyboardEvent} e - Événement clavier
+   */
   const handleDigitKeyDown = (index, e) => {
 
     if (e.key === 'Backspace') {
@@ -409,6 +468,12 @@ const Sign = ({ setAuth }) => {
     }
   };
 
+  /**
+   * Gère le collage d'un code 2FA dans les champs de saisie.
+   * 
+   * @param {number} index - Index du champ où le collage est effectué
+   * @param {ClipboardEvent} e - Événement de collage
+   */
   const handleDigitPaste = (index, e) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text').trim();
@@ -435,7 +500,14 @@ const Sign = ({ setAuth }) => {
     }
   };
 
-
+  /**
+   * Gère la soumission du formulaire de vérification 2FA.
+   * 
+   * @async
+   * @param {Event} e - Événement de soumission du formulaire
+   * @returns {Promise<boolean>} Résultat de la vérification 2FA
+   * @throws {Error} Erreur lors de la vérification du code 2FA
+   */
   const handle2FASubmit = async e => {
     e.preventDefault();
     if (Date.now() - lastSubmit < 2000) return;
@@ -487,6 +559,11 @@ const Sign = ({ setAuth }) => {
     }
   };
 
+  /**
+   * Finalise le processus d'authentification après une connexion réussie.
+   * 
+   * @param {string} token - Token d'authentification
+   */
   const handleAuthSuccess = token => {
     setAuth(token);
     if (rememberMe) {
@@ -499,6 +576,14 @@ const Sign = ({ setAuth }) => {
     navigate('/dashboard');
   };
 
+  /**
+   * Gère la soumission du formulaire de récupération de mot de passe.
+   * 
+   * @async
+   * @param {Event} e - Événement de soumission du formulaire
+   * @returns {Promise<boolean|undefined>} Résultat de la demande de récupération
+   * @throws {Error} Erreur lors de la demande de réinitialisation
+   */
   const handleForgotPasswordSubmit = async e => {
     e.preventDefault();
     setError(null);
@@ -526,6 +611,10 @@ const Sign = ({ setAuth }) => {
     }
   };
 
+  /**
+   * Bascule entre les modes connexion et inscription.
+   * Transfère les données d'email entre les formulaires.
+   */
   const toggleAuthMode = () => {
     setIsSignUpForm(!isSignUpForm);
     setError(null);
@@ -542,6 +631,11 @@ const Sign = ({ setAuth }) => {
     }
   };
 
+  /**
+   * Affiche le contenu pour la configuration ou vérification 2FA.
+   * 
+   * @returns {JSX.Element} Formulaire de gestion 2FA
+   */
   const render2FAContent = () => (
     <form onSubmit={handle2FASubmit} className="w-full max-w-md mx-auto space-y-8 p-6 rounded-2xl">
       {/* Section Configuration 2FA */}
@@ -667,6 +761,11 @@ const Sign = ({ setAuth }) => {
     </form>
   );
 
+  /**
+   * Affiche le formulaire de récupération de mot de passe.
+   * 
+   * @returns {JSX.Element} Formulaire de récupération de mot de passe
+   */
   const renderForgotPasswordForm = () => (
     <form onSubmit={handleForgotPasswordSubmit} className="w-full space-y-8">
       <div className="relative">
@@ -702,6 +801,11 @@ const Sign = ({ setAuth }) => {
     </form>
   );
 
+  /**
+   * Affiche le formulaire initial de connexion ou d'inscription.
+   * 
+   * @returns {JSX.Element} Formulaire de connexion ou d'inscription
+   */
   const renderInitialForm = () => (
     <form onSubmit={handleSubmit} className="w-full space-y-8">
       {isSignUpForm && (

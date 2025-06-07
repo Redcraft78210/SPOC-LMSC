@@ -1,13 +1,38 @@
+/**
+ * @fileoverview
+ * Composant de tutoriel interactif pour guider les utilisateurs à travers les fonctionnalités
+ * de gestion des classes. Ce tutoriel explique comment créer, modifier, rechercher et supprimer 
+ * des classes, ainsi que la gestion des vues et des actions groupées.
+ */
+
 import { useState } from 'react';
 import { useTutorial } from '../contexts/TutorialContext';
 import Tutorial from '../components/Tutorial';
 import { HelpCircle } from 'lucide-react';
 
+/**
+ * Composant qui affiche un tutoriel interactif pour la gestion des classes.
+ * Fournit un bouton d'aide fixe et un tutoriel étape par étape qui guide l'utilisateur
+ * à travers l'interface de gestion des classes.
+ * 
+ * @component
+ * @returns {JSX.Element} Composant de tutoriel avec un bouton d'aide fixe
+ */
 const ClassManagementTutorial = () => {
     const [runTutorial, setRunTutorial] = useState(false);
     const { resetTutorial } = useTutorial();
 
-
+    /**
+     * Définit les étapes du tutoriel de gestion des classes.
+     * Chaque étape cible un élément spécifique de l'interface et affiche des instructions.
+     * 
+     * @type {Array<Object>}
+     * @property {string} target - Sélecteur CSS de l'élément ciblé
+     * @property {string} content - Texte explicatif à afficher
+     * @property {string} placement - Position de l'info-bulle par rapport à l'élément ciblé
+     * @property {boolean} [disableBeacon] - Si true, désactive le point lumineux initial
+     * @property {Function} [isVisible] - Fonction qui détermine si l'étape doit être affichée
+     */
     const tutorialSteps = [
         {
             target: 'body',
@@ -78,11 +103,23 @@ const ClassManagementTutorial = () => {
         },
     ];
 
+    /**
+     * Réinitialise le tutoriel de gestion des classes et lance son exécution.
+     * Utilise la fonction resetTutorial du contexte pour réinitialiser le tutoriel
+     * identifié par 'class-management', puis met à jour l'état pour lancer le tutoriel.
+     * 
+     * @function
+     */
     const handleResetTutorial = () => {
         resetTutorial('class-management');
         setRunTutorial(true);
     };
 
+    /**
+     * Rendu du composant avec un bouton d'aide et le tutoriel.
+     * 
+     * @returns {JSX.Element} Interface du tutoriel
+     */
     return (
         <>
             <div className="fixed bottom-10 right-4 z-10">

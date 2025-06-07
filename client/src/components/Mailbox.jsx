@@ -43,6 +43,19 @@ import { Editor } from '@toast-ui/react-editor';
 import Viewer from '@toast-ui/editor/dist/toastui-editor-viewer';
 import '@toast-ui/editor/dist/toastui-editor.css';
 
+/**
+ * Composant de messagerie permettant aux utilisateurs de gérer leurs emails
+ * @component
+ * @param {Object} props - Les propriétés du composant
+ * @param {Object} props.user - Informations sur l'utilisateur connecté
+ * @param {string|number} props.user.id - Identifiant de l'utilisateur
+ * @param {string} props.user.name - Prénom de l'utilisateur
+ * @param {string} props.user.surname - Nom de famille de l'utilisateur
+ * @param {string} props.user.email - Email de l'utilisateur
+ * @param {'Administrateur'|'Professeur'|'Etudiant'} props.role - Rôle de l'utilisateur
+ * @param {Function} props.onClose - Fonction appelée lors de la fermeture du composant
+ * @returns {JSX.Element} Interface de messagerie
+ */
 const Mailbox = ({ role, onClose, user }) => {
   const [view, setView] = useState('inbox');
   const [messages, setMessages] = useState([]);
@@ -76,6 +89,12 @@ const Mailbox = ({ role, onClose, user }) => {
 
   const fileInputRef = useRef(null);
 
+  /**
+   * Récupère la fonction d'API correspondant à la vue actuelle
+   * @function
+   * @param {string} view - Vue active ('inbox', 'sent', 'trash')
+   * @returns {Function} Fonction d'API pour récupérer les messages
+   */
   const getEndpointForView = useCallback(() => {
     switch (view) {
       case 'inbox':
@@ -89,6 +108,13 @@ const Mailbox = ({ role, onClose, user }) => {
     }
   }, [view]);
 
+  /**
+   * Récupère les messages depuis l'API en fonction de la vue active
+   * @async
+   * @function
+   * @returns {Promise<void>}
+   * @throws {Error} Si la requête échoue
+   */
   const fetchMessages = useCallback(async () => {
     try {
       setLoading(true);
@@ -123,6 +149,14 @@ const Mailbox = ({ role, onClose, user }) => {
     fetchMessages();
   }, [fetchMessages, refreshKey]);
 
+  /**
+   * Gère la sélection d'un message et le marque comme lu si nécessaire
+   * @async
+   * @function
+   * @param {string|number} messageId - ID du message à sélectionner
+   * @returns {Promise<void>}
+   * @throws {Error} Si la requête échoue
+   */
   const handleMessageSelect = async messageId => {
     try {
 
@@ -170,6 +204,14 @@ const Mailbox = ({ role, onClose, user }) => {
     }
   };
 
+  /**
+   * Supprime un message ou le déplace vers la corbeille selon la vue active
+   * @async
+   * @function
+   * @param {string|number} messageId - ID du message à supprimer
+   * @returns {Promise<void>}
+   * @throws {Error} Si la requête échoue
+   */
   const deleteMessageHandler = async messageId => {
     try {
       setDeletingMessage(true);
@@ -196,6 +238,15 @@ const Mailbox = ({ role, onClose, user }) => {
     }
   };
 
+  /**
+   * Télécharge une pièce jointe
+   * @async
+   * @function
+   * @param {string|number} attachmentId - ID de la pièce jointe
+   * @param {string} filename - Nom du fichier
+   * @returns {Promise<void>}
+   * @throws {Error} Si le téléchargement échoue
+   */
   const downloadAttachmentHandler = async (attachmentId, filename) => {
     try {
       setDownloadingAttachments(prev => ({ ...prev, [attachmentId]: true }));
@@ -237,6 +288,11 @@ const Mailbox = ({ role, onClose, user }) => {
     );
   }, [messages, searchQuery]);
 
+  /**
+   * Composant pour composer un nouveau message ou répondre à un message existant
+   * @component
+   * @returns {JSX.Element} Formulaire de composition de message
+   */
   const ComposeMail = () => {
     const [recipients, setRecipients] = useState([]);
     const [availableRecipients, setAvailableRecipients] = useState([]);
@@ -281,10 +337,23 @@ const Mailbox = ({ role, onClose, user }) => {
     ];
 
 
+    /**
+     * Vérifie si le texte contient des mentions de pièces jointes
+     * @function
+     * @param {string} text - Contenu du message
+     * @returns {boolean} Vrai si le texte mentionne des pièces jointes
+     */
     const checkForAttachmentMention = (text) => {
       return attachmentRegexList.some(regex => regex.test(text));
     };
 
+    /**
+     * Récupère la liste des destinataires disponibles
+     * @async
+     * @function
+     * @returns {Promise<void>}
+     * @throws {Error} Si la requête échoue
+     */
     const fetchAvailableRecipients = useCallback(async () => {
       try {
         setLoadingRecipients(true);
@@ -347,6 +416,12 @@ const Mailbox = ({ role, onClose, user }) => {
       };
     }, []);
 
+    /**
+     * Gère le changement de fichiers lors de l'ajout de pièces jointes
+     * @function
+     * @param {Event} e - Événement de changement
+     * @returns {void}
+     */
     const handleFileChange = e => {
       const files = Array.from(e.target.files);
 
@@ -364,15 +439,33 @@ const Mailbox = ({ role, onClose, user }) => {
       setAttachments([...attachments, ...validFiles]);
     };
 
+    /**
+     * Supprime une pièce jointe du formulaire
+     * @function
+     * @param {number} index - Index de la pièce jointe à supprimer
+     * @returns {void}
+     */
     const removeAttachment = index => {
       setAttachments(attachments.filter((_, i) => i !== index));
     };
 
+    /**
+     * Gère les changements dans le champ de recherche de destinataires
+     * @function
+     * @param {Event} e - Événement de changement
+     * @returns {void}
+     */
     const handleSearchChange = e => {
       setSearchQuery(e.target.value);
       setShowSuggestions(true);
     };
 
+    /**
+     * Ajoute un destinataire sélectionné à la liste
+     * @function
+     * @param {string|number} userId - ID du destinataire
+     * @returns {void}
+     */
     const handleRecipientSelect = input => {
       const userId = input.toString();
       const selectedUser = availableRecipients.find(
@@ -393,6 +486,12 @@ const Mailbox = ({ role, onClose, user }) => {
       setShowSuggestions(false);
     };
 
+    /**
+     * Définit le type de destinataire spécial (tous les étudiants, tous les professeurs, etc.)
+     * @function
+     * @param {string} type - Type de destinataire spécial
+     * @returns {void}
+     */
     const handleSpecialRecipientSelect = type => {
       if (type !== recipientType) {
         setRecipientType(type);
@@ -400,6 +499,14 @@ const Mailbox = ({ role, onClose, user }) => {
       }
     };
 
+    /**
+     * Envoie le message
+     * @async
+     * @function
+     * @param {Event} e - Événement de soumission
+     * @returns {Promise<void>}
+     * @throws {Error} Si l'envoi échoue
+     */
     const handleSubmit = async e => {
       e.preventDefault();
 
@@ -964,6 +1071,13 @@ const Mailbox = ({ role, onClose, user }) => {
     setMobileMenuOpen(false);
   };
 
+  /**
+   * Composant pour afficher le contenu d'un message avec Toast UI Viewer
+   * @component
+   * @param {Object} props - Propriétés du composant
+   * @param {string} props.content - Contenu du message à afficher
+   * @returns {JSX.Element} Visualiseur de contenu
+   */
   const ToastViewer = ({ content }) => {
     const viewerRef = useRef();
 
@@ -981,8 +1095,67 @@ const Mailbox = ({ role, onClose, user }) => {
     return <div ref={viewerRef}></div>;
   };
 
-  ToastViewer.propTypes = {
-    content: PropTypes.string.isRequired,
+  /**
+   * Composant squelette pour l'affichage pendant le chargement d'un message dans la liste
+   * @component
+   * @returns {JSX.Element} Animation de chargement pour un message
+   */
+  const MessageSkeleton = () => {
+    return (
+      <div className="w-full p-3 sm:p-4 border border-gray-100 animate-pulse">
+        <div className="flex items-start justify-between mb-1">
+          <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+          <div className="h-3 bg-gray-200 rounded w-1/6"></div>
+        </div>
+        <div className="h-4 bg-gray-200 rounded w-3/4 mt-2"></div>
+        <div className="h-3 bg-gray-200 rounded w-1/2 mt-2"></div>
+        <div className="flex mt-2 gap-1">
+          <div className="h-5 bg-gray-200 rounded-full w-16"></div>
+        </div>
+      </div>
+    );
+  };
+
+
+  /**
+   * Composant squelette pour l'affichage pendant le chargement des détails d'un message
+   * @component
+   * @returns {JSX.Element} Animation de chargement pour les détails d'un message
+   */
+  const MessageDetailSkeleton = () => {
+    return (
+      <div className="flex-1 flex flex-col bg-white">
+        <div className="p-3 sm:p-4 border-b border-gray-200 animate-pulse">
+          <div className="h-6 bg-gray-200 rounded w-3/4 mb-3"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+        </div>
+        <div className="flex-1 p-3 sm:p-6 animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+          <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+          <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+          <div className="mt-8 pt-4 border-t border-gray-200">
+            <div className="h-5 bg-gray-200 rounded w-1/4 mb-3"></div>
+            <div className="h-12 bg-gray-200 rounded w-full mb-2"></div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  /**
+   * Validation des types de propriétés pour le composant Mailbox
+   * @type {Object}
+   */
+  Mailbox.propTypes = {
+    user: PropTypes.shape({
+      id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+      name: PropTypes.string,
+      surname: PropTypes.string,
+      email: PropTypes.string,
+    }).isRequired,
+    role: PropTypes.oneOf(['Administrateur', 'Professeur', 'Etudiant']).isRequired,
+    onClose: PropTypes.func.isRequired,
   };
 
   return (
@@ -1601,6 +1774,11 @@ const Mailbox = ({ role, onClose, user }) => {
 };
 
 
+/**
+ * Composant squelette pour l'affichage pendant le chargement d'un message dans la liste
+ * @component
+ * @returns {JSX.Element} Animation de chargement pour un message
+ */
 const MessageSkeleton = () => {
   return (
     <div className="w-full p-3 sm:p-4 border border-gray-100 animate-pulse">
@@ -1618,6 +1796,11 @@ const MessageSkeleton = () => {
 };
 
 
+/**
+ * Composant squelette pour l'affichage pendant le chargement des détails d'un message
+ * @component
+ * @returns {JSX.Element} Animation de chargement pour les détails d'un message
+ */
 const MessageDetailSkeleton = () => {
   return (
     <div className="flex-1 flex flex-col bg-white">

@@ -1,12 +1,45 @@
+/**
+ * @fileoverview
+ * Composant gérant le tutoriel pas à pas pour la bibliothèque de cours.
+ * Ce tutoriel guide l'utilisateur à travers l'interface de la bibliothèque
+ * en expliquant les fonctionnalités principales de recherche et de filtrage.
+ */
+
 import { useState } from 'react';
 import Tutorial from '../components/Tutorial';
 import { useTutorial } from '../contexts/TutorialContext';
 
+/**
+ * Composant qui affiche un tutoriel guidé pour la bibliothèque de cours
+ * 
+ * @component
+ * @returns {JSX.Element} Composant de tutoriel pour la bibliothèque de cours
+ */
 const CoursesLibraryTutorial = () => {
+  /**
+   * État contrôlant si le tutoriel est en cours d'exécution
+   * @type {[boolean, Function]}
+   */
   const [runTutorial, setRunTutorial] = useState(false);
+  
+  /**
+   * Contexte fournissant les fonctions de gestion des tutoriels
+   * @type {Object}
+   * @property {Function} isTutorialCompleted - Vérifie si un tutoriel spécifique a été complété
+   * @property {Function} resetTutorial - Réinitialise l'état d'un tutoriel spécifique
+   */
   const { isTutorialCompleted, resetTutorial } = useTutorial();
+  
+  /**
+   * Identifiant unique pour ce tutoriel
+   * @type {string}
+   */
   const tutorialId = 'courses-library';
   
+  /**
+   * Configuration des étapes du tutoriel
+   * @type {Array<Object>}
+   */
   const steps = [
     {
       target: 'body',

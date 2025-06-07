@@ -1,7 +1,27 @@
 import PropTypes from 'prop-types';
 import { Globe, BellIcon } from 'lucide-react';
 
+/**
+ * Composant d'onglet de confidentialité permettant aux utilisateurs de gérer leurs paramètres de confidentialité et de partage de données.
+ *
+ * @param {Object} props - Les propriétés du composant
+ * @param {Object} props.dataSharing - État des préférences de partage de données
+ * @param {boolean} props.dataSharing.analytics - Indique si l'utilisateur a autorisé les statistiques d'utilisation
+ * @param {boolean} props.dataSharing.personalizedAds - Indique si l'utilisateur a autorisé les publicités personnalisées
+ * @param {Function} props.setDataSharing - Fonction pour mettre à jour l'état de partage des données
+ * @param {Function} props.handleInputChange - Fonction déclenchée lors de la modification d'un paramètre
+ * @returns {JSX.Element} Onglet de paramètres de confidentialité
+ */
 const PrivacyTab = ({ dataSharing, setDataSharing, handleInputChange }) => {
+  /**
+   * Composant d'interrupteur personnalisé pour activer/désactiver une option
+   *
+   * @param {Object} props - Les propriétés du composant
+   * @param {boolean} props.checked - État actuel de l'interrupteur (activé/désactivé)
+   * @param {Function} props.onChange - Fonction appelée lors du changement d'état
+   * @param {boolean} [props.disabled] - Indique si l'interrupteur est désactivé
+   * @returns {JSX.Element} Bouton d'interrupteur stylisé
+   */
   const Switch = ({ checked, onChange, disabled }) => {
     return (
       <button
@@ -26,6 +46,15 @@ const PrivacyTab = ({ dataSharing, setDataSharing, handleInputChange }) => {
     disabled: PropTypes.bool,
   };
 
+  /**
+   * Composant de case à cocher personnalisé avec un libellé
+   *
+   * @param {Object} props - Les propriétés du composant
+   * @param {string} props.label - Texte à afficher à côté de la case à cocher
+   * @param {boolean} props.checked - État actuel de la case à cocher (cochée/non cochée)
+   * @param {Function} props.onChange - Fonction appelée lors du changement d'état
+   * @returns {JSX.Element} Case à cocher avec libellé
+   */
   const Checkbox = ({ label, checked, onChange }) => (
     <label className="flex items-center space-x-3">
       <input

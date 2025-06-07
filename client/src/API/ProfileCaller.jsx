@@ -2,9 +2,13 @@ import api from './api';
 import PropTypes from 'prop-types';
 
 /**
- * Fonction générique de gestion des erreurs
- * @param {Error} error - L'erreur à traiter
- * @returns {Object} - Objet d'erreur formaté
+ * Gère les erreurs retournées par les appels API
+ * @private
+ * @param {Error} error - L'erreur interceptée
+ * @returns {Object} Objet formaté contenant les détails de l'erreur
+ * @returns {number} .status - Code HTTP de l'erreur
+ * @returns {Object|null} .data - Données de réponse si disponibles
+ * @returns {string} .message - Message d'erreur
  */
 const handleError = (error) => {
 
@@ -32,6 +36,15 @@ const handleError = (error) => {
 };
 
 
+/**
+ * Récupère le profil de l'utilisateur connecté
+ * @async
+ * @returns {Promise<Object>} Résultat de la requête
+ * @returns {number} .status - Code HTTP de la réponse
+ * @returns {Object} .data - Données du profil utilisateur
+ * @returns {string} .message - Message de statut
+ * @throws {Error} Erreur formatée via handleError
+ */
 const getUserProfile = async () => {
   try {
     const response = await api.get('/users/profile');
@@ -46,6 +59,20 @@ const getUserProfile = async () => {
 };
 
 
+/**
+ * Met à jour le profil de l'utilisateur
+ * @async
+ * @param {Object} profileData - Données du profil à mettre à jour
+ * @param {string} [profileData.name] - Prénom de l'utilisateur
+ * @param {string} [profileData.surname] - Nom de famille de l'utilisateur
+ * @param {string} [profileData.email] - Email de l'utilisateur
+ * @param {string} [profileData.username] - Nom d'utilisateur
+ * @returns {Promise<Object>} Résultat de la requête
+ * @returns {number} .status - Code HTTP de la réponse
+ * @returns {Object} .data - Données mises à jour
+ * @returns {string} .message - Message de confirmation
+ * @throws {Error} Erreur formatée via handleError
+ */
 const updateUserProfile = async (profileData) => {
   try {
     const response = await api.put('/users/profile/', profileData);
@@ -60,6 +87,17 @@ const updateUserProfile = async (profileData) => {
 };
 
 
+/**
+ * Télécharge un fichier image comme avatar utilisateur
+ * @async
+ * @param {Object} params - Paramètres de téléchargement
+ * @param {File} params.file - Fichier image à télécharger
+ * @returns {Promise<Object>} Résultat de la requête
+ * @returns {number} .status - Code HTTP de la réponse
+ * @returns {Object} .data - Données de l'avatar téléchargé
+ * @returns {string} .message - Message de confirmation
+ * @throws {Error} Erreur formatée via handleError
+ */
 const uploadAvatar = async ({ file }) => {
   try {
     const formData = new FormData();
@@ -81,6 +119,15 @@ const uploadAvatar = async ({ file }) => {
 };
 
 
+/**
+ * Récupère l'avatar de l'utilisateur
+ * @async
+ * @returns {Promise<Object>} Résultat de la requête
+ * @returns {number} .status - Code HTTP de la réponse
+ * @returns {Blob} .data - Données binaires de l'image avatar
+ * @returns {string} .message - Message de statut
+ * @throws {Error} Erreur formatée via handleError
+ */
 const getAvatar = async () => {
   try {
     const response = await api.get('/avatars', {
@@ -97,6 +144,15 @@ const getAvatar = async () => {
 };
 
 
+/**
+ * Supprime l'avatar de l'utilisateur
+ * @async
+ * @returns {Promise<Object>} Résultat de la requête
+ * @returns {number} .status - Code HTTP de la réponse
+ * @returns {Object} .data - Données de la réponse
+ * @returns {string} .message - Message de confirmation
+ * @throws {Error} Erreur formatée via handleError
+ */
 const deleteAvatar = async () => {
   try {
     const response = await api.delete('/avatars');
@@ -111,6 +167,15 @@ const deleteAvatar = async () => {
 };
 
 
+/**
+ * Récupère les préférences de notification de l'utilisateur
+ * @async
+ * @returns {Promise<Object>} Résultat de la requête
+ * @returns {number} .status - Code HTTP de la réponse
+ * @returns {Object} .data - Préférences de notification
+ * @returns {string} .message - Message de statut
+ * @throws {Error} Erreur formatée via handleError
+ */
 const getNotificationPreferences = async () => {
   try {
     const response = await api.get('/users/profile/notifications');
@@ -125,6 +190,16 @@ const getNotificationPreferences = async () => {
 };
 
 
+/**
+ * Met à jour les préférences de notification de l'utilisateur
+ * @async
+ * @param {Object} preferences - Nouvelles préférences de notification
+ * @returns {Promise<Object>} Résultat de la requête
+ * @returns {number} .status - Code HTTP de la réponse
+ * @returns {Object} .data - Données mises à jour
+ * @returns {string} .message - Message de confirmation
+ * @throws {Error} Erreur formatée via handleError
+ */
 const updateNotificationPreferences = async (preferences) => {
   try {
     const response = await api.put('/users/profile/notifications', preferences);
@@ -138,6 +213,20 @@ const updateNotificationPreferences = async (preferences) => {
   }
 };
 
+
+/**
+ * Télécharge une image depuis un chemin comme avatar utilisateur
+ * @async
+ * @param {Object} params - Paramètres de téléchargement
+ * @param {string} params.imagePath - Chemin vers l'image à utiliser comme avatar
+ * @returns {Promise<Object>} Résultat de la requête via uploadAvatar
+ * @throws {Error} Erreur lors du téléchargement ou du traitement de l'image
+ * @example
+ * // Télécharger une illustration comme avatar
+ * uploadIllustrationAvatar({ imagePath: '/images/default-avatar.jpg' })
+ *   .then(result => console.log(result))
+ *   .catch(error => console.error(error));
+ */
 export const uploadIllustrationAvatar = async ({ imagePath }) => {
   try {
 

@@ -5,14 +5,35 @@ import 'react-pdf/dist/Page/TextLayer.css';
 import Proptypes from 'prop-types';
 import { Get_special_Document } from '../API/DocumentCaller';
 
+/** Configure le worker PDF.js pour le rendu des documents PDF */
 pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.mjs`;
 
+/**
+ * Composant pour afficher de manière sécurisée des documents PDF.
+ * Récupère et affiche un document PDF spécifique avec une mise en page réactive.
+ *
+ * @component
+ * @param {Object} props - Les propriétés du composant
+ * @param {string} props.authToken - Token d'authentification pour accéder au document
+ * @param {string} props.documentId - Identifiant unique du document à afficher
+ * @returns {JSX.Element} Composant d'affichage de document PDF
+ */
 const SecureDocumentViewer = ({ authToken, documentId }) => {
+  /** @type {[Blob|null, Function]} État contenant les données binaires du PDF */
   const [pdfData, setPdfData] = useState(null);
+  
+  /** @type {[number|null, Function]} État contenant le nombre total de pages du document */
   const [numPages, setNumPages] = useState(null);
+  
+  /** @type {[number, Function]} État contenant la largeur du conteneur pour le rendu réactif */
   const [width, setWidth] = useState(0);
+  
+  /** @type {React.RefObject} Référence vers l'élément conteneur du PDF */
   const containerRef = useRef(null);
 
+  /**
+   * Observe et réagit aux changements de taille du conteneur pour adapter la taille du PDF
+   */
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -27,6 +48,11 @@ const SecureDocumentViewer = ({ authToken, documentId }) => {
     return () => observer.disconnect();
   }, []);
 
+  /**
+   * Récupère le document PDF depuis l'API en utilisant l'ID du document fourni
+   * 
+   * @throws {Error} Si le document ne peut pas être chargé ou si le type de fichier est invalide
+   */
   useEffect(() => {
     const fetchPDF = async () => {
       try {
@@ -37,7 +63,6 @@ const SecureDocumentViewer = ({ authToken, documentId }) => {
         }
 
         const blob = response.data;
-
 
         if (!blob.type.includes('pdf')) {
           throw new Error('Invalid file type');
@@ -51,6 +76,12 @@ const SecureDocumentViewer = ({ authToken, documentId }) => {
     fetchPDF();
   }, [authToken, documentId]);
 
+  /**
+   * Gère le chargement réussi du document PDF
+   * 
+   * @param {Object} data - Données du document chargé
+   * @param {number} data.numPages - Nombre total de pages du document
+   */
   const onLoadSuccess = ({ numPages }) => {
     setNumPages(numPages);
   };
@@ -74,7 +105,6 @@ const SecureDocumentViewer = ({ authToken, documentId }) => {
                   <Page
                     key={pageIndex}
                     pageNumber={pageIndex + 1}
-
                     loading={
                       <div className="text-center py-8">
                         Chargement de la page...
@@ -98,8 +128,13 @@ const SecureDocumentViewer = ({ authToken, documentId }) => {
   );
 };
 
+/**
+ * Validation des props du composant SecureDocumentViewer
+ */
 SecureDocumentViewer.propTypes = {
+  /** Token d'authentification requis pour accéder au document */
   authToken: Proptypes.string.isRequired,
+  /** Identifiant unique du document à afficher */
   documentId: Proptypes.string.isRequired,
 };
 

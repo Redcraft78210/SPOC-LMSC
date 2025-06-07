@@ -13,20 +13,34 @@ import { changePassword } from '../../API/UserCaller';
 
 import { setup2FA, verify2FASetup, disable2FA } from '../../API/AuthCaller';
 
+/**
+ * A lazy-loaded component that renders a canvas template for CAPTCHA verification
+ * @type {React.LazyExoticComponent<React.ComponentType>}
+ */
 const LoadCanvasTemplate = lazy(() =>
   import('react-simple-captcha').then(module => ({ default: module.LoadCanvasTemplate }))
 );
 
+/**
+ * A lazy-loaded function to initialize the CAPTCHA engine
+ * @type {React.LazyExoticComponent<Function>}
+ */
 const loadCaptchaEngine = lazy(() =>
   import('react-simple-captcha').then(module => ({ default: module.loadCaptchaEnginge }))
 );
 
-
+/**
+ * Renders a spinning loader animation
+ * @returns {JSX.Element} A spinner component
+ */
 const Spinner = () => (
   <Loader2 className="h-4 w-4 animate-spin" />
 );
 
-
+/**
+ * Modal component for setting up Two-Factor Authentication
+ * @type {React.LazyExoticComponent<React.ComponentType>}
+ */
 const TwoFASetupModal = lazy(() => {
   return new Promise(resolve => {
 
@@ -110,6 +124,15 @@ const TwoFASetupModal = lazy(() => {
   });
 });
 
+/**
+ * Component for managing security settings including password changes and 2FA
+ * 
+ * @param {Object} props - Component props
+ * @param {Object} props.user - User object containing user information
+ * @param {Function} props.setUser - Function to update user state
+ * @param {Function} props.handleInputChange - Function to handle input changes
+ * @returns {JSX.Element} Security settings tab
+ */
 const SecurityTab = ({ user, handleInputChange }) => {
   const [twoFADigits, setTwoFADigits] = useState(['', '', '', '', '', '']);
   const digitsRefs = useRef([]);
@@ -123,6 +146,10 @@ const SecurityTab = ({ user, handleInputChange }) => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
+  /**
+   * Updates the component state when user data changes
+   * @returns {void}
+   */
   useEffect(() => {
 
     if (user && user.twoFAEnabled !== undefined) {
@@ -130,6 +157,10 @@ const SecurityTab = ({ user, handleInputChange }) => {
     }
   }, [user]);
 
+  /**
+   * Initializes CAPTCHA when failed verification attempts exceed threshold
+   * @returns {void}
+   */
   useEffect(() => {
     if (countEchec2FACode >= 2) {
 
@@ -147,6 +178,13 @@ const SecurityTab = ({ user, handleInputChange }) => {
     }
   }, [countEchec2FACode]);
 
+  /**
+   * Handles changes to 2FA verification code input fields
+   * 
+   * @param {number} index - Index of the digit being changed
+   * @param {string} value - New value for the digit
+   * @returns {void}
+   */
   const handleDigitChange = (index, value) => {
 
     if (!/^[0-9]?$/.test(value)) return;
@@ -161,6 +199,13 @@ const SecurityTab = ({ user, handleInputChange }) => {
     }
   };
 
+  /**
+   * Handles keyboard events for 2FA verification code input fields
+   * 
+   * @param {number} index - Index of the current digit field
+   * @param {KeyboardEvent} e - Keyboard event
+   * @returns {void}
+   */
   const handleDigitKeyDown = (index, e) => {
 
     if (e.key === 'Backspace') {
@@ -198,6 +243,13 @@ const SecurityTab = ({ user, handleInputChange }) => {
     }
   };
 
+  /**
+   * Handles paste events for 2FA verification code input fields
+   * 
+   * @param {number} index - Index of the current digit field
+   * @param {ClipboardEvent} e - Clipboard event
+   * @returns {void}
+   */
   const handleDigitPaste = (index, e) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text').trim();
@@ -224,6 +276,13 @@ const SecurityTab = ({ user, handleInputChange }) => {
     }
   };
 
+  /**
+   * Handles submission of 2FA verification code
+   * 
+   * @param {Event} e - Form submission event
+   * @returns {Promise<void>}
+   * @throws {Error} When verification fails
+   */
   const handle2FASubmit = async e => {
     e.preventDefault();
 
@@ -267,6 +326,13 @@ const SecurityTab = ({ user, handleInputChange }) => {
     }
   };
 
+  /**
+   * Initiates the 2FA setup process
+   * 
+   * @param {Event} e - Click event
+   * @returns {Promise<void>}
+   * @throws {Error} When 2FA setup fails
+   */
   const handle2FASetup = async e => {
     e.preventDefault();
     setLoading(true);
@@ -288,6 +354,13 @@ const SecurityTab = ({ user, handleInputChange }) => {
     }
   };
 
+  /**
+   * Resets and restarts the 2FA setup process
+   * 
+   * @param {Event} e - Click event
+   * @returns {Promise<void>}
+   * @throws {Error} When 2FA reset fails
+   */
   const handle2FAReset = async e => {
     e.preventDefault();
     try {
@@ -299,6 +372,12 @@ const SecurityTab = ({ user, handleInputChange }) => {
     }
   };
 
+  /**
+   * Disables two-factor authentication for the current user
+   * 
+   * @returns {Promise<void>}
+   * @throws {Error} When 2FA disabling fails
+   */
   const disable2FAHandler = async () => {
     try {
       const response = await disable2FA();
@@ -320,6 +399,12 @@ const SecurityTab = ({ user, handleInputChange }) => {
     }
   };
 
+  /**
+   * Validates and processes password change request
+   * 
+   * @returns {Promise<void>}
+   * @throws {Error} When password validation or update fails
+   */
   const handleSavePassword = async () => {
 
     setErrors({});
@@ -410,6 +495,15 @@ const SecurityTab = ({ user, handleInputChange }) => {
     }
   };
 
+  /**
+   * Toggle switch component
+   * 
+   * @param {Object} props - Component props
+   * @param {boolean} props.checked - Whether the switch is toggled on
+   * @param {Function} props.onChange - Function to call when switch state changes
+   * @param {boolean} props.disabled - Whether the switch is disabled
+   * @returns {JSX.Element} Switch component
+   */
   const Switch = ({ checked, onChange, disabled }) => {
     return (
       <button
@@ -426,13 +520,13 @@ const SecurityTab = ({ user, handleInputChange }) => {
     );
   };
 
-  Switch.propTypes = {
-    checked: PropTypes.bool.isRequired,
-    onChange: PropTypes.func.isRequired,
-    disabled: PropTypes.bool,
-  };
-
-
+  /**
+   * Displays error message for a form field
+   * 
+   * @param {Object} props - Component props
+   * @param {string} props.field - Field name to display errors for
+   * @returns {JSX.Element|null} Error message or null if no error
+   */
   const ErrorMessage = ({ field }) => {
     if (!errors[field]) return null;
 
@@ -441,10 +535,6 @@ const SecurityTab = ({ user, handleInputChange }) => {
         {errors[field]}
       </p>
     );
-  };
-
-  ErrorMessage.propTypes = {
-    field: PropTypes.string.isRequired
   };
 
   return (
@@ -588,6 +678,9 @@ const SecurityTab = ({ user, handleInputChange }) => {
   );
 };
 
+/**
+ * PropTypes for the SecurityTab component
+ */
 SecurityTab.propTypes = {
   user: PropTypes.object.isRequired,
   setUser: PropTypes.func.isRequired,

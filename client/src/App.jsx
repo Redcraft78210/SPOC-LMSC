@@ -1,3 +1,7 @@
+/**
+ * Application principale SPOC-LMSC gérant l'authentification et le routage.
+ * @module App
+ */
 import React, { useState, useEffect, Suspense } from 'react';
 import {
   Navigate,
@@ -10,6 +14,7 @@ import { jwtDecode } from 'jwt-decode';
 import { TutorialProvider } from './contexts/TutorialContext';
 
 
+// Importations avec chargement paresseux des composants
 const About = React.lazy(() => import('./pages/Public/About'));
 const Contact = React.lazy(() => import('./pages/Public/Contact'));
 const Terms = React.lazy(() => import('./pages/Public/TermsOfUse'));
@@ -24,6 +29,10 @@ const NotFound = React.lazy(() => import('./pages/Public/NotFound'));
 const Sign = React.lazy(() => import('./pages/Public/Sign'));
 
 
+/**
+ * Composant de secours affiché pendant le chargement des composants.
+ * @returns {JSX.Element} Composant d'interface utilisateur d'état de chargement
+ */
 const LoadingFallback = () => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-white bg-opacity-50 backdrop-blur-sm">
     <div className="flex flex-col items-center space-y-4">
@@ -34,10 +43,27 @@ const LoadingFallback = () => (
 );
 
 
-let APP_STATUS = 'MAINTENANCE';
+/**
+ * État global de l'application.
+ * @type {string} - 'MAINTENANCE' pour mode maintenance, aucune valeur pour mode normal
+ * @description Définit si l'application est en mode maintenance ou opérationnelle.
+ * En mode maintenance, l'application affiche une bannière de maintenance et empêche l'accès aux routes protégées.
+ * En mode normal, l'application fonctionne normalement avec authentification et routage.
+ * @example
+ * // Pour activer le mode maintenance, définissez APP_STATUS à 'MAINTENANCE'
+ * APP_STATUS = 'MAINTENANCE';
+ * // Pour revenir au mode normal, définissez APP_STATUS à une chaîne vide ou à 'OPERATIONAL'
+ * APP_STATUS = '';
+ * @see MaintenanceBanner pour l'affichage de la bannière de maintenance
+ * @see App pour la logique de routage et d'authentification
+ */
+let APP_STATUS = '';
 
 
-
+/**
+ * Configuration des routes protégées nécessitant une authentification.
+ * @type {Array<{path: string, content: string}>} - Liste des routes avec chemin et nom de composant
+ */
 const routeConfig = [
 
   { path: '/dashboard', content: 'Home' },
@@ -71,6 +97,10 @@ const routeConfig = [
   { path: '/settings', content: 'Settings' },
 ];
 
+/**
+ * Configuration des routes publiques accessibles sans authentification.
+ * @type {Array<{path: string, content: string}>} - Liste des routes avec chemin et nom de composant
+ */
 const publicRouteConfig = [
   { path: '/', content: 'Home' },
   { path: '/about', content: 'About' },
@@ -81,6 +111,10 @@ const publicRouteConfig = [
   { path: '/privacy', content: 'Privacy' },
 ];
 
+/**
+ * Composant d'encapsulation fournissant le routeur et le contexte de tutoriel.
+ * @returns {JSX.Element} Application avec Router et TutorialProvider
+ */
 function AppWrapper() {
   return (
     <Router>
@@ -91,19 +125,48 @@ function AppWrapper() {
   );
 }
 
+/**
+ * Composant principal gérant l'authentification et le routage.
+ * Gère la redirection vers la première connexion, les routes protégées et publiques.
+ * @returns {JSX.Element} Interface principale avec routage conditionnel
+ */
 function App() {
+  /**
+   * État contenant les informations d'authentification décodées du JWT
+   * @type {Object|null}
+   */
   const [auth, setAuth] = useState(null);
+  
+  /**
+   * État indiquant si l'application est en cours de chargement
+   * @type {boolean}
+   */
   const [loading, setLoading] = useState(true);
+  
+  /**
+   * Rôle de l'utilisateur authentifié
+   * @type {string|null}
+   */
   const [role, setRole] = useState(null);
+  
   const location = useLocation();
 
+  /**
+   * Vérifie la cohérence entre l'état d'authentification et les jetons stockés
+   */
   useEffect(() => {
     if (!auth && !loading && (sessionStorage.getItem('authToken') || localStorage.getItem('authToken'))) {
       handleLogout();
     }
   }, [auth, loading]);
 
+  /**
+   * Vérifie l'authenticité et la validité du jeton JWT
+   */
   useEffect(() => {
+    /**
+     * Vérifie le jeton d'authentification stocké et met à jour l'état
+     */
     const checkAuth = () => {
       const token =
         sessionStorage.getItem('authToken') || localStorage.getItem('authToken');
@@ -129,18 +192,25 @@ function App() {
     checkAuth();
   }, [auth, location]);
 
+  /**
+   * Configure l'authentification à partir d'un jeton JWT
+   * @param {string} token - Jeton JWT d'authentification
+   * @throws {Error} Erreur si le décodage du jeton échoue
+   */
   const handleSetAuth = token => {
     try {
       const decodedToken = jwtDecode(token);
       setAuth(decodedToken);
       setRole(decodedToken.role);
-
     } catch (error) {
       console.error('Error decoding token:', error);
       handleLogout();
     }
   };
 
+  /**
+   * Déconnecte l'utilisateur en supprimant les jetons et réinitialisant les états
+   */
   const handleLogout = () => {
     setAuth(null);
     setRole(null);
@@ -148,6 +218,7 @@ function App() {
     sessionStorage.removeItem('authToken');
   };
 
+  // Rendu conditionnel basé sur l'état de l'application
   if (APP_STATUS === 'MAINTENANCE') {
     return (
       <MaintenanceBanner

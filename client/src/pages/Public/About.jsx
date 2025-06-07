@@ -1,6 +1,20 @@
+/**
+ * @fileoverview
+ * Page "À propos" du site SPOC-LMSC qui présente la mission, la vision 
+ * et l'équipe derrière la plateforme. Cette page est accessible au public
+ * et s'intègre dans la navigation générale du site.
+ */
+
 import PublicNavbar from '../../components/PublicComp/PublicNavbar';
 import Footer from '../../components/PublicComp/Footer';
 
+/**
+ * Composant qui affiche la page "À propos" avec les informations sur la mission,
+ * la vision et l'équipe de SPOC-LMSC.
+ * 
+ * @component
+ * @returns {JSX.Element} Page "À propos" structurée avec en-tête, sections de contenu et équipe
+ */
 const About = () => {
   return (
     <div className="min-h-screen bg-gray-50">

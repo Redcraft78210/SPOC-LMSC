@@ -1,11 +1,6 @@
 import api from './api';
 import PropTypes from 'prop-types';
 
-/**
- * Fonction générique de gestion des erreurs
- * @param {Error} error - L'erreur à traiter
- * @returns {Object} - Objet d'erreur formaté
- */
 const handleError = (error) => {
 
   if (error.response) {

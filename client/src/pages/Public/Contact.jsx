@@ -1,3 +1,9 @@
+/**
+ * @fileoverview
+ * Component for the public contact page that allows users to send messages with attachments.
+ * Features include a rich text editor, file attachment system, and attachment mention detection.
+ */
+
 import { useState, useEffect, useRef } from 'react';
 import PublicNavbar from '../../components/PublicComp/PublicNavbar';
 import Footer from '../../components/PublicComp/Footer';
@@ -5,12 +11,24 @@ import { Paperclip, X } from 'lucide-react';
 import { sendContactMessage } from '../../API/ContactCaller';
 import toast, { Toaster } from 'react-hot-toast';
 
-
 import { Editor } from '@toast-ui/react-editor';
 import '@toast-ui/editor/dist/toastui-editor.css';
 
-
+/**
+ * Contact page component with form submission and file attachment capabilities
+ * 
+ * @returns {JSX.Element} The contact page with form and supporting UI elements
+ */
 const Contact = () => {
+  /**
+   * Form data state containing user input fields
+   * @type {Object}
+   * @property {string} name - User's full name
+   * @property {string} email - User's email address
+   * @property {string} motif - Contact reason/category
+   * @property {string} objet - Subject of the message
+   * @property {string} message - Content of the message
+   */
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -18,13 +36,35 @@ const Contact = () => {
     objet: '',
     message: '',
   });
+  
+  /**
+   * Reference to the rich text editor instance
+   * @type {React.RefObject}
+   */
   const editorRef = useRef(null);
 
+  /**
+   * Array of file attachments to be sent with the message
+   * @type {File[]}
+   */
   const [attachments, setAttachments] = useState([]);
+  
+  /**
+   * Current status of the form submission
+   * @type {string} - Empty string, 'loading', 'success', or 'error'
+   */
   const [status, setStatus] = useState('');
+  
+  /**
+   * Reference to the hidden file input element
+   * @type {React.RefObject}
+   */
   const fileInputRef = useRef(null);
 
-
+  /**
+   * Regular expressions to detect mentions of attachments in message text
+   * @type {RegExp[]}
+   */
   const attachmentRegexList = [
     /ci-joint/i,
     /pièce[s]? jointe[s]?/i,
@@ -46,11 +86,21 @@ const Contact = () => {
     /joint.*document/i,
   ];
 
-
+  /**
+   * Checks if the text contains any mention of attachments based on regex patterns
+   * 
+   * @param {string} text - The text to check for attachment mentions
+   * @returns {boolean} True if text contains attachment mentions, false otherwise
+   */
   const checkForAttachmentMention = (text) => {
     return attachmentRegexList.some(regex => regex.test(text));
   };
 
+  /**
+   * Handles changes to form input fields
+   * 
+   * @param {React.ChangeEvent<HTMLInputElement|HTMLSelectElement>} e - The change event
+   */
   const handleChange = e => {
     const { name, value } = e.target;
     setFormData(prevData => ({
@@ -59,9 +109,13 @@ const Contact = () => {
     }));
   };
 
+  /**
+   * Processes file selection for attachments with size validation
+   * 
+   * @param {React.ChangeEvent<HTMLInputElement>} e - The file input change event
+   */
   const handleFileChange = e => {
     const files = Array.from(e.target.files);
-
 
     const validFiles = files.filter(file => file.size <= 10 * 1024 * 1024);
     const invalidFiles = files.filter(file => file.size > 10 * 1024 * 1024);
@@ -70,18 +124,28 @@ const Contact = () => {
       alert(`${invalidFiles.length} fichier(s) dépassent la limite de 10 Mo`);
     }
 
-
     setAttachments([...attachments, ...validFiles]);
   };
 
+  /**
+   * Removes a specific attachment from the attachments array
+   * 
+   * @param {number} index - The index of the attachment to remove
+   */
   const removeAttachment = index => {
     setAttachments(attachments.filter((_, i) => i !== index));
   };
 
+  /**
+   * Handles form submission with attachment validation
+   * 
+   * @async
+   * @param {React.FormEvent} e - The form submission event
+   * @throws {Error} When the API call to send the message fails
+   */
   const handleSubmit = async e => {
     e.preventDefault();
     setStatus('loading');
-
 
     if (attachments.length === 0 && checkForAttachmentMention(formData.message)) {
       const confirmSend = window.confirm(
@@ -94,11 +158,9 @@ const Contact = () => {
       }
     }
 
-
     const editorContent = editorRef.current?.getInstance().getMarkdown() || '';
 
     try {
-
       const response = await sendContactMessage({
         name: formData.name,
         email: formData.email,
@@ -125,8 +187,10 @@ const Contact = () => {
     }
   };
 
-
-
+  /**
+   * Sets up drag and drop functionality for the editor
+   * Handles file drops with size validation and special handling for images
+   */
   useEffect(() => {
     if (editorRef.current) {
       const editorInstance = editorRef.current.getInstance();
@@ -182,7 +246,6 @@ const Contact = () => {
         });
       }
 
-
       return () => {
         if (dropZone) {
           dropZone.removeEventListener('dragover', () => { });
@@ -192,7 +255,6 @@ const Contact = () => {
       };
     }
   }, [editorRef.current]);
-
 
   return (
     <div className="min-h-screen bg-gray-50">

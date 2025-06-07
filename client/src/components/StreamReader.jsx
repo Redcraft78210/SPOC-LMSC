@@ -10,8 +10,22 @@ import {
   Shrink,
 } from 'lucide-react';
 
+/**
+ * Base WebSocket URL for streaming API connection
+ * @constant {string}
+ */
 const WSS_BASE_URL = 'wss://172.16.87.30/api';
 
+/**
+ * StreamReader component for displaying video and audio streams from a WebSocket connection
+ *
+ * @component
+ * @param {Object} props - Component props
+ * @param {string} props.authToken - Authentication token for WebSocket connection
+ * @param {boolean} [props.controls=true] - Whether to show video controls
+ * @param {string} [props.status] - Current stream status ('ongoing', etc.)
+ * @returns {JSX.Element} Rendered component
+ */
 const StreamReader = ({ authToken, controls, status }) => {
   const containerRef = useRef();
   const playerRef = useRef();
@@ -25,6 +39,13 @@ const StreamReader = ({ authToken, controls, status }) => {
   const wsRef = useRef(null);
   const audioDecoderRef = useRef(null);
 
+  /**
+   * Handles mouse movement over the player to show controls
+   * Sets a timer to hide controls after 3 seconds of inactivity if video is playing
+   *
+   * @function
+   * @returns {void}
+   */
   const handleMouseMove = () => {
     setShowControls(true);
     if (controlsTimerRef.current) {
@@ -38,22 +59,36 @@ const StreamReader = ({ authToken, controls, status }) => {
     }, 3000);
   };
 
+  /**
+   * Toggles play/pause state of the video stream
+   *
+   * @function
+   * @returns {void}
+   */
   const togglePlay = () => {
     setIsPlaying(!isPlaying);
-
-
   };
 
+  /**
+   * Toggles audio mute state
+   *
+   * @function
+   * @returns {void}
+   */
   const toggleMute = () => {
     setIsMuted(!isMuted);
-
-
-
   };
 
+  /**
+   * Toggles fullscreen mode for the video player
+   *
+   * @function
+   * @returns {void}
+   * @throws {Error} If fullscreen request fails
+   */
   const toggleFullScreen = () => {
     if (!document.fullscreenElement) {
-      playerRef.current.requestFullscreen().catch(err => {
+      playerRef.current.requestFullscreen().catch((err) => {
         console.error(
           `Error attempting to enable full-screen mode: ${err.message}`
         );
@@ -63,8 +98,14 @@ const StreamReader = ({ authToken, controls, status }) => {
     }
   };
 
+  /**
+   * Effect to handle fullscreen state changes
+   * Adds and removes event listeners for fullscreen changes
+   *
+   * @effect
+   * @returns {Function} Cleanup function that removes event listeners
+   */
   useEffect(() => {
-
     const handleFullScreenChange = () => {
       setIsFullScreen(!!document.fullscreenElement);
     };
@@ -75,10 +116,16 @@ const StreamReader = ({ authToken, controls, status }) => {
     };
   }, []);
 
+  /**
+   * Main effect to initialize video player, audio decoder, and WebSocket connection
+   * Sets up the stream playback and handles incoming WebSocket messages
+   *
+   * @effect
+   * @param {Array} dependencies - Effect dependencies [isPlaying, authToken]
+   * @returns {Function} Cleanup function that closes connections and cleans up resources
+   */
   useEffect(() => {
-
     const WSURL = `${WSS_BASE_URL}/stream?token=${authToken}`;
-
 
     const player = new Player({
       useWorker: true,
@@ -86,44 +133,52 @@ const StreamReader = ({ authToken, controls, status }) => {
       webgl: true,
     });
 
-
     if (containerRef.current) {
-
       const existingCanvas = containerRef.current.querySelector('canvas');
       if (existingCanvas) {
-
         containerRef.current.removeChild(existingCanvas);
       }
       containerRef.current.appendChild(player.canvas);
       player.canvas.classList.add('videoPlayer');
-
 
       player.canvas.style.width = '100%';
       player.canvas.style.height = '100%';
       player.canvas.style.objectFit = 'contain';
     }
 
-
-    const audioContext = new (window.AudioContext ||
-      window.webkitAudioContext)();
-
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
     document.addEventListener(
       'click',
       function () {
         if (audioContext.state === 'suspended') {
           audioContext.resume();
-
         }
       },
       { once: true }
     );
 
+    /**
+     * AudioDecoder class for decoding audio data from the stream
+     *
+     * @class
+     * @param {Object} config - Configuration object
+     * @param {Function} config.onSamplesDecoded - Callback function when samples are decoded
+     * @returns {Object} AudioDecoder instance
+     */
     const audioDecoder = new AudioDecoder({
+      /**
+       * Callback when audio samples are decoded
+       * Creates and plays an audio buffer from the decoded samples
+       *
+       * @function
+       * @param {Float32Array} samples - Decoded audio samples
+       * @param {number} sampleRate - Audio sample rate in Hz
+       * @param {number} channels - Number of audio channels
+       * @returns {void}
+       */
       onSamplesDecoded: function (samples, sampleRate, channels) {
-
         if (!isPlaying) return;
-
 
         const audioBuffer = audioContext.createBuffer(
           channels,
@@ -131,14 +186,12 @@ const StreamReader = ({ authToken, controls, status }) => {
           sampleRate
         );
 
-
         for (let channel = 0; channel < channels; channel++) {
           const channelData = audioBuffer.getChannelData(channel);
           for (let i = 0; i < samples.length / channels; i++) {
             channelData[i] = samples[i * channels + channel];
           }
         }
-
 
         const source = audioContext.createBufferSource();
         source.buffer = audioBuffer;
@@ -153,18 +206,15 @@ const StreamReader = ({ authToken, controls, status }) => {
 
     audioDecoderRef.current = audioDecoder;
 
-
     const ws = new WebSocket(WSURL);
     ws.binaryType = 'arraybuffer';
     wsRef.current = ws;
 
     ws.onopen = function () {
-
       setConnectionStatus('connected');
     };
 
     ws.onclose = function () {
-
       setConnectionStatus('disconnected');
     };
 
@@ -173,13 +223,18 @@ const StreamReader = ({ authToken, controls, status }) => {
       setConnectionStatus('error');
     };
 
-
-    ws.onmessage = event => {
+    /**
+     * WebSocket message handler
+     * Processes incoming data and routes it to the appropriate decoder
+     *
+     * @function
+     * @param {MessageEvent} event - WebSocket message event
+     * @returns {void}
+     */
+    ws.onmessage = (event) => {
       if (!isPlaying) return;
 
       const data = new Uint8Array(event.data);
-
-
 
       if (data[0] === 1) {
         // Handle audio data
@@ -189,14 +244,11 @@ const StreamReader = ({ authToken, controls, status }) => {
           console.error('Audio decoder not initialized');
         }
       } else {
-
         player.decode(data);
       }
     };
 
-
     const container = containerRef.current;
-
 
     return () => {
       ws.close();
@@ -234,13 +286,23 @@ const StreamReader = ({ authToken, controls, status }) => {
           <div className="flex justify-end px-4 pt-2">
             {status === 'ongoing' && (
               <div
-                className={`flex items-center gap-2 ${connectionStatus === 'connected' ? 'text-red-500' : 'text-gray-400'}`}
+                className={`flex items-center gap-2 ${
+                  connectionStatus === 'connected'
+                    ? 'text-red-500'
+                    : 'text-gray-400'
+                }`}
               >
                 <span
-                  className={`w-3 h-3 rounded-full ${connectionStatus === 'connected' ? 'bg-red-500 animate-pulse' : 'bg-gray-400'}`}
+                  className={`w-3 h-3 rounded-full ${
+                    connectionStatus === 'connected'
+                      ? 'bg-red-500 animate-pulse'
+                      : 'bg-gray-400'
+                  }`}
                 ></span>
                 <span className="uppercase text-xs font-semibold tracking-widest">
-                  {connectionStatus === 'connected' ? 'LIVE' : 'CONNECTING'}
+                  {connectionStatus === 'connected'
+                    ? 'LIVE'
+                    : 'CONNECTING'}
                 </span>
               </div>
             )}
@@ -298,6 +360,14 @@ const StreamReader = ({ authToken, controls, status }) => {
   );
 };
 
+/**
+ * PropTypes for the StreamReader component
+ *
+ * @type {Object}
+ * @property {string} authToken - Authentication token for WebSocket connection (required)
+ * @property {boolean} [controls] - Whether to show video controls
+ * @property {string} [status] - Current stream status ('ongoing', etc.)
+ */
 StreamReader.propTypes = {
   authToken: PropTypes.string.isRequired,
   controls: PropTypes.bool,

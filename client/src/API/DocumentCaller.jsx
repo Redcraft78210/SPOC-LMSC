@@ -2,9 +2,9 @@ import api from './api';
 import PropTypes from 'prop-types';
 
 /**
- * Fonction générique de gestion des erreurs
- * @param {Error} error - L'erreur à traiter
- * @returns {Object} - Objet d'erreur formaté
+ * Traite les erreurs renvoyées par l'API
+ * @param {Error} error - L'objet erreur à traiter
+ * @returns {Object} Objet formaté contenant le statut, les données et le message d'erreur
  */
 const handleError = (error) => {
 
@@ -32,6 +32,16 @@ const handleError = (error) => {
 };
 
 
+/**
+ * Récupère tous les documents disponibles
+ * @returns {Promise<Object>} Objet contenant le statut de la réponse, les données et un message
+ * @throws {Error} Erreurs de requête API gérées par handleError
+ * @example
+ * const response = await GetAll_Document();
+ * if (response.status === 200) {
+ *   const documents = response.data;
+ * }
+ */
 const GetAll_Document = async () => {
   try {
     const response = await api.get('/document/all/');
@@ -46,6 +56,19 @@ const GetAll_Document = async () => {
 };
 
 
+/**
+ * Envoie un document au serveur
+ * @param {Object} params - Paramètres de la fonction
+ * @param {File|string} params.file - Le fichier à envoyer
+ * @param {string} params.title - Le titre du document
+ * @returns {Promise<Object>} Objet contenant le statut de la réponse, les données et un message
+ * @throws {Error} Erreurs de requête API gérées par handleError
+ * @example
+ * const response = await SendDocument({
+ *   file: fileObject,
+ *   title: "Mon document"
+ * });
+ */
 const SendDocument = async ({ file, title }) => {
   const formData = new FormData();
   formData.append('document', file);
@@ -68,6 +91,18 @@ const SendDocument = async ({ file, title }) => {
 };
 
 
+/**
+ * Récupère un document spécifique par son ID
+ * @param {Object} params - Paramètres de la fonction
+ * @param {string|number} params.document_id - L'identifiant du document à récupérer
+ * @returns {Promise<Object>} Objet contenant le statut de la réponse, les données (Blob) et un message
+ * @throws {Error} Erreurs de requête API gérées par handleError
+ * @example
+ * const response = await Get_special_Document({ document_id: "123" });
+ * if (response.status === 200) {
+ *   const documentBlob = response.data;
+ * }
+ */
 const Get_special_Document = async ({ document_id }) => {
   try {
     const response = await api.get(`/documents/${document_id}`, {
@@ -85,6 +120,18 @@ const Get_special_Document = async ({ document_id }) => {
 };
 
 
+/**
+ * Récupère les informations d'un document spécifique
+ * @param {Object} params - Paramètres de la fonction
+ * @param {string|number} params.document_id - L'identifiant du document
+ * @returns {Promise<Object>} Objet contenant le statut de la réponse, les données et un message
+ * @throws {Error} Erreurs de requête API gérées par handleError
+ * @example
+ * const response = await Get_Document_Information({ document_id: "123" });
+ * if (response.status === 200) {
+ *   const documentInfo = response.data;
+ * }
+ */
 const Get_Document_Information = async ({ document_id }) => {
   try {
     const response = await api.get(`/document/document-info/${document_id}`);
@@ -99,6 +146,19 @@ const Get_Document_Information = async ({ document_id }) => {
 };
 
 
+/**
+ * Met à jour un document existant
+ * @param {Object} params - Paramètres de la fonction
+ * @param {string|number} params.document_id - L'identifiant du document à mettre à jour
+ * @param {Object} params.updatedData - Les données mises à jour du document
+ * @returns {Promise<Object>} Objet contenant le statut de la réponse, les données et un message
+ * @throws {Error} Erreurs de requête API gérées par handleError
+ * @example
+ * const response = await UpdateDocument({
+ *   document_id: "123",
+ *   updatedData: { title: "Nouveau titre" }
+ * });
+ */
 const UpdateDocument = async ({ document_id, updatedData }) => {
   try {
     const response = await api.put(`/document/update/${document_id}/`, updatedData);
@@ -113,6 +173,18 @@ const UpdateDocument = async ({ document_id, updatedData }) => {
 };
 
 
+/**
+ * Supprime un document
+ * @param {Object} params - Paramètres de la fonction
+ * @param {string|number} params.document_id - L'identifiant du document à supprimer
+ * @returns {Promise<Object>} Objet contenant le statut de la réponse, les données et un message
+ * @throws {Error} Erreurs de requête API gérées par handleError
+ * @example
+ * const response = await DeleteDocument({ document_id: "123" });
+ * if (response.status === 200) {
+ *   console.log("Document supprimé avec succès");
+ * }
+ */
 const DeleteDocument = async ({ document_id }) => {
   try {
     const response = await api.delete(`/document/delete/${document_id}`);

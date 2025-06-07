@@ -24,6 +24,17 @@ import {
   uploadIllustrationAvatar 
 } from '../API/ProfileCaller';
 
+/**
+ * Composant permettant de sélectionner une photo de profil parmi des illustrations
+ * prédéfinies ou depuis l'ordinateur de l'utilisateur.
+ * 
+ * @component
+ * @param {Object} props - Les propriétés du composant
+ * @param {Function} props.onUploadSuccess - Fonction appelée lorsque l'upload est réussi
+ * @param {Function} props.onClose - Fonction appelée pour fermer le sélecteur
+ * @param {string} props.token - Token d'authentification de l'utilisateur
+ * @returns {JSX.Element} Le composant de sélection de photo de profil
+ */
 const ProfilePhotoSelector = ({ onUploadSuccess, onClose }) => {
   const tabs = [
     { id: 'illustrations', label: 'Illustrations', icon: ImageIcon },
@@ -61,6 +72,13 @@ const ProfilePhotoSelector = ({ onUploadSuccess, onClose }) => {
     src.toLowerCase().includes(search.toLowerCase())
   );
 
+  /**
+   * Gère l'upload d'un fichier image comme avatar
+   * 
+   * @async
+   * @param {File} file - Le fichier image à uploader
+   * @throws {Error} Si l'upload échoue
+   */
   const handleFileUpload = async file => {
     setIsLoading(true);
     setError(null);
@@ -84,6 +102,13 @@ const ProfilePhotoSelector = ({ onUploadSuccess, onClose }) => {
     }
   };
 
+  /**
+   * Gère la sélection d'une illustration comme avatar
+   * 
+   * @async
+   * @param {string} imagePath - Le chemin de l'image sélectionnée
+   * @throws {Error} Si la sélection échoue
+   */
   const handleIllustrationSelect = async imagePath => {
     setIsLoading(true);
     setError(null);
@@ -106,7 +131,15 @@ const ProfilePhotoSelector = ({ onUploadSuccess, onClose }) => {
     }
   };
 
-
+  /**
+   * Composant de bouton avec icône
+   * 
+   * @component
+   * @param {Object} props - Les propriétés du composant
+   * @param {Function} props.icon - Composant d'icône à afficher
+   * @param {Object} props.rest - Les autres propriétés à passer au bouton
+   * @returns {JSX.Element} Un bouton avec une icône
+   */
   const IconButton = ({ icon: Icon, ...props }) => (
     <button
       {...props}
@@ -120,7 +153,19 @@ const ProfilePhotoSelector = ({ onUploadSuccess, onClose }) => {
     icon: PropTypes.elementType.isRequired,
   };
 
-
+  /**
+   * Composant d'onglet pour afficher les illustrations disponibles
+   * 
+   * @component
+   * @param {Object} props - Les propriétés du composant
+   * @param {string} props.search - Terme de recherche actuel
+   * @param {Function} props.onSearchChange - Fonction appelée lors du changement de recherche
+   * @param {Array<string>} props.filteredImages - Liste des images filtrées à afficher
+   * @param {Array<string>} props.extraImages - Liste des images supplémentaires à afficher
+   * @param {Function} props.onSelectImage - Fonction appelée lors de la sélection d'une image
+   * @param {boolean} props.isLoading - Indique si le chargement est en cours
+   * @returns {JSX.Element} L'onglet d'illustrations
+   */
   const IllustrationsTab = ({
     search,
     onSearchChange,
@@ -187,7 +232,16 @@ const ProfilePhotoSelector = ({ onUploadSuccess, onClose }) => {
     isLoading: PropTypes.bool,
   };
 
-
+  /**
+   * Composant pour afficher une grille d'images
+   * 
+   * @component
+   * @param {Object} props - Les propriétés du composant
+   * @param {Array<string>} props.images - Liste des chemins d'images à afficher
+   * @param {string} props.className - Classes CSS supplémentaires pour la grille
+   * @param {Function} props.onSelectImage - Fonction appelée lors de la sélection d'une image
+   * @returns {JSX.Element} Une grille d'images cliquables
+   */
   const ImageGrid = ({ images, className, onSelectImage }) => (
     <div className={`grid ${className}`}>
       {images.map(src => (
@@ -217,12 +271,25 @@ const ProfilePhotoSelector = ({ onUploadSuccess, onClose }) => {
     onSelectImage: PropTypes.func,
   };
 
-
+  /**
+   * Composant d'onglet pour télécharger une image depuis l'ordinateur
+   * 
+   * @component
+   * @param {Object} props - Les propriétés du composant
+   * @param {Function} props.onFileUpload - Fonction appelée pour uploader le fichier
+   * @param {boolean} props.isLoading - Indique si le chargement est en cours
+   * @returns {JSX.Element} L'onglet d'upload de fichier
+   */
   const FileUploadTab = ({ onFileUpload, isLoading }) => {
     const [selectedFile, setSelectedFile] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
     const [isDragging, setIsDragging] = useState(false);
 
+    /**
+     * Gère le changement de fichier sélectionné
+     * 
+     * @param {Object} event - L'événement de changement
+     */
     const handleFileChange = event => {
       const file = event.target.files[0];
       if (file) {
@@ -230,12 +297,20 @@ const ProfilePhotoSelector = ({ onUploadSuccess, onClose }) => {
       }
     };
 
+    /**
+     * Traite le fichier sélectionné et crée une URL de prévisualisation
+     * 
+     * @param {File} file - Le fichier à traiter
+     */
     const processFile = file => {
       setSelectedFile(file);
       const fileUrl = URL.createObjectURL(file);
       setPreviewUrl(fileUrl);
     };
 
+    /**
+     * Annule la sélection de fichier et libère l'URL de prévisualisation
+     */
     const handleCancel = () => {
       if (previewUrl) {
         URL.revokeObjectURL(previewUrl);
@@ -244,6 +319,11 @@ const ProfilePhotoSelector = ({ onUploadSuccess, onClose }) => {
       setPreviewUrl(null);
     };
 
+    /**
+     * Enregistre le fichier sélectionné comme avatar
+     * 
+     * @async
+     */
     const handleSave = async () => {
       if (selectedFile) {
         await onFileUpload(selectedFile);
@@ -251,23 +331,43 @@ const ProfilePhotoSelector = ({ onUploadSuccess, onClose }) => {
       }
     };
 
+    /**
+     * Gère l'événement de survol lors du drag & drop
+     * 
+     * @param {DragEvent} e - L'événement de drag over
+     */
     const handleDragOver = e => {
       e.preventDefault();
       e.stopPropagation();
     };
 
+    /**
+     * Gère l'événement d'entrée lors du drag & drop
+     * 
+     * @param {DragEvent} e - L'événement de drag enter
+     */
     const handleDragEnter = e => {
       e.preventDefault();
       e.stopPropagation();
       setIsDragging(true);
     };
 
+    /**
+     * Gère l'événement de sortie lors du drag & drop
+     * 
+     * @param {DragEvent} e - L'événement de drag leave
+     */
     const handleDragLeave = e => {
       e.preventDefault();
       e.stopPropagation();
       setIsDragging(false);
     };
 
+    /**
+     * Gère l'événement de dépôt lors du drag & drop
+     * 
+     * @param {DragEvent} e - L'événement de drop
+     */
     const handleDrop = e => {
       e.preventDefault();
       e.stopPropagation();
@@ -383,7 +483,6 @@ const ProfilePhotoSelector = ({ onUploadSuccess, onClose }) => {
     isLoading: PropTypes.bool,
   };
 
-
   if (error) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto bg-gray-900/80 backdrop-blur-md">
@@ -486,6 +585,23 @@ ProfilePhotoSelector.propTypes = {
   token: PropTypes.string.isRequired,
 };
 
+/**
+ * Composant principal pour afficher la modal de gestion de photo de profil.
+ * Permet de visualiser, modifier ou supprimer l'avatar de l'utilisateur.
+ * 
+ * @component
+ * @param {Object} props - Les propriétés du composant
+ * @param {Function} props.setShowProfilepictureModal - Fonction pour contrôler l'affichage de la modal
+ * @param {Function} props.refreshAvatar - Fonction pour rafraîchir l'avatar dans le composant parent
+ * @param {string} props.authToken - Token d'authentification de l'utilisateur
+ * @returns {JSX.Element} La modal de gestion de photo de profil
+ * @example
+ * <PictureModal 
+ *   setShowProfilepictureModal={setShowModal} 
+ *   refreshAvatar={refreshUserAvatar} 
+ *   authToken={userToken} 
+ * />
+ */
 const PictureModal = ({
   setShowProfilepictureModal,
   refreshAvatar,
@@ -493,15 +609,19 @@ const PictureModal = ({
 }) => {
 
   const [avatarUrl, setAvatarUrl] = useState(null);
-  const [showProfilePhotoSelector, setShowProfilePhotoSelector] =
-    useState(false);
+  const [showProfilePhotoSelector, setShowProfilePhotoSelector] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const decodedToken = jwtDecode(authToken);
   const user = decodedToken;
 
-
+  /**
+   * Récupère l'avatar de l'utilisateur depuis l'API et le met à jour dans le composant
+   * 
+   * @async
+   * @throws {Error} Si la récupération de l'avatar échoue
+   */
   useEffect(() => {
     const fetchAvatar = async () => {
       try {
@@ -529,7 +649,6 @@ const PictureModal = ({
 
     fetchAvatar();
 
-
     return () => {
       if (avatarUrl) {
         URL.revokeObjectURL(avatarUrl);
@@ -537,7 +656,12 @@ const PictureModal = ({
     };
   }, [authToken]);
 
-
+  /**
+   * Supprime l'avatar de l'utilisateur après confirmation
+   * 
+   * @async
+   * @throws {Error} Si la suppression de l'avatar échoue
+   */
   const handleDeleteAvatar = async () => {
     if (
       !window.confirm(
@@ -554,13 +678,8 @@ const PictureModal = ({
       const response = await deleteAvatar();
 
       if (response.status >= 200 && response.status < 400) {
-
         setAvatarUrl(null);
-
-
         refreshAvatar();
-
-
         toast.success('Votre photo de profil a été supprimée avec succès.');
       } else {
         throw new Error(response.message || "Erreur lors de la suppression de l'avatar");
@@ -575,18 +694,24 @@ const PictureModal = ({
     }
   };
 
+  /**
+   * Ferme le sélecteur de photo de profil
+   */
   const handleCloseSelector = () => {
     setShowProfilePhotoSelector(false);
   };
 
-
+  /**
+   * Gère la réussite de l'upload d'un avatar en récupérant et affichant le nouvel avatar
+   * 
+   * @async
+   * @throws {Error} Si la mise à jour de l'avatar échoue
+   */
   const handleAvatarUploadSuccess = async () => {
     try {
-
       const response = await getAvatar();
 
       if (response.status >= 200 && response.status < 400) {
-
         if (avatarUrl) {
           URL.revokeObjectURL(avatarUrl);
         }
@@ -596,11 +721,8 @@ const PictureModal = ({
         throw new Error(response.message || 'Failed to update avatar');
       }
 
-
       refreshAvatar();
       setShowProfilePhotoSelector(false);
-
-
       toast.success('Votre photo de profil a été mise à jour avec succès.');
     } catch (error) {
       console.error(
@@ -614,7 +736,6 @@ const PictureModal = ({
     }
   };
 
-
   if (showProfilePhotoSelector) {
     return (
       <ProfilePhotoSelector
@@ -627,7 +748,7 @@ const PictureModal = ({
 
   return (
     <div className="fixed inset-0 bg-gray-900/75 backdrop-blur-md flex items-center justify-center z-50">
-    <Toaster position="top-center" />
+      <Toaster position="top-center" />
       {/* Carte principale */}
       <div className="bg-gray-800 text-gray-100 w-full max-w-sm rounded-xl shadow-lg p-4 md:p-6 relative">
         {/* Bouton de fermeture */}

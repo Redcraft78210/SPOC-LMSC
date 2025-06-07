@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Composant Forum permettant aux utilisateurs de créer, consulter et interagir avec des discussions.
+ * Inclut des fonctionnalités de modération pour les administrateurs.
+ */
+
 import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { formatDistanceToNow } from 'date-fns';
@@ -18,6 +23,15 @@ import {
   flagContent
 } from '../API/ModerationCaller';
 
+/**
+ * Composant Forum permettant aux utilisateurs de consulter et interagir avec des discussions.
+ * Les administrateurs ont accès à des fonctionnalités de modération supplémentaires.
+ * 
+ * @component
+ * @param {Object} props - Les propriétés du composant
+ * @param {string} props.userRole - Le rôle de l'utilisateur actuel ('Administrateur' ou autre)
+ * @returns {JSX.Element} Composant Forum
+ */
 const Forum = ({ userRole }) => {
 
   const [threads, setThreads] = useState([]);
@@ -59,6 +73,14 @@ const Forum = ({ userRole }) => {
     fetchThreads();
   }, [pagination.currentPage, sortBy, authorFilter, activeSearchQuery, isSearching]);
 
+  /**
+   * Récupère la liste des discussions depuis l'API avec pagination et filtres.
+   * 
+   * @async
+   * @function
+   * @throws {Error} Si la requête échoue
+   * @returns {Promise<void>}
+   */
   const fetchThreads = async () => {
     try {
       setLoading(true);
@@ -98,6 +120,15 @@ const Forum = ({ userRole }) => {
     }
   };
 
+  /**
+   * Récupère les détails d'une discussion spécifique depuis l'API.
+   *
+   * @async
+   * @function
+   * @param {string|number} threadId - L'identifiant de la discussion à récupérer
+   * @throws {Error} Si la requête échoue
+   * @returns {Promise<void>}
+   */
   const fetchThreadDetails = async threadId => {
     try {
       setLoading(true);
@@ -119,6 +150,15 @@ const Forum = ({ userRole }) => {
     }
   };
 
+  /**
+   * Crée une nouvelle discussion avec le titre et le contenu saisis.
+   * Vérifie la présence de contenu interdit et affiche un avertissement si nécessaire.
+   *
+   * @async
+   * @function
+   * @throws {Error} Si la création échoue
+   * @returns {Promise<void>}
+   */
   const handleCreateThread = async () => {
     if (!newThreadTitle.trim() || !newThreadContent.trim()) {
       setError('Veuillez remplir tous les champs');
@@ -161,6 +201,15 @@ const Forum = ({ userRole }) => {
     }
   };
 
+  /**
+   * Ajoute un commentaire à la discussion sélectionnée.
+   * Vérifie la présence de contenu interdit et affiche un avertissement si nécessaire.
+   *
+   * @async
+   * @function
+   * @throws {Error} Si l'ajout du commentaire échoue
+   * @returns {Promise<void>}
+   */
   const handleCreateComment = async () => {
     if (!newComment.trim()) {
       setError('Veuillez écrire un commentaire');
@@ -200,6 +249,13 @@ const Forum = ({ userRole }) => {
   };
 
 
+  /**
+   * Gère la soumission du formulaire de recherche.
+   * 
+   * @function
+   * @param {Event} e - L'événement de soumission du formulaire
+   * @returns {void}
+   */
   const handleSearch = (e) => {
     e.preventDefault();
     setActiveSearchQuery(searchQuery);
@@ -207,7 +263,12 @@ const Forum = ({ userRole }) => {
     setIsSearching(prev => !prev);
   };
 
-
+  /**
+   * Efface les critères de recherche actuels.
+   * 
+   * @function
+   * @returns {void}
+   */
   const clearSearch = () => {
     setSearchQuery('');
     setActiveSearchQuery('');
@@ -215,6 +276,14 @@ const Forum = ({ userRole }) => {
     setIsSearching(prev => !prev);
   };
 
+  /**
+   * Met à jour les filtres de tri et d'auteur.
+   * 
+   * @function
+   * @param {string} filter - Type de filtre ('sort' ou 'author')
+   * @param {string} value - Valeur du filtre
+   * @returns {void}
+   */
   const handleFilterChange = (filter, value) => {
     setPagination(prev => ({ ...prev, currentPage: 1 }));
 
@@ -230,7 +299,15 @@ const Forum = ({ userRole }) => {
     }
   };
 
-
+  /**
+   * Supprime une discussion via l'API.
+   * 
+   * @async
+   * @function
+   * @param {string|number} threadId - L'identifiant de la discussion à supprimer
+   * @throws {Error} Si la suppression échoue
+   * @returns {Promise<void>}
+   */
   const handleDeleteThread = async (threadId) => {
     try {
       setLoading(true);
@@ -258,6 +335,15 @@ const Forum = ({ userRole }) => {
     }
   };
   
+  /**
+   * Supprime un commentaire via l'API.
+   * 
+   * @async
+   * @function
+   * @param {string|number} commentId - L'identifiant du commentaire à supprimer
+   * @throws {Error} Si la suppression échoue
+   * @returns {Promise<void>}
+   */
   const handleDeleteComment = async (commentId) => {
     try {
       setLoading(true);
@@ -283,12 +369,26 @@ const Forum = ({ userRole }) => {
     }
   };
   
+  /**
+   * Affiche la modale de confirmation de suppression.
+   * 
+   * @function
+   * @param {string|number} id - L'identifiant de l'élément à supprimer
+   * @param {string} type - Le type d'élément ('thread' ou 'comment')
+   * @returns {void}
+   */
   const showDeleteConfirmation = (id, type) => {
     setItemToDelete(id);
     setDeleteType(type);
     setShowDeleteModal(true);
   };
   
+  /**
+   * Confirme la suppression de l'élément sélectionné.
+   * 
+   * @function
+   * @returns {void}
+   */
   const confirmDelete = () => {
     if (deleteType === 'thread') {
       handleDeleteThread(itemToDelete);
@@ -297,12 +397,27 @@ const Forum = ({ userRole }) => {
     }
   };
   
+  /**
+   * Affiche le formulaire d'avertissement pour un utilisateur.
+   * 
+   * @function
+   * @param {string|number} userId - L'identifiant de l'utilisateur à avertir
+   * @param {string} username - Le nom d'utilisateur
+   * @returns {void}
+   */
   const showWarningForm = (userId, username) => {
     setUserToWarn({ id: userId, username });
     setShowWarningModal(true);
   };
   
-
+  /**
+   * Envoie un avertissement à un utilisateur via l'API.
+   * 
+   * @async
+   * @function
+   * @throws {Error} Si l'envoi de l'avertissement échoue
+   * @returns {Promise<void>}
+   */
   const handleSendWarning = async () => {
     if (!warningMessage.trim()) {
       toast.error("Veuillez saisir un message d'avertissement");
@@ -333,12 +448,28 @@ const Forum = ({ userRole }) => {
     }
   };
   
+  /**
+   * Initialise le processus de signalement d'un contenu.
+   * 
+   * @function
+   * @param {string|number} id - L'identifiant de l'élément à signaler
+   * @param {string} type - Le type d'élément ('thread' ou 'comment')
+   * @returns {void}
+   */
   const handleFlagContent = (id, type) => {
     setItemToFlag(id);
     setFlagType(type);
     setShowFlagModal(true);
   };
   
+  /**
+   * Soumet un signalement de contenu via l'API.
+   * 
+   * @async
+   * @function
+   * @throws {Error} Si le signalement échoue
+   * @returns {Promise<void>}
+   */
   const submitFlag = async () => {
     if (!flagReason.trim()) {
       toast.error("Veuillez indiquer une raison pour le signalement");
@@ -354,7 +485,6 @@ const Forum = ({ userRole }) => {
       });
       
       if (response.status === 201) {
-
         setFlaggedItems(prev => new Set([...prev, itemToFlag]));
         toast.success(`${flagType === 'thread' ? 'Discussion' : 'Commentaire'} signalé pour révision`);
         setShowFlagModal(false);
@@ -373,6 +503,15 @@ const Forum = ({ userRole }) => {
   };
 
 
+  /**
+   * Affiche les contrôles de modération pour une discussion (administrateurs uniquement).
+   * 
+   * @function
+   * @param {string|number} threadId - L'identifiant de la discussion
+   * @param {string|number} userId - L'identifiant de l'auteur
+   * @param {string} username - Le nom d'utilisateur de l'auteur
+   * @returns {JSX.Element|null} Les contrôles de modération ou null si l'utilisateur n'est pas administrateur
+   */
   const renderModerationControls = (threadId, userId, username) => {
     if (userRole !== 'Administrateur') return null;
     
@@ -418,6 +557,15 @@ const Forum = ({ userRole }) => {
   };
   
 
+  /**
+   * Affiche les contrôles de modération pour un commentaire (administrateurs uniquement).
+   * 
+   * @function
+   * @param {string|number} commentId - L'identifiant du commentaire
+   * @param {string|number} userId - L'identifiant de l'auteur
+   * @param {string} username - Le nom d'utilisateur de l'auteur
+   * @returns {JSX.Element|null} Les contrôles de modération ou null si l'utilisateur n'est pas administrateur
+   */
   const renderCommentModerationControls = (commentId, userId, username) => {
     if (userRole !== 'Administrateur') return null;
     

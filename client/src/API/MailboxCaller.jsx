@@ -2,9 +2,9 @@ import api from './api';
 import PropTypes from 'prop-types';
 
 /**
- * Fonction générique de gestion des erreurs
- * @param {Error} error - L'erreur à traiter
- * @returns {Object} - Objet d'erreur formaté
+ * Gère les erreurs retournées par les appels API
+ * @param {Error} error - L'erreur interceptée
+ * @returns {Object} Objet formaté contenant le statut, les données et le message d'erreur
  */
 const handleError = (error) => {
 
@@ -32,6 +32,17 @@ const handleError = (error) => {
 };
 
 
+/**
+ * Récupère les messages de la boîte de réception avec pagination et filtres
+ * @param {Object} options - Options pour la requête
+ * @param {number} [options.page=1] - Numéro de page pour la pagination
+ * @param {number} [options.limit=20] - Nombre de messages par page
+ * @param {Object} [options.filters={}] - Filtres à appliquer aux messages
+ * @param {boolean} [options.filters.unread] - Filtre pour les messages non lus
+ * @param {boolean} [options.filters.hasAttachments] - Filtre pour les messages avec pièces jointes
+ * @param {boolean} [options.filters.fromContact] - Filtre pour les messages de contacts
+ * @returns {Promise<Object>} Objet contenant le statut, les données et un message de succès/erreur
+ */
 const getInboxMessages = async ({ page = 1, limit = 20, filters = {} }) => {
   try {
     const queryParams = new URLSearchParams({
@@ -56,6 +67,17 @@ const getInboxMessages = async ({ page = 1, limit = 20, filters = {} }) => {
 };
 
 
+/**
+ * Récupère les messages envoyés avec pagination et filtres
+ * @param {Object} options - Options pour la requête
+ * @param {number} [options.page=1] - Numéro de page pour la pagination
+ * @param {number} [options.limit=20] - Nombre de messages par page
+ * @param {Object} [options.filters={}] - Filtres à appliquer aux messages
+ * @param {boolean} [options.filters.unread] - Filtre pour les messages non lus
+ * @param {boolean} [options.filters.hasAttachments] - Filtre pour les messages avec pièces jointes
+ * @param {boolean} [options.filters.fromContact] - Filtre pour les messages de contacts
+ * @returns {Promise<Object>} Objet contenant le statut, les données et un message de succès/erreur
+ */
 const getSentMessages = async ({ page = 1, limit = 20, filters = {} }) => {
   try {
     const queryParams = new URLSearchParams({
@@ -80,6 +102,17 @@ const getSentMessages = async ({ page = 1, limit = 20, filters = {} }) => {
 };
 
 
+/**
+ * Récupère les messages de la corbeille avec pagination et filtres
+ * @param {Object} options - Options pour la requête
+ * @param {number} [options.page=1] - Numéro de page pour la pagination
+ * @param {number} [options.limit=20] - Nombre de messages par page
+ * @param {Object} [options.filters={}] - Filtres à appliquer aux messages
+ * @param {boolean} [options.filters.unread] - Filtre pour les messages non lus
+ * @param {boolean} [options.filters.hasAttachments] - Filtre pour les messages avec pièces jointes
+ * @param {boolean} [options.filters.fromContact] - Filtre pour les messages de contacts
+ * @returns {Promise<Object>} Objet contenant le statut, les données et un message de succès/erreur
+ */
 const getTrashMessages = async ({ page = 1, limit = 20, filters = {} }) => {
   try {
     const queryParams = new URLSearchParams({
@@ -104,6 +137,12 @@ const getTrashMessages = async ({ page = 1, limit = 20, filters = {} }) => {
 };
 
 
+/**
+ * Récupère un message spécifique par son identifiant
+ * @param {Object} options - Options pour la requête
+ * @param {string|number} options.messageId - Identifiant du message à récupérer
+ * @returns {Promise<Object>} Objet contenant le statut, les données du message et un message de succès/erreur
+ */
 const getMessage = async ({ messageId }) => {
   try {
     const response = await api.get(`/messages/${messageId}`);
@@ -118,6 +157,19 @@ const getMessage = async ({ messageId }) => {
 };
 
 
+/**
+ * Envoie un nouveau message avec ou sans pièces jointes
+ * @param {FormData} formData - Données du formulaire contenant les informations du message
+ * @param {string} formData.subject - Sujet du message
+ * @param {string} formData.content - Contenu du message
+ * @param {Array<string|number>} [formData.recipients[]] - Liste des identifiants des destinataires individuels
+ * @param {string} [formData.recipientType] - Type de destinataires (pour envoi groupé)
+ * @param {File[]} [formData.attachments] - Pièces jointes du message
+ * @returns {Promise<Object>} Objet contenant le statut, les données et un message de succès/erreur
+ * @throws {Error} Si formData n'est pas une instance de FormData
+ * @throws {Error} Si le sujet ou le contenu sont manquants
+ * @throws {Error} Si aucun destinataire n'est spécifié
+ */
 const sendMessage = async (formData) => {
   console.log('Sending message with formData:', formData);
 
@@ -172,6 +224,12 @@ const sendMessage = async (formData) => {
 };
 
 
+/**
+ * Marque un message comme lu
+ * @param {Object} options - Options pour la requête
+ * @param {string|number} options.messageId - Identifiant du message à marquer comme lu
+ * @returns {Promise<Object>} Objet contenant le statut, les données et un message de confirmation
+ */
 const markAsRead = async ({ messageId }) => {
   try {
     const response = await api.patch(`/messages/${messageId}/read`);
@@ -186,6 +244,12 @@ const markAsRead = async ({ messageId }) => {
 };
 
 
+/**
+ * Marque un message comme non lu
+ * @param {Object} options - Options pour la requête
+ * @param {string|number} options.messageId - Identifiant du message à marquer comme non lu
+ * @returns {Promise<Object>} Objet contenant le statut, les données et un message de confirmation
+ */
 const markAsUnread = async ({ messageId }) => {
   try {
     const response = await api.patch(`/messages/${messageId}/unread`);
@@ -200,6 +264,12 @@ const markAsUnread = async ({ messageId }) => {
 };
 
 
+/**
+ * Déplace un message vers la corbeille
+ * @param {Object} options - Options pour la requête
+ * @param {string|number} options.messageId - Identifiant du message à déplacer
+ * @returns {Promise<Object>} Objet contenant le statut, les données et un message de confirmation
+ */
 const moveToTrash = async ({ messageId }) => {
   try {
     const response = await api.patch(`/messages/${messageId}/trash`);
@@ -214,6 +284,12 @@ const moveToTrash = async ({ messageId }) => {
 };
 
 
+/**
+ * Restaure un message de la corbeille
+ * @param {Object} options - Options pour la requête
+ * @param {string|number} options.messageId - Identifiant du message à restaurer
+ * @returns {Promise<Object>} Objet contenant le statut, les données et un message de confirmation
+ */
 const restoreFromTrash = async ({ messageId }) => {
   try {
     const response = await api.patch(`/messages/${messageId}/restore`);
@@ -228,6 +304,12 @@ const restoreFromTrash = async ({ messageId }) => {
 };
 
 
+/**
+ * Supprime définitivement un message
+ * @param {Object} options - Options pour la requête
+ * @param {string|number} options.messageId - Identifiant du message à supprimer
+ * @returns {Promise<Object>} Objet contenant le statut, les données et un message de confirmation
+ */
 const deleteMessage = async ({ messageId }) => {
   try {
     const response = await api.delete(`/messages/${messageId}`);
@@ -242,6 +324,12 @@ const deleteMessage = async ({ messageId }) => {
 };
 
 
+/**
+ * Télécharge une pièce jointe
+ * @param {Object} options - Options pour la requête
+ * @param {string|number} options.attachmentId - Identifiant de la pièce jointe à télécharger
+ * @returns {Promise<Object>} Objet contenant le statut, les données binaires (blob) et un message de succès/erreur
+ */
 const downloadAttachment = async ({ attachmentId }) => {
   try {
     const response = await api.get(`/messages/attachments/${attachmentId}`, {
@@ -258,6 +346,12 @@ const downloadAttachment = async ({ attachmentId }) => {
 };
 
 
+/**
+ * Récupère la liste des destinataires disponibles
+ * @param {Object} options - Options pour la requête
+ * @param {string} [options.type] - Type d'utilisateurs à récupérer (filtre optionnel)
+ * @returns {Promise<Object>} Objet contenant le statut, les données des destinataires et un message de succès/erreur
+ */
 const getAvailableRecipients = async ({ type }) => {
   try {
 

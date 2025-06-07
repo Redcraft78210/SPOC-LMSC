@@ -1,13 +1,11 @@
-/**
- * Module de gestion des appels API liés à l'authentification
- */
 import api from './api';
 import PropTypes from 'prop-types';
 
 /**
- * Fonction générique de gestion des erreurs
+ * Gère uniformément les erreurs API
+ * 
  * @param {Error} error - L'erreur à traiter
- * @returns {Object} - Objet d'erreur formaté
+ * @returns {Object} Objet contenant le statut, les données et le message d'erreur formatés
  */
 const handleError = (error) => {
 
@@ -35,10 +33,15 @@ const handleError = (error) => {
 };
 
 /**
- * Vérifier la validité d'un code d'inscription
- * @param {Object} params - Les paramètres
- * @param {string} params.code - Le code d'inscription à vérifier
- * @returns {Promise<Object>} - La réponse du serveur
+ * Vérifie la validité d'un code d'inscription
+ * 
+ * @param {Object} params - Paramètres de la requête
+ * @param {string} params.code - Code d'inscription à vérifier
+ * @returns {Promise<Object>} Résultat de la requête avec statut, données et message
+ * @throws {Error} Erreur capturée et traitée par handleError
+ * 
+ * @example
+ * const result = await checkRegisterCode({ code: "ABC123" });
  */
 export const checkRegisterCode = async ({ code }) => {
   try {
@@ -54,9 +57,17 @@ export const checkRegisterCode = async ({ code }) => {
 };
 
 /**
- * S'inscrire sur la plateforme
- * @param {Object} userData - Les données d'inscription
- * @returns {Promise<Object>} - La réponse du serveur
+ * Enregistre un nouvel utilisateur
+ * 
+ * @param {Object} userData - Données de l'utilisateur
+ * @param {string} userData.email - Email de l'utilisateur
+ * @param {string} userData.username - Nom d'utilisateur
+ * @param {string} userData.password - Mot de passe
+ * @param {string} userData.name - Prénom
+ * @param {string} userData.surname - Nom de famille
+ * @param {string} userData.registerCode - Code d'inscription
+ * @returns {Promise<Object>} Résultat de la requête avec statut, données et message
+ * @throws {Error} Erreur capturée et traitée par handleError
  */
 export const register = async (userData) => {
   try {
@@ -72,9 +83,13 @@ export const register = async (userData) => {
 };
 
 /**
- * Se connecter à la plateforme
- * @param {Object} credentials - Les identifiants
- * @returns {Promise<Object>} - La réponse du serveur
+ * Authentifie un utilisateur
+ * 
+ * @param {Object} credentials - Identifiants de connexion
+ * @param {string} credentials.email - Email de l'utilisateur
+ * @param {string} credentials.password - Mot de passe
+ * @returns {Promise<Object>} Résultat de la requête avec statut, données et message
+ * @throws {Error} Erreur capturée et traitée par handleError
  */
 export const login = async (credentials) => {
   try {
@@ -90,12 +105,14 @@ export const login = async (credentials) => {
 };
 
 /**
- * Vérifier un code 2FA
- * @param {Object} params - Les paramètres
- * @param {string} params.tempToken - Le token temporaire
- * @param {string} params.code - Le code 2FA
- * @param {boolean} params.setup - Indique s'il s'agit d'une configuration initiale
- * @returns {Promise<Object>} - La réponse du serveur
+ * Vérifie un code d'authentification à deux facteurs
+ * 
+ * @param {Object} params - Paramètres de vérification
+ * @param {string} params.tempToken - Token temporaire reçu après connexion
+ * @param {string} params.code - Code 2FA à vérifier
+ * @param {boolean} [params.setup] - Indique si c'est une vérification lors de la configuration
+ * @returns {Promise<Object>} Résultat de la requête avec statut, données et message
+ * @throws {Error} Erreur capturée et traitée par handleError
  */
 export const verifyTwoFA = async ({ tempToken, code, setup }) => {
   try {
@@ -111,11 +128,13 @@ export const verifyTwoFA = async ({ tempToken, code, setup }) => {
 };
 
 /**
- * Rafraîchir la configuration 2FA
- * @param {Object} params - Les paramètres
- * @param {string} params.tempToken - Le token temporaire
- * @param {Object} params.twoFASetup - Les données de configuration 2FA
- * @returns {Promise<Object>} - La réponse du serveur
+ * Rafraîchit la configuration de l'authentification à deux facteurs
+ * 
+ * @param {Object} params - Paramètres de rafraîchissement
+ * @param {string} params.tempToken - Token temporaire
+ * @param {Object} params.twoFASetup - Informations de configuration 2FA
+ * @returns {Promise<Object>} Résultat de la requête avec statut, données et message
+ * @throws {Error} Erreur capturée et traitée par handleError
  */
 export const refreshTwoFASetup = async ({ tempToken, twoFASetup }) => {
   try {
@@ -130,11 +149,11 @@ export const refreshTwoFASetup = async ({ tempToken, twoFASetup }) => {
   }
 };
 
-
-
 /**
- * Configurer l'authentification à deux facteurs
- * @returns {Promise<Object>} - La réponse du serveur
+ * Initialise la configuration de l'authentification à deux facteurs
+ * 
+ * @returns {Promise<Object>} Résultat de la requête avec statut, données (incluant QR code) et message
+ * @throws {Error} Erreur capturée et traitée par handleError
  */
 export const setup2FA = async () => {
   try {
@@ -150,9 +169,10 @@ export const setup2FA = async () => {
 };
 
 /**
- * Désactiver l'authentification à deux facteurs
- * @param {Object} params - Les paramètres
- * @returns {Promise<Object>} - La réponse du serveur
+ * Désactive l'authentification à deux facteurs pour l'utilisateur connecté
+ * 
+ * @returns {Promise<Object>} Résultat de la requête avec statut, données et message
+ * @throws {Error} Erreur capturée et traitée par handleError
  */
 export const disable2FA = async () => {
   try {
@@ -168,10 +188,13 @@ export const disable2FA = async () => {
 };
 
 /**
- * Vérifier la configuration de l'authentification à deux facteurs
- * @param {Object} params - Les paramètres
- * @param {string} params.code - Le code de vérification 2FA
- * @returns {Promise<Object>} - La réponse du serveur
+ * Vérifie la configuration de l'authentification à deux facteurs
+ * 
+ * @param {Object} params - Paramètres de vérification
+ * @param {string} params.code - Code 2FA à vérifier
+ * @param {string} params.tempToken - Token temporaire
+ * @returns {Promise<Object>} Résultat de la requête avec statut, données et message
+ * @throws {Error} Erreur capturée et traitée par handleError
  */
 export const verify2FASetup = async ({ code, tempToken }) => {
   try {
@@ -187,10 +210,12 @@ export const verify2FASetup = async ({ code, tempToken }) => {
 };
 
 /**
- * Demander la réinitialisation du mot de passe
- * @param {Object} params - Les paramètres
- * @param {string} params.email - L'email de l'utilisateur
- * @returns {Promise<Object>} - La réponse du serveur
+ * Demande un lien de réinitialisation de mot de passe
+ * 
+ * @param {Object} params - Paramètres de la demande
+ * @param {string} params.email - Email de l'utilisateur
+ * @returns {Promise<Object>} Résultat de la requête avec statut, données et message
+ * @throws {Error} Erreur capturée et traitée par handleError
  */
 export const forgotPassword = async ({ email }) => {
   try {
@@ -206,12 +231,14 @@ export const forgotPassword = async ({ email }) => {
 };
 
 /**
- * Effectuer la première connexion d'un utilisateur
- * @param {Object} params - Les paramètres
- * @param {string} params.username - Le nom d'utilisateur
- * @param {string} params.password - Le mot de passe
- * @param {string} params.token - Le token d'authentification
- * @returns {Promise<Object>} - La réponse du serveur
+ * Effectue la première connexion d'un utilisateur (définition de ses identifiants)
+ * 
+ * @param {Object} params - Paramètres de première connexion
+ * @param {string} params.username - Nom d'utilisateur choisi
+ * @param {string} params.password - Mot de passe choisi
+ * @param {string} params.token - Token d'invitation
+ * @returns {Promise<Object>} Résultat de la requête avec statut, données et message
+ * @throws {Error} Erreur capturée et traitée par handleError
  */
 export const firstLogin = async ({ username, password, token }) => {
   try {
@@ -230,10 +257,12 @@ export const firstLogin = async ({ username, password, token }) => {
 };
 
 /**
- * Vérifier si la 2FA est activée pour un utilisateur
- * @param {Object} params - Les paramètres
- * @param {string} params.token - Le token d'authentification
- * @returns {Promise<Object>} - La réponse du serveur
+ * Vérifie l'état de l'authentification à deux facteurs pour l'utilisateur
+ * 
+ * @param {Object} params - Paramètres de la requête
+ * @param {string} params.token - Token d'authentification
+ * @returns {Promise<Object>} Résultat de la requête avec statut, données et message
+ * @throws {Error} Erreur capturée et traitée par handleError
  */
 export const check2FAStatus = async ({ token }) => {
   try {

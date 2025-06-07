@@ -2,9 +2,10 @@ import api from './api';
 import PropTypes from 'prop-types';
 
 /**
- * Fonction générique de gestion des erreurs
+ * Gère les erreurs d'API de manière uniforme
+ * 
  * @param {Error} error - L'erreur à traiter
- * @returns {Object} - Objet d'erreur formaté
+ * @returns {Object} Objet d'erreur formaté avec status, data et message
  */
 const handleError = (error) => {
 
@@ -32,6 +33,29 @@ const handleError = (error) => {
 };
 
 
+/**
+ * Envoie un message de contact au serveur, avec ou sans pièces jointes
+ * 
+ * @param {Object} params - Paramètres du message
+ * @param {string} params.name - Nom de l'expéditeur
+ * @param {string} params.email - Email de l'expéditeur
+ * @param {string} params.motif - Motif du contact
+ * @param {string} params.objet - Objet du message
+ * @param {string} params.message - Contenu du message
+ * @param {File[]|Object} [params.attachments=[]] - Pièces jointes (fichiers)
+ * @returns {Promise<Object>} Résultat de l'opération avec status, data et message
+ * @throws {Error} En cas d'échec de la requête API
+ * 
+ * @example
+ * const result = await sendContactMessage({
+ *   name: 'Jean Dupont',
+ *   email: 'jean@exemple.fr',
+ *   motif: 'Question',
+ *   objet: 'Demande d\'information',
+ *   message: 'Bonjour, je souhaiterais...',
+ *   attachments: [fichier1, fichier2]
+ * });
+ */
 const sendContactMessage = async ({ name, email, motif, objet, message, attachments = [] }) => {
   try {
     const formData = new FormData();
@@ -68,6 +92,18 @@ const sendContactMessage = async ({ name, email, motif, objet, message, attachme
 };
 
 
+/**
+ * Récupère tous les messages de contact avec pagination
+ * 
+ * @param {Object} params - Paramètres de pagination
+ * @param {number} [params.page=1] - Numéro de page
+ * @param {number} [params.limit=20] - Nombre d'éléments par page
+ * @returns {Promise<Object>} Résultat de l'opération avec status, data et message
+ * @throws {Error} En cas d'échec de la requête API
+ * 
+ * @example
+ * const result = await getAllContactMessages({ page: 2, limit: 10 });
+ */
 const getAllContactMessages = async ({ page = 1, limit = 20 }) => {
   try {
     const response = await api.get(`/admin/contact-messages?page=${page}&limit=${limit}`);
@@ -82,6 +118,17 @@ const getAllContactMessages = async ({ page = 1, limit = 20 }) => {
 };
 
 
+/**
+ * Récupère un message de contact spécifique par son ID
+ * 
+ * @param {Object} params - Paramètres de la requête
+ * @param {string|number} params.messageId - ID du message à récupérer
+ * @returns {Promise<Object>} Résultat de l'opération avec status, data et message
+ * @throws {Error} En cas d'échec de la requête API
+ * 
+ * @example
+ * const result = await getContactMessage({ messageId: '12345' });
+ */
 const getContactMessage = async ({ messageId }) => {
   try {
     const response = await api.get(`/admin/contact-messages/${messageId}`);
@@ -96,6 +143,17 @@ const getContactMessage = async ({ messageId }) => {
 };
 
 
+/**
+ * Marque un message de contact comme traité
+ * 
+ * @param {Object} params - Paramètres de la requête
+ * @param {string|number} params.messageId - ID du message à marquer comme traité
+ * @returns {Promise<Object>} Résultat de l'opération avec status, data et message
+ * @throws {Error} En cas d'échec de la requête API
+ * 
+ * @example
+ * const result = await markContactMessageAsProcessed({ messageId: '12345' });
+ */
 const markContactMessageAsProcessed = async ({ messageId }) => {
   try {
     const response = await api.patch(`/admin/contact-messages/${messageId}/processed`);
@@ -110,6 +168,17 @@ const markContactMessageAsProcessed = async ({ messageId }) => {
 };
 
 
+/**
+ * Supprime un message de contact
+ * 
+ * @param {Object} params - Paramètres de la requête
+ * @param {string|number} params.messageId - ID du message à supprimer
+ * @returns {Promise<Object>} Résultat de l'opération avec status, data et message
+ * @throws {Error} En cas d'échec de la requête API
+ * 
+ * @example
+ * const result = await deleteContactMessage({ messageId: '12345' });
+ */
 const deleteContactMessage = async ({ messageId }) => {
   try {
     const response = await api.delete(`/admin/contact-messages/${messageId}`);

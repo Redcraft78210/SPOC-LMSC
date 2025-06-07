@@ -1,13 +1,42 @@
+/**
+ * @fileoverview
+ * Composant gérant le tutoriel pas à pas pour la gestion des utilisateurs.
+ * Ce tutoriel guide l'administrateur à travers l'interface de gestion des utilisateurs
+ * en expliquant les fonctionnalités principales comme la création, modification,
+ * activation/désactivation et suppression des utilisateurs.
+ */
+
 import { useState } from 'react';
 import { useTutorial } from '../contexts/TutorialContext';
 import Tutorial from '../components/Tutorial';
 import { HelpCircle } from 'lucide-react';
 
+/**
+ * Composant qui affiche un tutoriel guidé pour la gestion des utilisateurs.
+ * Fournit une séquence d'étapes explicatives sur les différentes fonctionnalités
+ * disponibles dans l'interface de gestion des utilisateurs.
+ * 
+ * @component
+ * @returns {JSX.Element} Composant de tutoriel pour la gestion des utilisateurs
+ */
 const UserManagementTutorial = () => {
+    /**
+     * État contrôlant si le tutoriel est en cours d'exécution
+     * @type {[boolean, Function]}
+     */
     const [runTutorial, setRunTutorial] = useState(false);
+    
+    /**
+     * Contexte fournissant les fonctions de gestion des tutoriels
+     * @type {Object}
+     * @property {Function} resetTutorial - Réinitialise l'état d'un tutoriel spécifique
+     */
     const { resetTutorial } = useTutorial();
 
-
+    /**
+     * Configuration des étapes du tutoriel avec les cibles et contenus
+     * @type {Array<Object>}
+     */
     const tutorialSteps = [
         {
             target: 'body',
@@ -83,6 +112,12 @@ const UserManagementTutorial = () => {
         },
     ];
 
+    /**
+     * Réinitialise le tutoriel et le démarre
+     * 
+     * @function
+     * @returns {void}
+     */
     const handleResetTutorial = () => {
         resetTutorial('user-management');
         setRunTutorial(true);

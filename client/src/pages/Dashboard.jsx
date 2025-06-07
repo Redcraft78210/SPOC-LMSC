@@ -39,12 +39,32 @@ const Forum = lazy(() => import('./Forum'));
 const Settings = lazy(() => import('./Settings'));
 
 
+/**
+ * @fileoverview Composant Dashboard principal qui gère l'interface utilisateur adaptée aux différents rôles
+ * (Administrateur, Professeur, Etudiant) et leurs fonctionnalités respectives.
+ */
+
+/**
+ * Composant affichant un indicateur de chargement animé pendant le chargement des composants lazy.
+ * 
+ * @returns {JSX.Element} Un spinner de chargement centré.
+ */
 const LoadingComponent = () => (
   <div className="flex items-center justify-center h-full w-full">
     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
   </div>
 );
 
+/**
+ * Composant principal du tableau de bord adapté selon le rôle de l'utilisateur.
+ * Gère l'affichage des différentes sections, le profil utilisateur, la navigation et les modales.
+ * 
+ * @param {Object} props - Les propriétés du composant
+ * @param {string} props.content - Identifiant du contenu à afficher (ex: "Home", "CoursesLibrary", etc.)
+ * @param {string} props.token - Token JWT d'authentification
+ * @param {('Administrateur'|'Professeur'|'Etudiant')} props.role - Rôle de l'utilisateur connecté
+ * @returns {JSX.Element} Interface du tableau de bord complète
+ */
 const Dashboard = ({ content, token, role }) => {
   const navigate = useNavigate();
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -58,11 +78,23 @@ const Dashboard = ({ content, token, role }) => {
   const avatarUrlRef = useRef(null);
 
 
+  /**
+   * Déclenche le rechargement de l'avatar utilisateur en mettant à jour le timestamp.
+   * 
+   * @returns {void}
+   */
   const refreshAvatar = useCallback(() => {
     setAvatarVersion(Date.now());
   }, []);
 
 
+  /**
+   * Récupère l'avatar de l'utilisateur depuis l'API.
+   * Crée une URL d'objet pour l'image et gère le nettoyage des ressources.
+   * 
+   * @returns {void}
+   * @throws {Error} Si la récupération de l'avatar échoue
+   */
   useEffect(() => {
     const fetchAvatar = async () => {
       try {
@@ -95,6 +127,11 @@ const Dashboard = ({ content, token, role }) => {
     };
   }, [token, avatarVersion]);
 
+  /**
+   * Gère la fermeture du modal de profil lors d'un clic en dehors de celui-ci.
+   * 
+   * @returns {void}
+   */
   useEffect(() => {
     function handleClickOutside(event) {
       if (divRef.current && !divRef.current.contains(event.target)) {
@@ -114,6 +151,11 @@ const Dashboard = ({ content, token, role }) => {
   }, [showProfileModal]);
 
 
+  /**
+   * Ferme le menu mobile lors du changement de contenu.
+   * 
+   * @returns {void}
+   */
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [content]);
@@ -177,6 +219,11 @@ const Dashboard = ({ content, token, role }) => {
     ),
   };
 
+  /**
+   * Sélectionne le composant à afficher en fonction du contenu demandé et du rôle utilisateur.
+   * 
+   * @returns {JSX.Element} Le composant correspondant au contenu demandé ou NotFound
+   */
   const renderContent = () => {
     return contentMap[content] || <NotFound />;
   };
@@ -379,6 +426,9 @@ const Dashboard = ({ content, token, role }) => {
   );
 };
 
+/**
+ * Définition des types de propriétés attendues par le composant Dashboard.
+ */
 Dashboard.propTypes = {
   content: PropTypes.string.isRequired,
   token: PropTypes.string.isRequired,

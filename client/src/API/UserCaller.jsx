@@ -2,9 +2,10 @@ import api from './api';
 import PropTypes from 'prop-types';
 
 /**
- * Fonction générique de gestion des erreurs
+ * Gère les erreurs d'API de manière uniforme
+ * 
  * @param {Error} error - L'erreur à traiter
- * @returns {Object} - Objet d'erreur formaté
+ * @returns {Object} Objet contenant le statut, les données et le message d'erreur formatés
  */
 const handleError = (error) => {
 
@@ -32,6 +33,19 @@ const handleError = (error) => {
 };
 
 
+/**
+ * Récupère tous les utilisateurs du système
+ * 
+ * @async
+ * @returns {Promise<Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ * 
+ * @example
+ * const result = await getAllUsers();
+ * if (result.status === 200) {
+ *   const users = result.data;
+ * }
+ */
 const getAllUsers = async () => {
   try {
     const response = await api.get('/users/');
@@ -46,6 +60,15 @@ const getAllUsers = async () => {
 };
 
 
+/**
+ * Récupère un utilisateur par son identifiant
+ * 
+ * @async
+ * @param {Object} params - Paramètres de la fonction
+ * @param {(string|number)} params.userId - Identifiant de l'utilisateur à récupérer
+ * @returns {Promise<Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ */
 const getUserById = async ({ userId }) => {
   try {
     const response = await api.get(`/users/${userId}`);
@@ -60,6 +83,19 @@ const getUserById = async ({ userId }) => {
 };
 
 
+/**
+ * Crée un nouvel utilisateur dans le système
+ * 
+ * @async
+ * @param {Object} userData - Données de l'utilisateur à créer
+ * @param {string} userData.name - Prénom de l'utilisateur
+ * @param {string} userData.surname - Nom de l'utilisateur
+ * @param {string} userData.email - Adresse email de l'utilisateur
+ * @param {string} userData.role - Rôle de l'utilisateur
+ * @param {string} [userData.password] - Mot de passe de l'utilisateur
+ * @returns {Promise<Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ */
 const createUser = async (userData) => {
   try {
     const response = await api.post('/users/', userData);
@@ -74,6 +110,16 @@ const createUser = async (userData) => {
 };
 
 
+/**
+ * Met à jour les informations d'un utilisateur existant
+ * 
+ * @async
+ * @param {Object} params - Paramètres de la fonction
+ * @param {(string|number)} params.userId - Identifiant de l'utilisateur à mettre à jour
+ * @param {Object} params.userData - Nouvelles données de l'utilisateur
+ * @returns {Promise<Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ */
 const updateUser = async ({ userId, userData }) => {
   try {
     const response = await api.put(`/users/${userId}`, userData);
@@ -88,6 +134,15 @@ const updateUser = async ({ userId, userData }) => {
 };
 
 
+/**
+ * Supprime un utilisateur du système
+ * 
+ * @async
+ * @param {Object} params - Paramètres de la fonction
+ * @param {(string|number)} params.userId - Identifiant de l'utilisateur à supprimer
+ * @returns {Promise<Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ */
 const deleteUser = async ({ userId }) => {
   try {
     const response = await api.delete(`/users/${userId}`);
@@ -102,6 +157,15 @@ const deleteUser = async ({ userId }) => {
 };
 
 
+/**
+ * Active un compte utilisateur
+ * 
+ * @async
+ * @param {Object} params - Paramètres de la fonction
+ * @param {(string|number)} params.userId - Identifiant de l'utilisateur à activer
+ * @returns {Promise<Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ */
 const activateUser = async ({ userId }) => {
   try {
     const response = await api.patch(`/users/${userId}`);
@@ -116,6 +180,15 @@ const activateUser = async ({ userId }) => {
 };
 
 
+/**
+ * Désactive un compte utilisateur
+ * 
+ * @async
+ * @param {Object} params - Paramètres de la fonction
+ * @param {(string|number)} params.userId - Identifiant de l'utilisateur à désactiver
+ * @returns {Promise<Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ */
 const deactivateUser = async ({ userId }) => {
   try {
     const response = await api.patch(`/users/${userId}`);
@@ -130,6 +203,18 @@ const deactivateUser = async ({ userId }) => {
 };
 
 
+/**
+ * Génère un code d'invitation pour l'inscription d'un nouvel utilisateur
+ * 
+ * @async
+ * @param {Object} params - Paramètres de la fonction
+ * @param {string} params.role - Rôle attribué à l'utilisateur qui utilisera ce code
+ * @param {number} [params.usageLimit] - Nombre d'utilisations autorisées pour ce code
+ * @param {string} [params.validityPeriod] - Période de validité du code
+ * @param {(string|number)} [params.classId] - Identifiant de la classe associée au code
+ * @returns {Promise<Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ */
 const generateInviteCode = async ({ role, usageLimit, validityPeriod, classId }) => {
   try {
     const payload = { role };
@@ -149,6 +234,13 @@ const generateInviteCode = async ({ role, usageLimit, validityPeriod, classId })
 };
 
 
+/**
+ * Récupère tous les codes d'invitation du système
+ * 
+ * @async
+ * @returns {Promise<Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ */
 const getAllInviteCodes = async () => {
   try {
     const response = await api.get('/codes');
@@ -163,6 +255,15 @@ const getAllInviteCodes = async () => {
 };
 
 
+/**
+ * Supprime un code d'invitation
+ * 
+ * @async
+ * @param {Object} params - Paramètres de la fonction
+ * @param {(string|number)} params.codeId - Identifiant du code à supprimer
+ * @returns {Promise<Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ */
 const deleteInviteCode = async ({ codeId }) => {
   try {
     const response = await api.delete(`/codes/${codeId}`);
@@ -177,6 +278,15 @@ const deleteInviteCode = async ({ codeId }) => {
 };
 
 
+/**
+ * Rétrograde le rôle d'un utilisateur
+ * 
+ * @async
+ * @param {Object} params - Paramètres de la fonction
+ * @param {(string|number)} params.userId - Identifiant de l'utilisateur à rétrograder
+ * @returns {Promise<Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ */
 const retrogradeUserRole = async ({ userId }) => {
   try {
     const response = await api.patch(`/users/retrograde/${userId}`);
@@ -191,6 +301,15 @@ const retrogradeUserRole = async ({ userId }) => {
 };
 
 
+/**
+ * Promeut le rôle d'un utilisateur
+ * 
+ * @async
+ * @param {Object} params - Paramètres de la fonction
+ * @param {(string|number)} params.userId - Identifiant de l'utilisateur à promouvoir
+ * @returns {Promise<Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ */
 const upgradeUserRole = async ({ userId }) => {
   try {
     const response = await api.patch(`/users/upgrade/${userId}`);
@@ -205,7 +324,16 @@ const upgradeUserRole = async ({ userId }) => {
 };
 
 
-
+/**
+ * Change le mot de passe d'un utilisateur
+ * 
+ * @async
+ * @param {Object} params - Paramètres de la fonction
+ * @param {string} params.oldPassword - Ancien mot de passe de l'utilisateur
+ * @param {string} params.newPassword - Nouveau mot de passe de l'utilisateur
+ * @returns {Promise<Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ */
 const changePassword = async ({ oldPassword, newPassword }) => {
   try {
     const response = await api.put('/users/change-password', { oldPassword, newPassword });
@@ -220,6 +348,13 @@ const changePassword = async ({ oldPassword, newPassword }) => {
 };
 
 
+/**
+ * Désactive l'authentification à deux facteurs pour l'utilisateur actuel
+ * 
+ * @async
+ * @returns {Promise<Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ */
 const disable2FA = async () => {
   try {
     const response = await api.delete('/auth/2fa');

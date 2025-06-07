@@ -4,9 +4,11 @@ import PropTypes from 'prop-types';
 const baseURL = '/api';
 
 /**
- * Fonction générique de gestion des erreurs
+ * Gère les erreurs d'API de manière uniforme
+ * 
  * @param {Error} error - L'erreur à traiter
- * @returns {Object} - Objet d'erreur formaté
+ * @returns {Object} Objet formaté contenant le statut, les données et le message d'erreur
+ * @private
  */
 const handleError = (error) => {
 
@@ -34,6 +36,15 @@ const handleError = (error) => {
 };
 
 
+/**
+ * Récupère toutes les diffusions en direct
+ * 
+ * @async
+ * @returns {Promise<Object>} Objet contenant le statut de la réponse, les données et un message
+ * @throws {Error} Erreur traitée par handleError en cas d'échec de la requête
+ * @example
+ * const { status, data, message } = await getAllLives();
+ */
 const getAllLives = async () => {
   try {
     const response = await api.get('/lives/all');
@@ -48,6 +59,14 @@ const getAllLives = async () => {
 };
 
 
+/**
+ * Récupère les diffusions en direct associées à une classe spécifique
+ * 
+ * @async
+ * @param {string|number} classId - L'identifiant de la classe
+ * @returns {Promise<Object>} Objet contenant le statut de la réponse, les données et un message
+ * @throws {Error} Erreur traitée par handleError en cas d'échec de la requête
+ */
 const getLivesByClass = async (classId) => {
   try {
     const response = await api.get(`/lives/class/${classId}`);
@@ -62,6 +81,14 @@ const getLivesByClass = async (classId) => {
 };
 
 
+/**
+ * Récupère une diffusion en direct par son identifiant
+ * 
+ * @async
+ * @param {string|number} liveId - L'identifiant de la diffusion en direct
+ * @returns {Promise<Object>} Objet contenant le statut de la réponse, les données et un message
+ * @throws {Error} Erreur traitée par handleError en cas d'échec de la requête
+ */
 const getLiveById = async (liveId) => {
   try {
     const response = await api.get(`/lives/${liveId}`);
@@ -76,6 +103,21 @@ const getLiveById = async (liveId) => {
 };
 
 
+/**
+ * Crée une nouvelle diffusion en direct
+ * 
+ * @async
+ * @param {Object} liveData - Les données de la diffusion en direct à créer
+ * @param {string} liveData.titre - Le titre de la diffusion
+ * @param {string} [liveData.description] - La description de la diffusion
+ * @param {string} liveData.matiere - La matière concernée
+ * @param {boolean} [liveData.chat_enabled] - Si le chat est activé
+ * @param {boolean} [liveData.est_programe] - Si la diffusion est programmée
+ * @param {string} [liveData.date_heure_lancement] - Date et heure de lancement programmé
+ * @param {Array<string|number>|string} liveData.allowed_classes - Classes autorisées à suivre la diffusion
+ * @returns {Promise<Object>} Objet contenant le statut de la réponse, les données et un message
+ * @throws {Error} Erreur traitée par handleError en cas d'échec de la requête
+ */
 const createLive = async (liveData) => {
   try {
     const response = await api.post('/lives/', liveData);
@@ -90,6 +132,16 @@ const createLive = async (liveData) => {
 };
 
 
+/**
+ * Met à jour une diffusion en direct existante
+ * 
+ * @async
+ * @param {Object} params - Paramètres de mise à jour
+ * @param {string|number} params.liveId - L'identifiant de la diffusion à mettre à jour
+ * @param {Object} params.liveData - Les nouvelles données pour la diffusion
+ * @returns {Promise<Object>} Objet contenant le statut de la réponse, les données et un message
+ * @throws {Error} Erreur traitée par handleError en cas d'échec de la requête
+ */
 const updateLive = async ({ liveId, liveData }) => {
   try {
     const response = await api.put(`/lives/${liveId}`, liveData);
@@ -104,6 +156,14 @@ const updateLive = async ({ liveId, liveData }) => {
 };
 
 
+/**
+ * Supprime une diffusion en direct
+ * 
+ * @async
+ * @param {string|number} liveId - L'identifiant de la diffusion à supprimer
+ * @returns {Promise<Object>} Objet contenant le statut de la réponse, les données et un message
+ * @throws {Error} Erreur traitée par handleError en cas d'échec de la requête
+ */
 const deleteLive = async (liveId) => {
   try {
     const response = await api.delete(`/lives/${liveId}`);
@@ -118,6 +178,14 @@ const deleteLive = async (liveId) => {
 };
 
 
+/**
+ * Démarre une diffusion en direct
+ * 
+ * @async
+ * @param {string|number} liveId - L'identifiant de la diffusion à démarrer
+ * @returns {Promise<Object>} Objet contenant le statut de la réponse, les données et un message
+ * @throws {Error} Erreur traitée par handleError en cas d'échec de la requête
+ */
 const startLive = async (liveId) => {
   try {
     const response = await api.patch(`/lives/${liveId}/start`);
@@ -132,6 +200,14 @@ const startLive = async (liveId) => {
 };
 
 
+/**
+ * Termine une diffusion en direct
+ * 
+ * @async
+ * @param {string|number} liveId - L'identifiant de la diffusion à terminer
+ * @returns {Promise<Object>} Objet contenant le statut de la réponse, les données et un message
+ * @throws {Error} Erreur traitée par handleError en cas d'échec de la requête
+ */
 const endLive = async (liveId) => {
   try {
     const response = await api.patch(`/lives/${liveId}/end`);
@@ -145,6 +221,17 @@ const endLive = async (liveId) => {
   }
 };
 
+
+/**
+ * Désapprouve une diffusion en direct
+ * 
+ * @async
+ * @param {Object} params - Paramètres de désapprobation
+ * @param {string|number} params.liveId - L'identifiant de la diffusion à désapprouver
+ * @param {string} params.justification - La justification de la désapprobation
+ * @returns {Promise<Object>} Objet contenant le statut de la réponse, les données et un message
+ * @throws {Error} Erreur traitée par handleError en cas d'échec de la requête
+ */
 const disapproveLive = async ({ liveId, justification }) => {
   try {
     const response = await api.patch(`/lives/${liveId}/disapprove`, { justification });
@@ -156,8 +243,19 @@ const disapproveLive = async ({ liveId, justification }) => {
   } catch (error) {
     return handleError(error);
   }
-}
+};
 
+
+/**
+ * Bloque une diffusion en direct
+ * 
+ * @async
+ * @param {Object} params - Paramètres de blocage
+ * @param {string|number} params.liveId - L'identifiant de la diffusion à bloquer
+ * @param {string} params.reason - La raison du blocage
+ * @returns {Promise<Object>} Objet contenant le statut de la réponse, les données et un message
+ * @throws {Error} Erreur traitée par handleError en cas d'échec de la requête
+ */
 const blockLive = async ({ liveId, reason }) => {
   try {
     const response = await api.patch(`/lives/${liveId}/block`, { justification: reason });
@@ -171,6 +269,15 @@ const blockLive = async ({ liveId, reason }) => {
   }
 };
 
+
+/**
+ * Débloque une diffusion en direct
+ * 
+ * @async
+ * @param {string|number} liveId - L'identifiant de la diffusion à débloquer
+ * @returns {Promise<Object>} Objet contenant le statut de la réponse, les données et un message
+ * @throws {Error} Erreur traitée par handleError en cas d'échec de la requête
+ */
 const unblockLive = async (liveId) => {
   try {
     const response = await api.patch(`/lives/${liveId}/unblock`);
@@ -185,6 +292,14 @@ const unblockLive = async (liveId) => {
 };
 
 
+/**
+ * Récupère les messages du chat d'une diffusion en direct
+ * 
+ * @async
+ * @param {string|number} liveId - L'identifiant de la diffusion
+ * @returns {Promise<Object>} Objet contenant le statut de la réponse, les données et un message
+ * @throws {Error} Erreur traitée par handleError en cas d'échec de la requête
+ */
 const getLiveMessages = async (liveId) => {
   try {
     const response = await api.get(`/${liveId}/chat`);
@@ -199,6 +314,16 @@ const getLiveMessages = async (liveId) => {
 };
 
 
+/**
+ * Envoie un message dans le chat d'une diffusion en direct
+ * 
+ * @async
+ * @param {Object} params - Paramètres d'envoi
+ * @param {string|number} params.liveId - L'identifiant de la diffusion
+ * @param {string} params.message - Le contenu du message à envoyer
+ * @returns {Promise<Object>} Objet contenant le statut de la réponse, les données et un message
+ * @throws {Error} Erreur traitée par handleError en cas d'échec de la requête
+ */
 const sendLiveMessage = async ({ liveId, message }) => {
   try {
     const response = await api.post(`/${liveId}/chat`, { message });
@@ -213,11 +338,27 @@ const sendLiveMessage = async ({ liveId, message }) => {
 };
 
 
+/**
+ * Génère l'URL de streaming d'une diffusion en direct
+ * 
+ * @param {string|number} liveId - L'identifiant de la diffusion
+ * @returns {string} L'URL de streaming complète
+ */
 const getLiveStreamUrl = (liveId) => {
   return `${baseURL}/api/stream/${liveId}`;
 };
 
 
+/**
+ * Enregistre l'engagement d'un utilisateur sur une diffusion en direct
+ * 
+ * @async
+ * @param {Object} params - Paramètres d'engagement
+ * @param {string|number} params.streamId - L'identifiant de la diffusion
+ * @param {number} params.activeViewTime - Le temps de visionnage actif en secondes
+ * @returns {Promise<Object>} Objet contenant le statut de la réponse, les données et un message
+ * @throws {Error} Erreur traitée par handleError en cas d'échec de la requête
+ */
 const logViewEngagement = async ({ streamId, activeViewTime }) => {
   try {
     const response = await api.post('/attendance', {

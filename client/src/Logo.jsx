@@ -1,9 +1,37 @@
+/**
+ * @fileoverview
+ * Composant Logo qui affiche le logo SPOC-LMSC avec une couleur de remplissage personnalisable.
+ * Ce composant utilise un SVG avec une image encodée en base64 pour garantir que le logo
+ * s'affiche correctement dans tous les environnements.
+ */
 import PropTypes from "prop-types";
 
+/**
+ * Définition des PropTypes pour le composant Logo
+ * @type {Object}
+ */
 Logo.propTypes = {
   fillColor: PropTypes.string,
   className: PropTypes.string,
 };
+
+/**
+ * Composant qui affiche le logo SPOC-LMSC
+ * 
+ * @component
+ * @param {Object} props - Les propriétés du composant
+ * @param {string} [props.fillColor] - Couleur de remplissage pour le logo (format CSS valide)
+ * @param {string} [props.className] - Classes CSS additionnelles à appliquer au logo
+ * @returns {JSX.Element} Élément SVG représentant le logo avec les propriétés appliquées
+ * 
+ * @example
+ * // Logo avec couleur par défaut
+ * <Logo />
+ * 
+ * @example
+ * // Logo rouge avec classe personnalisée
+ * <Logo fillColor="#FF0000" className="my-logo-class" />
+ */
 
 export default function Logo({ fillColor, className }) {
   return (

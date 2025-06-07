@@ -2,9 +2,10 @@ import api from './api';
 import PropTypes from 'prop-types';
 
 /**
- * Fonction générique de gestion des erreurs
- * @param {Error} error - L'erreur à traiter
- * @returns {Object} - Objet d'erreur formaté
+ * Gère uniformément les erreurs d'API
+ * @private
+ * @param {Error} error - L'erreur interceptée
+ * @returns {Object} Objet normalisé contenant le statut, les données et le message d'erreur
  */
 const handleError = (error) => {
 
@@ -32,6 +33,12 @@ const handleError = (error) => {
 };
 
 
+/**
+ * Récupère tous les cours disponibles
+ * @async
+ * @returns {Promise<Object>} Objet contenant le statut, les données et un message de succès
+ * @throws {Error} En cas d'échec de la requête API
+ */
 const getAllCourses = async () => {
   try {
     const response = await api.get('/courses/all');
@@ -46,6 +53,14 @@ const getAllCourses = async () => {
 };
 
 
+/**
+ * Récupère un cours spécifique par son identifiant
+ * @async
+ * @param {Object} params - Paramètres de la fonction
+ * @param {string|number} params.courseId - Identifiant du cours à récupérer
+ * @returns {Promise<Object>} Objet contenant le statut, les données du cours et un message de succès
+ * @throws {Error} En cas d'échec de la requête API
+ */
 const getCourseById = async ({ courseId }) => {
   try {
     const response = await api.get(`/courses/${courseId}/main`);
@@ -60,6 +75,20 @@ const getCourseById = async ({ courseId }) => {
 };
 
 
+/**
+ * Crée un nouveau cours
+ * @async
+ * @param {Object} courseData - Données du cours à créer
+ * @param {string} courseData.matiere - Matière du cours
+ * @param {string} [courseData.chapitre] - Chapitre du cours
+ * @param {string} courseData.titre - Titre du cours
+ * @param {string} [courseData.description] - Description du cours
+ * @param {string} [courseData.teacher_name] - Nom de l'enseignant
+ * @param {string} [courseData.date_creation] - Date de création
+ * @param {Array<string|number>|string} [courseData.allowed_classes] - Classes autorisées à accéder au cours
+ * @returns {Promise<Object>} Objet contenant le statut, les données du cours créé et un message de succès
+ * @throws {Error} En cas d'échec de la requête API
+ */
 const createCourse = async (courseData) => {
   try {
     const response = await api.post('/courses/', courseData);
@@ -74,6 +103,15 @@ const createCourse = async (courseData) => {
 };
 
 
+/**
+ * Désapprouve/bloque un cours avec une justification
+ * @async
+ * @param {Object} params - Paramètres de la fonction
+ * @param {string|number} params.courseId - Identifiant du cours à désapprouver
+ * @param {string} params.justification - Raison de la désapprobation
+ * @returns {Promise<Object>} Objet contenant le statut, les données de réponse et un message de succès
+ * @throws {Error} En cas d'échec de la requête API
+ */
 const disapproveCourse = async ({ courseId, justification }) => {
   try {
     const response = await api.post(`/courses/${courseId}/block`,
@@ -89,6 +127,13 @@ const disapproveCourse = async ({ courseId, justification }) => {
   }
 };
 
+/**
+ * Débloque un cours précédemment désapprouvé
+ * @async
+ * @param {string|number} courseId - Identifiant du cours à débloquer
+ * @returns {Promise<Object>} Objet contenant le statut, les données de réponse et un message de succès
+ * @throws {Error} En cas d'échec de la requête API
+ */
 const unblockCourse = async (courseId) => {
   try {
     const response = await api.put(`/courses/${courseId}/unblock`);
@@ -103,6 +148,15 @@ const unblockCourse = async (courseId) => {
 };
 
 
+/**
+ * Met à jour un cours existant
+ * @async
+ * @param {Object} params - Paramètres de la fonction
+ * @param {string|number} params.courseId - Identifiant du cours à mettre à jour
+ * @param {Object} params.courseData - Nouvelles données du cours
+ * @returns {Promise<Object>} Objet contenant le statut, les données mises à jour et un message de succès
+ * @throws {Error} En cas d'échec de la requête API
+ */
 const updateCourse = async ({ courseId, courseData }) => {
   try {
     const response = await api.put(`/courses/${courseId}`, courseData);
@@ -117,6 +171,13 @@ const updateCourse = async ({ courseId, courseData }) => {
 };
 
 
+/**
+ * Supprime un cours existant
+ * @async
+ * @param {string|number} courseId - Identifiant du cours à supprimer
+ * @returns {Promise<Object>} Objet contenant le statut, les données de réponse et un message de succès
+ * @throws {Error} En cas d'échec de la requête API
+ */
 const deleteCourse = async (courseId) => {
   try {
     const response = await api.delete(`/courses/${courseId}`);
@@ -131,6 +192,14 @@ const deleteCourse = async (courseId) => {
 };
 
 
+/**
+ * Récupère les détails complets d'un cours spécifique
+ * @async
+ * @param {Object} params - Paramètres de la fonction
+ * @param {string|number} params.courseId - Identifiant du cours
+ * @returns {Promise<Object>} Objet contenant le statut, les détails du cours et un message de succès
+ * @throws {Error} En cas d'échec de la requête API
+ */
 const getCourseDetails = async ({ courseId }) => {
   try {
     const response = await api.get(`/courses/${courseId}/details`);
@@ -145,6 +214,14 @@ const getCourseDetails = async ({ courseId }) => {
 };
 
 
+/**
+ * Récupère tous les cours associés à une classe spécifique
+ * @async
+ * @param {Object} params - Paramètres de la fonction
+ * @param {string|number} params.classId - Identifiant de la classe
+ * @returns {Promise<Object>} Objet contenant le statut, la liste des cours et un message de succès
+ * @throws {Error} En cas d'échec de la requête API
+ */
 const getCoursesByClass = async ({ classId }) => {
   try {
     const response = await api.get(`/courses/class/${classId}`);
@@ -159,6 +236,15 @@ const getCoursesByClass = async ({ classId }) => {
 };
 
 
+/**
+ * Marque un cours comme terminé pour un utilisateur
+ * @async
+ * @param {Object} params - Paramètres de la fonction
+ * @param {string|number} params.courseId - Identifiant du cours
+ * @param {string|number} params.userId - Identifiant de l'utilisateur
+ * @returns {Promise<Object>} Objet contenant le statut, les données de progression et un message de succès
+ * @throws {Error} En cas d'échec de la requête API
+ */
 const markCourseAsCompleted = async ({ courseId, userId }) => {
   try {
     const response = await api.post(`/progress/course-progress/${courseId}`, {
@@ -176,6 +262,15 @@ const markCourseAsCompleted = async ({ courseId, userId }) => {
 };
 
 
+/**
+ * Marque un cours comme en cours de réalisation pour un utilisateur
+ * @async
+ * @param {Object} params - Paramètres de la fonction
+ * @param {string|number} params.courseId - Identifiant du cours
+ * @param {string|number} params.userId - Identifiant de l'utilisateur
+ * @returns {Promise<Object>} Objet contenant le statut, les données de progression et un message de succès
+ * @throws {Error} En cas d'échec de la requête API
+ */
 const markCourseAsInProgress = async ({ courseId, userId }) => {
   try {
     const response = await api.post(`/progress/course-progress/${courseId}`, {
@@ -193,6 +288,12 @@ const markCourseAsInProgress = async ({ courseId, userId }) => {
 };
 
 
+/**
+ * Récupère les statistiques de progression d'un étudiant
+ * @async
+ * @returns {Promise<Object>} Objet contenant le statut, les statistiques de progression et un message de succès
+ * @throws {Error} En cas d'échec de la requête API
+ */
 const getStudentProgress = async () => {
   try {
     const response = await api.get(`/progress/stats`);
@@ -207,6 +308,14 @@ const getStudentProgress = async () => {
 };
 
 
+/**
+ * Récupère les informations de progression pour un cours spécifique
+ * @async
+ * @param {Object} params - Paramètres de la fonction
+ * @param {string|number} params.courseId - Identifiant du cours
+ * @returns {Promise<Object>} Objet contenant le statut, les données de progression et un message de succès
+ * @throws {Error} En cas d'échec de la requête API
+ */
 const getCourseProgress = async ({ courseId }) => {
   try {
     const response = await api.get(`/progress/course-progress/${courseId}`);

@@ -1,17 +1,41 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import PropTypes from 'prop-types';
-import { getStudentProgress } from '../../API/CourseCaller';
+/**
+ * @fileoverview Student dashboard home page component that displays course progress, navigation options, and statistics.
+ */
 
-
-import DashboardTutorial from '../../tutorials/DashboardTutorial';
-
-
+/**
+ * @component DashboardHome
+ * @description Renders the student dashboard home page with navigation cards and statistics.
+ * Displays information about courses, live sessions, forum access, and progress statistics.
+ * 
+ * @param {Object} props - Component properties
+ * @param {Object} props.user - The current user object
+ * @param {string} props.user.role - The role of the user (e.g., 'student')
+ * @param {string} props.user.name - The name of the user
+ * 
+ * @returns {JSX.Element} The rendered dashboard home page
+ */
 const DashboardHome = ({ user }) => {
   const navigate = useNavigate();
+  
+  /**
+   * @type {Object}
+   * @property {number} completedCourses - Number of courses the student has completed
+   * @property {number} liveSessions - Number of live sessions the student has attended
+   * @property {number} startedCourses - Number of courses the student has started but not completed
+   */
   const [stats, setStats] = useState({ completedCourses: 0, liveSessions: 0 });
 
+  /**
+   * @description Fetches the student's progress data from the API when the component mounts
+   * @function
+   */
   useEffect(() => {
+    /**
+     * @async
+     * @function fetchData
+     * @description Retrieves student progress data from the server
+     * @throws {Error} If there's an issue with the API request
+     */
     const fetchData = async () => {
       try {
         const response = await getStudentProgress();
@@ -128,6 +152,10 @@ const DashboardHome = ({ user }) => {
   );
 };
 
+/**
+ * @type {Object}
+ * @description PropTypes validation for the DashboardHome component
+ */
 DashboardHome.propTypes = {
   user: PropTypes.shape({
     role: PropTypes.string.isRequired,
@@ -135,4 +163,7 @@ DashboardHome.propTypes = {
   }).isRequired,
 };
 
+/**
+ * @exports DashboardHome
+ */
 export default DashboardHome;
