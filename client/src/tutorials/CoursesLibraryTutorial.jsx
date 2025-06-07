@@ -18,7 +18,7 @@ import { useTutorial } from '../contexts/TutorialContext';
 const CoursesLibraryTutorial = () => {
   /**
    * État contrôlant si le tutoriel est en cours d'exécution
-   * @type {[boolean, Function]}
+   * @type {boolean}
    */
   const [runTutorial, setRunTutorial] = useState(false);
   

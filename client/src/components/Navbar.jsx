@@ -52,7 +52,7 @@ const NavigationBar = ({ isAdmin = false, isProf = false }) => {
   
   /**
    * State to track the currently active route
-   * @type {[string, function]}
+   * @type {string}
    */
   const [activeRoute, setActiveRoute] = React.useState(location.pathname);
 

@@ -10,7 +10,7 @@ const { body, validationResult } = require('express-validator');
  * Middleware de validation des données utilisateur.
  * Vérifie que les champs nom, prénom, email et mot de passe respectent les critères de validation.
  * 
- * @type {Array<import('express').RequestHandler>}
+ * @type {Array<RequestHandler>}
  * @example
  * // Dans un fichier de routes:
  * const validateUser = require('../middlewares/userValidation');
@@ -65,9 +65,9 @@ const validateUser = [
    * Gestionnaire de validation qui vérifie les résultats et renvoie les erreurs
    * ou passe au middleware suivant.
    * 
-   * @param {import('express').Request} req - L'objet requête Express
-   * @param {import('express').Response} res - L'objet réponse Express
-   * @param {import('express').NextFunction} next - La fonction pour passer au middleware suivant
+   * @param {Request} req - L'objet requête Express
+   * @param {Response} res - L'objet réponse Express
+   * @param {NextFunction} next - La fonction pour passer au middleware suivant
    * @returns {void}
    * @throws {Object} Renvoie un objet d'erreurs avec statut 400 si la validation échoue
    */

@@ -44,8 +44,7 @@ const LoadingFallback = () => (
 
 
 /**
- * État global de l'application.
- * @type {string} - 'MAINTENANCE' pour mode maintenance, aucune valeur pour mode normal
+ * @type {string}
  * @description Définit si l'application est en mode maintenance ou opérationnelle.
  * En mode maintenance, l'application affiche une bannière de maintenance et empêche l'accès aux routes protégées.
  * En mode normal, l'application fonctionne normalement avec authentification et routage.
@@ -61,8 +60,8 @@ let APP_STATUS = '';
 
 
 /**
- * Configuration des routes protégées nécessitant une authentification.
- * @type {Array<{path: string, content: string}>} - Liste des routes avec chemin et nom de composant
+ * @type {Array<{path: string, content: string}>}
+ * @description Configuration des routes protégées nécessitant une authentification.
  */
 const routeConfig = [
 
@@ -98,8 +97,8 @@ const routeConfig = [
 ];
 
 /**
- * Configuration des routes publiques accessibles sans authentification.
- * @type {Array<{path: string, content: string}>} - Liste des routes avec chemin et nom de composant
+ * @type {Array<{path: string, content: string}>}
+ * @description Configuration des routes publiques accessibles sans authentification.
  */
 const publicRouteConfig = [
   { path: '/', content: 'Home' },
@@ -132,20 +131,20 @@ function AppWrapper() {
  */
 function App() {
   /**
-   * État contenant les informations d'authentification décodées du JWT
    * @type {Object|null}
+   * @description État contenant les informations d'authentification décodées du JWT
    */
   const [auth, setAuth] = useState(null);
   
   /**
-   * État indiquant si l'application est en cours de chargement
    * @type {boolean}
+   * @description État indiquant si l'application est en cours de chargement
    */
   const [loading, setLoading] = useState(true);
   
   /**
-   * Rôle de l'utilisateur authentifié
    * @type {string|null}
+   * @description Rôle de l'utilisateur authentifié
    */
   const [role, setRole] = useState(null);
   

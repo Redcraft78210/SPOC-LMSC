@@ -12,20 +12,19 @@ import Tutorial from '../components/Tutorial';
 import { HelpCircle } from 'lucide-react';
 
 /**
- * Composant qui affiche un tutoriel guidé pour la gestion des utilisateurs.
- * Fournit une séquence d'étapes explicatives sur les différentes fonctionnalités
- * disponibles dans l'interface de gestion des utilisateurs.
- * 
- * @component
- * @returns {JSX.Element} Composant de tutoriel pour la gestion des utilisateurs
+ * Tutoriel interactif pour la gestion des utilisateurs
+ * @param {Object} props - Les propriétés du composant
+ * @param {boolean} props.isOpen - Indique si le tutoriel est ouvert
+ * @param {Function} props.setIsOpen - Fonction pour contrôler l'état d'ouverture
+ * @returns {JSX.Element|null} Le composant du tutoriel
  */
 const UserManagementTutorial = () => {
     /**
      * État contrôlant si le tutoriel est en cours d'exécution
-     * @type {[boolean, Function]}
+     * @type {Array<boolean|Function>}
      */
     const [runTutorial, setRunTutorial] = useState(false);
-    
+
     /**
      * Contexte fournissant les fonctions de gestion des tutoriels
      * @type {Object}

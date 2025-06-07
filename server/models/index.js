@@ -13,157 +13,157 @@ sequelize.Op = Sequelize.Op;
 
 /**
  * Modèle User - Représente les utilisateurs de la plateforme
- * @type {import('sequelize').Model}
+ * @type {Model}
  */
 const User = require('./User');
 
 /**
  * Modèle CourseProgress - Suivi de progression des cours par utilisateur
- * @type {import('sequelize').Model}
+ * @type {Model}
  */
 const CourseProgress = require('./CourseProgress');
 
 /**
  * Modèle LiveAttendance - Présence des utilisateurs aux sessions en direct
- * @type {import('sequelize').Model}
+ * @type {Model}
  */
 const LiveAttendance = require('./LiveAttendance');
 
 /**
  * Modèle Student - Informations spécifiques aux étudiants
- * @type {import('sequelize').Model}
+ * @type {Model}
  */
 const Student = require('./Student');
 
 /**
  * Modèle StudentClass - Table de liaison étudiants-classes
- * @type {import('sequelize').Model}
+ * @type {Model}
  */
 const StudentClass = require('./StudentClass');
 
 /**
  * Modèle Classe - Représente les classes d'étudiants
- * @type {import('sequelize').Model}
+ * @type {Model}
  */
 const Classe = require('./Classe');
 
 /**
  * Modèle Lives - Sessions de cours en direct
- * @type {import('sequelize').Model}
+ * @type {Model}
  */
 const Lives = require('./Lives');
 
 /**
  * Modèle Teacher - Informations spécifiques aux enseignants
- * @type {import('sequelize').Model}
+ * @type {Model}
  */
 const Teacher = require('./Teacher');
 
 /**
  * Modèle ClassLives - Table de liaison classes-sessions en direct
- * @type {import('sequelize').Model}
+ * @type {Model}
  */
 const ClassLives = require('./ClassLives');
 
 /**
  * Modèle Course - Représente les cours disponibles
- * @type {import('sequelize').Model}
+ * @type {Model}
  */
 const Course = require('./Course');
 
 /**
  * Modèle Admin - Informations spécifiques aux administrateurs
- * @type {import('sequelize').Model}
+ * @type {Model}
  */
 const Admin = require('./Admin');
 
 /**
  * Modèle Code - Codes d'invitation pour l'inscription
- * @type {import('sequelize').Model}
+ * @type {Model}
  */
 const Code = require('./Code');
 
 /**
  * Modèle Comment - Commentaires sur les threads de discussion
- * @type {import('sequelize').Model}
+ * @type {Model}
  */
 const Comment = require('./Comment');
 
 /**
  * Modèle Thread - Threads de discussion
- * @type {import('sequelize').Model}
+ * @type {Model}
  */
 const Thread = require('./Thread');
 
 /**
  * Modèle ChatMessage - Messages de chat en temps réel
- * @type {import('sequelize').Model}
+ * @type {Model}
  */
 const ChatMessage = require('./ChatMessage');
 
 /**
  * Modèle UserAvatar - Avatars des utilisateurs
- * @type {import('sequelize').Model}
+ * @type {Model}
  */
 const UserAvatar = require('./UserAvatar');
 
 /**
  * Modèle Document - Documents PDF associés aux cours
- * @type {import('sequelize').Model}
+ * @type {Model}
  */
 const Document = require('./Document');
 
 /**
  * Modèle Video - Vidéos associées aux cours
- * @type {import('sequelize').Model}
+ * @type {Model}
  */
 const Video = require('./Video');
 
 /**
  * Modèle CourseDocument - Table de liaison cours-documents
- * @type {import('sequelize').Model}
+ * @type {Model}
  */
 const CourseDocument = require('./CourseDocument');
 
 /**
  * Modèle CourseVideo - Table de liaison cours-vidéos
- * @type {import('sequelize').Model}
+ * @type {Model}
  */
 const CourseVideo = require('./CourseVideo');
 
 /**
  * Modèle Attachment - Pièces jointes aux messages
- * @type {import('sequelize').Model}
+ * @type {Model}
  */
 const Attachment = require('./Attachment');
 
 /**
  * Modèle Message - Messages privés entre utilisateurs
- * @type {import('sequelize').Model}
+ * @type {Model}
  */
 const Message = require('./Message');
 
 /**
  * Modèle Recipient - Destinataires des messages
- * @type {import('sequelize').Model}
+ * @type {Model}
  */
 const Recipient = require('./Recipient');
 
 /**
  * Modèle TrashMessage - Messages supprimés
- * @type {import('sequelize').Model}
+ * @type {Model}
  */
 const TrashMessage = require('./TrashMessage');
 
 /**
  * Modèle Warning - Avertissements émis aux utilisateurs
- * @type {import('sequelize').Model}
+ * @type {Model}
  */
 const Warning = require('./Warning');
 
 /**
  * Modèle Flag - Signalements de contenu inapproprié
- * @type {import('sequelize').Model}
+ * @type {Model}
  */
 const Flag = require('./Flag');
 

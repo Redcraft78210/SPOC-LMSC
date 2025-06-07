@@ -2,8 +2,17 @@
  * @fileoverview Student dashboard home page component that displays course progress, navigation options, and statistics.
  */
 
+
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import PropTypes from 'prop-types';
+import { getStudentProgress } from '../../API/CourseCaller'; // Ajout de cette fonction dans CourseCaller
+
+// Tutorial component
+import DashboardTutorial from '../../tutorials/DashboardTutorial';
+
 /**
- * @component DashboardHome
+ * @component EleveDashboardHome
  * @description Renders the student dashboard home page with navigation cards and statistics.
  * Displays information about courses, live sessions, forum access, and progress statistics.
  * 
@@ -14,9 +23,11 @@
  * 
  * @returns {JSX.Element} The rendered dashboard home page
  */
-const DashboardHome = ({ user }) => {
+
+
+const EleveDashboardHome = ({ user }) => {
   const navigate = useNavigate();
-  
+
   /**
    * @type {Object}
    * @property {number} completedCourses - Number of courses the student has completed
@@ -154,16 +165,13 @@ const DashboardHome = ({ user }) => {
 
 /**
  * @type {Object}
- * @description PropTypes validation for the DashboardHome component
+ * @description PropTypes validation for the EleveDashboardHome component
  */
-DashboardHome.propTypes = {
+EleveDashboardHome.propTypes = {
   user: PropTypes.shape({
     role: PropTypes.string.isRequired,
     name: PropTypes.string.isRequired,
   }).isRequired,
 };
 
-/**
- * @exports DashboardHome
- */
-export default DashboardHome;
+export default EleveDashboardHome;

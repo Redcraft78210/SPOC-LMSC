@@ -1,8 +1,16 @@
 /**
- * @module Tutorial
- * @description Un composant React qui intègre react-joyride pour créer des tutoriels interactifs
- * dans l'application. Gère automatiquement le suivi des tutoriels complétés via TutorialContext.
+ * @fileoverview
+ * Composant de tutoriel interactif utilisant react-joyride
+ * pour guider les utilisateurs à travers l'application.
+ *
+ * Ce composant encapsule la logique d'affichage d'un tutoriel étape par étape,
+ * permettant de guider l'utilisateur dans l'interface. Il prend en charge la gestion
+ * de l'état de complétion du tutoriel, la personnalisation des étapes et des styles,
+ * ainsi que la localisation des boutons. L'intégration avec le contexte TutorialContext
+ * permet de suivre la progression de l'utilisateur et d'éviter de répéter les tutoriels
+ * déjà complétés.
  */
+
 import { useState, useEffect } from 'react';
 import Joyride, { STATUS } from 'react-joyride';
 import PropTypes from 'prop-types';
@@ -83,7 +91,7 @@ const Tutorial = ({
     options: {
       zIndex: 10000,
       primaryColor: '#3b82f6',
-      textColor: '#1f2937',   
+      textColor: '#1f2937',
       backgroundColor: '#ffffff',
       arrowColor: '#ffffff',
     },

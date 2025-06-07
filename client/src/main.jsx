@@ -3,7 +3,6 @@
  * Ce fichier initialise l'application en rendant le composant racine dans le DOM.
  * Il configure également le ThemeProvider pour gérer les thèmes de l'application.
  * 
- * @module main
  */
 
 import ReactDOM from 'react-dom/client';
@@ -13,18 +12,33 @@ import { ThemeProvider } from './contexts/ThemeProvider.jsx';
 import App from './App.jsx';
 
 /**
- * Crée une racine React sur l'élément DOM avec l'id 'root'.
- * @type {import('react-dom/client').Root}
+ * @type {Object}
+ * @description Instance de rendu React pour l'application
  */
-const root = ReactDOM.createRoot(document.getElementById('root'));
+let root;
 
 /**
- * Rend l'application React dans l'élément DOM racine.
- * Encapsule le composant App dans ThemeProvider pour fournir
- * un contexte de thème à toute l'application.
+ * @type {Object}
+ * @description Fonction pour monter l'application React dans le DOM
  */
-root.render(
-  <ThemeProvider>
-    <App />
-  </ThemeProvider>
-);
+const mountApp = () => {
+  /**
+   * @type {Object}
+   * @description Crée une racine React sur l'élément DOM avec l'id 'root'.
+   */
+  root = ReactDOM.createRoot(document.getElementById('root'));
+
+  /**
+   * Rend l'application React dans l'élément DOM racine.
+   * Encapsule le composant App dans ThemeProvider pour fournir
+   * un contexte de thème à toute l'application.
+   */
+  root.render(
+    <ThemeProvider>
+      <App />
+    </ThemeProvider>
+  );
+};
+
+// Monter l'application
+mountApp();

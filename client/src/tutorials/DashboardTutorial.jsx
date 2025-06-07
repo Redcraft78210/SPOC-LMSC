@@ -23,7 +23,13 @@ import PropTypes from 'prop-types';
 const DashboardTutorial = ({ userRole, name }) => {
   /**
    * État contrôlant si le tutoriel est en cours d'exécution
-   * @type {[boolean, Function]}
+   * @type {boolean}
+   * @type {Function}
+   * @description
+   * Cet état est initialisé à false et sera mis à true si l'utilisateur
+   * n'a pas encore complété le tutoriel pour son rôle spécifique.
+   * Il est utilisé pour déclencher l'affichage du tutoriel.
+   * @default false
    */
   const [runTutorial, setRunTutorial] = useState(false);
   

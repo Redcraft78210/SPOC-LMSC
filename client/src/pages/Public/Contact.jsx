@@ -51,7 +51,7 @@ const Contact = () => {
   
   /**
    * Current status of the form submission
-   * @type {string} - Empty string, 'loading', 'success', or 'error'
+   * @type {string}
    */
   const [status, setStatus] = useState('');
   

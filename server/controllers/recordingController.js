@@ -26,7 +26,7 @@ let currentRecordingFile = null;
 
 /**
  * Instance du processus FFmpeg en cours d'exécution
- * @type {import('child_process').ChildProcess|null}
+ * @type {ChildProcess|null}
  */
 let ffmpegProcess = null;
 
@@ -62,8 +62,8 @@ if (!fs.existsSync(recordingsDir)) {
 
 /**
  * Démarre un nouvel enregistrement vidéo
- * @param {import('express').Request} req - Requête Express
- * @param {import('express').Response} res - Réponse Express
+ * @param {Request} req - Requête Express
+ * @param {Response} res - Réponse Express
  * @returns {Object} Statut de l'opération et nom du fichier créé
  * @throws {Error} Si l'initialisation de FFmpeg échoue
  */
@@ -132,8 +132,8 @@ const startRecording = (req, res) => {
 
 /**
  * Arrête l'enregistrement en cours et sauvegarde la vidéo
- * @param {import('express').Request} req - Requête Express
- * @param {import('express').Response} res - Réponse Express
+ * @param {Request} req - Requête Express
+ * @param {Response} res - Réponse Express
  * @returns {Promise<Object>} Statut de l'opération et informations sur la vidéo sauvegardée
  * @throws {Error} Si le traitement du fichier échoue
  */
@@ -183,8 +183,8 @@ const stopRecording = async (req, res) => {
 
 /**
  * Récupère l'état actuel de l'enregistrement
- * @param {import('express').Request} req - Requête Express
- * @param {import('express').Response} res - Réponse Express
+ * @param {Request} req - Requête Express
+ * @param {Response} res - Réponse Express
  * @returns {Object} État de l'enregistrement et nom du fichier actuel
  */
 const getRecordingStatus = (req, res) => {

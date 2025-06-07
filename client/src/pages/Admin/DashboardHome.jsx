@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Admin dashboard home page component that displays user management, class management, and settings.
+ * Provides navigation cards for quick access to various admin functionalities.
+ */
+
 import { useNavigate } from 'react-router-dom';
 import {
   Users,
@@ -12,21 +17,22 @@ import DashboardTutorial from '../../tutorials/DashboardTutorial';
 import PropTypes from 'prop-types';
 
 /**
- * Admin Dashboard Home component
- *
- * Renders the main dashboard interface for administrators with various
- * management sections, notifications, and quick actions.
- *
+ * AdminDashboardHome Component
+ * 
+ * This component renders the main dashboard interface for admin users.
+ * It provides navigation cards for managing users, classes, and settings,
+ * as well as sections for notifications, recent activity, and quick actions.
+ * 
+ * @component
  * @param {Object} props - Component props
- * @param {Object} props.user - The current user information
- * @param {string} props.user.role - The user's role in the system
- * @param {string} props.user.name - The user's name
- * @returns {JSX.Element} The rendered dashboard interface
- *
- * @example
- * <DashboardHome user={{ role: 'admin', name: 'John Doe' }} />
+ * @param {Object} props.user - User object containing role and name
+ * @param {string} props.user.role - User's role (used for tutorial)
+ * @param {string} props.user.name - User's display name
+ * 
+ * @returns {JSX.Element} The admin dashboard home interface
  */
-const DashboardHome = ({ user }) => {
+
+const AdminDashboardHome = ({ user }) => {
   /**
    * React Router navigate function used for redirecting to different pages
    * @type {Function}
@@ -212,11 +218,11 @@ const DashboardHome = ({ user }) => {
   );
 };
 
-DashboardHome.propTypes = {
+AdminDashboardHome.propTypes = {
   user: PropTypes.shape({
     role: PropTypes.string.isRequired,
     name: PropTypes.string.isRequired,
   }).isRequired,
 };
 
-export default DashboardHome;
+export default AdminDashboardHome;

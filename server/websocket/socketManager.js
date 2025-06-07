@@ -31,7 +31,7 @@ const createStreamWSS = () => new WebSocket.Server({ noServer: true });
  * Cette fonction définit le comportement lors des demandes de mise à niveau WebSocket
  * et route les connexions vers le serveur WebSocket approprié en fonction du chemin
  * 
- * @param {import('http').Server} server - Le serveur HTTP sur lequel configurer les WebSockets
+ * @param {Server} server - Le serveur HTTP sur lequel configurer les WebSockets
  * @param {WebSocket.Server} chatWSS - Le serveur WebSocket pour les communications de chat
  * @param {WebSocket.Server} streamWSS - Le serveur WebSocket pour les communications de streaming
  * @throws {Error} Si la création de l'URL à partir des en-têtes de la requête échoue

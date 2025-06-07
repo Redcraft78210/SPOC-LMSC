@@ -19,16 +19,20 @@ pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.mjs`;
  * @returns {JSX.Element} Composant d'affichage de document PDF
  */
 const SecureDocumentViewer = ({ authToken, documentId }) => {
-  /** @type {[Blob|null, Function]} État contenant les données binaires du PDF */
+  /** @type {Blob|null} */
+  /** @description État contenant les données binaires du PDF */
   const [pdfData, setPdfData] = useState(null);
-  
-  /** @type {[number|null, Function]} État contenant le nombre total de pages du document */
+
+  /** @type {number|null} */
+  /** @description État contenant le nombre total de pages du document */
   const [numPages, setNumPages] = useState(null);
-  
-  /** @type {[number, Function]} État contenant la largeur du conteneur pour le rendu réactif */
+
+  /** @type {number} */
+  /** @description État contenant la largeur du conteneur pour le rendu réactif */
   const [width, setWidth] = useState(0);
-  
-  /** @type {React.RefObject} Référence vers l'élément conteneur du PDF */
+
+  /** @type {React.RefObject} */
+  /** @description Référence vers l'élément conteneur du PDF */
   const containerRef = useRef(null);
 
   /**
