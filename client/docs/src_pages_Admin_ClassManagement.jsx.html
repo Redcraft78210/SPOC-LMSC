@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: src/pages/Admin/ClassManagement.jsx</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: src/pages/Admin/ClassManagement.jsx</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import { useState, useEffect } from 'react';
+import { toast, Toaster } from 'react-hot-toast';
+import {
+  Edit,
+  Trash2,
+  UserPlus,
+  Users,
+  List,
+  Grid,
+  Search,
+} from 'lucide-react';
+import {
+  getAllClasses,
+  createClass,
+  updateClass,
+  deleteClass,
+} from '../../API/ClassCaller';
+import { getAllUsers } from '../../API/UserCaller';
+import ClassManagementTutorial from '../../tutorials/ClassManagementTutorial';
+
+/**
+ * Composant de gestion des classes pour l'interface d'administration.
+ * Permet la visualisation, création, modification et suppression de classes,
+ * ainsi que l'assignation d'enseignants et d'étudiants.
+ * 
+ * @returns {JSX.Element} Interface complète de gestion des classes
+ */
+const ClasseManagement = () => {
+
+  /**
+   * Récupère toutes les classes depuis l'API
+   * 
+   * @async
+   * @function fetchClasses
+   * @throws {Error} Si la requête échoue
+   */
+  const fetchClasses = async () => {
+    try {
+      const response = await getAllClasses();
+      if (response.status === 200) {
+        setClasses(response.data);
+      } else {
+        toast.error(response.message || 'Erreur lors du chargement des classes');
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des classes:', error);
+      toast.error('Erreur lors du chargement des classes');
+    }
+  };
+
+  /**
+   * Récupère tous les utilisateurs depuis l'API et les filtre par rôle
+   * 
+   * @async
+   * @function fetchUsers
+   * @throws {Error} Si la requête échoue
+   */
+  const fetchUsers = async () => {
+    try {
+      const response = await getAllUsers();
+      if (response.status === 200) {
+
+        const students = response.data.filter(user => user.role === 'Etudiant');
+        const teachers = response.data.filter(user => user.role === 'Professeur');
+
+        setStudentUsers(students);
+        setTeachersUsers(teachers);
+      } else {
+        toast.error(response.message || 'Erreur lors du chargement des utilisateurs');
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des utilisateurs:', error);
+      toast.error('Erreur lors du chargement des utilisateurs');
+    }
+  };
+
+  /**
+   * Détermine le mode d'affichage initial en fonction de la largeur de l'écran
+   * 
+   * @function getInitialViewMode
+   * @returns {string} Mode d'affichage ('list' ou 'grid')
+   */
+  const getInitialViewMode = () => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth &lt; 640 ? 'grid' : 'list';
+    }
+    return 'list';
+  };
+
+  const [classes, setClasses] = useState([]);
+  const [studentsUsers, setStudentUsers] = useState([]);
+  const [teachersUsers, setTeachersUsers] = useState([]);
+  const [viewMode, setViewMode] = useState(getInitialViewMode());
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedClasses, setSelectedClasses] = useState([]);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [selectedClasse, setSelectedClasse] = useState(null);
+
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth &lt; 640 &amp;&amp; viewMode === 'list') {
+        setViewMode('grid');
+      } else if (window.innerWidth >= 640 &amp;&amp; viewMode === 'grid') {
+        setViewMode('list');
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [viewMode]);
+
+  useEffect(() => {
+    fetchClasses();
+    fetchUsers();
+  }, []);
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    setShowCreateModal(searchParams.get('create-class') === 'true');
+  }, []);
+
+  /**
+   * Filtre les classes en fonction de la requête de recherche
+   * 
+   * @type {Array&lt;Object>}
+   */
+  const filteredClasses = classes.filter(
+    Classe =>
+      Classe.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      Classe.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  /**
+   * Sélectionne ou désélectionne toutes les classes filtrées
+   * 
+   * @function toggleAll
+   */
+  const toggleAll = () => {
+    setSelectedClasses(prev =>
+      prev.length === filteredClasses.length
+        ? []
+        : filteredClasses.map(g => g.id)
+    );
+  };
+
+  /**
+   * Bascule la sélection d'une classe spécifique
+   * 
+   * @function toggleClasse
+   * @param {number} ClasseId - Identifiant de la classe à sélectionner/désélectionner
+   */
+  const toggleClasse = ClasseId => {
+    setSelectedClasses(prev =>
+      prev.includes(ClasseId)
+        ? prev.filter(id => id !== ClasseId)
+        : [...prev, ClasseId]
+    );
+  };
+
+  /**
+   * Supprime toutes les classes sélectionnées après confirmation utilisateur
+   * 
+   * @async
+   * @function bulkDelete
+   * @throws {Error} Si une suppression échoue
+   */
+  const bulkDelete = async () => {
+    if (window.confirm(`Supprimer ${selectedClasses.length} Classe(s) ?`)) {
+      try {
+        for (const classId of selectedClasses) {
+          await deleteClass({ classId });
+        }
+        toast.success(`${selectedClasses.length} classe(s) supprimée(s)`);
+        setSelectedClasses([]);
+        fetchClasses();
+      } catch (error) {
+        console.error('Erreur lors de la suppression:', error);
+        toast.error('Erreur lors de la suppression des classes');
+      }
+    }
+  };
+
+  /**
+   * Supprime une classe spécifique après confirmation utilisateur
+   * 
+   * @async
+   * @function deleteClasseHandler
+   * @param {number} classId - Identifiant de la classe à supprimer
+   * @throws {Error} Si la suppression échoue
+   */
+  const deleteClasseHandler = async classId => {
+    if (window.confirm('Supprimer cette Classe ?')) {
+      try {
+        const response = await deleteClass({ classId });
+        if (response.status === 200) {
+          toast.success('Classe supprimée avec succès');
+        } else {
+          toast.error(response.message || 'Erreur lors de la suppression');
+        }
+        fetchClasses();
+      } catch (error) {
+        console.error('Erreur lors de la suppression:', error);
+        toast.error('Erreur lors de la suppression de la classe');
+      }
+    }
+  };
+
+  /**
+   * Crée ou met à jour une classe avec les données du formulaire
+   * 
+   * @async
+   * @function handleSubmitClasse
+   * @param {Object} formData - Données du formulaire de classe
+   * @param {string} formData.name - Nom de la classe
+   * @param {string} formData.description - Description de la classe
+   * @param {number} formData.main_teacher_id - ID de l'enseignant principal
+   * @param {Array&lt;number>} formData.students - IDs des étudiants de la classe
+   * @throws {Error} Si la création ou mise à jour échoue
+   */
+  const handleSubmitClasse = async formData => {
+    const classData = {
+      name: formData.name,
+      description: formData.description,
+      main_teacher_id: formData.main_teacher_id,
+      students: formData.students,
+    };
+
+    try {
+      let response;
+
+      if (selectedClasse) {
+        response = await updateClass({
+          classId: selectedClasse.id,
+          classData,
+        });
+      } else {
+        response = await createClass(classData);
+      }
+
+      if (response.status === 200 || response.status === 201) {
+        toast.success(selectedClasse ? 'Classe mise à jour' : 'Classe créée');
+        setShowCreateModal(false);
+        setSelectedClasse(null);
+        fetchClasses();
+      } else {
+        toast.error(response.message || "Erreur lors de l'opération");
+      }
+    } catch (error) {
+      console.error('Erreur:', error);
+      toast.error('Une erreur est survenue');
+    }
+  };
+
+  /**
+   * Composant de barre de recherche pour filtrer les classes
+   * 
+   * @function SearchBar
+   * @returns {JSX.Element} Barre de recherche
+   */
+  const SearchBar = () => (
+    &lt;div className="relative flex-1 max-w-xl">
+      &lt;Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+      &lt;input
+        type="text"
+        placeholder="Rechercher une classe..."
+        className="w-full pl-10 pr-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500"
+        value={searchQuery}
+        onChange={e => setSearchQuery(e.target.value)}
+      />
+    &lt;/div>
+  );
+
+  /**
+   * Composant de basculement entre les modes d'affichage liste et grille
+   * 
+   * @function ToggleView
+   * @returns {JSX.Element} Boutons de basculement de vue
+   */
+  const ToggleView = () => (
+    &lt;div className="flex gap-2 toggleView">
+      &lt;button
+        onClick={() => setViewMode('list')}
+        className={`p-2 rounded-lg ${viewMode === 'list' ? 'bg-blue-100 text-blue-600' : 'text-gray-600'
+          }`}
+      >
+        &lt;List className="w-5 h-5" />
+      &lt;/button>
+      &lt;button
+        onClick={() => setViewMode('grid')}
+        className={`p-2 rounded-lg ${viewMode === 'grid' ? 'bg-blue-100 text-blue-600' : 'text-gray-600'
+          }`}
+      >
+        &lt;Grid className="w-5 h-5" />
+      &lt;/button>
+    &lt;/div>
+  );
+
+  /**
+   * Composant affichant les actions en masse pour les classes sélectionnées
+   * 
+   * @function BulkActions
+   * @returns {JSX.Element|null} Actions en masse ou null si aucune classe n'est sélectionnée
+   */
+  const BulkActions = () =>
+    selectedClasses.length > 0 &amp;&amp; (
+      &lt;div className="bg-blue-50 p-4 rounded-lg flex items-center gap-6">
+        &lt;span className="font-medium">
+          {selectedClasses.length} sélectionné(s)
+        &lt;/span>
+        &lt;button
+          onClick={bulkDelete}
+          className="px-4 py-2 bg-red-600 text-white rounded-lg flex items-center hover:bg-red-700"
+        >
+          &lt;Trash2 className="w-5 h-5 mr-2" />
+          Supprimer
+        &lt;/button>
+      &lt;/div>
+    );
+
+  /**
+   * Composant d'affichage des classes en mode tableau
+   * 
+   * @function ClasseTable
+   * @returns {JSX.Element} Tableau des classes
+   */
+  const ClasseTable = () => (
+    &lt;div className="bg-white rounded-lg shadow overflow-x-auto">
+      &lt;table className="min-w-full divide-y divide-gray-200">
+        &lt;thead className="bg-gray-50">
+          &lt;tr>
+            &lt;th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-8">
+              &lt;input
+                type="checkbox"
+                checked={selectedClasses.length === filteredClasses.length}
+                onChange={toggleAll}
+                className="rounded text-blue-600"
+              />
+            &lt;/th>
+            &lt;th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              Nom
+            &lt;/th>
+            &lt;th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              Enseignant principal
+            &lt;/th>
+            &lt;th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              Description
+            &lt;/th>
+            &lt;th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              Membres
+            &lt;/th>
+            &lt;th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+              Actions
+            &lt;/th>
+          &lt;/tr>
+        &lt;/thead>
+        &lt;tbody className="bg-white divide-y divide-gray-200">
+          {filteredClasses.map(Classe => (
+            &lt;tr key={Classe.id}>
+              &lt;td className="px-6 py-4">
+                &lt;input
+                  type="checkbox"
+                  checked={selectedClasses.includes(Classe.id)}
+                  onChange={() => toggleClasse(Classe.id)}
+                  className="rounded text-blue-600"
+                />
+              &lt;/td>
+              &lt;td className="px-6 py-4 font-medium">{Classe.name}&lt;/td>
+              &lt;td className="px-6 py-4">
+                {Classe.main_teacher_id ? (
+                  &lt;div className="flex items-center">
+                    &lt;Users className="w-5 h-5 mr-2 text-gray-400" />
+                    {
+                      teachersUsers.find(
+                        user => user.id === Classe.main_teacher_id
+                      )?.name
+                    }
+                  &lt;/div>
+                ) : (
+                  &lt;div className="flex items-center">
+                    &lt;Users className="w-5 h-5 mr-2 text-gray-400" />
+                    Aucun enseignant principal
+                  &lt;/div>
+                )}
+              &lt;/td>
+              &lt;td className="px-6 py-4 text-gray-600">
+                {Classe.description
+                  ? `${Classe.description
+                    .charAt(0)
+                    .toUpperCase()}${Classe.description.slice(1)}`
+                  : 'Aucune description'}
+              &lt;/td>
+              &lt;td className="px-6 py-4">
+                &lt;div className="flex items-center">
+                  &lt;Users className="w-5 h-5 mr-2 text-gray-400" />
+                  {Classe.memberCount || 0}
+                &lt;/div>
+              &lt;/td>
+              &lt;td className="px-6 py-4 space-x-2">
+                &lt;button
+                  onClick={() => {
+                    setSelectedClasse(Classe);
+                    setShowCreateModal(true);
+                  }}
+                  className="text-blue-600 hover:text-blue-800"
+                >
+                  &lt;Edit className="w-5 h-5" />
+                &lt;/button>
+                &lt;button
+                  onClick={() => deleteClasseHandler(Classe.id)}
+                  className="text-red-600 hover:text-red-800"
+                >
+                  &lt;Trash2 className="w-5 h-5" />
+                &lt;/button>
+              &lt;/td>
+            &lt;/tr>
+          ))}
+        &lt;/tbody>
+      &lt;/table>
+    &lt;/div>
+  );
+
+  /**
+   * Composant d'affichage des classes en mode carte
+   * 
+   * @function ClasseCards
+   * @returns {JSX.Element} Grille de cartes représentant les classes
+   */
+  const ClasseCards = () => (
+    &lt;div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {filteredClasses.map(Classe => (
+        &lt;div key={Classe.id} className="bg-white p-4 rounded-lg shadow">
+          &lt;div className="flex justify-between items-start">
+            &lt;input
+              type="checkbox"
+              checked={selectedClasses.includes(Classe.id)}
+              onChange={() => toggleClasse(Classe.id)}
+              className="rounded text-blue-600"
+            />
+            &lt;div className="flex gap-2">
+              &lt;button
+                onClick={() => {
+                  setSelectedClasse(Classe);
+                  setShowCreateModal(true);
+                }}
+                className="text-blue-600 hover:text-blue-800"
+              >
+                &lt;Edit className="w-5 h-5" />
+              &lt;/button>
+              &lt;button
+                onClick={() => deleteClasseHandler(Classe.id)}
+                className="text-red-600 hover:text-red-800"
+              >
+                &lt;Trash2 className="w-5 h-5" />
+              &lt;/button>
+            &lt;/div>
+          &lt;/div>
+          &lt;div className="mt-4">
+            &lt;h3 className="text-lg font-semibold">{Classe.name}&lt;/h3>
+            &lt;p className="text-gray-600 text-sm mt-2">
+              {Classe.description
+                ? `${Classe.description.charAt(0).toUpperCase()}${Classe.description.slice(1)}`
+                : 'Aucune description'}
+            &lt;/p>
+            &lt;div className="flex items-center mt-4 text-gray-500">
+              &lt;Users className="w-5 h-5 mr-2" />
+              &lt;span>
+                {Classe.memberCount || 0} membre{Classe.memberCount > 1 &amp;&amp; 's'}
+              &lt;/span>
+            &lt;/div>
+            &lt;div className="flex items-center mt-2 text-gray-500">
+              &lt;Users className="w-5 h-5 mr-2" />
+              {Classe.main_teacher_id ? (
+                &lt;span>
+                  {
+                    teachersUsers.find(user => user.id === Classe.main_teacher_id)
+                      ?.name || 'Aucun enseignant principal'
+                  }
+                &lt;/span>
+              ) : (
+                &lt;span>Aucun enseignant principal&lt;/span>
+              )}
+            &lt;/div>
+          &lt;/div>
+        &lt;/div>
+      ))}
+    &lt;/div>
+  );
+  /**
+   * Modal de création ou d'édition d'une classe
+   * 
+   * @function ClasseCreationModal
+   * @returns {JSX.Element} Formulaire modal pour créer/éditer une classe
+   */
+  const ClasseCreationModal = () => {
+    const [formData, setFormData] = useState({
+      name: '',
+      description: '',
+      main_teacher_id: 0,
+      students: [],
+    });
+    const [errors, setErrors] = useState({});
+    const [isLoading, setIsLoading] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false);
+    const [isMounted, setIsMounted] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+
+    useEffect(() => {
+      setIsMounted(true);
+      if (selectedClasse) {
+        setFormData({
+          name: selectedClasse.name,
+          description: selectedClasse.description || '',
+          main_teacher_id: selectedClasse.main_teacher_id || 0,
+          students: selectedClasse.students || [],
+        });
+      }
+      return () => setIsMounted(false);
+    }, [setIsMounted]);
+
+    /**
+     * Valide les champs du formulaire et met à jour l'état des erreurs
+     * 
+     * @function validateForm
+     * @returns {boolean} Vrai si le formulaire est valide, faux sinon
+     */
+    const validateForm = () => {
+      const newErrors = {};
+      if (!formData.name.trim()) {
+        newErrors.name = 'Le nom de la classe est requis';
+      } else if (formData.name.length > 50) {
+        newErrors.name = 'Le nom ne doit pas dépasser 50 caractères';
+      }
+
+      if (formData.description.length > 200) {
+        newErrors.description =
+          'La description ne doit pas dépasser 200 caractères';
+      }
+
+      setErrors(newErrors);
+      return Object.keys(newErrors).length === 0;
+    };
+
+    /**
+     * Bascule la sélection d'un étudiant dans la classe
+     * 
+     * @function toggleMember
+     * @param {number} userId - ID de l'utilisateur à ajouter/retirer
+     */
+    const toggleMember = userId => {
+      setFormData(prev => ({
+        ...prev,
+        students: prev.students.includes(userId)
+          ? prev.students.filter(id => id !== userId)
+          : [...prev.students, userId],
+      }));
+    };
+
+    /**
+     * Filtre les utilisateurs en fonction de la requête de recherche
+     * 
+     * @type {Array&lt;Object>}
+     */
+    const filteredUsers = studentsUsers.filter(
+      user =>
+        user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    /**
+     * Gère la soumission du formulaire de création/édition de classe
+     * 
+     * @async
+     * @function handleSubmit
+     * @param {Event} e - Événement de soumission du formulaire
+     * @throws {Error} Si la soumission échoue
+     */
+    const handleSubmit = async e => {
+      e.preventDefault();
+      if (!validateForm()) return;
+
+      setIsLoading(true);
+      try {
+        await handleSubmitClasse(formData);
+        if (isMounted) {
+          setIsSuccess(true);
+          setTimeout(() => {
+            setShowCreateModal(false);
+            setSelectedClasse(null);
+            setIsSuccess(false);
+          }, 1500);
+        }
+      } catch (error) {
+        console.error('Submission error:', error);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+
+    /**
+     * Ferme le modal et réinitialise l'état de sélection
+     * 
+     * @function handleClose
+     */
+    const handleClose = () => {
+      setShowCreateModal(false);
+      setSelectedClasse(null);
+    };
+
+    /**
+     * Gère les clics sur l'arrière-plan pour fermer le modal
+     * 
+     * @function handleBackdropClick
+     * @param {Event} e - Événement de clic
+     */
+    const handleBackdropClick = e => {
+      if (e.target === e.currentTarget) handleClose();
+    };
+
+    useEffect(() => {
+      const handleKeyDown = e => {
+        if (e.key === 'Escape') handleClose();
+      };
+
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    return (
+      &lt;div
+        className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center transition-all duration-300 ease-out z-10"
+        onClick={handleBackdropClick}
+        role="dialog"
+        aria-labelledby="modalTitle"
+      >
+        &lt;div
+          className={`bg-white rounded-xl shadow-2xl p-8 w-full max-w-md transform transition-all duration-300 ease-in-out ${isMounted ? 'scale-100 opacity-100' : 'scale-95 opacity-0'
+            }`}
+        >
+          &lt;h2 id="modalTitle" className="text-2xl font-bold text-gray-900 mb-6">
+            {selectedClasse ? 'Modifier la Classe' : 'Nouvelle Classe'}
+          &lt;/h2>
+
+          &lt;form onSubmit={handleSubmit}>
+            &lt;div className="space-y-6">
+              {/* Name Field */}
+              &lt;div>
+                &lt;label
+                  htmlFor="name"
+                  className="block text-sm font-semibold text-gray-800 mb-2"
+                >
+                  Nom de la Classe *
+                &lt;/label>
+                &lt;div className="relative">
+                  &lt;input
+                    id="name"
+                    name="name"
+                    value={formData.name}
+                    onChange={e =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
+                    className={`w-full px-4 py-2.5 rounded-lg border ${errors.name
+                      ? 'border-red-500 focus:ring-red-500'
+                      : 'border-gray-200 focus:border-blue-500'
+                      } focus:ring-2 focus:ring-blue-200 outline-none transition-all`}
+                    aria-invalid={!!errors.name}
+                    aria-describedby="nameError"
+                    disabled={isLoading}
+                  />
+                  &lt;div className="absolute right-3 top-3.5 text-sm text-gray-400">
+                    {formData.name.length}/50
+                  &lt;/div>
+                &lt;/div>
+                {errors.name &amp;&amp; (
+                  &lt;p id="nameError" className="text-red-600 text-sm mt-2 ml-1">
+                    {errors.name}
+                  &lt;/p>
+                )}
+              &lt;/div>
+
+              {/* Description Field */}
+              &lt;div>
+                &lt;label
+                  htmlFor="description"
+                  className="block text-sm font-semibold text-gray-800 mb-2"
+                >
+                  Description
+                &lt;/label>
+                &lt;div className="relative">
+                  &lt;textarea
+                    id="description"
+                    name="description"
+                    value={formData.description}
+                    onChange={e =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
+                    className={`w-full px-4 py-2.5 rounded-lg border ${errors.description
+                      ? 'border-red-500 focus:ring-red-500'
+                      : 'border-gray-200 focus:border-blue-500'
+                      } focus:ring-2 focus:ring-blue-200 outline-none transition-all`}
+                    rows="3"
+                    aria-invalid={!!errors.description}
+                    aria-describedby="descError"
+                    disabled={isLoading}
+                  />
+                  &lt;div className="absolute right-3 bottom-3 text-sm text-gray-400">
+                    {formData.description.length}/200
+                  &lt;/div>
+                &lt;/div>
+                {errors.description &amp;&amp; (
+                  &lt;p id="descError" className="text-red-600 text-sm mt-2 ml-1">
+                    {errors.description}
+                  &lt;/p>
+                )}
+              &lt;/div>
+
+              {/* Main Teacher Field */}
+              &lt;div>
+                &lt;label
+                  htmlFor="main_teacher"
+                  className="block text-sm font-semibold text-gray-800 mb-2"
+                >
+                  Enseignant Principal
+                &lt;/label>
+                &lt;select
+                  id="main_teacher"
+                  name="main_teacher"
+                  value={formData.main_teacher_id}
+                  onChange={e =>
+                    setFormData({
+                      ...formData,
+                      main_teacher_id: e.target.value,
+                    })
+                  }
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                  disabled={isLoading}
+                >
+                  &lt;option value="0">cliquez pour sélectionner...&lt;/option>
+                  {teachersUsers.map(teacher => (
+                    &lt;option key={teacher.id} value={teacher.id}>
+                      {teacher.name}
+                    &lt;/option>
+                  ))}
+                &lt;/select>
+              &lt;/div>
+
+              {/* Students Section */}
+              &lt;div className="space-y-2">
+                &lt;label className="block text-sm font-semibold text-gray-800 mb-2">
+                  Élèves de la Classe
+                &lt;/label>
+
+                {/* Selected Users Tags */}
+                &lt;div className="flex flex-wrap gap-2 mb-3">
+                  {formData.students.map(userId => {
+                    const user = studentsUsers.find(u => u.id === userId);
+                    return (
+                      &lt;span
+                        key={userId}
+                        className="bg-blue-100 text-blue-800 text-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-colors hover:bg-blue-200"
+                      >
+                        {user?.name || 'Unknown User'}
+                        &lt;button
+                          type="button"
+                          onClick={() => toggleMember(userId)}
+                          className="ml-1 text-blue-600 hover:text-blue-800 transition-colors"
+                          aria-label="Remove user"
+                        >
+                          &amp;times;
+                        &lt;/button>
+                      &lt;/span>
+                    );
+                  })}
+                &lt;/div>
+
+                {/* User Search Input */}
+                &lt;input
+                  type="text"
+                  placeholder="Rechercher des utilisateurs..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                />
+
+                {/* Users List */}
+                &lt;div className="mt-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg">
+                  {filteredUsers.map(user => (
+                    &lt;div
+                      key={user.id}
+                      className={`flex items-center p-3 hover:bg-gray-50 cursor-pointer transition-colors ${formData.students.includes(user.id) ? 'bg-blue-50' : ''
+                        }`}
+                      onClick={() => toggleMember(user.id)}
+                    >
+                      &lt;input
+                        type="checkbox"
+                        checked={formData.students.includes(user.id)}
+                        readOnly
+                        className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                      />
+                      &lt;div className="ml-3 space-y-0.5">
+                        &lt;p className="text-sm font-medium text-gray-900">
+                          {user.name}
+                        &lt;/p>
+                        &lt;p className="text-xs text-gray-500 font-mono">
+                          {user.email}
+                        &lt;/p>
+                      &lt;/div>
+                    &lt;/div>
+                  ))}
+
+                  {filteredUsers.length === 0 &amp;&amp; (
+                    &lt;p className="p-3 text-sm text-gray-500">
+                      Aucun utilisateur trouvé
+                    &lt;/p>
+                  )}
+                &lt;/div>
+              &lt;/div>
+            &lt;/div>
+
+            {/* Form Actions */}
+            &lt;div className="mt-8 flex justify-end gap-3">
+              &lt;button
+                type="button"
+                onClick={handleClose}
+                className="px-5 py-2.5 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors duration-200 disabled:opacity-50"
+                disabled={isLoading}
+              >
+                Annuler
+              &lt;/button>
+              &lt;button
+                type="submit"
+                className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 transition-colors duration-200"
+                disabled={isLoading}
+              >
+                {isLoading &amp;&amp; (
+                  &lt;svg
+                    className="animate-spin h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    &lt;circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    >&lt;/circle>
+                    &lt;path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    >&lt;/path>
+                  &lt;/svg>
+                )}
+                {selectedClasse ? 'Sauvegarder' : 'Créer'}
+              &lt;/button>
+            &lt;/div>
+          &lt;/form>
+
+          {/* Success Overlay */}
+          {isSuccess &amp;&amp; (
+            &lt;div className="absolute inset-0 bg-white/95 flex items-center justify-center rounded-xl animate-pulse">
+              &lt;div className="flex items-center gap-2 text-green-600">
+                &lt;svg
+                  className="w-6 h-6"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  &lt;path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clipRule="evenodd"
+                  />
+                &lt;/svg>
+                &lt;span className="font-semibold">Succès!&lt;/span>
+              &lt;/div>
+            &lt;/div>
+          )}
+        &lt;/div>
+      &lt;/div>
+    );
+  };
+
+  return (
+    &lt;div className="container mx-auto p-6">
+      &lt;Toaster position="bottom-right" />
+      &lt;ClassManagementTutorial />
+      &lt;div className="flex flex-col gap-4 mb-8">
+        &lt;div className="flex justify-between items-center">
+          &lt;h1 className="text-2xl font-bold text-gray-800">
+            Gestion des Classes
+          &lt;/h1>
+          &lt;button
+            onClick={() => setShowCreateModal(true)}
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            &lt;UserPlus className="w-5 h-5 mr-2" />
+            Créer une classe
+          &lt;/button>
+        &lt;/div>
+        &lt;div className="flex flex-col sm:flex-row gap-4 justify-between">
+          &lt;SearchBar />
+          &lt;ToggleView />
+        &lt;/div>
+        &lt;BulkActions />
+      &lt;/div>
+
+      {viewMode === 'list' ? &lt;ClasseTable /> : &lt;ClasseCards />}
+
+      {showCreateModal &amp;&amp; &lt;ClasseCreationModal />}
+    &lt;/div>
+  );
+};
+
+export default ClasseManagement;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-App.html">App</a></li></ul><h3>Global</h3><ul><li><a href="global.html#About">About</a></li><li><a href="global.html#AccountDisabledModal">AccountDisabledModal</a></li><li><a href="global.html#AdminDashboardHome">AdminDashboardHome</a></li><li><a href="global.html#BASE_URL">BASE_URL</a></li><li><a href="global.html#BulkActions">BulkActions</a></li><li><a href="global.html#ClassManagementTutorial">ClassManagementTutorial</a></li><li><a href="global.html#ClasseCards">ClasseCards</a></li><li><a href="global.html#ClasseCreationModal">ClasseCreationModal</a></li><li><a href="global.html#ClasseManagement">ClasseManagement</a></li><li><a href="global.html#ClasseTable">ClasseTable</a></li><li><a href="global.html#Contact">Contact</a></li><li><a href="global.html#ContentCard">ContentCard</a></li><li><a href="global.html#CourseReader">CourseReader</a></li><li><a href="global.html#CourseReaderTutorial">CourseReaderTutorial</a></li><li><a href="global.html#Courses">Courses</a></li><li><a href="global.html#CoursesLibraryTutorial">CoursesLibraryTutorial</a></li><li><a href="global.html#Dashboard">Dashboard</a></li><li><a href="global.html#DashboardTutorial">DashboardTutorial</a></li><li><a href="global.html#DeleteDocument">DeleteDocument</a></li><li><a href="global.html#DeleteVideo">DeleteVideo</a></li><li><a href="global.html#EleveDashboardHome">EleveDashboardHome</a></li><li><a href="global.html#ErrorMessage">ErrorMessage</a></li><li><a href="global.html#FilterDropdown">FilterDropdown</a></li><li><a href="global.html#FirstLogin">FirstLogin</a></li><li><a href="global.html#Footer">Footer</a></li><li><a href="global.html#Forum">Forum</a></li><li><a href="global.html#GetAll_DataStructure">GetAll_DataStructure</a></li><li><a href="global.html#GetAll_Document">GetAll_Document</a></li><li><a href="global.html#Get_Document_Information">Get_Document_Information</a></li><li><a href="global.html#Get_Video_Information">Get_Video_Information</a></li><li><a href="global.html#Get_special_Document">Get_special_Document</a></li><li><a href="global.html#Get_special_Video">Get_special_Video</a></li><li><a href="global.html#Home">Home</a></li><li><a href="global.html#INACTIVITY_THRESHOLD">INACTIVITY_THRESHOLD</a></li><li><a href="global.html#LegalNotice">LegalNotice</a></li><li><a href="global.html#LiveNotFound">LiveNotFound</a></li><li><a href="global.html#LiveViewer">LiveViewer</a></li><li><a href="global.html#LoadCanvasTemplate">LoadCanvasTemplate</a></li><li><a href="global.html#LoadingComponent">LoadingComponent</a></li><li><a href="global.html#LoadingSpinner">LoadingSpinner</a></li><li><a href="global.html#Logout">Logout</a></li><li><a href="global.html#Mailbox">Mailbox</a></li><li><a href="global.html#MaintenanceBanner">MaintenanceBanner</a></li><li><a href="global.html#MessageDetailSkeleton">MessageDetailSkeleton</a></li><li><a href="global.html#MessageSkeleton">MessageSkeleton</a></li><li><a href="global.html#NavigationBar">NavigationBar</a></li><li><a href="global.html#PictureModal">PictureModal</a></li><li><a href="global.html#PrivacyPolicy">PrivacyPolicy</a></li><li><a href="global.html#PrivacyTab">PrivacyTab</a></li><li><a href="global.html#ProfilePhotoSelector">ProfilePhotoSelector</a></li><li><a href="global.html#PublicNavbar">PublicNavbar</a></li><li><a href="global.html#SearchBar">SearchBar</a></li><li><a href="global.html#SearchUser">SearchUser</a></li><li><a href="global.html#SecureDocumentViewer">SecureDocumentViewer</a></li><li><a href="global.html#SecureVideoPlayer">SecureVideoPlayer</a></li><li><a href="global.html#SecurityTab">SecurityTab</a></li><li><a href="global.html#SendDocument">SendDocument</a></li><li><a href="global.html#SendVideo">SendVideo</a></li><li><a href="global.html#Settings">Settings</a></li><li><a href="global.html#Sign">Sign</a></li><li><a href="global.html#Spinner">Spinner</a></li><li><a href="global.html#StreamReader">StreamReader</a></li><li><a href="global.html#TEN_MINUTES">TEN_MINUTES</a></li><li><a href="global.html#TermsOfUse">TermsOfUse</a></li><li><a href="global.html#ToggleView">ToggleView</a></li><li><a href="global.html#Tutorial">Tutorial</a></li><li><a href="global.html#TutorialContext">TutorialContext</a></li><li><a href="global.html#TutorialProvider">TutorialProvider</a></li><li><a href="global.html#TwoFASetupModal">TwoFASetupModal</a></li><li><a href="global.html#UpdateDocument">UpdateDocument</a></li><li><a href="global.html#UserManagementTutorial">UserManagementTutorial</a></li><li><a href="global.html#WSS_BASE_URL">WSS_BASE_URL</a></li><li><a href="global.html#activateUser">activateUser</a></li><li><a href="global.html#addComment">addComment</a></li><li><a href="global.html#addStudentToClass">addStudentToClass</a></li><li><a href="global.html#allDigitsFilled">allDigitsFilled</a></li><li><a href="global.html#api">api</a></li><li><a href="global.html#authToken">authToken</a></li><li><a href="global.html#authenticatedButtons">authenticatedButtons</a></li><li><a href="global.html#baseURL">baseURL</a></li><li><a href="global.html#blockLive">blockLive</a></li><li><a href="global.html#bulkDelete">bulkDelete</a></li><li><a href="global.html#changePassword">changePassword</a></li><li><a href="global.html#check2FAStatus">check2FAStatus</a></li><li><a href="global.html#checkRegisterCode">checkRegisterCode</a></li><li><a href="global.html#createClass">createClass</a></li><li><a href="global.html#createCourse">createCourse</a></li><li><a href="global.html#createLive">createLive</a></li><li><a href="global.html#createThread">createThread</a></li><li><a href="global.html#createUser">createUser</a></li><li><a href="global.html#deactivateUser">deactivateUser</a></li><li><a href="global.html#deleteAvatar">deleteAvatar</a></li><li><a href="global.html#deleteClass">deleteClass</a></li><li><a href="global.html#deleteClasseHandler">deleteClasseHandler</a></li><li><a href="global.html#deleteComment">deleteComment</a></li><li><a href="global.html#deleteContactMessage">deleteContactMessage</a></li><li><a href="global.html#deleteCourse">deleteCourse</a></li><li><a href="global.html#deleteInviteCode">deleteInviteCode</a></li><li><a href="global.html#deleteLive">deleteLive</a></li><li><a href="global.html#deleteMessage">deleteMessage</a></li><li><a href="global.html#deleteThread">deleteThread</a></li><li><a href="global.html#deleteUser">deleteUser</a></li><li><a href="global.html#disable2FA">disable2FA</a></li><li><a href="global.html#disapproveCourse">disapproveCourse</a></li><li><a href="global.html#disapproveLive">disapproveLive</a></li><li><a href="global.html#downloadAttachment">downloadAttachment</a></li><li><a href="global.html#endLive">endLive</a></li><li><a href="global.html#errorMessages">errorMessages</a></li><li><a href="global.html#fetchClasses">fetchClasses</a></li><li><a href="global.html#fetchCourseData">fetchCourseData</a></li><li><a href="global.html#fetchData">fetchData</a></li><li><a href="global.html#fetchUsers">fetchUsers</a></li><li><a href="global.html#firstLogin">firstLogin</a></li><li><a href="global.html#flagContent">flagContent</a></li><li><a href="global.html#forgotPassword">forgotPassword</a></li><li><a href="global.html#generateInviteCode">generateInviteCode</a></li><li><a href="global.html#getAllClasses">getAllClasses</a></li><li><a href="global.html#getAllContactMessages">getAllContactMessages</a></li><li><a href="global.html#getAllCourses">getAllCourses</a></li><li><a href="global.html#getAllInviteCodes">getAllInviteCodes</a></li><li><a href="global.html#getAllLives">getAllLives</a></li><li><a href="global.html#getAllUsers">getAllUsers</a></li><li><a href="global.html#getAvailableRecipients">getAvailableRecipients</a></li><li><a href="global.html#getAvatar">getAvatar</a></li><li><a href="global.html#getClassById">getClassById</a></li><li><a href="global.html#getClassStudents">getClassStudents</a></li><li><a href="global.html#getContactMessage">getContactMessage</a></li><li><a href="global.html#getCourseById">getCourseById</a></li><li><a href="global.html#getCourseDetails">getCourseDetails</a></li><li><a href="global.html#getCourseProgress">getCourseProgress</a></li><li><a href="global.html#getCoursesByClass">getCoursesByClass</a></li><li><a href="global.html#getFlags">getFlags</a></li><li><a href="global.html#getInboxMessages">getInboxMessages</a></li><li><a href="global.html#getInitialViewMode">getInitialViewMode</a></li><li><a href="global.html#getLiveById">getLiveById</a></li><li><a href="global.html#getLiveMessages">getLiveMessages</a></li><li><a href="global.html#getLiveStreamUrl">getLiveStreamUrl</a></li><li><a href="global.html#getLivesByClass">getLivesByClass</a></li><li><a href="global.html#getMessage">getMessage</a></li><li><a href="global.html#getNotificationPreferences">getNotificationPreferences</a></li><li><a href="global.html#getSentMessages">getSentMessages</a></li><li><a href="global.html#getStudentProgress">getStudentProgress</a></li><li><a href="global.html#getThreadById">getThreadById</a></li><li><a href="global.html#getThreads">getThreads</a></li><li><a href="global.html#getTrashMessages">getTrashMessages</a></li><li><a href="global.html#getUserById">getUserById</a></li><li><a href="global.html#getUserProfile">getUserProfile</a></li><li><a href="global.html#getUserWarnings">getUserWarnings</a></li><li><a href="global.html#getVideoDetails">getVideoDetails</a></li><li><a href="global.html#getVideoStreamUrl">getVideoStreamUrl</a></li><li><a href="global.html#handle2FASubmit">handle2FASubmit</a></li><li><a href="global.html#handleBackdropClick">handleBackdropClick</a></li><li><a href="global.html#handleBlockedMouseLeave">handleBlockedMouseLeave</a></li><li><a href="global.html#handleBlockedMouseMove">handleBlockedMouseMove</a></li><li><a href="global.html#handleClose">handleClose</a></li><li><a href="global.html#handleCompleteCourse">handleCompleteCourse</a></li><li><a href="global.html#handleCourseDisapproval">handleCourseDisapproval</a></li><li><a href="global.html#handleDeleteCourse">handleDeleteCourse</a></li><li><a href="global.html#handleDigitChange">handleDigitChange</a></li><li><a href="global.html#handleDigitKeyDown">handleDigitKeyDown</a></li><li><a href="global.html#handleDigitPaste">handleDigitPaste</a></li><li><a href="global.html#handleDownloadDocument">handleDownloadDocument</a></li><li><a href="global.html#handleError">handleError</a></li><li><a href="global.html#handleInputChange">handleInputChange</a></li><li><a href="global.html#handleLogout">handleLogout</a></li><li><a href="global.html#handleMenuToggle">handleMenuToggle</a></li><li><a href="global.html#handleModAction">handleModAction</a></li><li><a href="global.html#handleSubmit">handleSubmit</a></li><li><a href="global.html#handleSubmitClasse">handleSubmitClasse</a></li><li><a href="global.html#handleTabChange">handleTabChange</a></li><li><a href="global.html#handleUnblockCourse">handleUnblockCourse</a></li><li><a href="global.html#isAuthenticated">isAuthenticated</a></li><li><a href="global.html#loadCaptchaEngine">loadCaptchaEngine</a></li><li><a href="global.html#logViewEngagement">logViewEngagement</a></li><li><a href="global.html#login">login</a></li><li><a href="global.html#markAsRead">markAsRead</a></li><li><a href="global.html#markAsUnread">markAsUnread</a></li><li><a href="global.html#markContactMessageAsProcessed">markContactMessageAsProcessed</a></li><li><a href="global.html#markCourseAsCompleted">markCourseAsCompleted</a></li><li><a href="global.html#markCourseAsInProgress">markCourseAsInProgress</a></li><li><a href="global.html#mountApp">mountApp</a></li><li><a href="global.html#moveToTrash">moveToTrash</a></li><li><a href="global.html#navItems">navItems</a></li><li><a href="global.html#navigate">navigate</a></li><li><a href="global.html#onSamplesDecoded">onSamplesDecoded</a></li><li><a href="global.html#refreshTwoFASetup">refreshTwoFASetup</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#removeStudentFromClass">removeStudentFromClass</a></li><li><a href="global.html#renderContent">renderContent</a></li><li><a href="global.html#resolveFlag">resolveFlag</a></li><li><a href="global.html#restoreFromTrash">restoreFromTrash</a></li><li><a href="global.html#retrogradeUserRole">retrogradeUserRole</a></li><li><a href="global.html#root">root</a></li><li><a href="global.html#sendContactMessage">sendContactMessage</a></li><li><a href="global.html#sendLiveMessage">sendLiveMessage</a></li><li><a href="global.html#sendMessage">sendMessage</a></li><li><a href="global.html#sendWarning">sendWarning</a></li><li><a href="global.html#setMainTeacher">setMainTeacher</a></li><li><a href="global.html#setup2FA">setup2FA</a></li><li><a href="global.html#signButtons">signButtons</a></li><li><a href="global.html#startLive">startLive</a></li><li><a href="global.html#toggleAll">toggleAll</a></li><li><a href="global.html#toggleClasse">toggleClasse</a></li><li><a href="global.html#toggleMember">toggleMember</a></li><li><a href="global.html#toggleMobileMenu">toggleMobileMenu</a></li><li><a href="global.html#unblockCourse">unblockCourse</a></li><li><a href="global.html#unblockLive">unblockLive</a></li><li><a href="global.html#updateClass">updateClass</a></li><li><a href="global.html#updateComment">updateComment</a></li><li><a href="global.html#updateCourse">updateCourse</a></li><li><a href="global.html#updateLive">updateLive</a></li><li><a href="global.html#updateNotificationPreferences">updateNotificationPreferences</a></li><li><a href="global.html#updateThread">updateThread</a></li><li><a href="global.html#updateUser">updateUser</a></li><li><a href="global.html#updateUserProfile">updateUserProfile</a></li><li><a href="global.html#updateUserProfileHandler">updateUserProfileHandler</a></li><li><a href="global.html#updateVideo">updateVideo</a></li><li><a href="global.html#upgradeUserRole">upgradeUserRole</a></li><li><a href="global.html#uploadAvatar">uploadAvatar</a></li><li><a href="global.html#uploadIllustrationAvatar">uploadIllustrationAvatar</a></li><li><a href="global.html#useEffect">useEffect</a></li><li><a href="global.html#useTutorial">useTutorial</a></li><li><a href="global.html#validateForm">validateForm</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#verify2FASetup">verify2FASetup</a></li><li><a href="global.html#verifyTwoFA">verifyTwoFA</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Sat Jun 07 2025 14:32:34 GMT+0200 (Central European Summer Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: controllers/socketController.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: controllers/socketController.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @fileoverview Contrôleur de gestion du streaming vidéo et audio via WebSockets et UDP.
+ * Ce module reçoit des flux vidéo et audio sur des sockets UDP et les transmet
+ * aux clients connectés via WebSockets. Il inclut l'authentification par JWT
+ * et le traitement des unités NAL pour le streaming vidéo H.264.
+ */
+
+const dgram = require('dgram');
+const WebSocket = require('ws');
+const jwt = require('jsonwebtoken');
+const { Lives } = require('../models');
+const SECRET = process.env.JWT_SECRET
+
+/**
+ * Configure et initialise le serveur de streaming vidéo et audio.
+ * 
+ * @param {WebSocket.Server} wss - Serveur WebSocket où les clients se connecteront
+ */
+function setupStreaming(wss) {
+  const videoSocket = dgram.createSocket('udp4');
+  const audioSocket = dgram.createSocket('udp4');
+
+  const wsVideoBuffers = new Map();
+
+  /**
+   * Gestionnaire de connexion WebSocket - authentifie les clients et configure la session.
+   * 
+   * @param {WebSocket} ws - L'instance WebSocket du client
+   * @param {Object} req - La requête HTTP initiale
+   * @throws {Error} Erreurs possibles: token manquant, token invalide, pas de live en cours
+   */
+  wss.on('connection', async (ws, req) => {
+
+    let token;
+    try {
+      const fullUrl = new URL(req.url, `https://${req.headers.host}`);
+      token = fullUrl.searchParams.get('token');
+      if (!token) {
+        const error = new Error('Token manquant');
+        error.code = 4001;
+        throw error;
+      }
+    } catch (e) {
+      const code = e.code || 4001;
+      const msg = e.message || 'Mauvaise requête';
+      return ws.close(code, msg);
+    }
+
+    let payload;
+    try {
+      payload = jwt.verify(token, SECRET);
+      ws.user = payload;  // Optionnel : attacher l'utilisateur à l'objet ws
+      console.log('Token vérifié pour :', payload.role);
+    } catch (err) {
+      const isJwtErr = err.name === 'TokenExpiredError' || err.name === 'JsonWebTokenError';
+      console.error('Erreur de vérification du token JWT :', err.message);
+      return ws.close(isJwtErr ? 4002 : 4003, isJwtErr ? 'Token invalide' : 'Erreur serveur');
+    }
+
+    if (payload.role === 'Etudiant') {
+      console.log('Étudiant connecté, vérification du live en cours');
+      try {
+        const live = await Lives.findOne();
+        if (!live) {
+          throw new Error('Aucun live en cours');
+        }
+        console.log('Étudiant autorisé pour le live en cours :', live.id);
+      } catch (err) {
+        const code = err.message === 'Aucun live en cours' ? 4004 : 4003;
+        console.error('Erreur de vérification du live :', err.message);
+        return ws.close(code, err.message);
+      }
+    }
+
+    console.log('Client WebSocket authentifié et connecté');
+
+    ws.on('message', (message) => {
+      console.log(`← Message du client : ${message}`);
+    });
+
+    ws.on('close', (code, reason) => {
+      console.log(`Client déconnecté (code ${code} : ${reason})`);
+    });
+
+    ws.on('error', (error) => {
+      console.error('Erreur WebSocket :', error);
+    });
+
+    wsVideoBuffers.set(ws, []);
+
+    ws.on('close', () => {
+      wsVideoBuffers.delete(ws);
+      console.log('Client déconnecté');
+    });
+  });
+
+  let videoBuffer = Buffer.alloc(0);
+
+  /**
+   * Recherche un code de début NALU (0x00 0x00 0x00 0x01) dans un buffer.
+   * 
+   * @param {Buffer} buffer - Buffer dans lequel rechercher
+   * @param {number} fromIndex - Index à partir duquel commencer la recherche
+   * @returns {number} L'index où le code de début a été trouvé, ou -1 si non trouvé
+   */
+  function findStartCode(buffer, fromIndex) {
+    for (let i = fromIndex; i &lt;= buffer.length - 4; i++) {
+      if (buffer[i] === 0x00 &amp;&amp;
+        buffer[i + 1] === 0x00 &amp;&amp;
+        buffer[i + 2] === 0x00 &amp;&amp;
+        buffer[i + 3] === 0x01) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  /**
+   * Vérifie si l'unité NAL est un délimiteur d'unité d'accès (type 9).
+   * 
+   * @param {Buffer} nal - Unité NAL à vérifier
+   * @returns {boolean} Vrai si l'unité est un délimiteur d'unité d'accès
+   */
+  function isAccessUnitDelimiter(nal) {
+    return nal.length > 4 &amp;&amp; (nal[4] &amp; 0x1F) === 0x09;
+  }
+
+  /**
+   * Détermine si l'unité NAL représente le début d'une nouvelle image.
+   * Vérifie si le type est 5 (IDR, image I) ou 1 (non-IDR, image P).
+   * 
+   * @param {Buffer} nal - Unité NAL à vérifier
+   * @returns {boolean} Vrai si l'unité représente une nouvelle image
+   */
+  function isNewPicture(nal) {
+    if (nal.length > 4) {
+      const type = nal[4] &amp; 0x1F;
+      return type === 5 || type === 1;
+    }
+    return false;
+  }
+
+  videoSocket.bind(8082);
+  audioSocket.bind(8083);
+
+  /**
+   * Gestionnaire de réception des données vidéo UDP.
+   * Accumule les données et recherche les unités NAL complètes.
+   * 
+   * @param {Buffer} msg - Le paquet UDP reçu
+   */
+  videoSocket.on('message', (msg) => {
+    videoBuffer = Buffer.concat([videoBuffer, msg]);
+    let startPos = 0;
+
+    while (true) {
+      const nextStart = findStartCode(videoBuffer, startPos > 0 ? startPos : 0);
+
+      if (nextStart === -1) break;
+
+      if (startPos !== nextStart) {
+        const nal = videoBuffer.subarray(startPos, nextStart);
+        processNalUnit(nal);
+      }
+
+      startPos = nextStart + 4; // Passer le start code
+    }
+
+    videoBuffer = videoBuffer.subarray(startPos);
+  });
+
+  videoSocket.on('error', (err) => {
+    console.error('Erreur sur le socket vidéo UDP :', err);
+  });
+
+  audioSocket.on('error', (err) => {
+    console.error('Erreur sur le socket audio UDP :', err);
+  });
+
+  /**
+   * Traite une unité NAL reçue et l'envoie aux clients WebSocket connectés.
+   * Gère le regroupement des NAL units en unités d'accès complètes avant l'envoi.
+   * 
+   * @param {Buffer} nal - Unité NAL à traiter et envoyer
+   */
+  function processNalUnit(nal) {
+    const fullNal = Buffer.concat([Buffer.from([0x00, 0x00, 0x00, 0x01]), nal]);
+
+    wsVideoBuffers.forEach((bufferList, ws) => {
+      if (ws.readyState !== WebSocket.OPEN) return;
+
+      bufferList.push(fullNal);
+
+      if (isAccessUnitDelimiter(fullNal) || isNewPicture(fullNal)) {
+        if (bufferList.length > 1) {
+          const toSend = Buffer.concat(bufferList.slice(0, -1));
+
+          if (ws.bufferedAmount &lt; 1048576) { // Backpressure check (1MB)
+            ws.send(toSend, (err) => {
+              if (err) {
+                console.error('Erreur envoi:', err);
+                ws.terminate();
+              }
+            });
+          } else {
+            console.warn('Buffer client plein, fermeture');
+            ws.terminate();
+          }
+        }
+        wsVideoBuffers.set(ws, [fullNal]); // Garder le dernier NAL
+      }
+    });
+  }
+
+  /**
+   * Gestionnaire de réception des données audio UDP.
+   * Envoie immédiatement les données audio reçues à tous les clients connectés.
+   * 
+   * @param {Buffer} msg - Le paquet UDP audio reçu
+   */
+  audioSocket.on('message', (msg) => {
+    wss.clients.forEach((ws) => {
+      if (ws.readyState === WebSocket.OPEN) {
+        const data = Buffer.concat([Buffer.from([1]), msg]);
+        ws.send(data, (err) => {
+          if (err) {
+            console.error('Erreur envoi audio:', err);
+            ws.terminate();
+          }
+        });
+      }
+    });
+  });
+
+  console.log('Serveur de streaming démarré');
+}
+
+module.exports = { setupStreaming };
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-chatController.html">chatController</a></li><li><a href="module-chatRoutes.html">chatRoutes</a></li><li><a href="module-controllers_authController.html">controllers/authController</a></li><li><a href="module-controllers_avatarController.html">controllers/avatarController</a></li><li><a href="module-controllers_classController.html">controllers/classController</a></li><li><a href="module-controllers_messageController.html">controllers/messageController</a></li><li><a href="module-controllers_moderationController.html">controllers/moderationController</a></li><li><a href="module-controllers_progressTracking.html">controllers/progressTracking</a></li><li><a href="module-controllers_userController.html">controllers/userController</a></li><li><a href="module-documentController.html">documentController</a></li><li><a href="module-documentRoutes.html">documentRoutes</a></li><li><a href="module-forumController.html">forumController</a></li><li><a href="module-forumRoutes.html">forumRoutes</a></li><li><a href="module-middlewares_userValidation.html">middlewares/userValidation</a></li><li><a href="module-recordingController.html">recordingController</a></li><li><a href="module-recordingRoutes.html">recordingRoutes</a></li><li><a href="module-routes_authRoutes.html">routes/authRoutes</a></li><li><a href="module-routes_avatarRoutes.html">routes/avatarRoutes</a></li><li><a href="module-routes_classRoutes.html">routes/classRoutes</a></li><li><a href="module-routes_messageRoutes.html">routes/messageRoutes</a></li><li><a href="module-routes_moderationRoutes.html">routes/moderationRoutes</a></li><li><a href="module-routes_progressTracking.html">routes/progressTracking</a></li><li><a href="module-routes_userRoutes.html">routes/userRoutes</a></li><li><a href="module-socketManager.html">socketManager</a></li><li><a href="module-videoController.html">videoController</a></li><li><a href="module-videoRoutes.html">videoRoutes</a></li><li><a href="module-virusScanService.html">virusScanService</a></li><li><a href="module-%25257BObject%25257D.html">{Object}</a></li></ul><h3>Classes</h3><ul><li><a href="global.html#Admin">Admin</a></li><li><a href="global.html#Attachment">Attachment</a></li><li><a href="global.html#ChatMessage">ChatMessage</a></li><li><a href="global.html#Classe">Classe</a></li><li><a href="global.html#Code">Code</a></li><li><a href="global.html#Comment">Comment</a></li><li><a href="global.html#Course">Course</a></li><li><a href="global.html#CourseDocument">CourseDocument</a></li><li><a href="global.html#CourseProgress">CourseProgress</a></li><li><a href="global.html#CourseVideo">CourseVideo</a></li><li><a href="global.html#Document">Document</a></li><li><a href="global.html#Flag">Flag</a></li><li><a href="global.html#LiveAttendance">LiveAttendance</a></li><li><a href="global.html#Lives">Lives</a></li><li><a href="global.html#Message">Message</a></li><li><a href="global.html#Recipient">Recipient</a></li><li><a href="Stats.html">Stats</a></li><li><a href="global.html#Student">Student</a></li><li><a href="global.html#StudentClass">StudentClass</a></li><li><a href="global.html#Teacher">Teacher</a></li><li><a href="TeacherClass.html">TeacherClass</a></li><li><a href="global.html#Thread">Thread</a></li><li><a href="global.html#TrashMessage">TrashMessage</a></li><li><a href="global.html#User">User</a></li><li><a href="global.html#UserAvatar">UserAvatar</a></li><li><a href="global.html#Video">Video</a></li><li><a href="global.html#Warning">Warning</a></li><li><a href="module-models.ClassLives.html">ClassLives</a></li></ul><h3>Global</h3><ul><li><a href="global.html#ClassLives">ClassLives</a></li><li><a href="global.html#DEFAULTS">DEFAULTS</a></li><li><a href="global.html#MessageId">MessageId</a></li><li><a href="global.html#addLive">addLive</a></li><li><a href="global.html#allowedOrigins">allowedOrigins</a></li><li><a href="global.html#authMiddleware">authMiddleware</a></li><li><a href="global.html#blockCourse">blockCourse</a></li><li><a href="global.html#blockLive">blockLive</a></li><li><a href="global.html#buildAndRun">buildAndRun</a></li><li><a href="global.html#class_id">class_id</a></li><li><a href="global.html#content">content</a></li><li><a href="global.html#createCode">createCode</a></li><li><a href="global.html#createCourse">createCourse</a></li><li><a href="global.html#createQuarantineContainer">createQuarantineContainer</a></li><li><a href="global.html#createdAt">createdAt</a></li><li><a href="global.html#deleteCode">deleteCode</a></li><li><a href="global.html#deleteCourse">deleteCourse</a></li><li><a href="global.html#deleteLive">deleteLive</a></li><li><a href="global.html#description">description</a></li><li><a href="global.html#disapproveLive">disapproveLive</a></li><li><a href="global.html#editLive">editLive</a></li><li><a href="global.html#email">email</a></li><li><a href="global.html#endLive">endLive</a></li><li><a href="global.html#fileSize">fileSize</a></li><li><a href="global.html#filename">filename</a></li><li><a href="global.html#firstLogin">firstLogin</a></li><li><a href="global.html#generateRandomCode">generateRandomCode</a></li><li><a href="global.html#getAllCodes">getAllCodes</a></li><li><a href="global.html#getAllCourses">getAllCourses</a></li><li><a href="global.html#getAllLives">getAllLives</a></li><li><a href="global.html#getCourse">getCourse</a></li><li><a href="global.html#getLive">getLive</a></li><li><a href="global.html#getLiveByClass">getLiveByClass</a></li><li><a href="global.html#getMainCourse">getMainCourse</a></li><li><a href="global.html#httpServer">httpServer</a></li><li><a href="global.html#id">id</a></li><li><a href="global.html#imageExists">imageExists</a></li><li><a href="global.html#imageToByteArray">imageToByteArray</a></li><li><a href="global.html#live_id">live_id</a></li><li><a href="global.html#main_teacher_id">main_teacher_id</a></li><li><a href="global.html#mimeType">mimeType</a></li><li><a href="global.html#name">name</a></li><li><a href="global.html#password">password</a></li><li><a href="global.html#runCommand">runCommand</a></li><li><a href="global.html#scanStatus">scanStatus</a></li><li><a href="global.html#sequelize">sequelize</a></li><li><a href="global.html#setupStreaming">setupStreaming</a></li><li><a href="global.html#startLive">startLive</a></li><li><a href="global.html#statut">statut</a></li><li><a href="global.html#surname">surname</a></li><li><a href="global.html#twoFAEnabled">twoFAEnabled</a></li><li><a href="global.html#twoFASecret">twoFASecret</a></li><li><a href="global.html#unblockCourse">unblockCourse</a></li><li><a href="global.html#unblockLive">unblockLive</a></li><li><a href="global.html#updateCourse">updateCourse</a></li><li><a href="global.html#updateVideoCoverImages">updateVideoCoverImages</a></li><li><a href="global.html#updatedAt">updatedAt</a></li><li><a href="global.html#user_id">user_id</a></li><li><a href="global.html#username">username</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Sat Jun 07 2025 14:03:57 GMT+0200 (Central European Summer Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

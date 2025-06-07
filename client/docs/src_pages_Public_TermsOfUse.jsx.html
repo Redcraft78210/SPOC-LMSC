@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: src/pages/Public/TermsOfUse.jsx</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: src/pages/Public/TermsOfUse.jsx</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @fileoverview
+ * Composant qui affiche les conditions d'utilisation de la plateforme SPOC-LMSC.
+ * Présente l'ensemble des conditions générales régissant l'utilisation de la plateforme,
+ * organisées par sections thématiques incluant présentation de l'application, inscription,
+ * droits et responsabilités, propriété intellectuelle, et autres dispositions légales.
+ */
+
+import PublicNavbar from '../../components/PublicComp/PublicNavbar';
+import Footer from '../../components/PublicComp/Footer';
+
+/**
+ * Composant de page affichant les conditions générales d'utilisation complètes
+ * de la plateforme SPOC-LMSC. La page est structurée avec une bannière d'en-tête,
+ * des sections détaillées pour chaque aspect des conditions, et un pied de page.
+ * 
+ * @component
+ * @returns {JSX.Element} Page complète des conditions d'utilisation avec sections détaillées
+ */
+const TermsOfUse = () => {
+  return (
+    &lt;div className="min-h-screen bg-gray-50">
+      {/* Navigation */}
+      &lt;PublicNavbar />
+
+      {/* Hero Section */}
+      &lt;header className="pt-32 pb-20 bg-gradient-to-r from-blue-600 to-blue-800 text-white">
+        &lt;div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          &lt;h1 className="text-5xl font-bold mb-6">Conditions d&amp;apos;Utilisation&lt;/h1>
+          &lt;p className="text-xl mb-8">
+            Les conditions générales régissant l&amp;apos;utilisation de la plateforme SPOC-LMSC.
+          &lt;/p>
+        &lt;/div>
+      &lt;/header>
+
+      {/* Terms Content Section */}
+      &lt;section className="py-20 bg-white">
+        &lt;div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          &lt;h2 className="text-3xl font-bold text-gray-800 mb-8 text-center">
+            Conditions Générales d&amp;apos;Utilisation
+          &lt;/h2>
+          
+          {/* Terms sections */}
+          &lt;div className="space-y-10">
+            &lt;div>
+              &lt;h3 className="text-2xl font-bold text-gray-800 mb-4">1. Présentation de l&amp;apos;Application&lt;/h3>
+              &lt;p className="text-gray-700">
+                SPOC-LMSC est une plateforme d&amp;apos;apprentissage en ligne permettant aux enseignants de créer et partager du contenu pédagogique, et aux étudiants d&amp;apos;accéder à des cours, des documents et des sessions de formation en direct.
+              &lt;/p>
+            &lt;/div>
+
+            &lt;div>
+              &lt;h3 className="text-2xl font-bold text-gray-800 mb-4">2. Acceptation des Conditions&lt;/h3>
+              &lt;p className="text-gray-700">
+                En accédant à l&amp;apos;application SPOC-LMSC, vous acceptez d&amp;apos;être lié par les présentes conditions d&amp;apos;utilisation. Si vous n&amp;apos;acceptez pas ces conditions, veuillez ne pas utiliser l&amp;apos;application.
+              &lt;/p>
+            &lt;/div>
+
+            &lt;div>
+              &lt;h3 className="text-2xl font-bold text-gray-800 mb-4">3. Inscription et Compte Utilisateur&lt;/h3>
+              &lt;div className="pl-6">
+                &lt;p className="text-gray-700 mb-2">3.1 Création de compte&lt;/p>
+                &lt;ul className="list-disc pl-6 space-y-1 mb-3">
+                  &lt;li className="text-gray-700">L&amp;apos;accès à l&amp;apos;application nécessite un code d&amp;apos;invitation valide fourni par un administrateur.&lt;/li>
+                  &lt;li className="text-gray-700">Vous devez fournir des informations exactes et complètes lors de votre inscription.&lt;/li>
+                  &lt;li className="text-gray-700">Vous êtes responsable de la confidentialité de votre mot de passe et de toute activité sur votre compte.&lt;/li>
+                  &lt;li className="text-gray-700">Les mots de passe doivent contenir au moins 12 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial.&lt;/li>
+                &lt;/ul>
+                &lt;p className="text-gray-700 mb-2">3.2 Authentification à deux facteurs&lt;/p>
+                &lt;ul className="list-disc pl-6 space-y-1 mb-3">
+                  &lt;li className="text-gray-700">L&amp;apos;application propose une authentification à deux facteurs (2FA) pour renforcer la sécurité de votre compte.&lt;/li>
+                  &lt;li className="text-gray-700">Lors de votre première connexion, vous serez invité à configurer la 2FA.&lt;/li>
+                  &lt;li className="text-gray-700">Vous êtes responsable de la sécurité des appareils utilisés pour l&amp;apos;authentification à deux facteurs.&lt;/li>
+                &lt;/ul>
+                &lt;p className="text-gray-700 mb-2">3.3 Types de comptes&lt;/p>
+                &lt;ul className="list-disc pl-6 space-y-1">
+                  &lt;li className="text-gray-700">Étudiant : accès aux cours, documents, forums et sessions en direct.&lt;/li>
+                  &lt;li className="text-gray-700">Professeur : droits d&amp;apos;étudiants plus la capacité de créer et gérer du contenu pédagogique.&lt;/li>
+                  &lt;li className="text-gray-700">Administrateur : droits complets de gestion de la plateforme.&lt;/li>
+                &lt;/ul>
+              &lt;/div>
+            &lt;/div>
+
+            &lt;div>
+              &lt;h3 className="text-2xl font-bold text-gray-800 mb-4">4. Description des Services&lt;/h3>
+              &lt;p className="text-gray-700">
+                La plateforme SPOC-LMSC offre les services suivants :
+              &lt;/p>
+              &lt;ul className="list-disc pl-6 space-y-2">
+                &lt;li className="text-gray-700">Création et gestion de cours en ligne.&lt;/li>
+                &lt;li className="text-gray-700">Accès à des ressources pédagogiques variées.&lt;/li>
+                &lt;li className="text-gray-700">Outils de communication et de collaboration pour les enseignants et les étudiants.&lt;/li>
+                &lt;li className="text-gray-700">Support technique et pédagogique.&lt;/li>
+              &lt;/ul>
+            &lt;/div>
+            
+            &lt;div>
+              &lt;h3 className="text-2xl font-bold text-gray-800 mb-4">5. Obligations de l&amp;apos;Éditeur&lt;/h3>
+              &lt;p className="text-gray-700">
+                L&amp;apos;éditeur s&amp;apos;engage à :
+              &lt;/p>
+              &lt;ul className="list-disc pl-6 space-y-2">
+                &lt;li className="text-gray-700">Fournir un accès continu et sécurisé à la plateforme, sauf en cas de maintenance programmée.&lt;/li>
+                &lt;li className="text-gray-700">Informer les utilisateurs de toute modification substantielle des fonctionnalités de la plateforme.&lt;/li>
+                &lt;li className="text-gray-700">Respecter la confidentialité des données personnelles des utilisateurs.&lt;/li>
+                &lt;li className="text-gray-700">Assurer la conformité de la plateforme avec les réglementations en vigueur.&lt;/li>
+              &lt;/ul>
+            &lt;/div>
+            
+            &lt;div>
+              &lt;h3 className="text-2xl font-bold text-gray-800 mb-4">6. Propriété Intellectuelle&lt;/h3>
+              &lt;p className="text-gray-700">
+                Tous les contenus disponibles sur la plateforme, y compris les cours, documents, logos et graphiques, sont protégés par des droits d&amp;apos;auteur et sont la propriété de SPOC-LMSC ou de tiers ayant autorisé leur utilisation. Toute reproduction, distribution ou modification sans autorisation préalable est interdite.
+              &lt;/p>
+            &lt;/div>
+            
+            &lt;div>
+              &lt;h3 className="text-2xl font-bold text-gray-800 mb-4">7. Responsabilité de l&amp;apos;Éditeur&lt;/h3>
+              &lt;p className="text-gray-700">
+                L&amp;apos;éditeur n&amp;apos;est pas responsable des dommages directs ou indirects résultant de l&amp;apos;utilisation ou de l&amp;apos;impossibilité d&amp;apos;utiliser la plateforme, y compris en cas de perte de données ou d&amp;apos;interruption de service.
+              &lt;/p>
+            &lt;/div>
+            
+            &lt;div>
+              &lt;h3 className="text-2xl font-bold text-gray-800 mb-4">8. Force Majeure&lt;/h3>
+              &lt;ul className="list-decimal pl-6 space-y-2">
+                &lt;li className="text-gray-700">Aucune partie ne sera responsable des retards ou défaillances dus à des événements imprévisibles et irrésistibles (cyberattaques majeures, catastrophes naturelles, etc.).&lt;/li>
+                &lt;li className="text-gray-700">L&amp;apos;application s&amp;apos;engage à informer les utilisateurs dans les meilleurs délais en cas de tels événements.&lt;/li>
+              &lt;/ul>
+            &lt;/div>
+            
+            &lt;div>
+              &lt;h3 className="text-2xl font-bold text-gray-800 mb-4">9. Données Personnelles&lt;/h3>
+              &lt;p className="text-gray-700">
+                Les données personnelles collectées lors de l&amp;apos;inscription sont nécessaires à la création de votre compte et à la fourniture des services. Elles sont traitées conformément à la politique de confidentialité de SPOC-LMSC.
+              &lt;/p>
+            &lt;/div>
+            
+            &lt;div>
+              &lt;h3 className="text-2xl font-bold text-gray-800 mb-4">10. Cookies et Technologies de Suivi&lt;/h3>
+              &lt;p className="text-gray-700 mb-3">
+                La plateforme utilise des cookies pour améliorer l&amp;apos;expérience utilisateur. Vous pouvez gérer vos préférences en matière de cookies dans les paramètres de votre navigateur.
+              &lt;/p>
+              &lt;ul className="list-decimal pl-6 space-y-2">
+                &lt;li className="text-gray-700">La plateforme utilise uniquement des cookies strictement nécessaires au fonctionnement technique.&lt;/li>
+                &lt;li className="text-gray-700">Aucun cookie analytique (mesure d&amp;apos;audience) n&amp;apos;est utilisé.&lt;/li>
+                &lt;li className="text-gray-700">Aucun cookie publicitaire ou de pistage commercial n&amp;apos;est utilisé.&lt;/li>
+              &lt;/ul>
+            &lt;/div>
+            
+            &lt;div>
+              &lt;h3 className="text-2xl font-bold text-gray-800 mb-4">11. Liens Hypertextes et Services Tiers&lt;/h3>
+              &lt;ul className="list-decimal pl-6 space-y-2">
+                &lt;li className="text-gray-700">La plateforme peut contenir des liens vers d&amp;apos;autres sites et ressources externes.&lt;/li>
+                &lt;li className="text-gray-700">SPOC-LMSC n&amp;apos;est pas responsable du contenu de ces sites et décline toute responsabilité en cas de dommage résultant de leur utilisation.&lt;/li>
+                &lt;li className="text-gray-700">SPOC-LMSC décline toute responsabilité quant à la confidentialité ou aux pratiques des sites tiers.&lt;/li>
+                &lt;li className="text-gray-700">Les intégrations avec des services externes (ex : outils de visioconférence) sont soumises à leurs propres conditions d&amp;apos;utilisation.&lt;/li>
+              &lt;/ul>
+            &lt;/div>
+            
+            &lt;div>
+              &lt;h3 className="text-2xl font-bold text-gray-800 mb-4">12. Droit Applicable et Juridiction&lt;/h3>
+              &lt;p className="text-gray-700">
+                Les présentes conditions sont régies par le droit français. Tout litige relatif à l&amp;apos;utilisation de la plateforme sera soumis à la compétence exclusive des tribunaux français.
+              &lt;/p>
+            &lt;/div>
+            
+            &lt;div>
+              &lt;h3 className="text-2xl font-bold text-gray-800 mb-4">13. Modifications des Conditions&lt;/h3>
+              &lt;ul className="list-decimal pl-6 space-y-2">
+                &lt;li className="text-gray-700">L&amp;apos;éditeur se réserve le droit de modifier ces CGU à tout moment.&lt;/li>
+                &lt;li className="text-gray-700">Les utilisateurs seront notifiés des changements par email et/ou via une notification dans l&amp;apos;application 30 jours avant leur entrée en vigueur.&lt;/li>
+                &lt;li className="text-gray-700">L&amp;apos;utilisation continue de la plateforme après cette période vaut acceptation des nouvelles conditions.&lt;/li>
+              &lt;/ul>
+            &lt;/div>
+            
+            &lt;div>
+              &lt;h3 className="text-2xl font-bold text-gray-800 mb-4">14. Responsabilités des Utilisateurs&lt;/h3>
+              &lt;div className="pl-6">
+                &lt;p className="text-gray-700 mb-2">14.1 Les utilisateurs s&amp;apos;engagent à :&lt;/p>
+                &lt;ul className="list-disc pl-6 space-y-1 mb-3">
+                  &lt;li className="text-gray-700">Maintenir à jour leurs informations personnelles&lt;/li>
+                  &lt;li className="text-gray-700">Utiliser la plateforme conformément à sa destination pédagogique&lt;/li>
+                  &lt;li className="text-gray-700">Protéger leurs appareils contre tout accès non autorisé&lt;/li>
+                &lt;/ul>
+                &lt;p className="text-gray-700">14.2 Le partage d&amp;apos;identifiants ou la création de comptes multiples sont strictement interdits.&lt;/p>
+              &lt;/div>
+            &lt;/div>
+            
+            &lt;div>
+              &lt;h3 className="text-2xl font-bold text-gray-800 mb-4">15. Indemnisation&lt;/h3>
+              &lt;div className="pl-6">
+                &lt;p className="text-gray-700 mb-2">15.1 L&amp;apos;utilisateur s&amp;apos;engage à indemniser SPOC-LMSC et ses partenaires contre toute réclamation ou dommage résultant :&lt;/p>
+                &lt;ul className="list-disc pl-6 space-y-1">
+                  &lt;li className="text-gray-700">D&amp;apos;une violation des présentes CGU&lt;/li>
+                  &lt;li className="text-gray-700">De contenus illicites publiés&lt;/li>
+                  &lt;li className="text-gray-700">D&amp;apos;une utilisation abusive de la plateforme&lt;/li>
+                &lt;/ul>
+              &lt;/div>
+            &lt;/div>
+            
+            &lt;div>
+              &lt;h3 className="text-2xl font-bold text-gray-800 mb-4">16. Mineurs&lt;/h3>
+              &lt;ul className="list-decimal pl-6 space-y-2">
+                &lt;li className="text-gray-700">L&amp;apos;inscription des mineurs de moins de 15 ans nécessite le consentement écrit préalable des titulaires de l&amp;apos;autorité parentale.&lt;/li>
+                &lt;li className="text-gray-700">Les données des mineurs sont protégées selon les dispositions spécifiques du RGPD et de la loi française.&lt;/li>
+              &lt;/ul>
+            &lt;/div>
+            
+            &lt;div>
+              &lt;h3 className="text-2xl font-bold text-gray-800 mb-4">17. Conservation des Données&lt;/h3>
+              &lt;ul className="list-decimal pl-6 space-y-2">
+                &lt;li className="text-gray-700">Les données utilisateur sont conservées 3 ans après la dernière activité sur le compte.&lt;/li>
+                &lt;li className="text-gray-700">Les contenus pédagogiques publiés peuvent être conservés à des fins d&amp;apos;archivage pédagogique, sous forme anonymisée.&lt;/li>
+              &lt;/ul>
+            &lt;/div>
+            
+            &lt;div>
+              &lt;h3 className="text-2xl font-bold text-gray-800 mb-4">18. Dispositions Diverses&lt;/h3>
+              &lt;ul className="list-decimal pl-6 space-y-2">
+                &lt;li className="text-gray-700">&lt;strong>Intégralité de l&amp;apos;Accord&lt;/strong> : Ces CGU constituent l&amp;apos;accord entier entre les parties.&lt;/li>
+                &lt;li className="text-gray-700">&lt;strong>Divisibilité&lt;/strong> : Si une clause est jugée invalide, les autres dispositions restent applicables.&lt;/li>
+                &lt;li className="text-gray-700">&lt;strong>Non-Renonciation&lt;/strong> : Le fait de ne pas invoquer un droit ne constitue pas une renonciation à celui-ci.&lt;/li>
+              &lt;/ul>
+            &lt;/div>
+            
+            &lt;div>
+              &lt;h3 className="text-2xl font-bold text-gray-800 mb-4">19. Accessibilité&lt;/h3>
+              &lt;ul className="list-decimal pl-6 space-y-2">
+                &lt;li className="text-gray-700">SPOC-LMSC s&amp;apos;engage à respecter les normes RGAA (Référentiel Général d&amp;apos;Amélioration de l&amp;apos;Accessibilité).&lt;/li>
+                &lt;li className="text-gray-700">Les utilisateurs peuvent signaler tout problème d&amp;apos;accessibilité via le formulaire de contact.&lt;/li>
+              &lt;/ul>
+            &lt;/div>
+            
+            &lt;div>
+              &lt;h3 className="text-2xl font-bold text-gray-800 mb-4">20. Export de Données&lt;/h3>
+              &lt;ul className="list-decimal pl-6 space-y-2">
+                &lt;li className="text-gray-700">Les utilisateurs peuvent exporter leurs contributions personnelles via des formats standardisés (CSV, PDF).&lt;/li>
+                &lt;li className="text-gray-700">L&amp;apos;export de contenus pédagogiques protégés par le droit d&amp;apos;auteur nécessite l&amp;apos;accord écrit des titulaires des droits.&lt;/li>
+              &lt;/ul>
+            &lt;/div>
+          &lt;/div>
+        &lt;/div>
+      &lt;/section>
+
+      {/* Footer */}
+      &lt;Footer />
+    &lt;/div>
+  );
+};
+
+export default TermsOfUse;</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-App.html">App</a></li></ul><h3>Global</h3><ul><li><a href="global.html#About">About</a></li><li><a href="global.html#AccountDisabledModal">AccountDisabledModal</a></li><li><a href="global.html#AdminDashboardHome">AdminDashboardHome</a></li><li><a href="global.html#BASE_URL">BASE_URL</a></li><li><a href="global.html#BulkActions">BulkActions</a></li><li><a href="global.html#ClassManagementTutorial">ClassManagementTutorial</a></li><li><a href="global.html#ClasseCards">ClasseCards</a></li><li><a href="global.html#ClasseCreationModal">ClasseCreationModal</a></li><li><a href="global.html#ClasseManagement">ClasseManagement</a></li><li><a href="global.html#ClasseTable">ClasseTable</a></li><li><a href="global.html#Contact">Contact</a></li><li><a href="global.html#ContentCard">ContentCard</a></li><li><a href="global.html#CourseReader">CourseReader</a></li><li><a href="global.html#CourseReaderTutorial">CourseReaderTutorial</a></li><li><a href="global.html#Courses">Courses</a></li><li><a href="global.html#CoursesLibraryTutorial">CoursesLibraryTutorial</a></li><li><a href="global.html#Dashboard">Dashboard</a></li><li><a href="global.html#DashboardTutorial">DashboardTutorial</a></li><li><a href="global.html#DeleteDocument">DeleteDocument</a></li><li><a href="global.html#DeleteVideo">DeleteVideo</a></li><li><a href="global.html#EleveDashboardHome">EleveDashboardHome</a></li><li><a href="global.html#ErrorMessage">ErrorMessage</a></li><li><a href="global.html#FilterDropdown">FilterDropdown</a></li><li><a href="global.html#FirstLogin">FirstLogin</a></li><li><a href="global.html#Footer">Footer</a></li><li><a href="global.html#Forum">Forum</a></li><li><a href="global.html#GetAll_DataStructure">GetAll_DataStructure</a></li><li><a href="global.html#GetAll_Document">GetAll_Document</a></li><li><a href="global.html#Get_Document_Information">Get_Document_Information</a></li><li><a href="global.html#Get_Video_Information">Get_Video_Information</a></li><li><a href="global.html#Get_special_Document">Get_special_Document</a></li><li><a href="global.html#Get_special_Video">Get_special_Video</a></li><li><a href="global.html#Home">Home</a></li><li><a href="global.html#INACTIVITY_THRESHOLD">INACTIVITY_THRESHOLD</a></li><li><a href="global.html#LegalNotice">LegalNotice</a></li><li><a href="global.html#LiveNotFound">LiveNotFound</a></li><li><a href="global.html#LiveViewer">LiveViewer</a></li><li><a href="global.html#LoadCanvasTemplate">LoadCanvasTemplate</a></li><li><a href="global.html#LoadingComponent">LoadingComponent</a></li><li><a href="global.html#LoadingSpinner">LoadingSpinner</a></li><li><a href="global.html#Logout">Logout</a></li><li><a href="global.html#Mailbox">Mailbox</a></li><li><a href="global.html#MaintenanceBanner">MaintenanceBanner</a></li><li><a href="global.html#MessageDetailSkeleton">MessageDetailSkeleton</a></li><li><a href="global.html#MessageSkeleton">MessageSkeleton</a></li><li><a href="global.html#NavigationBar">NavigationBar</a></li><li><a href="global.html#PictureModal">PictureModal</a></li><li><a href="global.html#PrivacyPolicy">PrivacyPolicy</a></li><li><a href="global.html#PrivacyTab">PrivacyTab</a></li><li><a href="global.html#ProfilePhotoSelector">ProfilePhotoSelector</a></li><li><a href="global.html#PublicNavbar">PublicNavbar</a></li><li><a href="global.html#SearchBar">SearchBar</a></li><li><a href="global.html#SearchUser">SearchUser</a></li><li><a href="global.html#SecureDocumentViewer">SecureDocumentViewer</a></li><li><a href="global.html#SecureVideoPlayer">SecureVideoPlayer</a></li><li><a href="global.html#SecurityTab">SecurityTab</a></li><li><a href="global.html#SendDocument">SendDocument</a></li><li><a href="global.html#SendVideo">SendVideo</a></li><li><a href="global.html#Settings">Settings</a></li><li><a href="global.html#Sign">Sign</a></li><li><a href="global.html#Spinner">Spinner</a></li><li><a href="global.html#StreamReader">StreamReader</a></li><li><a href="global.html#TEN_MINUTES">TEN_MINUTES</a></li><li><a href="global.html#TermsOfUse">TermsOfUse</a></li><li><a href="global.html#ToggleView">ToggleView</a></li><li><a href="global.html#Tutorial">Tutorial</a></li><li><a href="global.html#TutorialContext">TutorialContext</a></li><li><a href="global.html#TutorialProvider">TutorialProvider</a></li><li><a href="global.html#TwoFASetupModal">TwoFASetupModal</a></li><li><a href="global.html#UpdateDocument">UpdateDocument</a></li><li><a href="global.html#UserManagementTutorial">UserManagementTutorial</a></li><li><a href="global.html#WSS_BASE_URL">WSS_BASE_URL</a></li><li><a href="global.html#activateUser">activateUser</a></li><li><a href="global.html#addComment">addComment</a></li><li><a href="global.html#addStudentToClass">addStudentToClass</a></li><li><a href="global.html#allDigitsFilled">allDigitsFilled</a></li><li><a href="global.html#api">api</a></li><li><a href="global.html#authToken">authToken</a></li><li><a href="global.html#authenticatedButtons">authenticatedButtons</a></li><li><a href="global.html#baseURL">baseURL</a></li><li><a href="global.html#blockLive">blockLive</a></li><li><a href="global.html#bulkDelete">bulkDelete</a></li><li><a href="global.html#changePassword">changePassword</a></li><li><a href="global.html#check2FAStatus">check2FAStatus</a></li><li><a href="global.html#checkRegisterCode">checkRegisterCode</a></li><li><a href="global.html#createClass">createClass</a></li><li><a href="global.html#createCourse">createCourse</a></li><li><a href="global.html#createLive">createLive</a></li><li><a href="global.html#createThread">createThread</a></li><li><a href="global.html#createUser">createUser</a></li><li><a href="global.html#deactivateUser">deactivateUser</a></li><li><a href="global.html#deleteAvatar">deleteAvatar</a></li><li><a href="global.html#deleteClass">deleteClass</a></li><li><a href="global.html#deleteClasseHandler">deleteClasseHandler</a></li><li><a href="global.html#deleteComment">deleteComment</a></li><li><a href="global.html#deleteContactMessage">deleteContactMessage</a></li><li><a href="global.html#deleteCourse">deleteCourse</a></li><li><a href="global.html#deleteInviteCode">deleteInviteCode</a></li><li><a href="global.html#deleteLive">deleteLive</a></li><li><a href="global.html#deleteMessage">deleteMessage</a></li><li><a href="global.html#deleteThread">deleteThread</a></li><li><a href="global.html#deleteUser">deleteUser</a></li><li><a href="global.html#disable2FA">disable2FA</a></li><li><a href="global.html#disapproveCourse">disapproveCourse</a></li><li><a href="global.html#disapproveLive">disapproveLive</a></li><li><a href="global.html#downloadAttachment">downloadAttachment</a></li><li><a href="global.html#endLive">endLive</a></li><li><a href="global.html#errorMessages">errorMessages</a></li><li><a href="global.html#fetchClasses">fetchClasses</a></li><li><a href="global.html#fetchCourseData">fetchCourseData</a></li><li><a href="global.html#fetchData">fetchData</a></li><li><a href="global.html#fetchUsers">fetchUsers</a></li><li><a href="global.html#firstLogin">firstLogin</a></li><li><a href="global.html#flagContent">flagContent</a></li><li><a href="global.html#forgotPassword">forgotPassword</a></li><li><a href="global.html#generateInviteCode">generateInviteCode</a></li><li><a href="global.html#getAllClasses">getAllClasses</a></li><li><a href="global.html#getAllContactMessages">getAllContactMessages</a></li><li><a href="global.html#getAllCourses">getAllCourses</a></li><li><a href="global.html#getAllInviteCodes">getAllInviteCodes</a></li><li><a href="global.html#getAllLives">getAllLives</a></li><li><a href="global.html#getAllUsers">getAllUsers</a></li><li><a href="global.html#getAvailableRecipients">getAvailableRecipients</a></li><li><a href="global.html#getAvatar">getAvatar</a></li><li><a href="global.html#getClassById">getClassById</a></li><li><a href="global.html#getClassStudents">getClassStudents</a></li><li><a href="global.html#getContactMessage">getContactMessage</a></li><li><a href="global.html#getCourseById">getCourseById</a></li><li><a href="global.html#getCourseDetails">getCourseDetails</a></li><li><a href="global.html#getCourseProgress">getCourseProgress</a></li><li><a href="global.html#getCoursesByClass">getCoursesByClass</a></li><li><a href="global.html#getFlags">getFlags</a></li><li><a href="global.html#getInboxMessages">getInboxMessages</a></li><li><a href="global.html#getInitialViewMode">getInitialViewMode</a></li><li><a href="global.html#getLiveById">getLiveById</a></li><li><a href="global.html#getLiveMessages">getLiveMessages</a></li><li><a href="global.html#getLiveStreamUrl">getLiveStreamUrl</a></li><li><a href="global.html#getLivesByClass">getLivesByClass</a></li><li><a href="global.html#getMessage">getMessage</a></li><li><a href="global.html#getNotificationPreferences">getNotificationPreferences</a></li><li><a href="global.html#getSentMessages">getSentMessages</a></li><li><a href="global.html#getStudentProgress">getStudentProgress</a></li><li><a href="global.html#getThreadById">getThreadById</a></li><li><a href="global.html#getThreads">getThreads</a></li><li><a href="global.html#getTrashMessages">getTrashMessages</a></li><li><a href="global.html#getUserById">getUserById</a></li><li><a href="global.html#getUserProfile">getUserProfile</a></li><li><a href="global.html#getUserWarnings">getUserWarnings</a></li><li><a href="global.html#getVideoDetails">getVideoDetails</a></li><li><a href="global.html#getVideoStreamUrl">getVideoStreamUrl</a></li><li><a href="global.html#handle2FASubmit">handle2FASubmit</a></li><li><a href="global.html#handleBackdropClick">handleBackdropClick</a></li><li><a href="global.html#handleBlockedMouseLeave">handleBlockedMouseLeave</a></li><li><a href="global.html#handleBlockedMouseMove">handleBlockedMouseMove</a></li><li><a href="global.html#handleClose">handleClose</a></li><li><a href="global.html#handleCompleteCourse">handleCompleteCourse</a></li><li><a href="global.html#handleCourseDisapproval">handleCourseDisapproval</a></li><li><a href="global.html#handleDeleteCourse">handleDeleteCourse</a></li><li><a href="global.html#handleDigitChange">handleDigitChange</a></li><li><a href="global.html#handleDigitKeyDown">handleDigitKeyDown</a></li><li><a href="global.html#handleDigitPaste">handleDigitPaste</a></li><li><a href="global.html#handleDownloadDocument">handleDownloadDocument</a></li><li><a href="global.html#handleError">handleError</a></li><li><a href="global.html#handleInputChange">handleInputChange</a></li><li><a href="global.html#handleLogout">handleLogout</a></li><li><a href="global.html#handleMenuToggle">handleMenuToggle</a></li><li><a href="global.html#handleModAction">handleModAction</a></li><li><a href="global.html#handleSubmit">handleSubmit</a></li><li><a href="global.html#handleSubmitClasse">handleSubmitClasse</a></li><li><a href="global.html#handleTabChange">handleTabChange</a></li><li><a href="global.html#handleUnblockCourse">handleUnblockCourse</a></li><li><a href="global.html#isAuthenticated">isAuthenticated</a></li><li><a href="global.html#loadCaptchaEngine">loadCaptchaEngine</a></li><li><a href="global.html#logViewEngagement">logViewEngagement</a></li><li><a href="global.html#login">login</a></li><li><a href="global.html#markAsRead">markAsRead</a></li><li><a href="global.html#markAsUnread">markAsUnread</a></li><li><a href="global.html#markContactMessageAsProcessed">markContactMessageAsProcessed</a></li><li><a href="global.html#markCourseAsCompleted">markCourseAsCompleted</a></li><li><a href="global.html#markCourseAsInProgress">markCourseAsInProgress</a></li><li><a href="global.html#mountApp">mountApp</a></li><li><a href="global.html#moveToTrash">moveToTrash</a></li><li><a href="global.html#navItems">navItems</a></li><li><a href="global.html#navigate">navigate</a></li><li><a href="global.html#onSamplesDecoded">onSamplesDecoded</a></li><li><a href="global.html#refreshTwoFASetup">refreshTwoFASetup</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#removeStudentFromClass">removeStudentFromClass</a></li><li><a href="global.html#renderContent">renderContent</a></li><li><a href="global.html#resolveFlag">resolveFlag</a></li><li><a href="global.html#restoreFromTrash">restoreFromTrash</a></li><li><a href="global.html#retrogradeUserRole">retrogradeUserRole</a></li><li><a href="global.html#root">root</a></li><li><a href="global.html#sendContactMessage">sendContactMessage</a></li><li><a href="global.html#sendLiveMessage">sendLiveMessage</a></li><li><a href="global.html#sendMessage">sendMessage</a></li><li><a href="global.html#sendWarning">sendWarning</a></li><li><a href="global.html#setMainTeacher">setMainTeacher</a></li><li><a href="global.html#setup2FA">setup2FA</a></li><li><a href="global.html#signButtons">signButtons</a></li><li><a href="global.html#startLive">startLive</a></li><li><a href="global.html#toggleAll">toggleAll</a></li><li><a href="global.html#toggleClasse">toggleClasse</a></li><li><a href="global.html#toggleMember">toggleMember</a></li><li><a href="global.html#toggleMobileMenu">toggleMobileMenu</a></li><li><a href="global.html#unblockCourse">unblockCourse</a></li><li><a href="global.html#unblockLive">unblockLive</a></li><li><a href="global.html#updateClass">updateClass</a></li><li><a href="global.html#updateComment">updateComment</a></li><li><a href="global.html#updateCourse">updateCourse</a></li><li><a href="global.html#updateLive">updateLive</a></li><li><a href="global.html#updateNotificationPreferences">updateNotificationPreferences</a></li><li><a href="global.html#updateThread">updateThread</a></li><li><a href="global.html#updateUser">updateUser</a></li><li><a href="global.html#updateUserProfile">updateUserProfile</a></li><li><a href="global.html#updateUserProfileHandler">updateUserProfileHandler</a></li><li><a href="global.html#updateVideo">updateVideo</a></li><li><a href="global.html#upgradeUserRole">upgradeUserRole</a></li><li><a href="global.html#uploadAvatar">uploadAvatar</a></li><li><a href="global.html#uploadIllustrationAvatar">uploadIllustrationAvatar</a></li><li><a href="global.html#useEffect">useEffect</a></li><li><a href="global.html#useTutorial">useTutorial</a></li><li><a href="global.html#validateForm">validateForm</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#verify2FASetup">verify2FASetup</a></li><li><a href="global.html#verifyTwoFA">verifyTwoFA</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Sat Jun 07 2025 14:32:34 GMT+0200 (Central European Summer Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

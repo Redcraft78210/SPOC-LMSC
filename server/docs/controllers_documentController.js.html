@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: controllers/documentController.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: controllers/documentController.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @fileoverview Contrôleur de gestion des documents PDF pour l'application SPOC-LMSC.
+ * Ce module gère le téléchargement, la récupération et la suppression des documents PDF,
+ * avec vérifications de sécurité et association aux cours.
+ * 
+ * @module documentController
+ * @requires fs/promises
+ * @requires fs
+ * @requires path
+ * @requires crypto
+ * @requires ../models
+ */
+
+const fs = require('fs/promises');
+const fsSync = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+const { Document, Course, CourseDocument } = require('../models');
+
+/**
+ * Chemin absolu vers le répertoire de stockage des documents
+ * @constant {string}
+ */
+const documentsDirectory = path.resolve(__dirname, '..', 'documents');
+
+console.log(`documentsDirectory: ${documentsDirectory}`);
+
+/**
+ * En-têtes HTTP communs pour la sécurité des documents servis
+ * @constant {Object}
+ */
+const COMMON_HEADERS = {
+    'Cache-Control': 'public, max-age=3600',
+    'Content-Security-Policy': "default-src 'none'",
+    'X-Frame-Options': 'DENY',
+    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+    'X-Content-Type-Options': 'nosniff'
+};
+
+/**
+ * Vérifie si le chemin de fichier fourni est à l'intérieur du répertoire de documents.
+ * Protection contre les attaques de traversée de répertoire.
+ * 
+ * @param {string} filePath - Chemin du fichier à vérifier
+ * @returns {boolean} Vrai si le fichier est dans le répertoire autorisé, faux sinon
+ * 
+ * @example
+ * // Retourne true si le fichier est dans le répertoire documents
+ * isInsideDocumentsDir('/path/to/documents/file.pdf');
+ */
+const isInsideDocumentsDir = (filePath) => {
+    const relative = path.relative(documentsDirectory, filePath);
+    return !relative.startsWith('..') &amp;&amp; !path.isAbsolute(relative);
+};
+
+/**
+ * Génère un ETag à partir du contenu d'un fichier pour la gestion du cache HTTP
+ * 
+ * @param {Buffer} fileData - Contenu du fichier en mémoire
+ * @returns {string} ETag généré (hash SHA-1 du contenu)
+ */
+const generateETag = (fileData) => {
+    const hash = crypto.createHash('sha1');
+    hash.update(fileData);
+    return hash.digest('hex');
+};
+
+/**
+ * Génère le chemin absolu vers un document PDF
+ * 
+ * @param {string} id - Identifiant unique du document
+ * @param {string} fingerprint - Empreinte unique du document
+ * @returns {string} Chemin complet vers le fichier PDF
+ */
+const generateDocumentPath = (id, fingerprint) => {
+    return path.resolve(documentsDirectory, `${id}-${fingerprint}.pdf`);
+};
+
+/**
+ * Récupère un document PDF et le renvoie au client avec les en-têtes de sécurité appropriés
+ * 
+ * @param {Object} req - Objet requête Express
+ * @param {Object} res - Objet réponse Express
+ * @throws {Error} En cas d'erreur lors de la lecture du fichier ou de problème serveur
+ * 
+ * @example
+ * // Route: GET /api/documents/:id
+ */
+const getBlobDocument = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!id || typeof id !== 'string' || !/^[a-zA-Z0-9_-]+$/.test(id)) {
+            return res.status(400).json({ message: 'Invalid document ID' });
+        }
+
+        const document = await Document.findOne({
+            where: { id },
+            include: {
+                model: Course,
+                attributes: ['title']
+            }
+        });
+
+        if (!document) {
+            return res.status(404).json({ message: 'Document not found' });
+        }
+
+        const fingerprint = document.fingerprint;
+        const documentPath = generateDocumentPath(id, fingerprint)
+        const documentTitle = document.Course?.title;
+
+        const escapedFilename = documentTitle 
+            ? encodeURIComponent(`${documentTitle}.pdf`) 
+            : encodeURIComponent(`${id}-${fingerprint}.pdf`);
+
+        if (!isInsideDocumentsDir(documentPath)) {
+            return res.status(400).json({ message: 'Invalid path' });
+        }
+
+        if (!fsSync.existsSync(documentPath)) {
+            console.error('File not found:', documentPath);
+            return res.status(404).json({ message: 'Document not found' });
+        }
+
+        const handle = await fs.open(documentPath, 'r');
+        try {
+            const stats = await handle.stat();
+            const buffer = await handle.readFile();
+
+            res.writeHead(200, {
+                ...COMMON_HEADERS,
+                'Content-Length': buffer.length,
+                'Content-Type': 'application/pdf',
+                'Content-Disposition': `attachment; filename*="UTF-8''${escapedFilename}"`,
+                'ETag': `"${generateETag(buffer)}"`
+            });
+
+            res.end(buffer);
+        } finally {
+            await handle.close();
+        }
+    } catch (error) {
+        console.error('Server error:', error);
+        if (!res.headersSent) {
+            if (error.code === 'ENOENT') {
+                return res.status(404).json({ message: 'Document not found' });
+            }
+            res.status(500).json({ message: 'Internal server error' });
+        }
+    }
+};
+
+/**
+ * Télécharge un nouveau document PDF ou met à jour un document existant
+ * 
+ * @param {Object} req - Objet requête Express
+ * @param {Object} res - Objet réponse Express
+ * @throws {Error} En cas d'erreur lors de l'écriture du fichier ou problème serveur
+ * 
+ * @example
+ * // Route: POST /api/documents/:id
+ * // Corps: données binaires du PDF avec Content-Type: application/pdf
+ * // + métadonnées en formdata (courseId, isMain, title, description, fingerprint)
+ */
+const uploadDocument = async (req, res) => {
+    try {
+        if (!req.user) {
+            return res.status(403).json({ message: 'Accès non autorisé' });
+        }
+
+        const { id } = req.params;
+        if (!id || !/^[a-zA-Z0-9_-]+$/.test(id)) {
+            return res.status(400).json({ message: 'ID invalide' });
+        }
+
+        let fingerprint = req.body.fingerprint || crypto.randomBytes(8).toString('hex');
+        const courseId = req.body.courseId; // Récupérer l'ID du cours associé
+        const isMain = req.body.isMain || false; // Document principal ou non
+        
+        const documentPath = generateDocumentPath(id, fingerprint);
+        
+        if (!isInsideDocumentsDir(documentPath)) {
+            return res.status(400).json({ message: 'Chemin invalide' });
+        }
+
+        await fs.mkdir(path.dirname(documentPath), { recursive: true });
+
+        const fileData = [];
+        req.on('data', (chunk) => {
+            fileData.push(chunk);
+        });
+        
+        req.on('end', async () => {
+            try {
+                const buffer = Buffer.concat(fileData);
+                await fs.writeFile(documentPath, buffer);
+                
+                const [document, created] = await Document.upsert({
+                    id,
+                    fingerprint,
+                    title: req.body.title || `Document ${id}`,
+                    description: req.body.description
+                }, { returning: true });
+                
+                if (courseId) {
+                    await CourseDocument.upsert({
+                        course_id: courseId,
+                        document_id: id,
+                        is_main: isMain
+                    });
+                }
+                
+                res.status(201).json({ 
+                    message: 'Document téléchargé avec succès',
+                    id,
+                    fingerprint,
+                    courseId: courseId || null,
+                    isMain
+                });
+            } catch (error) {
+                console.error('Erreur lors de l\'écriture du fichier:', error);
+                res.status(500).json({ message: 'Erreur interne du serveur' });
+            }
+        });
+
+    } catch (error) {
+        console.error('Erreur serveur:', error);
+        if (!res.headersSent) {
+            res.status(500).json({
+                message: error.message || 'Erreur interne'
+            });
+        }
+    }
+};
+
+/**
+ * Supprime un document PDF et ses associations dans la base de données
+ * 
+ * @param {Object} req - Objet requête Express
+ * @param {Object} res - Objet réponse Express
+ * @throws {Error} En cas d'erreur lors de la suppression du fichier ou problème serveur
+ * 
+ * @example
+ * // Route: DELETE /api/documents/:id
+ */
+const deleteDocument = async (req, res) => {
+    try {
+        if (!req.user) {
+            return res.status(403).json({ message: 'Accès non autorisé' });
+        }
+
+        const { id } = req.params;
+        if (!id || !/^[a-zA-Z0-9_-]+$/.test(id)) {
+            return res.status(400).json({ message: 'ID invalide' });
+        }
+
+        const document = await Document.findByPk(id);
+        if (!document) {
+            return res.status(404).json({ message: 'Document non trouvé' });
+        }
+
+        const documentPath = generateDocumentPath(id, document.fingerprint);
+        
+        if (!isInsideDocumentsDir(documentPath)) {
+            return res.status(400).json({ message: 'Chemin invalide' });
+        }
+
+        try {
+            await fs.access(documentPath);
+            await fs.unlink(documentPath);
+        } catch (error) {
+            if (error.code !== 'ENOENT') {
+                throw error;
+            }
+        }
+        
+        const { CourseDocument } = require('../models');
+        await CourseDocument.destroy({ where: { document_id: id }});
+        
+        await document.destroy();
+        
+        res.status(200).json({ message: 'Document supprimé avec succès' });
+
+    } catch (error) {
+        console.error('Erreur serveur:', error);
+        if (!res.headersSent) {
+            res.status(error.code === 'ENOENT' ? 404 : 500).json({
+                message: error.message || 'Erreur interne'
+            });
+        }
+    }
+};
+
+/**
+ * Exporte les fonctions du contrôleur de documents
+ * @exports documentController
+ */
+module.exports = {
+    getBlobDocument,
+    uploadDocument,
+    deleteDocument
+};</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-chatController.html">chatController</a></li><li><a href="module-chatRoutes.html">chatRoutes</a></li><li><a href="module-controllers_authController.html">controllers/authController</a></li><li><a href="module-controllers_avatarController.html">controllers/avatarController</a></li><li><a href="module-controllers_classController.html">controllers/classController</a></li><li><a href="module-controllers_messageController.html">controllers/messageController</a></li><li><a href="module-controllers_moderationController.html">controllers/moderationController</a></li><li><a href="module-controllers_progressTracking.html">controllers/progressTracking</a></li><li><a href="module-controllers_userController.html">controllers/userController</a></li><li><a href="module-documentController.html">documentController</a></li><li><a href="module-documentRoutes.html">documentRoutes</a></li><li><a href="module-forumController.html">forumController</a></li><li><a href="module-forumRoutes.html">forumRoutes</a></li><li><a href="module-middlewares_userValidation.html">middlewares/userValidation</a></li><li><a href="module-recordingController.html">recordingController</a></li><li><a href="module-recordingRoutes.html">recordingRoutes</a></li><li><a href="module-routes_authRoutes.html">routes/authRoutes</a></li><li><a href="module-routes_avatarRoutes.html">routes/avatarRoutes</a></li><li><a href="module-routes_classRoutes.html">routes/classRoutes</a></li><li><a href="module-routes_messageRoutes.html">routes/messageRoutes</a></li><li><a href="module-routes_moderationRoutes.html">routes/moderationRoutes</a></li><li><a href="module-routes_progressTracking.html">routes/progressTracking</a></li><li><a href="module-routes_userRoutes.html">routes/userRoutes</a></li><li><a href="module-socketManager.html">socketManager</a></li><li><a href="module-videoController.html">videoController</a></li><li><a href="module-videoRoutes.html">videoRoutes</a></li><li><a href="module-virusScanService.html">virusScanService</a></li><li><a href="module-%25257BObject%25257D.html">{Object}</a></li></ul><h3>Classes</h3><ul><li><a href="global.html#Admin">Admin</a></li><li><a href="global.html#Attachment">Attachment</a></li><li><a href="global.html#ChatMessage">ChatMessage</a></li><li><a href="global.html#Classe">Classe</a></li><li><a href="global.html#Code">Code</a></li><li><a href="global.html#Comment">Comment</a></li><li><a href="global.html#Course">Course</a></li><li><a href="global.html#CourseDocument">CourseDocument</a></li><li><a href="global.html#CourseProgress">CourseProgress</a></li><li><a href="global.html#CourseVideo">CourseVideo</a></li><li><a href="global.html#Document">Document</a></li><li><a href="global.html#Flag">Flag</a></li><li><a href="global.html#LiveAttendance">LiveAttendance</a></li><li><a href="global.html#Lives">Lives</a></li><li><a href="global.html#Message">Message</a></li><li><a href="global.html#Recipient">Recipient</a></li><li><a href="Stats.html">Stats</a></li><li><a href="global.html#Student">Student</a></li><li><a href="global.html#StudentClass">StudentClass</a></li><li><a href="global.html#Teacher">Teacher</a></li><li><a href="TeacherClass.html">TeacherClass</a></li><li><a href="global.html#Thread">Thread</a></li><li><a href="global.html#TrashMessage">TrashMessage</a></li><li><a href="global.html#User">User</a></li><li><a href="global.html#UserAvatar">UserAvatar</a></li><li><a href="global.html#Video">Video</a></li><li><a href="global.html#Warning">Warning</a></li><li><a href="module-models.ClassLives.html">ClassLives</a></li></ul><h3>Global</h3><ul><li><a href="global.html#ClassLives">ClassLives</a></li><li><a href="global.html#DEFAULTS">DEFAULTS</a></li><li><a href="global.html#MessageId">MessageId</a></li><li><a href="global.html#addLive">addLive</a></li><li><a href="global.html#allowedOrigins">allowedOrigins</a></li><li><a href="global.html#authMiddleware">authMiddleware</a></li><li><a href="global.html#blockCourse">blockCourse</a></li><li><a href="global.html#blockLive">blockLive</a></li><li><a href="global.html#buildAndRun">buildAndRun</a></li><li><a href="global.html#class_id">class_id</a></li><li><a href="global.html#content">content</a></li><li><a href="global.html#createCode">createCode</a></li><li><a href="global.html#createCourse">createCourse</a></li><li><a href="global.html#createQuarantineContainer">createQuarantineContainer</a></li><li><a href="global.html#createdAt">createdAt</a></li><li><a href="global.html#deleteCode">deleteCode</a></li><li><a href="global.html#deleteCourse">deleteCourse</a></li><li><a href="global.html#deleteLive">deleteLive</a></li><li><a href="global.html#description">description</a></li><li><a href="global.html#disapproveLive">disapproveLive</a></li><li><a href="global.html#editLive">editLive</a></li><li><a href="global.html#email">email</a></li><li><a href="global.html#endLive">endLive</a></li><li><a href="global.html#fileSize">fileSize</a></li><li><a href="global.html#filename">filename</a></li><li><a href="global.html#firstLogin">firstLogin</a></li><li><a href="global.html#generateRandomCode">generateRandomCode</a></li><li><a href="global.html#getAllCodes">getAllCodes</a></li><li><a href="global.html#getAllCourses">getAllCourses</a></li><li><a href="global.html#getAllLives">getAllLives</a></li><li><a href="global.html#getCourse">getCourse</a></li><li><a href="global.html#getLive">getLive</a></li><li><a href="global.html#getLiveByClass">getLiveByClass</a></li><li><a href="global.html#getMainCourse">getMainCourse</a></li><li><a href="global.html#httpServer">httpServer</a></li><li><a href="global.html#id">id</a></li><li><a href="global.html#imageExists">imageExists</a></li><li><a href="global.html#imageToByteArray">imageToByteArray</a></li><li><a href="global.html#live_id">live_id</a></li><li><a href="global.html#main_teacher_id">main_teacher_id</a></li><li><a href="global.html#mimeType">mimeType</a></li><li><a href="global.html#name">name</a></li><li><a href="global.html#password">password</a></li><li><a href="global.html#runCommand">runCommand</a></li><li><a href="global.html#scanStatus">scanStatus</a></li><li><a href="global.html#sequelize">sequelize</a></li><li><a href="global.html#setupStreaming">setupStreaming</a></li><li><a href="global.html#startLive">startLive</a></li><li><a href="global.html#statut">statut</a></li><li><a href="global.html#surname">surname</a></li><li><a href="global.html#twoFAEnabled">twoFAEnabled</a></li><li><a href="global.html#twoFASecret">twoFASecret</a></li><li><a href="global.html#unblockCourse">unblockCourse</a></li><li><a href="global.html#unblockLive">unblockLive</a></li><li><a href="global.html#updateCourse">updateCourse</a></li><li><a href="global.html#updateVideoCoverImages">updateVideoCoverImages</a></li><li><a href="global.html#updatedAt">updatedAt</a></li><li><a href="global.html#user_id">user_id</a></li><li><a href="global.html#username">username</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Sat Jun 07 2025 14:03:57 GMT+0200 (Central European Summer Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

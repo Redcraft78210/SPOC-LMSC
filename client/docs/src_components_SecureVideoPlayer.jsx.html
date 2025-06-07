@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: src/components/SecureVideoPlayer.jsx</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: src/components/SecureVideoPlayer.jsx</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import { useEffect, useRef } from "react";
+import PropTypes from "prop-types";
+import Plyr from "plyr";
+import "plyr/dist/plyr.css";
+import "./style/plyr.css";
+import Logo from "../Logo";
+import { Play } from "lucide-react";
+
+/**
+ * URL de base pour les requêtes API
+ * @constant {string}
+ */
+const BASE_URL = "/api";
+
+/**
+ * Composant de lecteur vidéo sécurisé utilisant Plyr avec authentification par token
+ *
+ * @component
+ * @param {Object} props - Les propriétés du composant
+ * @param {string} props.videoId - Identifiant unique de la vidéo à afficher
+ * @param {string} props.authToken - Token d'authentification pour accéder à la vidéo
+ * @param {string} [props.posterUrl] - URL optionnelle de l'image d'aperçu de la vidéo
+ * @param {Function} [props.onError] - Fonction de rappel optionnelle appelée en cas d'erreur de lecture
+ * @returns {JSX.Element} Composant de lecteur vidéo sécurisé
+ *
+ * @example
+ * // Exemple d'utilisation de base
+ * &lt;SecureVideoPlayer
+ *   videoId="123456"
+ *   authToken="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ *   posterUrl="/images/video-poster.jpg"
+ *   onError={(error) => console.error("Erreur de lecture:", error)}
+ * />
+ */
+const SecureVideoPlayer = ({ videoId, authToken, posterUrl, onError }) => {
+  const videoRef = useRef(null);
+  const wrapperRef = useRef(null);
+  const playerRef = useRef(null);
+  const playButtonRef = useRef(null);
+
+  useEffect(() => {
+    if (!videoRef.current) return;
+
+    const src = `${BASE_URL}s/videos/${videoId}?authToken=${encodeURIComponent(
+      authToken
+    )}`;
+
+    videoRef.current.innerHTML = "";
+    const source = document.createElement("source");
+    source.src = src;
+    source.type = "video/mp4";
+    videoRef.current.appendChild(source);
+
+    videoRef.current.poster = posterUrl || "";
+
+    playerRef.current = new Plyr("video", {
+      controls: [
+        "play",
+        "progress",
+        "current-time",
+        "mute",
+        "volume",
+        "settings",
+        "fullscreen",
+      ],
+      fullscreen: {
+        enabled: true,
+        fallback: true,
+        iosNative: false,
+        container: ".player-wrapper",
+      },
+    });
+
+    const player = playerRef.current;
+
+    const handlePlayPause = () => {
+      if (player.paused) {
+        playButtonRef.current?.removeAttribute("hidden");
+      } else {
+        playButtonRef.current?.setAttribute("hidden", true);
+      }
+    };
+
+    player.on("play", handlePlayPause);
+    player.on("pause", handlePlayPause);
+
+    if (onError) player.on("error", onError);
+
+    return () => {
+      player.off("play", handlePlayPause);
+      player.off("pause", handlePlayPause);
+      if (onError) player.off("error", onError);
+      player.destroy();
+    };
+  }, [videoId, authToken, posterUrl, onError]);
+
+  return (
+    &lt;div
+      ref={wrapperRef}
+      className="player-wrapper video-player-wrapper rounded-lg overflow-hidden shadow-md relative"
+    >
+      &lt;video ref={videoRef} className="plyr" playsInline />
+      &lt;button
+        ref={playButtonRef}
+        className="custom-play-btn"
+        aria-label="Play"
+        onClick={(e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          playerRef.current?.play();
+        }}
+      >
+        &lt;Play className="w-14 h-14" />
+      &lt;/button>
+      &lt;Logo className="absolute top-0 right-4 w-30 h-30" />
+    &lt;/div>
+  );
+};
+
+/**
+ * Validation des types de propriétés pour le composant SecureVideoPlayer
+ */
+SecureVideoPlayer.propTypes = {
+  videoId: PropTypes.string.isRequired,
+  authToken: PropTypes.string.isRequired,
+  posterUrl: PropTypes.string,
+  onError: PropTypes.func,
+};
+
+export default SecureVideoPlayer;</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-App.html">App</a></li></ul><h3>Global</h3><ul><li><a href="global.html#About">About</a></li><li><a href="global.html#AccountDisabledModal">AccountDisabledModal</a></li><li><a href="global.html#AdminDashboardHome">AdminDashboardHome</a></li><li><a href="global.html#BASE_URL">BASE_URL</a></li><li><a href="global.html#BulkActions">BulkActions</a></li><li><a href="global.html#ClassManagementTutorial">ClassManagementTutorial</a></li><li><a href="global.html#ClasseCards">ClasseCards</a></li><li><a href="global.html#ClasseCreationModal">ClasseCreationModal</a></li><li><a href="global.html#ClasseManagement">ClasseManagement</a></li><li><a href="global.html#ClasseTable">ClasseTable</a></li><li><a href="global.html#Contact">Contact</a></li><li><a href="global.html#ContentCard">ContentCard</a></li><li><a href="global.html#CourseReader">CourseReader</a></li><li><a href="global.html#CourseReaderTutorial">CourseReaderTutorial</a></li><li><a href="global.html#Courses">Courses</a></li><li><a href="global.html#CoursesLibraryTutorial">CoursesLibraryTutorial</a></li><li><a href="global.html#Dashboard">Dashboard</a></li><li><a href="global.html#DashboardTutorial">DashboardTutorial</a></li><li><a href="global.html#DeleteDocument">DeleteDocument</a></li><li><a href="global.html#DeleteVideo">DeleteVideo</a></li><li><a href="global.html#EleveDashboardHome">EleveDashboardHome</a></li><li><a href="global.html#ErrorMessage">ErrorMessage</a></li><li><a href="global.html#FilterDropdown">FilterDropdown</a></li><li><a href="global.html#FirstLogin">FirstLogin</a></li><li><a href="global.html#Footer">Footer</a></li><li><a href="global.html#Forum">Forum</a></li><li><a href="global.html#GetAll_DataStructure">GetAll_DataStructure</a></li><li><a href="global.html#GetAll_Document">GetAll_Document</a></li><li><a href="global.html#Get_Document_Information">Get_Document_Information</a></li><li><a href="global.html#Get_Video_Information">Get_Video_Information</a></li><li><a href="global.html#Get_special_Document">Get_special_Document</a></li><li><a href="global.html#Get_special_Video">Get_special_Video</a></li><li><a href="global.html#Home">Home</a></li><li><a href="global.html#INACTIVITY_THRESHOLD">INACTIVITY_THRESHOLD</a></li><li><a href="global.html#LegalNotice">LegalNotice</a></li><li><a href="global.html#LiveNotFound">LiveNotFound</a></li><li><a href="global.html#LiveViewer">LiveViewer</a></li><li><a href="global.html#LoadCanvasTemplate">LoadCanvasTemplate</a></li><li><a href="global.html#LoadingComponent">LoadingComponent</a></li><li><a href="global.html#LoadingSpinner">LoadingSpinner</a></li><li><a href="global.html#Logout">Logout</a></li><li><a href="global.html#Mailbox">Mailbox</a></li><li><a href="global.html#MaintenanceBanner">MaintenanceBanner</a></li><li><a href="global.html#MessageDetailSkeleton">MessageDetailSkeleton</a></li><li><a href="global.html#MessageSkeleton">MessageSkeleton</a></li><li><a href="global.html#NavigationBar">NavigationBar</a></li><li><a href="global.html#PictureModal">PictureModal</a></li><li><a href="global.html#PrivacyPolicy">PrivacyPolicy</a></li><li><a href="global.html#PrivacyTab">PrivacyTab</a></li><li><a href="global.html#ProfilePhotoSelector">ProfilePhotoSelector</a></li><li><a href="global.html#PublicNavbar">PublicNavbar</a></li><li><a href="global.html#SearchBar">SearchBar</a></li><li><a href="global.html#SearchUser">SearchUser</a></li><li><a href="global.html#SecureDocumentViewer">SecureDocumentViewer</a></li><li><a href="global.html#SecureVideoPlayer">SecureVideoPlayer</a></li><li><a href="global.html#SecurityTab">SecurityTab</a></li><li><a href="global.html#SendDocument">SendDocument</a></li><li><a href="global.html#SendVideo">SendVideo</a></li><li><a href="global.html#Settings">Settings</a></li><li><a href="global.html#Sign">Sign</a></li><li><a href="global.html#Spinner">Spinner</a></li><li><a href="global.html#StreamReader">StreamReader</a></li><li><a href="global.html#TEN_MINUTES">TEN_MINUTES</a></li><li><a href="global.html#TermsOfUse">TermsOfUse</a></li><li><a href="global.html#ToggleView">ToggleView</a></li><li><a href="global.html#Tutorial">Tutorial</a></li><li><a href="global.html#TutorialContext">TutorialContext</a></li><li><a href="global.html#TutorialProvider">TutorialProvider</a></li><li><a href="global.html#TwoFASetupModal">TwoFASetupModal</a></li><li><a href="global.html#UpdateDocument">UpdateDocument</a></li><li><a href="global.html#UserManagementTutorial">UserManagementTutorial</a></li><li><a href="global.html#WSS_BASE_URL">WSS_BASE_URL</a></li><li><a href="global.html#activateUser">activateUser</a></li><li><a href="global.html#addComment">addComment</a></li><li><a href="global.html#addStudentToClass">addStudentToClass</a></li><li><a href="global.html#allDigitsFilled">allDigitsFilled</a></li><li><a href="global.html#api">api</a></li><li><a href="global.html#authToken">authToken</a></li><li><a href="global.html#authenticatedButtons">authenticatedButtons</a></li><li><a href="global.html#baseURL">baseURL</a></li><li><a href="global.html#blockLive">blockLive</a></li><li><a href="global.html#bulkDelete">bulkDelete</a></li><li><a href="global.html#changePassword">changePassword</a></li><li><a href="global.html#check2FAStatus">check2FAStatus</a></li><li><a href="global.html#checkRegisterCode">checkRegisterCode</a></li><li><a href="global.html#createClass">createClass</a></li><li><a href="global.html#createCourse">createCourse</a></li><li><a href="global.html#createLive">createLive</a></li><li><a href="global.html#createThread">createThread</a></li><li><a href="global.html#createUser">createUser</a></li><li><a href="global.html#deactivateUser">deactivateUser</a></li><li><a href="global.html#deleteAvatar">deleteAvatar</a></li><li><a href="global.html#deleteClass">deleteClass</a></li><li><a href="global.html#deleteClasseHandler">deleteClasseHandler</a></li><li><a href="global.html#deleteComment">deleteComment</a></li><li><a href="global.html#deleteContactMessage">deleteContactMessage</a></li><li><a href="global.html#deleteCourse">deleteCourse</a></li><li><a href="global.html#deleteInviteCode">deleteInviteCode</a></li><li><a href="global.html#deleteLive">deleteLive</a></li><li><a href="global.html#deleteMessage">deleteMessage</a></li><li><a href="global.html#deleteThread">deleteThread</a></li><li><a href="global.html#deleteUser">deleteUser</a></li><li><a href="global.html#disable2FA">disable2FA</a></li><li><a href="global.html#disapproveCourse">disapproveCourse</a></li><li><a href="global.html#disapproveLive">disapproveLive</a></li><li><a href="global.html#downloadAttachment">downloadAttachment</a></li><li><a href="global.html#endLive">endLive</a></li><li><a href="global.html#errorMessages">errorMessages</a></li><li><a href="global.html#fetchClasses">fetchClasses</a></li><li><a href="global.html#fetchCourseData">fetchCourseData</a></li><li><a href="global.html#fetchData">fetchData</a></li><li><a href="global.html#fetchUsers">fetchUsers</a></li><li><a href="global.html#firstLogin">firstLogin</a></li><li><a href="global.html#flagContent">flagContent</a></li><li><a href="global.html#forgotPassword">forgotPassword</a></li><li><a href="global.html#generateInviteCode">generateInviteCode</a></li><li><a href="global.html#getAllClasses">getAllClasses</a></li><li><a href="global.html#getAllContactMessages">getAllContactMessages</a></li><li><a href="global.html#getAllCourses">getAllCourses</a></li><li><a href="global.html#getAllInviteCodes">getAllInviteCodes</a></li><li><a href="global.html#getAllLives">getAllLives</a></li><li><a href="global.html#getAllUsers">getAllUsers</a></li><li><a href="global.html#getAvailableRecipients">getAvailableRecipients</a></li><li><a href="global.html#getAvatar">getAvatar</a></li><li><a href="global.html#getClassById">getClassById</a></li><li><a href="global.html#getClassStudents">getClassStudents</a></li><li><a href="global.html#getContactMessage">getContactMessage</a></li><li><a href="global.html#getCourseById">getCourseById</a></li><li><a href="global.html#getCourseDetails">getCourseDetails</a></li><li><a href="global.html#getCourseProgress">getCourseProgress</a></li><li><a href="global.html#getCoursesByClass">getCoursesByClass</a></li><li><a href="global.html#getFlags">getFlags</a></li><li><a href="global.html#getInboxMessages">getInboxMessages</a></li><li><a href="global.html#getInitialViewMode">getInitialViewMode</a></li><li><a href="global.html#getLiveById">getLiveById</a></li><li><a href="global.html#getLiveMessages">getLiveMessages</a></li><li><a href="global.html#getLiveStreamUrl">getLiveStreamUrl</a></li><li><a href="global.html#getLivesByClass">getLivesByClass</a></li><li><a href="global.html#getMessage">getMessage</a></li><li><a href="global.html#getNotificationPreferences">getNotificationPreferences</a></li><li><a href="global.html#getSentMessages">getSentMessages</a></li><li><a href="global.html#getStudentProgress">getStudentProgress</a></li><li><a href="global.html#getThreadById">getThreadById</a></li><li><a href="global.html#getThreads">getThreads</a></li><li><a href="global.html#getTrashMessages">getTrashMessages</a></li><li><a href="global.html#getUserById">getUserById</a></li><li><a href="global.html#getUserProfile">getUserProfile</a></li><li><a href="global.html#getUserWarnings">getUserWarnings</a></li><li><a href="global.html#getVideoDetails">getVideoDetails</a></li><li><a href="global.html#getVideoStreamUrl">getVideoStreamUrl</a></li><li><a href="global.html#handle2FASubmit">handle2FASubmit</a></li><li><a href="global.html#handleBackdropClick">handleBackdropClick</a></li><li><a href="global.html#handleBlockedMouseLeave">handleBlockedMouseLeave</a></li><li><a href="global.html#handleBlockedMouseMove">handleBlockedMouseMove</a></li><li><a href="global.html#handleClose">handleClose</a></li><li><a href="global.html#handleCompleteCourse">handleCompleteCourse</a></li><li><a href="global.html#handleCourseDisapproval">handleCourseDisapproval</a></li><li><a href="global.html#handleDeleteCourse">handleDeleteCourse</a></li><li><a href="global.html#handleDigitChange">handleDigitChange</a></li><li><a href="global.html#handleDigitKeyDown">handleDigitKeyDown</a></li><li><a href="global.html#handleDigitPaste">handleDigitPaste</a></li><li><a href="global.html#handleDownloadDocument">handleDownloadDocument</a></li><li><a href="global.html#handleError">handleError</a></li><li><a href="global.html#handleInputChange">handleInputChange</a></li><li><a href="global.html#handleLogout">handleLogout</a></li><li><a href="global.html#handleMenuToggle">handleMenuToggle</a></li><li><a href="global.html#handleModAction">handleModAction</a></li><li><a href="global.html#handleSubmit">handleSubmit</a></li><li><a href="global.html#handleSubmitClasse">handleSubmitClasse</a></li><li><a href="global.html#handleTabChange">handleTabChange</a></li><li><a href="global.html#handleUnblockCourse">handleUnblockCourse</a></li><li><a href="global.html#isAuthenticated">isAuthenticated</a></li><li><a href="global.html#loadCaptchaEngine">loadCaptchaEngine</a></li><li><a href="global.html#logViewEngagement">logViewEngagement</a></li><li><a href="global.html#login">login</a></li><li><a href="global.html#markAsRead">markAsRead</a></li><li><a href="global.html#markAsUnread">markAsUnread</a></li><li><a href="global.html#markContactMessageAsProcessed">markContactMessageAsProcessed</a></li><li><a href="global.html#markCourseAsCompleted">markCourseAsCompleted</a></li><li><a href="global.html#markCourseAsInProgress">markCourseAsInProgress</a></li><li><a href="global.html#mountApp">mountApp</a></li><li><a href="global.html#moveToTrash">moveToTrash</a></li><li><a href="global.html#navItems">navItems</a></li><li><a href="global.html#navigate">navigate</a></li><li><a href="global.html#onSamplesDecoded">onSamplesDecoded</a></li><li><a href="global.html#refreshTwoFASetup">refreshTwoFASetup</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#removeStudentFromClass">removeStudentFromClass</a></li><li><a href="global.html#renderContent">renderContent</a></li><li><a href="global.html#resolveFlag">resolveFlag</a></li><li><a href="global.html#restoreFromTrash">restoreFromTrash</a></li><li><a href="global.html#retrogradeUserRole">retrogradeUserRole</a></li><li><a href="global.html#root">root</a></li><li><a href="global.html#sendContactMessage">sendContactMessage</a></li><li><a href="global.html#sendLiveMessage">sendLiveMessage</a></li><li><a href="global.html#sendMessage">sendMessage</a></li><li><a href="global.html#sendWarning">sendWarning</a></li><li><a href="global.html#setMainTeacher">setMainTeacher</a></li><li><a href="global.html#setup2FA">setup2FA</a></li><li><a href="global.html#signButtons">signButtons</a></li><li><a href="global.html#startLive">startLive</a></li><li><a href="global.html#toggleAll">toggleAll</a></li><li><a href="global.html#toggleClasse">toggleClasse</a></li><li><a href="global.html#toggleMember">toggleMember</a></li><li><a href="global.html#toggleMobileMenu">toggleMobileMenu</a></li><li><a href="global.html#unblockCourse">unblockCourse</a></li><li><a href="global.html#unblockLive">unblockLive</a></li><li><a href="global.html#updateClass">updateClass</a></li><li><a href="global.html#updateComment">updateComment</a></li><li><a href="global.html#updateCourse">updateCourse</a></li><li><a href="global.html#updateLive">updateLive</a></li><li><a href="global.html#updateNotificationPreferences">updateNotificationPreferences</a></li><li><a href="global.html#updateThread">updateThread</a></li><li><a href="global.html#updateUser">updateUser</a></li><li><a href="global.html#updateUserProfile">updateUserProfile</a></li><li><a href="global.html#updateUserProfileHandler">updateUserProfileHandler</a></li><li><a href="global.html#updateVideo">updateVideo</a></li><li><a href="global.html#upgradeUserRole">upgradeUserRole</a></li><li><a href="global.html#uploadAvatar">uploadAvatar</a></li><li><a href="global.html#uploadIllustrationAvatar">uploadIllustrationAvatar</a></li><li><a href="global.html#useEffect">useEffect</a></li><li><a href="global.html#useTutorial">useTutorial</a></li><li><a href="global.html#validateForm">validateForm</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#verify2FASetup">verify2FASetup</a></li><li><a href="global.html#verifyTwoFA">verifyTwoFA</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Sat Jun 07 2025 14:32:34 GMT+0200 (Central European Summer Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

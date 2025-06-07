@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: src/pages/Forum.jsx</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: src/pages/Forum.jsx</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @fileoverview Composant Forum permettant aux utilisateurs de créer, consulter et interagir avec des discussions.
+ * Inclut des fonctionnalités de modération pour les administrateurs.
+ */
+
+import { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
+import { formatDistanceToNow } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { toast, Toaster } from 'react-hot-toast';
+import { ArrowLeft, User, Clock, MessageSquareText, Search, Filter, X, Plus, Trash2, Flag, Shield, AlertTriangle } from 'lucide-react';
+import {
+  getThreads,
+  getThreadById,
+  createThread,
+  addComment,
+  deleteThread,
+  deleteComment
+} from '../API/ForumCaller';
+
+import {
+  sendWarning,
+  flagContent
+} from '../API/ModerationCaller';
+
+/**
+ * Composant Forum permettant aux utilisateurs de consulter et interagir avec des discussions.
+ * Les administrateurs ont accès à des fonctionnalités de modération supplémentaires.
+ * 
+ * @component
+ * @param {Object} props - Les propriétés du composant
+ * @param {string} props.userRole - Le rôle de l'utilisateur actuel ('Administrateur' ou autre)
+ * @returns {JSX.Element} Composant Forum
+ */
+const Forum = ({ userRole }) => {
+
+  const [threads, setThreads] = useState([]);
+  const [selectedThread, setSelectedThread] = useState(null);
+  const [newThreadTitle, setNewThreadTitle] = useState('');
+  const [newThreadContent, setNewThreadContent] = useState('');
+  const [disciplinaryWarning, setDisciplinaryWarning] = useState(null);
+  const [showDisciplinaryWarning, setShowDisciplinaryWarning] = useState(false);
+  const [newComment, setNewComment] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+  });
+
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeSearchQuery, setActiveSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('newest');
+  const [authorFilter, setAuthorFilter] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [showCreateThreadModal, setShowCreateThreadModal] = useState(false);
+  
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [deleteType, setDeleteType] = useState('');
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [warningMessage, setWarningMessage] = useState('');
+  const [userToWarn, setUserToWarn] = useState(null);
+  const [flaggedItems, setFlaggedItems] = useState(new Set());
+  const [showFlagModal, setShowFlagModal] = useState(false);
+  const [itemToFlag, setItemToFlag] = useState(null);
+  const [flagType, setFlagType] = useState('');
+  const [flagReason, setFlagReason] = useState('');
+  
+  useEffect(() => {
+    fetchThreads();
+  }, [pagination.currentPage, sortBy, authorFilter, activeSearchQuery, isSearching]);
+
+  /**
+   * Récupère la liste des discussions depuis l'API avec pagination et filtres.
+   * 
+   * @async
+   * @function
+   * @throws {Error} Si la requête échoue
+   * @returns {Promise&lt;void>}
+   */
+  const fetchThreads = async () => {
+    try {
+      setLoading(true);
+      console.log("Paramètres de recherche:", {
+        page: pagination.currentPage,
+        limit: 10,
+        search: activeSearchQuery,
+        sortBy: sortBy,
+        author: authorFilter || undefined
+      });
+      const response = await getThreads({
+        page: pagination.currentPage,
+        limit: 10,
+        search: activeSearchQuery,
+        sortBy: sortBy,
+        author: authorFilter || undefined,
+        searchSubmitted: activeSearchQuery ? 'true' : 'false'
+      });
+
+      if (response.status === 200) {
+        setThreads(response.data.threads);
+        setPagination({
+          currentPage: response.data.currentPage,
+          totalPages: response.data.totalPages
+        });
+        setError('');
+      } else {
+        setError(response.message || "Erreur lors du chargement des discussions");
+        toast.error(response.message || "Erreur lors du chargement des discussions");
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement des discussions:", error);
+      setError("Erreur lors du chargement des discussions");
+      toast.error("Erreur lors du chargement des discussions");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Récupère les détails d'une discussion spécifique depuis l'API.
+   *
+   * @async
+   * @function
+   * @param {string|number} threadId - L'identifiant de la discussion à récupérer
+   * @throws {Error} Si la requête échoue
+   * @returns {Promise&lt;void>}
+   */
+  const fetchThreadDetails = async threadId => {
+    try {
+      setLoading(true);
+      const response = await getThreadById({ threadId });
+
+      if (response.status === 200) {
+        setSelectedThread(response.data);
+        setError('');
+      } else {
+        setError(response.message || "Erreur lors du chargement de la discussion");
+        toast.error(response.message || "Erreur lors du chargement de la discussion");
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement de la discussion:", error);
+      setError("Erreur lors du chargement de la discussion");
+      toast.error("Erreur lors du chargement de la discussion");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Crée une nouvelle discussion avec le titre et le contenu saisis.
+   * Vérifie la présence de contenu interdit et affiche un avertissement si nécessaire.
+   *
+   * @async
+   * @function
+   * @throws {Error} Si la création échoue
+   * @returns {Promise&lt;void>}
+   */
+  const handleCreateThread = async () => {
+    if (!newThreadTitle.trim() || !newThreadContent.trim()) {
+      setError('Veuillez remplir tous les champs');
+      toast.error('Veuillez remplir tous les champs');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await createThread({
+        title: newThreadTitle.trim(),
+        content: newThreadContent.trim()
+      });
+
+      if (response.status === 201) {
+        const threadId = response.data.id;
+        await fetchThreads();
+        await fetchThreadDetails(threadId);
+        setNewThreadTitle('');
+        setNewThreadContent('');
+        setError('');
+        setShowCreateThreadModal(false);
+        toast.success('Discussion créée avec succès');
+      } else {
+        if (response.message?.includes('forbidden words')) {
+          setShowDisciplinaryWarning(true);
+          setDisciplinaryWarning(response.message);
+          toast('Avertissement !', { icon: '⚠️' });
+        } else {
+          setError(response.message || "Erreur lors de la création de la discussion");
+          toast.error(response.message || "Erreur lors de la création de la discussion");
+        }
+      }
+    } catch (error) {
+      console.error("Erreur lors de la création de la discussion:", error);
+      setError("Erreur lors de la création de la discussion");
+      toast.error("Erreur lors de la création de la discussion");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Ajoute un commentaire à la discussion sélectionnée.
+   * Vérifie la présence de contenu interdit et affiche un avertissement si nécessaire.
+   *
+   * @async
+   * @function
+   * @throws {Error} Si l'ajout du commentaire échoue
+   * @returns {Promise&lt;void>}
+   */
+  const handleCreateComment = async () => {
+    if (!newComment.trim()) {
+      setError('Veuillez écrire un commentaire');
+      toast.error('Veuillez écrire un commentaire');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await addComment({
+        threadId: selectedThread.id,
+        content: newComment.trim()
+      });
+
+      if (response.status === 201) {
+        await fetchThreadDetails(selectedThread.id);
+        setNewComment('');
+        setError('');
+        toast.success('Commentaire publié avec succès');
+      } else {
+        if (response.message?.includes('forbidden words')) {
+          setShowDisciplinaryWarning(true);
+          setDisciplinaryWarning(response.message);
+          toast('Avertissement !', { icon: '⚠️' });
+        } else {
+          setError(response.message || "Erreur lors de l'ajout du commentaire");
+          toast.error(response.message || "Erreur lors de l'ajout du commentaire");
+        }
+      }
+    } catch (error) {
+      console.error("Erreur lors de l'ajout du commentaire:", error);
+      setError("Erreur lors de l'ajout du commentaire");
+      toast.error("Erreur lors de l'ajout du commentaire");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+  /**
+   * Gère la soumission du formulaire de recherche.
+   * 
+   * @function
+   * @param {Event} e - L'événement de soumission du formulaire
+   * @returns {void}
+   */
+  const handleSearch = (e) => {
+    e.preventDefault();
+    setActiveSearchQuery(searchQuery);
+    setPagination(prev => ({ ...prev, currentPage: 1 }));
+    setIsSearching(prev => !prev);
+  };
+
+  /**
+   * Efface les critères de recherche actuels.
+   * 
+   * @function
+   * @returns {void}
+   */
+  const clearSearch = () => {
+    setSearchQuery('');
+    setActiveSearchQuery('');
+    setPagination(prev => ({ ...prev, currentPage: 1 }));
+    setIsSearching(prev => !prev);
+  };
+
+  /**
+   * Met à jour les filtres de tri et d'auteur.
+   * 
+   * @function
+   * @param {string} filter - Type de filtre ('sort' ou 'author')
+   * @param {string} value - Valeur du filtre
+   * @returns {void}
+   */
+  const handleFilterChange = (filter, value) => {
+    setPagination(prev => ({ ...prev, currentPage: 1 }));
+
+    switch (filter) {
+      case 'sort':
+        setSortBy(value);
+        break;
+      case 'author':
+        setAuthorFilter(value);
+        break;
+      default:
+        break;
+    }
+  };
+
+  /**
+   * Supprime une discussion via l'API.
+   * 
+   * @async
+   * @function
+   * @param {string|number} threadId - L'identifiant de la discussion à supprimer
+   * @throws {Error} Si la suppression échoue
+   * @returns {Promise&lt;void>}
+   */
+  const handleDeleteThread = async (threadId) => {
+    try {
+      setLoading(true);
+      const response = await deleteThread({ threadId });
+      
+      if (response.status === 200) {
+        toast.success("Discussion supprimée avec succès");
+
+        if (selectedThread &amp;&amp; selectedThread.id === threadId) {
+          setSelectedThread(null);
+        }
+
+        await fetchThreads();
+      } else {
+        toast.error(response.message || "Erreur lors de la suppression de la discussion");
+      }
+    } catch (error) {
+      console.error("Erreur lors de la suppression de la discussion:", error);
+      toast.error("Erreur lors de la suppression de la discussion");
+    } finally {
+      setLoading(false);
+      setShowDeleteModal(false);
+      setItemToDelete(null);
+      setDeleteType('');
+    }
+  };
+  
+  /**
+   * Supprime un commentaire via l'API.
+   * 
+   * @async
+   * @function
+   * @param {string|number} commentId - L'identifiant du commentaire à supprimer
+   * @throws {Error} Si la suppression échoue
+   * @returns {Promise&lt;void>}
+   */
+  const handleDeleteComment = async (commentId) => {
+    try {
+      setLoading(true);
+      const response = await deleteComment({ commentId });
+      
+      if (response.status === 200) {
+        toast.success("Commentaire supprimé avec succès");
+
+        if (selectedThread) {
+          await fetchThreadDetails(selectedThread.id);
+        }
+      } else {
+        toast.error(response.message || "Erreur lors de la suppression du commentaire");
+      }
+    } catch (error) {
+      console.error("Erreur lors de la suppression du commentaire:", error);
+      toast.error("Erreur lors de la suppression du commentaire");
+    } finally {
+      setLoading(false);
+      setShowDeleteModal(false);
+      setItemToDelete(null);
+      setDeleteType('');
+    }
+  };
+  
+  /**
+   * Affiche la modale de confirmation de suppression.
+   * 
+   * @function
+   * @param {string|number} id - L'identifiant de l'élément à supprimer
+   * @param {string} type - Le type d'élément ('thread' ou 'comment')
+   * @returns {void}
+   */
+  const showDeleteConfirmation = (id, type) => {
+    setItemToDelete(id);
+    setDeleteType(type);
+    setShowDeleteModal(true);
+  };
+  
+  /**
+   * Confirme la suppression de l'élément sélectionné.
+   * 
+   * @function
+   * @returns {void}
+   */
+  const confirmDelete = () => {
+    if (deleteType === 'thread') {
+      handleDeleteThread(itemToDelete);
+    } else if (deleteType === 'comment') {
+      handleDeleteComment(itemToDelete);
+    }
+  };
+  
+  /**
+   * Affiche le formulaire d'avertissement pour un utilisateur.
+   * 
+   * @function
+   * @param {string|number} userId - L'identifiant de l'utilisateur à avertir
+   * @param {string} username - Le nom d'utilisateur
+   * @returns {void}
+   */
+  const showWarningForm = (userId, username) => {
+    setUserToWarn({ id: userId, username });
+    setShowWarningModal(true);
+  };
+  
+  /**
+   * Envoie un avertissement à un utilisateur via l'API.
+   * 
+   * @async
+   * @function
+   * @throws {Error} Si l'envoi de l'avertissement échoue
+   * @returns {Promise&lt;void>}
+   */
+  const handleSendWarning = async () => {
+    if (!warningMessage.trim()) {
+      toast.error("Veuillez saisir un message d'avertissement");
+      return;
+    }
+    
+    try {
+      setLoading(true);
+
+      const response = await sendWarning({
+        userId: userToWarn.id,
+        message: warningMessage.trim()
+      });
+      
+      if (response.status === 201) {
+        toast.success(`Avertissement envoyé à ${userToWarn.username}`);
+        setShowWarningModal(false);
+        setWarningMessage('');
+        setUserToWarn(null);
+      } else {
+        toast.error(response.message || "Erreur lors de l'envoi de l'avertissement");
+      }
+    } catch (error) {
+      console.error("Erreur lors de l'envoi de l'avertissement:", error);
+      toast.error("Erreur lors de l'envoi de l'avertissement");
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  /**
+   * Initialise le processus de signalement d'un contenu.
+   * 
+   * @function
+   * @param {string|number} id - L'identifiant de l'élément à signaler
+   * @param {string} type - Le type d'élément ('thread' ou 'comment')
+   * @returns {void}
+   */
+  const handleFlagContent = (id, type) => {
+    setItemToFlag(id);
+    setFlagType(type);
+    setShowFlagModal(true);
+  };
+  
+  /**
+   * Soumet un signalement de contenu via l'API.
+   * 
+   * @async
+   * @function
+   * @throws {Error} Si le signalement échoue
+   * @returns {Promise&lt;void>}
+   */
+  const submitFlag = async () => {
+    if (!flagReason.trim()) {
+      toast.error("Veuillez indiquer une raison pour le signalement");
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      const response = await flagContent({
+        itemId: itemToFlag,
+        itemType: flagType,
+        reason: flagReason.trim()
+      });
+      
+      if (response.status === 201) {
+        setFlaggedItems(prev => new Set([...prev, itemToFlag]));
+        toast.success(`${flagType === 'thread' ? 'Discussion' : 'Commentaire'} signalé pour révision`);
+        setShowFlagModal(false);
+        setFlagReason('');
+        setItemToFlag(null);
+        setFlagType('');
+      } else {
+        toast.error(response.message || "Erreur lors du signalement du contenu");
+      }
+    } catch (error) {
+      console.error("Erreur lors du signalement du contenu:", error);
+      toast.error("Erreur lors du signalement du contenu");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+  /**
+   * Affiche les contrôles de modération pour une discussion (administrateurs uniquement).
+   * 
+   * @function
+   * @param {string|number} threadId - L'identifiant de la discussion
+   * @param {string|number} userId - L'identifiant de l'auteur
+   * @param {string} username - Le nom d'utilisateur de l'auteur
+   * @returns {JSX.Element|null} Les contrôles de modération ou null si l'utilisateur n'est pas administrateur
+   */
+  const renderModerationControls = (threadId, userId, username) => {
+    if (userRole !== 'Administrateur') return null;
+    
+    const isFlagged = flaggedItems.has(threadId);
+    
+    return (
+      &lt;div className="flex items-center gap-2 mt-2 text-sm">
+        &lt;button 
+          onClick={(e) => {
+            e.stopPropagation();
+            showDeleteConfirmation(threadId, 'thread');
+          }}
+          className="flex items-center gap-1 text-red-600 hover:text-red-800"
+          title="Supprimer cette discussion"
+        >
+          &lt;Trash2 className="w-4 h-4" />
+          &lt;span>Supprimer&lt;/span>
+        &lt;/button>
+        &lt;button 
+          onClick={(e) => {
+            e.stopPropagation();
+            showWarningForm(userId, username);
+          }}
+          className="flex items-center gap-1 text-amber-600 hover:text-amber-800"
+          title="Avertir l'utilisateur"
+        >
+          &lt;AlertTriangle className="w-4 h-4" />
+          &lt;span>Avertir&lt;/span>
+        &lt;/button>
+        &lt;button 
+          onClick={(e) => {
+            e.stopPropagation();
+            handleFlagContent(threadId, 'thread');
+          }}
+          className={`flex items-center gap-1 ${isFlagged ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
+          title={isFlagged ? "Discussion déjà signalée" : "Signaler cette discussion pour révision"}
+        >
+          &lt;Flag className="w-4 h-4" fill={isFlagged ? "currentColor" : "none"} />
+          &lt;span>{isFlagged ? "Signalé" : "Signaler"}&lt;/span>
+        &lt;/button>
+      &lt;/div>
+    );
+  };
+  
+
+  /**
+   * Affiche les contrôles de modération pour un commentaire (administrateurs uniquement).
+   * 
+   * @function
+   * @param {string|number} commentId - L'identifiant du commentaire
+   * @param {string|number} userId - L'identifiant de l'auteur
+   * @param {string} username - Le nom d'utilisateur de l'auteur
+   * @returns {JSX.Element|null} Les contrôles de modération ou null si l'utilisateur n'est pas administrateur
+   */
+  const renderCommentModerationControls = (commentId, userId, username) => {
+    if (userRole !== 'Administrateur') return null;
+    
+    const isFlagged = flaggedItems.has(commentId);
+    
+    return (
+      &lt;div className="flex items-center gap-2 mt-2 text-sm">
+        &lt;button 
+          onClick={() => showDeleteConfirmation(commentId, 'comment')}
+          className="flex items-center gap-1 text-red-600 hover:text-red-800"
+        >
+          &lt;Trash2 className="w-4 h-4" />
+          &lt;span>Supprimer&lt;/span>
+        &lt;/button>
+        &lt;button 
+          onClick={() => showWarningForm(userId, username)}
+          className="flex items-center gap-1 text-amber-600 hover:text-amber-800"
+        >
+          &lt;AlertTriangle className="w-4 h-4" />
+          &lt;span>Avertir&lt;/span>
+        &lt;/button>
+        &lt;button 
+          onClick={() => handleFlagContent(commentId, 'comment')}
+          className={`flex items-center gap-1 ${isFlagged ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'}`}
+        >
+          &lt;Flag className="w-4 h-4" fill={isFlagged ? "currentColor" : "none"} />
+          &lt;span>{isFlagged ? "Signalé" : "Signaler"}&lt;/span>
+        &lt;/button>
+      &lt;/div>
+    );
+  };
+
+  return (
+    &lt;div className="min-h-screen bg-gray-50 py-8">
+      &lt;Toaster position="top-center" reverseOrder={false} />
+      
+      {/* Admin badge for administrators */}
+      {userRole === 'Administrateur' &amp;&amp; (
+        &lt;div className="max-w-4xl mx-auto px-4 mb-4">
+          &lt;div className="inline-flex items-center gap-2 bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium">
+            &lt;Shield className="w-4 h-4" />
+            Mode modération
+          &lt;/div>
+        &lt;/div>
+      )}
+      
+      &lt;div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        &lt;h1 className="text-4xl font-extrabold text-gray-900 mb-8 border-b pb-4 border-gray-200">
+          Forum de discussion
+        &lt;/h1>
+
+        {error &amp;&amp; (
+          &lt;div className="mb-6 p-4 bg-red-50 text-red-800 rounded-lg border border-red-200 flex items-center">
+            &lt;svg
+              className="w-5 h-5 mr-2"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              &lt;path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z"
+                clipRule="evenodd"
+              />
+            &lt;/svg>
+            {error}
+          &lt;/div>
+        )}
+
+        {/* Disciplinary warning modal - existing code */}
+        {showDisciplinaryWarning &amp;&amp; (
+          &lt;div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="disciplinary-heading"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity"
+            onClick={() => setShowDisciplinaryWarning(false)}
+            onKeyDown={e =>
+              e.key === 'Escape' &amp;&amp; setShowDisciplinaryWarning(false)
+            }
+          >
+            &lt;div
+              className="mx-4 w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl transition-all"
+              onClick={e => e.stopPropagation()}
+            >
+              &lt;div className="flex items-start justify-between">
+                &lt;div className="flex-1">
+                  &lt;div className="flex items-center gap-2 mb-4">
+                    &lt;svg
+                      className="w-6 h-6 text-red-500 shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      &lt;path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                      />
+                    &lt;/svg>
+                    &lt;h2
+                      id="disciplinary-heading"
+                      className="text-xl font-semibold text-gray-900"
+                    >
+                      Avertissement disciplinaire
+                    &lt;/h2>
+                  &lt;/div>
+
+                  {/* Nouveau contenu textuel */}
+                  &lt;div className="space-y-4 text-gray-700">
+                    &lt;p className="leading-relaxed">{disciplinaryWarning}&lt;/p>
+
+                    &lt;div className="p-4 bg-amber-50 rounded-lg border border-amber-100">
+                      &lt;h3 className="flex items-center gap-2 mb-2 font-medium text-amber-700">
+                        &lt;svg
+                          className="w-5 h-5 shrink-0"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          &lt;path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        &lt;/svg>
+                        Raison de l&amp;apos;avertissement
+                      &lt;/h3>
+                      &lt;p className="text-sm">
+                        Vous avez enfreint notre charte de conduite en
+                        partageant du contenu inapproprié. Ce comportement est
+                        contraire à l&amp;apos;article 4.2 de nos conditions
+                        d&amp;apos;utilisation.
+                      &lt;/p>
+                    &lt;/div>
+
+                    &lt;div className="grid gap-3 sm:grid-cols-2">
+                      &lt;div className="p-3 bg-gray-50 rounded-lg">
+                        &lt;h4 className="flex items-center gap-2 mb-1 text-sm font-medium">
+                          &lt;svg
+                            className="w-4 h-4 text-gray-500 shrink-0"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            &lt;path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                            />
+                          &lt;/svg>
+                          Règles violées
+                        &lt;/h4>
+                        &lt;ul className="pl-5 text-sm list-disc">
+                          &lt;li>Langage inapproprié&lt;/li>
+                          &lt;li>Partage d&amp;apos;informations personnelles&lt;/li>
+                          &lt;li>Spam répété&lt;/li>
+                        &lt;/ul>
+                      &lt;/div>
+
+                      &lt;div className="p-3 bg-red-50 rounded-lg">
+                        &lt;h4 className="flex items-center gap-2 mb-1 text-sm font-medium text-red-700">
+                          &lt;svg
+                            className="w-4 h-4 shrink-0"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            &lt;path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                            />
+                          &lt;/svg>
+                          Conséquences
+                        &lt;/h4>
+                        &lt;ul className="pl-5 text-sm list-disc">
+                          &lt;li>Restriction des fonctionnalités&lt;/li>
+                          &lt;li>Surveillance accrue&lt;/li>
+                          &lt;li>Possibilité de suspension&lt;/li>
+                        &lt;/ul>
+                      &lt;/div>
+                    &lt;/div>
+
+                    &lt;div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                      &lt;h3 className="flex items-center gap-2 mb-2 text-sm font-medium text-blue-700">
+                        &lt;svg
+                          className="w-5 h-5 shrink-0"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          &lt;path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        &lt;/svg>
+                        Prochaines étapes
+                      &lt;/h3>
+                      &lt;p className="text-sm">
+                        Si vous pensez qu&amp;apos;il s&amp;apos;agit d&amp;apos;une erreur
+                        ou souhaitez contester cette décision, veuillez
+                        contacter notre équipe de modération à
+                        &lt;a
+                          href="mailto:moderation@spoc.lmsc"
+                          className="ml-1 text-blue-600 underline hover:text-blue-800"
+                        >
+                          moderation@spoc.lmsc
+                        &lt;/a>{' '}
+                        dans les 48 heures.
+                      &lt;/p>
+                    &lt;/div>
+                  &lt;/div>
+                &lt;/div>
+
+                &lt;button
+                  type="button"
+                  onClick={() => setShowDisciplinaryWarning(false)}
+                  className="ml-4 p-1 text-gray-400 hover:text-gray-500 rounded-full hover:bg-gray-100 transition-colors"
+                  aria-label="Fermer l'avertissement"
+                >
+                  &lt;svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    &lt;path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  &lt;/svg>
+                &lt;/button>
+              &lt;/div>
+
+              &lt;div className="mt-6 flex flex-col sm:flex-row justify-end gap-3">
+                &lt;button
+                  type="button"
+                  onClick={() => setShowDisciplinaryWarning(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 focus:ring-2 focus:ring-gray-300 transition-colors"
+                >
+                  Fermer
+                &lt;/button>
+                &lt;button
+                  type="button"
+                  onClick={() => {
+                    setError(null);
+                    setDisciplinaryWarning(null);
+                    setShowDisciplinaryWarning(false);
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 focus:ring-2 focus:ring-red-300 transition-colors"
+                >
+                  Je comprends et accepte
+                &lt;/button>
+              &lt;/div>
+            &lt;/div>
+          &lt;/div>
+        )}
+
+        {/* Create Thread Modal */}
+        {showCreateThreadModal &amp;&amp; (
+          &lt;div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="create-thread-heading"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity"
+            onClick={() => setShowCreateThreadModal(false)}
+            onKeyDown={e => e.key === 'Escape' &amp;&amp; setShowCreateThreadModal(false)}
+          >
+            &lt;div
+              className="mx-4 w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl transition-all"
+              onClick={e => e.stopPropagation()}
+            >
+              &lt;div className="flex items-start justify-between mb-6">
+                &lt;h2
+                  id="create-thread-heading"
+                  className="text-xl font-semibold text-gray-900"
+                >
+                  Nouvelle discussion
+                &lt;/h2>
+
+                &lt;button
+                  type="button"
+                  onClick={() => setShowCreateThreadModal(false)}
+                  className="ml-4 p-1 text-gray-400 hover:text-gray-500 rounded-full hover:bg-gray-100 transition-colors"
+                  aria-label="Fermer"
+                >
+                  &lt;svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    &lt;path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  &lt;/svg>
+                &lt;/button>
+              &lt;/div>
+
+              &lt;div className="space-y-5">
+                &lt;div>
+                  &lt;label className="block text-sm font-medium text-gray-700 mb-2">
+                    Titre
+                  &lt;/label>
+                  &lt;input
+                    type="text"
+                    placeholder="Sujet de votre discussion"
+                    value={newThreadTitle}
+                    onChange={e => setNewThreadTitle(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                &lt;/div>
+                &lt;div>
+                  &lt;label className="block text-sm font-medium text-gray-700 mb-2">
+                    Contenu
+                  &lt;/label>
+                  &lt;textarea
+                    placeholder="Détails de votre discussion"
+                    value={newThreadContent}
+                    onChange={e => setNewThreadContent(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    rows="6"
+                  />
+                &lt;/div>
+
+                &lt;div className="flex justify-end gap-3 pt-2">
+                  &lt;button
+                    type="button"
+                    onClick={() => setShowCreateThreadModal(false)}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 focus:ring-2 focus:ring-gray-300 transition-colors"
+                  >
+                    Annuler
+                  &lt;/button>
+                  &lt;button
+                    onClick={handleCreateThread}
+                    className="inline-flex items-center justify-center px-6 py-2 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      &lt;>
+                        &lt;svg
+                          className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          &lt;circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          >&lt;/circle>
+                          &lt;path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          >&lt;/path>
+                        &lt;/svg>
+                        Création...
+                      &lt;/>
+                    ) : (
+                      'Publier la discussion'
+                    )}
+                  &lt;/button>
+                &lt;/div>
+              &lt;/div>
+            &lt;/div>
+          &lt;/div>
+        )}
+
+        {/* Remplacer la section "New thread" par un bouton */}
+        &lt;section className="mb-3 flex justify-end">
+          &lt;button
+            onClick={() => setShowCreateThreadModal(true)}
+            className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+          >
+            &lt;Plus className="w-5 h-5 mr-2" />
+            Nouvelle discussion
+          &lt;/button>
+        &lt;/section>
+
+        {!selectedThread ? (
+          &lt;>
+            {/* Search and Filter Bar */}
+            &lt;section className="mb-6 p-4 bg-white rounded-lg shadow-sm border border-gray-200">
+              &lt;div className="mt-4 flex flex-wrap gap-4">
+                &lt;div className="min-w-[200px]">
+                  &lt;label htmlFor="sortBy" className="block text-sm font-medium text-gray-700 mb-1">
+                    Trier par
+                  &lt;/label>
+                  &lt;select
+                    id="sortBy"
+                    value={sortBy}
+                    onChange={(e) => handleFilterChange('sort', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    &lt;option value="newest">Plus récents&lt;/option>
+                    &lt;option value="oldest">Plus anciens&lt;/option>
+                    &lt;option value="popular">Plus commentés&lt;/option>
+                  &lt;/select>
+                &lt;/div>
+
+                &lt;div className="min-w-[200px]">
+                  &lt;label htmlFor="author" className="block text-sm font-medium text-gray-700 mb-1">
+                    Auteur
+                  &lt;/label>
+                  &lt;input
+                    type="text"
+                    id="author"
+                    placeholder="Nom d'utilisateur"
+                    value={authorFilter}
+                    onChange={(e) => handleFilterChange('author', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                &lt;/div>
+              &lt;/div>
+
+              &lt;form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-4 mt-4">
+                &lt;div className="relative flex-grow">
+                  &lt;div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    &lt;Search className="h-5 w-5 text-gray-400" />
+                  &lt;/div>
+                  &lt;input
+                    type="text"
+                    placeholder="Rechercher dans les discussions..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  {searchQuery &amp;&amp; (
+                    &lt;button
+                      type="button"
+                      onClick={clearSearch}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    >
+                      &lt;X className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    &lt;/button>
+                  )}
+                &lt;/div>
+                &lt;button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                >
+                  Rechercher
+                &lt;/button>
+              &lt;/form>
+
+              {(searchQuery || sortBy !== 'newest' || authorFilter) &amp;&amp; (
+                &lt;div className="mt-4 flex items-center">
+                  &lt;span className="text-sm text-gray-500 mr-2 flex items-center">
+                    &lt;Filter className="w-4 h-4 mr-1" /> Filtres actifs:
+                  &lt;/span>
+                  &lt;div className="flex flex-wrap gap-2">
+                    {searchQuery &amp;&amp; (
+                      &lt;span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full flex items-center">
+                        Recherche: {searchQuery}
+                        &lt;button onClick={clearSearch} className="ml-1">
+                          &lt;X className="w-3 h-3" />
+                        &lt;/button>
+                      &lt;/span>
+                    )}
+                    {sortBy !== 'newest' &amp;&amp; (
+                      &lt;span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                        Tri: {sortBy === 'oldest' ? 'Plus anciens' : 'Plus commentés'}
+                      &lt;/span>
+                    )}
+                    {authorFilter &amp;&amp; (
+                      &lt;span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                        Auteur: {authorFilter}
+                      &lt;/span>
+                    )}
+                    &lt;button
+                      onClick={() => {
+                        setSearchQuery('');
+                        setActiveSearchQuery('');
+                        setSortBy('newest');
+                        setAuthorFilter('');
+                        setPagination(prev => ({ ...prev, currentPage: 1 }));
+                        setIsSearching(prev => !prev);
+                      }}
+                      className="text-xs text-gray-600 underline hover:text-gray-900"
+                    >
+                      Réinitialiser tous les filtres
+                    &lt;/button>
+                  &lt;/div>
+                &lt;/div>
+              )}
+            &lt;/section>
+
+            {/* Thread list - existing code */}
+            &lt;section className="space-y-6">
+              {loading &amp;&amp; threads.length === 0 ? (
+                &lt;div className="text-center py-8">
+                  &lt;div className="inline-block animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mb-4">&lt;/div>
+                  &lt;p className="text-gray-600">Chargement des discussions...&lt;/p>
+                &lt;/div>
+              ) : threads.length === 0 ? (
+                &lt;div className="text-center py-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                  &lt;p className="text-gray-600 mb-2">Aucune discussion trouvée.&lt;/p>
+                  &lt;p className="text-sm text-gray-500">Essayez de modifier vos critères de recherche ou créez une nouvelle discussion.&lt;/p>
+                &lt;/div>
+              ) : (
+                threads.map(thread => (
+                  &lt;article
+                    key={thread.id}
+                    onClick={() => fetchThreadDetails(thread.id)}
+                    className="group p-6 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 border border-gray-200 cursor-pointer"
+                  >
+                    &lt;h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      {thread.title}
+                    &lt;/h3>
+                    &lt;p className="text-gray-600 line-clamp-2 mb-4">
+                      {thread.content}
+                    &lt;/p>
+                    &lt;div className="flex items-center text-sm text-gray-500 space-x-4">
+                      &lt;span className="inline-flex items-center">
+                        &lt;User className="w-4 h-4 mr-2" />
+                        {thread.User?.username}
+                      &lt;/span>
+                      &lt;span className="inline-flex items-center">
+                        &lt;Clock className="w-4 h-4 mr-2" />
+                        {formatDistanceToNow(new Date(thread.createdAt), {
+                          addSuffix: true,
+                          locale: fr,
+                        })}
+                      &lt;/span>
+                      &lt;span className="inline-flex items-center">
+                        &lt;MessageSquareText className="w-4 h-4 mr-1 mt-1" />
+                        {thread.commentsCount} réponse
+                        {thread.commentsCount > 1 ? 's' : ''}
+                      &lt;/span>
+                    &lt;/div>
+                    
+                    {/* Add moderation controls */}
+                    {renderModerationControls(thread.id, thread.User?.id, thread.User?.username)}
+                  &lt;/article>
+                ))
+              )}
+            &lt;/section>
+            
+            {/* Pagination - existing code */}
+            &lt;div className="mt-6 flex justify-between">
+              &lt;button
+                disabled={pagination.currentPage &lt;= 1}
+                onClick={() =>
+                  setPagination(prev => ({
+                    ...prev,
+                    currentPage: prev.currentPage - 1,
+                  }))
+                }
+                className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50"
+              >
+                Précédent
+              &lt;/button>
+              &lt;button
+                disabled={pagination.currentPage >= pagination.totalPages}
+                onClick={() =>
+                  setPagination(prev => ({
+                    ...prev,
+                    currentPage: prev.currentPage + 1,
+                  }))
+                }
+                className="px-4 py-2 bg-gray-200 rounded disabled:opacity-50"
+              >
+                Suivant
+              &lt;/button>
+            &lt;/div>
+          &lt;/>
+        ) : (
+
+          &lt;div>
+            &lt;button
+              onClick={() => {
+                setSelectedThread(null);
+                fetchThreads();
+                setError(null);
+              }}
+              className="mb-6 flex items-center text-gray-600 hover:text-gray-900 transition-colors duration-200"
+            >
+              &lt;ArrowLeft className="w-4 h-4 mr-2" />
+              Retour aux discussions
+            &lt;/button>
+
+            &lt;article className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              &lt;header className="mb-8">
+                &lt;h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  {selectedThread.title}
+                &lt;/h2>
+                &lt;div className="flex items-center space-x-4 text-sm text-gray-500">
+                  &lt;span className="flex items-center">
+                    &lt;User className="w-4 h-4 mr-1.5" />
+                    {selectedThread.User?.username}
+                  &lt;/span>
+                  &lt;span className="flex items-center">
+                    &lt;Clock className="w-4 h-4 mr-1.5" />
+                    {formatDistanceToNow(new Date(selectedThread.createdAt), {
+                      addSuffix: true,
+                      locale: fr,
+                    })}
+                  &lt;/span>
+                &lt;/div>
+                
+                {/* Add thread moderation controls */}
+                {userRole === 'Administrateur' &amp;&amp; (
+                  &lt;div className="mt-3 flex gap-3">
+                    &lt;button 
+                      onClick={() => showDeleteConfirmation(selectedThread.id, 'thread')}
+                      className="flex items-center gap-1 px-3 py-1 text-white bg-red-600 rounded-md hover:bg-red-700"
+                    >
+                      &lt;Trash2 className="w-4 h-4" />
+                      &lt;span>Supprimer la discussion&lt;/span>
+                    &lt;/button>
+                    &lt;button 
+                      onClick={() => showWarningForm(selectedThread.User?.id, selectedThread.User?.username)}
+                      className="flex items-center gap-1 px-3 py-1 text-white bg-amber-600 rounded-md hover:bg-amber-700"
+                    >
+                      &lt;AlertTriangle className="w-4 h-4" />
+                      &lt;span>Avertir l&amp;apos;auteur&lt;/span>
+                    &lt;/button>
+                  &lt;/div>
+                )}
+              &lt;/header>
+
+              &lt;div className="prose prose-blue mb-10 p-4 bg-gray-50 rounded-lg">
+                {selectedThread.content}
+              &lt;/div>
+
+              &lt;section className="space-y-6">
+                {selectedThread.Comments.map(comment => (
+                  &lt;div
+                    key={comment.id}
+                    className="pl-6 border-l-4 border-blue-200"
+                  >
+                    &lt;div className="prose prose-sm text-gray-600">
+                      {comment.content}
+                    &lt;/div>
+                    &lt;div className="mt-3 text-sm text-gray-500 flex items-center space-x-3">
+                      &lt;span className="flex items-center">
+                        &lt;User className="w-4 h-4 mr-1.5" />
+                        {comment.User.username}
+                      &lt;/span>
+                      &lt;span className="flex items-center">
+                        &lt;Clock className="w-4 h-4 mr-1.5" />
+                        {formatDistanceToNow(new Date(comment.createdAt), {
+                          addSuffix: true,
+                          locale: fr,
+                        })}
+                      &lt;/span>
+                    &lt;/div>
+                    
+                    {/* Add comment moderation controls */}
+                    {renderCommentModerationControls(comment.id, comment.User.id, comment.User.username)}
+                  &lt;/div>
+                ))}
+              &lt;/section>
+              
+              &lt;div className="mt-10 pt-6 border-t border-gray-200">
+                &lt;label className="block text-sm font-medium text-gray-700 mb-4">
+                  Votre réponse
+                &lt;/label>
+                &lt;textarea
+                  placeholder="Écrivez votre réponse ici..."
+                  value={newComment}
+                  onChange={e => setNewComment(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mb-4"
+                  rows="4"
+                />
+                &lt;button
+                  onClick={handleCreateComment}
+                  className="inline-flex items-center justify-center px-6 py-2.5 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    &lt;>
+                      &lt;svg
+                        className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        &lt;circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        >&lt;/circle>
+                        &lt;path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        >&lt;/path>
+                      &lt;/svg>
+                      Publication...
+                    &lt;/>
+                  ) : (
+                    'Publier la réponse'
+                  )}
+                &lt;/button>
+              &lt;/div>
+            &lt;/article>
+          &lt;/div>
+        )}
+      &lt;/div>
+      
+      {/* Delete confirmation modal */}
+      {showDeleteModal &amp;&amp; (
+        &lt;div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          &lt;div className="mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+            &lt;h3 className="text-xl font-bold text-gray-900 mb-4">Confirmer la suppression&lt;/h3>
+            &lt;p className="text-gray-600 mb-6">
+              Êtes-vous sûr de vouloir supprimer {deleteType === 'thread' ? 'cette discussion' : 'ce commentaire'} ? 
+              Cette action est irréversible.
+            &lt;/p>
+            &lt;div className="flex justify-end gap-3">
+              &lt;button
+                onClick={() => setShowDeleteModal(false)}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              >
+                Annuler
+              &lt;/button>
+              &lt;button
+                onClick={confirmDelete}
+                className="px-4 py-2 text-white bg-red-600 rounded-lg hover:bg-red-700"
+                disabled={loading}
+              >
+                {loading ? 'Suppression...' : 'Supprimer'}
+              &lt;/button>
+            &lt;/div>
+          &lt;/div>
+        &lt;/div>
+      )}
+      
+      {/* Warning modal */}
+      {showWarningModal &amp;&amp; (
+        &lt;div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          &lt;div className="mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+            &lt;h3 className="text-xl font-bold text-gray-900 mb-4">
+              Envoyer un avertissement à {userToWarn?.username}
+            &lt;/h3>
+            &lt;div className="mb-4">
+              &lt;label className="block text-sm font-medium text-gray-700 mb-2">
+                Message d&amp;apos;avertissement
+              &lt;/label>
+              &lt;textarea
+                value={warningMessage}
+                onChange={e => setWarningMessage(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                rows="4"
+                placeholder="Décrivez la raison de l'avertissement..."
+              />
+            &lt;/div>
+            &lt;div className="flex justify-end gap-3">
+              &lt;button
+                onClick={() => setShowWarningModal(false)}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              >
+                Annuler
+              &lt;/button>
+              &lt;button
+                onClick={handleSendWarning}
+                className="px-4 py-2 text-white bg-amber-600 rounded-lg hover:bg-amber-700"
+                disabled={loading}
+              >
+                {loading ? 'Envoi...' : 'Envoyer l\'avertissement'}
+              &lt;/button>
+            &lt;/div>
+          &lt;/div>
+        &lt;/div>
+      )}
+
+      {/* Flag modal */}
+      {showFlagModal &amp;&amp; (
+        &lt;div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          &lt;div className="mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+            &lt;h3 className="text-xl font-bold text-gray-900 mb-4">
+              Signaler le contenu
+            &lt;/h3>
+            &lt;div className="mb-4">
+              &lt;label className="block text-sm font-medium text-gray-700 mb-2">
+                Motif du signalement
+              &lt;/label>
+              &lt;textarea
+                value={flagReason}
+                onChange={e => setFlagReason(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                rows="4"
+                placeholder="Décrivez pourquoi ce contenu doit être révisé..."
+              />
+            &lt;/div>
+            &lt;div className="flex justify-end gap-3">
+              &lt;button
+                onClick={() => setShowFlagModal(false)}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+              >
+                Annuler
+              &lt;/button>
+              &lt;button
+                onClick={submitFlag}
+                className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                disabled={loading}
+              >
+                {loading ? 'Envoi...' : 'Signaler le contenu'}
+              &lt;/button>
+            &lt;/div>
+          &lt;/div>
+        &lt;/div>
+      )}
+    &lt;/div>
+  );
+};
+
+Forum.propTypes = {
+  userRole: PropTypes.string,
+  currentUser: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    username: PropTypes.string.isRequired,
+  })
+};
+
+export default Forum;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-App.html">App</a></li></ul><h3>Global</h3><ul><li><a href="global.html#About">About</a></li><li><a href="global.html#AccountDisabledModal">AccountDisabledModal</a></li><li><a href="global.html#AdminDashboardHome">AdminDashboardHome</a></li><li><a href="global.html#BASE_URL">BASE_URL</a></li><li><a href="global.html#BulkActions">BulkActions</a></li><li><a href="global.html#ClassManagementTutorial">ClassManagementTutorial</a></li><li><a href="global.html#ClasseCards">ClasseCards</a></li><li><a href="global.html#ClasseCreationModal">ClasseCreationModal</a></li><li><a href="global.html#ClasseManagement">ClasseManagement</a></li><li><a href="global.html#ClasseTable">ClasseTable</a></li><li><a href="global.html#Contact">Contact</a></li><li><a href="global.html#ContentCard">ContentCard</a></li><li><a href="global.html#CourseReader">CourseReader</a></li><li><a href="global.html#CourseReaderTutorial">CourseReaderTutorial</a></li><li><a href="global.html#Courses">Courses</a></li><li><a href="global.html#CoursesLibraryTutorial">CoursesLibraryTutorial</a></li><li><a href="global.html#Dashboard">Dashboard</a></li><li><a href="global.html#DashboardTutorial">DashboardTutorial</a></li><li><a href="global.html#DeleteDocument">DeleteDocument</a></li><li><a href="global.html#DeleteVideo">DeleteVideo</a></li><li><a href="global.html#EleveDashboardHome">EleveDashboardHome</a></li><li><a href="global.html#ErrorMessage">ErrorMessage</a></li><li><a href="global.html#FilterDropdown">FilterDropdown</a></li><li><a href="global.html#FirstLogin">FirstLogin</a></li><li><a href="global.html#Footer">Footer</a></li><li><a href="global.html#Forum">Forum</a></li><li><a href="global.html#GetAll_DataStructure">GetAll_DataStructure</a></li><li><a href="global.html#GetAll_Document">GetAll_Document</a></li><li><a href="global.html#Get_Document_Information">Get_Document_Information</a></li><li><a href="global.html#Get_Video_Information">Get_Video_Information</a></li><li><a href="global.html#Get_special_Document">Get_special_Document</a></li><li><a href="global.html#Get_special_Video">Get_special_Video</a></li><li><a href="global.html#Home">Home</a></li><li><a href="global.html#INACTIVITY_THRESHOLD">INACTIVITY_THRESHOLD</a></li><li><a href="global.html#LegalNotice">LegalNotice</a></li><li><a href="global.html#LiveNotFound">LiveNotFound</a></li><li><a href="global.html#LiveViewer">LiveViewer</a></li><li><a href="global.html#LoadCanvasTemplate">LoadCanvasTemplate</a></li><li><a href="global.html#LoadingComponent">LoadingComponent</a></li><li><a href="global.html#LoadingSpinner">LoadingSpinner</a></li><li><a href="global.html#Logout">Logout</a></li><li><a href="global.html#Mailbox">Mailbox</a></li><li><a href="global.html#MaintenanceBanner">MaintenanceBanner</a></li><li><a href="global.html#MessageDetailSkeleton">MessageDetailSkeleton</a></li><li><a href="global.html#MessageSkeleton">MessageSkeleton</a></li><li><a href="global.html#NavigationBar">NavigationBar</a></li><li><a href="global.html#PictureModal">PictureModal</a></li><li><a href="global.html#PrivacyPolicy">PrivacyPolicy</a></li><li><a href="global.html#PrivacyTab">PrivacyTab</a></li><li><a href="global.html#ProfilePhotoSelector">ProfilePhotoSelector</a></li><li><a href="global.html#PublicNavbar">PublicNavbar</a></li><li><a href="global.html#SearchBar">SearchBar</a></li><li><a href="global.html#SearchUser">SearchUser</a></li><li><a href="global.html#SecureDocumentViewer">SecureDocumentViewer</a></li><li><a href="global.html#SecureVideoPlayer">SecureVideoPlayer</a></li><li><a href="global.html#SecurityTab">SecurityTab</a></li><li><a href="global.html#SendDocument">SendDocument</a></li><li><a href="global.html#SendVideo">SendVideo</a></li><li><a href="global.html#Settings">Settings</a></li><li><a href="global.html#Sign">Sign</a></li><li><a href="global.html#Spinner">Spinner</a></li><li><a href="global.html#StreamReader">StreamReader</a></li><li><a href="global.html#TEN_MINUTES">TEN_MINUTES</a></li><li><a href="global.html#TermsOfUse">TermsOfUse</a></li><li><a href="global.html#ToggleView">ToggleView</a></li><li><a href="global.html#Tutorial">Tutorial</a></li><li><a href="global.html#TutorialContext">TutorialContext</a></li><li><a href="global.html#TutorialProvider">TutorialProvider</a></li><li><a href="global.html#TwoFASetupModal">TwoFASetupModal</a></li><li><a href="global.html#UpdateDocument">UpdateDocument</a></li><li><a href="global.html#UserManagementTutorial">UserManagementTutorial</a></li><li><a href="global.html#WSS_BASE_URL">WSS_BASE_URL</a></li><li><a href="global.html#activateUser">activateUser</a></li><li><a href="global.html#addComment">addComment</a></li><li><a href="global.html#addStudentToClass">addStudentToClass</a></li><li><a href="global.html#allDigitsFilled">allDigitsFilled</a></li><li><a href="global.html#api">api</a></li><li><a href="global.html#authToken">authToken</a></li><li><a href="global.html#authenticatedButtons">authenticatedButtons</a></li><li><a href="global.html#baseURL">baseURL</a></li><li><a href="global.html#blockLive">blockLive</a></li><li><a href="global.html#bulkDelete">bulkDelete</a></li><li><a href="global.html#changePassword">changePassword</a></li><li><a href="global.html#check2FAStatus">check2FAStatus</a></li><li><a href="global.html#checkRegisterCode">checkRegisterCode</a></li><li><a href="global.html#createClass">createClass</a></li><li><a href="global.html#createCourse">createCourse</a></li><li><a href="global.html#createLive">createLive</a></li><li><a href="global.html#createThread">createThread</a></li><li><a href="global.html#createUser">createUser</a></li><li><a href="global.html#deactivateUser">deactivateUser</a></li><li><a href="global.html#deleteAvatar">deleteAvatar</a></li><li><a href="global.html#deleteClass">deleteClass</a></li><li><a href="global.html#deleteClasseHandler">deleteClasseHandler</a></li><li><a href="global.html#deleteComment">deleteComment</a></li><li><a href="global.html#deleteContactMessage">deleteContactMessage</a></li><li><a href="global.html#deleteCourse">deleteCourse</a></li><li><a href="global.html#deleteInviteCode">deleteInviteCode</a></li><li><a href="global.html#deleteLive">deleteLive</a></li><li><a href="global.html#deleteMessage">deleteMessage</a></li><li><a href="global.html#deleteThread">deleteThread</a></li><li><a href="global.html#deleteUser">deleteUser</a></li><li><a href="global.html#disable2FA">disable2FA</a></li><li><a href="global.html#disapproveCourse">disapproveCourse</a></li><li><a href="global.html#disapproveLive">disapproveLive</a></li><li><a href="global.html#downloadAttachment">downloadAttachment</a></li><li><a href="global.html#endLive">endLive</a></li><li><a href="global.html#errorMessages">errorMessages</a></li><li><a href="global.html#fetchClasses">fetchClasses</a></li><li><a href="global.html#fetchCourseData">fetchCourseData</a></li><li><a href="global.html#fetchData">fetchData</a></li><li><a href="global.html#fetchUsers">fetchUsers</a></li><li><a href="global.html#firstLogin">firstLogin</a></li><li><a href="global.html#flagContent">flagContent</a></li><li><a href="global.html#forgotPassword">forgotPassword</a></li><li><a href="global.html#generateInviteCode">generateInviteCode</a></li><li><a href="global.html#getAllClasses">getAllClasses</a></li><li><a href="global.html#getAllContactMessages">getAllContactMessages</a></li><li><a href="global.html#getAllCourses">getAllCourses</a></li><li><a href="global.html#getAllInviteCodes">getAllInviteCodes</a></li><li><a href="global.html#getAllLives">getAllLives</a></li><li><a href="global.html#getAllUsers">getAllUsers</a></li><li><a href="global.html#getAvailableRecipients">getAvailableRecipients</a></li><li><a href="global.html#getAvatar">getAvatar</a></li><li><a href="global.html#getClassById">getClassById</a></li><li><a href="global.html#getClassStudents">getClassStudents</a></li><li><a href="global.html#getContactMessage">getContactMessage</a></li><li><a href="global.html#getCourseById">getCourseById</a></li><li><a href="global.html#getCourseDetails">getCourseDetails</a></li><li><a href="global.html#getCourseProgress">getCourseProgress</a></li><li><a href="global.html#getCoursesByClass">getCoursesByClass</a></li><li><a href="global.html#getFlags">getFlags</a></li><li><a href="global.html#getInboxMessages">getInboxMessages</a></li><li><a href="global.html#getInitialViewMode">getInitialViewMode</a></li><li><a href="global.html#getLiveById">getLiveById</a></li><li><a href="global.html#getLiveMessages">getLiveMessages</a></li><li><a href="global.html#getLiveStreamUrl">getLiveStreamUrl</a></li><li><a href="global.html#getLivesByClass">getLivesByClass</a></li><li><a href="global.html#getMessage">getMessage</a></li><li><a href="global.html#getNotificationPreferences">getNotificationPreferences</a></li><li><a href="global.html#getSentMessages">getSentMessages</a></li><li><a href="global.html#getStudentProgress">getStudentProgress</a></li><li><a href="global.html#getThreadById">getThreadById</a></li><li><a href="global.html#getThreads">getThreads</a></li><li><a href="global.html#getTrashMessages">getTrashMessages</a></li><li><a href="global.html#getUserById">getUserById</a></li><li><a href="global.html#getUserProfile">getUserProfile</a></li><li><a href="global.html#getUserWarnings">getUserWarnings</a></li><li><a href="global.html#getVideoDetails">getVideoDetails</a></li><li><a href="global.html#getVideoStreamUrl">getVideoStreamUrl</a></li><li><a href="global.html#handle2FASubmit">handle2FASubmit</a></li><li><a href="global.html#handleBackdropClick">handleBackdropClick</a></li><li><a href="global.html#handleBlockedMouseLeave">handleBlockedMouseLeave</a></li><li><a href="global.html#handleBlockedMouseMove">handleBlockedMouseMove</a></li><li><a href="global.html#handleClose">handleClose</a></li><li><a href="global.html#handleCompleteCourse">handleCompleteCourse</a></li><li><a href="global.html#handleCourseDisapproval">handleCourseDisapproval</a></li><li><a href="global.html#handleDeleteCourse">handleDeleteCourse</a></li><li><a href="global.html#handleDigitChange">handleDigitChange</a></li><li><a href="global.html#handleDigitKeyDown">handleDigitKeyDown</a></li><li><a href="global.html#handleDigitPaste">handleDigitPaste</a></li><li><a href="global.html#handleDownloadDocument">handleDownloadDocument</a></li><li><a href="global.html#handleError">handleError</a></li><li><a href="global.html#handleInputChange">handleInputChange</a></li><li><a href="global.html#handleLogout">handleLogout</a></li><li><a href="global.html#handleMenuToggle">handleMenuToggle</a></li><li><a href="global.html#handleModAction">handleModAction</a></li><li><a href="global.html#handleSubmit">handleSubmit</a></li><li><a href="global.html#handleSubmitClasse">handleSubmitClasse</a></li><li><a href="global.html#handleTabChange">handleTabChange</a></li><li><a href="global.html#handleUnblockCourse">handleUnblockCourse</a></li><li><a href="global.html#isAuthenticated">isAuthenticated</a></li><li><a href="global.html#loadCaptchaEngine">loadCaptchaEngine</a></li><li><a href="global.html#logViewEngagement">logViewEngagement</a></li><li><a href="global.html#login">login</a></li><li><a href="global.html#markAsRead">markAsRead</a></li><li><a href="global.html#markAsUnread">markAsUnread</a></li><li><a href="global.html#markContactMessageAsProcessed">markContactMessageAsProcessed</a></li><li><a href="global.html#markCourseAsCompleted">markCourseAsCompleted</a></li><li><a href="global.html#markCourseAsInProgress">markCourseAsInProgress</a></li><li><a href="global.html#mountApp">mountApp</a></li><li><a href="global.html#moveToTrash">moveToTrash</a></li><li><a href="global.html#navItems">navItems</a></li><li><a href="global.html#navigate">navigate</a></li><li><a href="global.html#onSamplesDecoded">onSamplesDecoded</a></li><li><a href="global.html#refreshTwoFASetup">refreshTwoFASetup</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#removeStudentFromClass">removeStudentFromClass</a></li><li><a href="global.html#renderContent">renderContent</a></li><li><a href="global.html#resolveFlag">resolveFlag</a></li><li><a href="global.html#restoreFromTrash">restoreFromTrash</a></li><li><a href="global.html#retrogradeUserRole">retrogradeUserRole</a></li><li><a href="global.html#root">root</a></li><li><a href="global.html#sendContactMessage">sendContactMessage</a></li><li><a href="global.html#sendLiveMessage">sendLiveMessage</a></li><li><a href="global.html#sendMessage">sendMessage</a></li><li><a href="global.html#sendWarning">sendWarning</a></li><li><a href="global.html#setMainTeacher">setMainTeacher</a></li><li><a href="global.html#setup2FA">setup2FA</a></li><li><a href="global.html#signButtons">signButtons</a></li><li><a href="global.html#startLive">startLive</a></li><li><a href="global.html#toggleAll">toggleAll</a></li><li><a href="global.html#toggleClasse">toggleClasse</a></li><li><a href="global.html#toggleMember">toggleMember</a></li><li><a href="global.html#toggleMobileMenu">toggleMobileMenu</a></li><li><a href="global.html#unblockCourse">unblockCourse</a></li><li><a href="global.html#unblockLive">unblockLive</a></li><li><a href="global.html#updateClass">updateClass</a></li><li><a href="global.html#updateComment">updateComment</a></li><li><a href="global.html#updateCourse">updateCourse</a></li><li><a href="global.html#updateLive">updateLive</a></li><li><a href="global.html#updateNotificationPreferences">updateNotificationPreferences</a></li><li><a href="global.html#updateThread">updateThread</a></li><li><a href="global.html#updateUser">updateUser</a></li><li><a href="global.html#updateUserProfile">updateUserProfile</a></li><li><a href="global.html#updateUserProfileHandler">updateUserProfileHandler</a></li><li><a href="global.html#updateVideo">updateVideo</a></li><li><a href="global.html#upgradeUserRole">upgradeUserRole</a></li><li><a href="global.html#uploadAvatar">uploadAvatar</a></li><li><a href="global.html#uploadIllustrationAvatar">uploadIllustrationAvatar</a></li><li><a href="global.html#useEffect">useEffect</a></li><li><a href="global.html#useTutorial">useTutorial</a></li><li><a href="global.html#validateForm">validateForm</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#verify2FASetup">verify2FASetup</a></li><li><a href="global.html#verifyTwoFA">verifyTwoFA</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Sat Jun 07 2025 14:32:34 GMT+0200 (Central European Summer Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

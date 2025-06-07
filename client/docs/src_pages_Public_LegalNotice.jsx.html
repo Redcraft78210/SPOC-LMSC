@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: src/pages/Public/LegalNotice.jsx</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: src/pages/Public/LegalNotice.jsx</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @fileoverview
+ * Composant affichant les mentions légales complètes de la plateforme SPOC-LMSC.
+ * Inclut des informations sur l'éditeur du site, l'hébergement, la propriété intellectuelle,
+ * la protection des données personnelles, les conditions d'utilisation, les cookies,
+ * les limitations de responsabilité et les informations de contact.
+ */
+import PublicNavbar from '../../components/PublicComp/PublicNavbar';
+import Footer from '../../components/PublicComp/Footer';
+
+
+/**
+ * Composant de page affichant les mentions légales de la plateforme.
+ * Structure les informations légales en sections distinctes avec une mise en forme claire.
+ * 
+ * @component
+ * @returns {JSX.Element} Page complète des mentions légales avec en-tête, contenu et pied de page
+ */
+const LegalNotice = () => {
+  return (
+    &lt;div className="min-h-screen bg-gray-50">
+      {/* Navigation */}
+      &lt;PublicNavbar />
+
+      {/* Hero Section */}
+      &lt;header className="pt-32 pb-20 bg-gradient-to-r from-blue-600 to-blue-800 text-white">
+        &lt;div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          &lt;h1 className="text-5xl font-bold mb-6">Mentions Légales&lt;/h1>
+          &lt;p className="text-xl mb-8">
+            Informations légales concernant la plateforme SPOC-LMSC.
+          &lt;/p>
+        &lt;/div>
+      &lt;/header>
+
+      {/* Legal Content Section */}
+      &lt;section className="py-20 bg-white">
+        &lt;div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          &lt;h2 className="text-3xl font-bold text-gray-800 mb-8 text-center">
+            Mentions Légales SPOC-LMSC
+          &lt;/h2>
+
+          {/* Legal sections */}
+          &lt;div className="space-y-10">
+            &lt;div>
+              &lt;h3 className="text-2xl font-bold text-gray-800 mb-4">1. Informations légales&lt;/h3>
+              &lt;div className="pl-6 space-y-3">
+                &lt;div>
+                  &lt;p className="font-semibold text-gray-800">Éditeur du site :&lt;/p>
+                  &lt;p className="text-gray-700">SPOC-LMSC&lt;/p>
+                  &lt;p className="text-gray-700">2 avenue Jean Jaurès&lt;/p>
+                  &lt;p className="text-gray-700">78210 Saint-Cyr-l&amp;apos;École&lt;/p>
+                  &lt;p className="text-gray-700">France&lt;/p>
+                  &lt;p className="text-gray-700">Email : support@spoc-lmsc.com&lt;/p>
+                  &lt;p className="text-gray-700">Téléphone : +33 1 23 45 67 89&lt;/p>
+                &lt;/div>
+                &lt;div>
+                  &lt;p className="font-semibold text-gray-800">Directeur de la publication :&lt;/p>
+                  &lt;p className="text-gray-700">Mr Eric Maquer&lt;/p>
+                &lt;/div>
+                &lt;div>
+                  &lt;p className="font-semibold text-gray-800">Développement et conception :&lt;/p>
+                  &lt;p className="text-gray-700">SPOC-LMSC&lt;/p>
+                &lt;/div>
+              &lt;/div>
+            &lt;/div>
+
+            &lt;div>
+              &lt;h3 className="text-2xl font-bold text-gray-800 mb-4">2. Hébergement&lt;/h3>
+              &lt;div className="pl-6">
+                &lt;p className="text-gray-700">Le site SPOC-LMSC est hébergé par :&lt;/p>
+                &lt;p className="text-gray-700">Lycée Militaire de Saint-Cyr&lt;/p>
+                &lt;p className="text-gray-700">2 avenue Jean Jaurès, 78210 Saint-Cyr-l&amp;apos;École&lt;/p>
+                &lt;p className="text-gray-700">Téléphone : +33 1 23 45 67 89&lt;/p>
+              &lt;/div>
+            &lt;/div>
+
+            &lt;div>
+              &lt;h3 className="text-2xl font-bold text-gray-800 mb-4">3. Propriété intellectuelle&lt;/h3>
+              &lt;div className="pl-6 space-y-3">
+                &lt;p className="text-gray-700">
+                  L&amp;apos;ensemble des éléments constituant le site SPOC-LMSC (textes, graphismes, logiciels, images,
+                  vidéos, sons, plans, logos, marques, etc.) sont la propriété exclusive de SPOC-LMSC ou
+                  font l&amp;apos;objet d&amp;apos;une autorisation d&amp;apos;utilisation. Ces éléments sont protégés par les lois
+                  relatives à la propriété intellectuelle.
+                &lt;/p>
+                &lt;p className="text-gray-700">
+                  Ce logiciel est distribué sous licence GNU General Public License v3, dont les termes
+                  complets sont disponibles dans le fichier LICENSE.
+                &lt;/p>
+                &lt;p className="text-gray-700">
+                  Toute reproduction, représentation, modification, publication, adaptation, totale ou
+                  partielle des éléments du site, quel que soit le moyen ou le procédé utilisé, est
+                  interdite sans autorisation préalable.
+                &lt;/p>
+              &lt;/div>
+            &lt;/div>
+
+            &lt;div>
+              &lt;h3 className="text-2xl font-bold text-gray-800 mb-4">4. Protection des données personnelles&lt;/h3>
+              &lt;div className="pl-6 space-y-6">
+                &lt;div>
+                  &lt;h4 className="text-xl font-semibold text-gray-800 mb-2">4.1 Collecte des données personnelles&lt;/h4>
+                  &lt;p className="text-gray-700 mb-2">
+                    Dans le cadre de l&amp;apos;utilisation de SPOC-LMSC, nous collectons et traitons les données
+                    personnelles suivantes :
+                  &lt;/p>
+                  &lt;ul className="list-disc pl-6 space-y-1">
+                    &lt;li className="text-gray-700">Informations d&amp;apos;identification (nom, prénom, adresse email, nom d&amp;apos;utilisateur)&lt;/li>
+                    &lt;li className="text-gray-700">Données de connexion et d&amp;apos;utilisation&lt;/li>
+                    &lt;li className="text-gray-700">Contenu généré par l&amp;apos;utilisateur (messages, commentaires, fichiers)&lt;/li>
+                    &lt;li className="text-gray-700">Image de profil (avatar)&lt;/li>
+                  &lt;/ul>
+                &lt;/div>
+
+                &lt;div>
+                  &lt;h4 className="text-xl font-semibold text-gray-800 mb-2">4.2 Finalités du traitement&lt;/h4>
+                  &lt;p className="text-gray-700 mb-2">
+                    Les données personnelles sont collectées et traitées pour les finalités suivantes :
+                  &lt;/p>
+                  &lt;ul className="list-disc pl-6 space-y-1">
+                    &lt;li className="text-gray-700">Gestion des comptes utilisateurs&lt;/li>
+                    &lt;li className="text-gray-700">Fourniture des services éducatifs&lt;/li>
+                    &lt;li className="text-gray-700">Communication entre utilisateurs&lt;/li>
+                    &lt;li className="text-gray-700">Amélioration de l&amp;apos;expérience utilisateur&lt;/li>
+                    &lt;li className="text-gray-700">Respect des obligations légales&lt;/li>
+                  &lt;/ul>
+                &lt;/div>
+
+                &lt;div>
+                  &lt;h4 className="text-xl font-semibold text-gray-800 mb-2">4.3 Base légale&lt;/h4>
+                  &lt;p className="text-gray-700 mb-2">
+                    Le traitement de vos données personnelles est justifié par :
+                  &lt;/p>
+                  &lt;ul className="list-disc pl-6 space-y-1">
+                    &lt;li className="text-gray-700">L&amp;apos;exécution du contrat de service éducatif&lt;/li>
+                    &lt;li className="text-gray-700">Votre consentement&lt;/li>
+                    &lt;li className="text-gray-700">L&amp;apos;intérêt légitime de SPOC-LMSC&lt;/li>
+                    &lt;li className="text-gray-700">Le respect des obligations légales&lt;/li>
+                  &lt;/ul>
+                &lt;/div>
+
+                &lt;div>
+                  &lt;h4 className="text-xl font-semibold text-gray-800 mb-2">4.4 Durée de conservation&lt;/h4>
+                  &lt;p className="text-gray-700">
+                    Les données personnelles sont conservées pour la durée nécessaire à la fourniture des
+                    services. En cas de suppression de compte, vos données seront anonymisées dans un délai
+                    de 30 jours conformément à notre politique de suppression.
+                  &lt;/p>
+                &lt;/div>
+
+                &lt;div>
+                  &lt;h4 className="text-xl font-semibold text-gray-800 mb-2">4.5 Droits des utilisateurs&lt;/h4>
+                  &lt;p className="text-gray-700 mb-2">
+                    Conformément au Règlement Général sur la Protection des Données (RGPD), vous disposez
+                    des droits suivants :
+                  &lt;/p>
+                  &lt;ul className="list-disc pl-6 space-y-1 mb-3">
+                    &lt;li className="text-gray-700">Droit d&amp;apos;accès à vos données&lt;/li>
+                    &lt;li className="text-gray-700">Droit de rectification&lt;/li>
+                    &lt;li className="text-gray-700">Droit à l&amp;apos;effacement (droit à l&amp;apos;oubli)&lt;/li>
+                    &lt;li className="text-gray-700">Droit à la limitation du traitement&lt;/li>
+                    &lt;li className="text-gray-700">Droit à la portabilité des données&lt;/li>
+                    &lt;li className="text-gray-700">Droit d&amp;apos;opposition&lt;/li>
+                    &lt;li className="text-gray-700">Droit de retirer votre consentement à tout moment&lt;/li>
+                  &lt;/ul>
+                  &lt;p className="text-gray-700 mb-2">Pour exercer ces droits, vous pouvez :&lt;/p>
+                  &lt;ul className="list-disc pl-6 space-y-1">
+                    &lt;li className="text-gray-700">Utiliser les fonctionnalités intégrées dans votre compte utilisateur&lt;/li>
+                    &lt;li className="text-gray-700">Contacter notre équipe à l&amp;apos;adresse : moderation@spoc.lmsc&lt;/li>
+                    &lt;li className="text-gray-700">Remplir notre formulaire de contact&lt;/li>
+                  &lt;/ul>
+                &lt;/div>
+
+                &lt;div>
+                  &lt;h4 className="text-xl font-semibold text-gray-800 mb-2">4.6 Transferts de données&lt;/h4>
+                  &lt;p className="text-gray-700">
+                    Nous nous engageons à ne pas transférer vos données personnelles en dehors de l&amp;apos;Union
+                    Européenne sans garanties appropriées.
+                  &lt;/p>
+                &lt;/div>
+
+                &lt;div>
+                  &lt;h4 className="text-xl font-semibold text-gray-800 mb-2">4.7 Sécurité des données&lt;/h4>
+                  &lt;p className="text-gray-700 mb-2">
+                    Nous mettons en œuvre des mesures techniques et organisationnelles appropriées pour
+                    protéger vos données personnelles, notamment :
+                  &lt;/p>
+                  &lt;ul className="list-disc pl-6 space-y-1">
+                    &lt;li className="text-gray-700">Authentification à deux facteurs&lt;/li>
+                    &lt;li className="text-gray-700">Chiffrement des données sensibles&lt;/li>
+                    &lt;li className="text-gray-700">Politique de contrôle d&amp;apos;accès strict&lt;/li>
+                  &lt;/ul>
+                &lt;/div>
+              &lt;/div>
+            &lt;/div>
+
+            &lt;div>
+              &lt;h3 className="text-2xl font-bold text-gray-800 mb-4">5. Conditions d&amp;apos;utilisation&lt;/h3>
+              &lt;div className="pl-6 space-y-6">
+                &lt;div>
+                  &lt;h4 className="text-xl font-semibold text-gray-800 mb-2">5.1 Accès au service&lt;/h4>
+                  &lt;p className="text-gray-700">
+                    L&amp;apos;accès à SPOC-LMSC nécessite un code d&amp;apos;invitation valide et la création d&amp;apos;un compte
+                    utilisateur. L&amp;apos;inscription est soumise à l&amp;apos;acceptation des présentes conditions.
+                  &lt;/p>
+                &lt;/div>
+
+                &lt;div>
+                  &lt;h4 className="text-xl font-semibold text-gray-800 mb-2">5.2 Comportement des utilisateurs&lt;/h4>
+                  &lt;p className="text-gray-700 mb-2">Les utilisateurs s&amp;apos;engagent à :&lt;/p>
+                  &lt;ul className="list-disc pl-6 space-y-1">
+                    &lt;li className="text-gray-700">Respecter les lois en vigueur&lt;/li>
+                    &lt;li className="text-gray-700">Ne pas partager de contenu inapproprié, offensant ou illégal&lt;/li>
+                    &lt;li className="text-gray-700">Ne pas usurper l&amp;apos;identité d&amp;apos;un tiers&lt;/li>
+                    &lt;li className="text-gray-700">Ne pas perturber le fonctionnement du service&lt;/li>
+                    &lt;li className="text-gray-700">Ne pas collecter les données d&amp;apos;autres utilisateurs&lt;/li>
+                  &lt;/ul>
+                &lt;/div>
+
+                &lt;div>
+                  &lt;h4 className="text-xl font-semibold text-gray-800 mb-2">5.3 Modération et sanctions&lt;/h4>
+                  &lt;p className="text-gray-700 mb-2">
+                    En cas de non-respect des règles d&amp;apos;utilisation, les modérateurs peuvent prendre les
+                    mesures suivantes :
+                  &lt;/p>
+                  &lt;ul className="list-disc pl-6 space-y-1">
+                    &lt;li className="text-gray-700">Avertissement&lt;/li>
+                    &lt;li className="text-gray-700">Restriction temporaire des fonctionnalités&lt;/li>
+                    &lt;li className="text-gray-700">Surveillance accrue&lt;/li>
+                    &lt;li className="text-gray-700">Suspension ou suppression du compte&lt;/li>
+                  &lt;/ul>
+                &lt;/div>
+
+                &lt;div>
+                  &lt;h4 className="text-xl font-semibold text-gray-800 mb-2">5.4 Suppression de compte&lt;/h4>
+                  &lt;p className="text-gray-700">
+                    Vous pouvez demander la suppression de votre compte depuis les paramètres. La suppression
+                    sera effective 30 jours après votre demande. Pendant cette période, vous pouvez annuler
+                    la suppression en vous reconnectant.
+                  &lt;/p>
+                &lt;/div>
+              &lt;/div>
+            &lt;/div>
+
+            &lt;div>
+              &lt;h3 className="text-2xl font-bold text-gray-800 mb-4">6. Cookies et technologies similaires&lt;/h3>
+              &lt;div className="pl-6 space-y-6">
+                &lt;div>
+                  &lt;h4 className="text-xl font-semibold text-gray-800 mb-2">6.1 Qu&amp;apos;est-ce qu&amp;apos;un cookie ?&lt;/h4>
+                  &lt;p className="text-gray-700">
+                    Un cookie est un petit fichier texte déposé sur votre appareil lors de votre visite sur
+                    notre plateforme. Les cookies nous permettent de reconnaître votre appareil et de stocker
+                    des informations sur vos préférences.
+                  &lt;/p>
+                &lt;/div>
+
+                &lt;div>
+                  &lt;h4 className="text-xl font-semibold text-gray-800 mb-2">6.2 Types de cookies utilisés&lt;/h4>
+                  &lt;p className="text-gray-700 mb-2">Nous utilisons les types de cookies suivants :&lt;/p>
+                  &lt;ul className="list-disc pl-6 space-y-1">
+                    &lt;li className="text-gray-700">Cookies techniques essentiels au fonctionnement du service&lt;/li>
+                    &lt;li className="text-gray-700">Cookies de session pour l&amp;apos;authentification&lt;/li>
+                    &lt;li className="text-gray-700">Cookies de préférences pour personnaliser votre expérience&lt;/li>
+                  &lt;/ul>
+                &lt;/div>
+
+                &lt;div>
+                  &lt;h4 className="text-xl font-semibold text-gray-800 mb-2">6.3 Gestion des cookies&lt;/h4>
+                  &lt;p className="text-gray-700">
+                    Vous pouvez configurer votre navigateur pour refuser les cookies. Cependant, certaines
+                    fonctionnalités essentielles pourraient ne pas fonctionner correctement.
+                  &lt;/p>
+                &lt;/div>
+              &lt;/div>
+            &lt;/div>
+
+            &lt;div>
+              &lt;h3 className="text-2xl font-bold text-gray-800 mb-4">7. Limitation de responsabilité&lt;/h3>
+              &lt;div className="pl-6 space-y-6">
+                &lt;div>
+                  &lt;h4 className="text-xl font-semibold text-gray-800 mb-2">7.1 Disponibilité du service&lt;/h4>
+                  &lt;p className="text-gray-700">
+                    SPOC-LMSC s&amp;apos;efforce d&amp;apos;assurer la disponibilité du service 24h/24 et 7j/7. Toutefois,
+                    nous ne pouvons garantir une disponibilité sans interruption et déclinons toute
+                    responsabilité en cas d&amp;apos;indisponibilité temporaire.
+                  &lt;/p>
+                &lt;/div>
+
+                &lt;div>
+                  &lt;h4 className="text-xl font-semibold text-gray-800 mb-2">7.2 Contenu généré par les utilisateurs&lt;/h4>
+                  &lt;p className="text-gray-700">
+                    SPOC-LMSC n&amp;apos;exerce pas de contrôle préalable sur le contenu publié par les utilisateurs
+                    et ne peut être tenu responsable des contenus illicites ou inappropriés avant leur
+                    signalement.
+                  &lt;/p>
+                &lt;/div>
+
+                &lt;div>
+                  &lt;h4 className="text-xl font-semibold text-gray-800 mb-2">7.3 Garanties et responsabilités&lt;/h4>
+                  &lt;p className="text-gray-700">
+                    Conformément à la licence GNU GPL v3, le programme est fourni &amp;quot;tel quel&amp;quot;, sans aucune
+                    garantie, explicite ou implicite, concernant sa qualité et ses performances. Les auteurs
+                    ou détenteurs du copyright ne pourront être tenus responsables des dommages, de quelque
+                    nature qu&amp;apos;ils soient, causés par l&amp;apos;utilisation ou l&amp;apos;impossibilité d&amp;apos;utilisation du
+                    programme.
+                  &lt;/p>
+                &lt;/div>
+              &lt;/div>
+            &lt;/div>
+
+            &lt;div>
+              &lt;h3 className="text-2xl font-bold text-gray-800 mb-4">8. Loi applicable et juridiction&lt;/h3>
+              &lt;div className="pl-6">
+                &lt;p className="text-gray-700">
+                  Les présentes mentions légales sont soumises au droit français. En cas de litige, les
+                  tribunaux français seront seuls compétents.
+                &lt;/p>
+              &lt;/div>
+            &lt;/div>
+
+            &lt;div>
+              &lt;h3 className="text-2xl font-bold text-gray-800 mb-4">9. Contact&lt;/h3>
+              &lt;div className="pl-6">
+                &lt;p className="text-gray-700">
+                  Pour toute question concernant ces mentions légales, vous pouvez nous contacter à l&amp;apos;adresse
+                  suivante : support@spoc-lmsc.com
+                &lt;/p>
+              &lt;/div>
+            &lt;/div>
+
+            &lt;div className="pt-6 border-t border-gray-200">
+              &lt;p className="text-gray-600 text-sm italic text-center">
+                Dernière mise à jour : 27 mai 2025
+              &lt;/p>
+            &lt;/div>
+          &lt;/div>
+        &lt;/div>
+      &lt;/section>
+
+      {/* Footer */}
+      &lt;Footer />
+    &lt;/div>
+  );
+};
+
+export default LegalNotice;</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-App.html">App</a></li></ul><h3>Global</h3><ul><li><a href="global.html#About">About</a></li><li><a href="global.html#AccountDisabledModal">AccountDisabledModal</a></li><li><a href="global.html#AdminDashboardHome">AdminDashboardHome</a></li><li><a href="global.html#BASE_URL">BASE_URL</a></li><li><a href="global.html#BulkActions">BulkActions</a></li><li><a href="global.html#ClassManagementTutorial">ClassManagementTutorial</a></li><li><a href="global.html#ClasseCards">ClasseCards</a></li><li><a href="global.html#ClasseCreationModal">ClasseCreationModal</a></li><li><a href="global.html#ClasseManagement">ClasseManagement</a></li><li><a href="global.html#ClasseTable">ClasseTable</a></li><li><a href="global.html#Contact">Contact</a></li><li><a href="global.html#ContentCard">ContentCard</a></li><li><a href="global.html#CourseReader">CourseReader</a></li><li><a href="global.html#CourseReaderTutorial">CourseReaderTutorial</a></li><li><a href="global.html#Courses">Courses</a></li><li><a href="global.html#CoursesLibraryTutorial">CoursesLibraryTutorial</a></li><li><a href="global.html#Dashboard">Dashboard</a></li><li><a href="global.html#DashboardTutorial">DashboardTutorial</a></li><li><a href="global.html#DeleteDocument">DeleteDocument</a></li><li><a href="global.html#DeleteVideo">DeleteVideo</a></li><li><a href="global.html#EleveDashboardHome">EleveDashboardHome</a></li><li><a href="global.html#ErrorMessage">ErrorMessage</a></li><li><a href="global.html#FilterDropdown">FilterDropdown</a></li><li><a href="global.html#FirstLogin">FirstLogin</a></li><li><a href="global.html#Footer">Footer</a></li><li><a href="global.html#Forum">Forum</a></li><li><a href="global.html#GetAll_DataStructure">GetAll_DataStructure</a></li><li><a href="global.html#GetAll_Document">GetAll_Document</a></li><li><a href="global.html#Get_Document_Information">Get_Document_Information</a></li><li><a href="global.html#Get_Video_Information">Get_Video_Information</a></li><li><a href="global.html#Get_special_Document">Get_special_Document</a></li><li><a href="global.html#Get_special_Video">Get_special_Video</a></li><li><a href="global.html#Home">Home</a></li><li><a href="global.html#INACTIVITY_THRESHOLD">INACTIVITY_THRESHOLD</a></li><li><a href="global.html#LegalNotice">LegalNotice</a></li><li><a href="global.html#LiveNotFound">LiveNotFound</a></li><li><a href="global.html#LiveViewer">LiveViewer</a></li><li><a href="global.html#LoadCanvasTemplate">LoadCanvasTemplate</a></li><li><a href="global.html#LoadingComponent">LoadingComponent</a></li><li><a href="global.html#LoadingSpinner">LoadingSpinner</a></li><li><a href="global.html#Logout">Logout</a></li><li><a href="global.html#Mailbox">Mailbox</a></li><li><a href="global.html#MaintenanceBanner">MaintenanceBanner</a></li><li><a href="global.html#MessageDetailSkeleton">MessageDetailSkeleton</a></li><li><a href="global.html#MessageSkeleton">MessageSkeleton</a></li><li><a href="global.html#NavigationBar">NavigationBar</a></li><li><a href="global.html#PictureModal">PictureModal</a></li><li><a href="global.html#PrivacyPolicy">PrivacyPolicy</a></li><li><a href="global.html#PrivacyTab">PrivacyTab</a></li><li><a href="global.html#ProfilePhotoSelector">ProfilePhotoSelector</a></li><li><a href="global.html#PublicNavbar">PublicNavbar</a></li><li><a href="global.html#SearchBar">SearchBar</a></li><li><a href="global.html#SearchUser">SearchUser</a></li><li><a href="global.html#SecureDocumentViewer">SecureDocumentViewer</a></li><li><a href="global.html#SecureVideoPlayer">SecureVideoPlayer</a></li><li><a href="global.html#SecurityTab">SecurityTab</a></li><li><a href="global.html#SendDocument">SendDocument</a></li><li><a href="global.html#SendVideo">SendVideo</a></li><li><a href="global.html#Settings">Settings</a></li><li><a href="global.html#Sign">Sign</a></li><li><a href="global.html#Spinner">Spinner</a></li><li><a href="global.html#StreamReader">StreamReader</a></li><li><a href="global.html#TEN_MINUTES">TEN_MINUTES</a></li><li><a href="global.html#TermsOfUse">TermsOfUse</a></li><li><a href="global.html#ToggleView">ToggleView</a></li><li><a href="global.html#Tutorial">Tutorial</a></li><li><a href="global.html#TutorialContext">TutorialContext</a></li><li><a href="global.html#TutorialProvider">TutorialProvider</a></li><li><a href="global.html#TwoFASetupModal">TwoFASetupModal</a></li><li><a href="global.html#UpdateDocument">UpdateDocument</a></li><li><a href="global.html#UserManagementTutorial">UserManagementTutorial</a></li><li><a href="global.html#WSS_BASE_URL">WSS_BASE_URL</a></li><li><a href="global.html#activateUser">activateUser</a></li><li><a href="global.html#addComment">addComment</a></li><li><a href="global.html#addStudentToClass">addStudentToClass</a></li><li><a href="global.html#allDigitsFilled">allDigitsFilled</a></li><li><a href="global.html#api">api</a></li><li><a href="global.html#authToken">authToken</a></li><li><a href="global.html#authenticatedButtons">authenticatedButtons</a></li><li><a href="global.html#baseURL">baseURL</a></li><li><a href="global.html#blockLive">blockLive</a></li><li><a href="global.html#bulkDelete">bulkDelete</a></li><li><a href="global.html#changePassword">changePassword</a></li><li><a href="global.html#check2FAStatus">check2FAStatus</a></li><li><a href="global.html#checkRegisterCode">checkRegisterCode</a></li><li><a href="global.html#createClass">createClass</a></li><li><a href="global.html#createCourse">createCourse</a></li><li><a href="global.html#createLive">createLive</a></li><li><a href="global.html#createThread">createThread</a></li><li><a href="global.html#createUser">createUser</a></li><li><a href="global.html#deactivateUser">deactivateUser</a></li><li><a href="global.html#deleteAvatar">deleteAvatar</a></li><li><a href="global.html#deleteClass">deleteClass</a></li><li><a href="global.html#deleteClasseHandler">deleteClasseHandler</a></li><li><a href="global.html#deleteComment">deleteComment</a></li><li><a href="global.html#deleteContactMessage">deleteContactMessage</a></li><li><a href="global.html#deleteCourse">deleteCourse</a></li><li><a href="global.html#deleteInviteCode">deleteInviteCode</a></li><li><a href="global.html#deleteLive">deleteLive</a></li><li><a href="global.html#deleteMessage">deleteMessage</a></li><li><a href="global.html#deleteThread">deleteThread</a></li><li><a href="global.html#deleteUser">deleteUser</a></li><li><a href="global.html#disable2FA">disable2FA</a></li><li><a href="global.html#disapproveCourse">disapproveCourse</a></li><li><a href="global.html#disapproveLive">disapproveLive</a></li><li><a href="global.html#downloadAttachment">downloadAttachment</a></li><li><a href="global.html#endLive">endLive</a></li><li><a href="global.html#errorMessages">errorMessages</a></li><li><a href="global.html#fetchClasses">fetchClasses</a></li><li><a href="global.html#fetchCourseData">fetchCourseData</a></li><li><a href="global.html#fetchData">fetchData</a></li><li><a href="global.html#fetchUsers">fetchUsers</a></li><li><a href="global.html#firstLogin">firstLogin</a></li><li><a href="global.html#flagContent">flagContent</a></li><li><a href="global.html#forgotPassword">forgotPassword</a></li><li><a href="global.html#generateInviteCode">generateInviteCode</a></li><li><a href="global.html#getAllClasses">getAllClasses</a></li><li><a href="global.html#getAllContactMessages">getAllContactMessages</a></li><li><a href="global.html#getAllCourses">getAllCourses</a></li><li><a href="global.html#getAllInviteCodes">getAllInviteCodes</a></li><li><a href="global.html#getAllLives">getAllLives</a></li><li><a href="global.html#getAllUsers">getAllUsers</a></li><li><a href="global.html#getAvailableRecipients">getAvailableRecipients</a></li><li><a href="global.html#getAvatar">getAvatar</a></li><li><a href="global.html#getClassById">getClassById</a></li><li><a href="global.html#getClassStudents">getClassStudents</a></li><li><a href="global.html#getContactMessage">getContactMessage</a></li><li><a href="global.html#getCourseById">getCourseById</a></li><li><a href="global.html#getCourseDetails">getCourseDetails</a></li><li><a href="global.html#getCourseProgress">getCourseProgress</a></li><li><a href="global.html#getCoursesByClass">getCoursesByClass</a></li><li><a href="global.html#getFlags">getFlags</a></li><li><a href="global.html#getInboxMessages">getInboxMessages</a></li><li><a href="global.html#getInitialViewMode">getInitialViewMode</a></li><li><a href="global.html#getLiveById">getLiveById</a></li><li><a href="global.html#getLiveMessages">getLiveMessages</a></li><li><a href="global.html#getLiveStreamUrl">getLiveStreamUrl</a></li><li><a href="global.html#getLivesByClass">getLivesByClass</a></li><li><a href="global.html#getMessage">getMessage</a></li><li><a href="global.html#getNotificationPreferences">getNotificationPreferences</a></li><li><a href="global.html#getSentMessages">getSentMessages</a></li><li><a href="global.html#getStudentProgress">getStudentProgress</a></li><li><a href="global.html#getThreadById">getThreadById</a></li><li><a href="global.html#getThreads">getThreads</a></li><li><a href="global.html#getTrashMessages">getTrashMessages</a></li><li><a href="global.html#getUserById">getUserById</a></li><li><a href="global.html#getUserProfile">getUserProfile</a></li><li><a href="global.html#getUserWarnings">getUserWarnings</a></li><li><a href="global.html#getVideoDetails">getVideoDetails</a></li><li><a href="global.html#getVideoStreamUrl">getVideoStreamUrl</a></li><li><a href="global.html#handle2FASubmit">handle2FASubmit</a></li><li><a href="global.html#handleBackdropClick">handleBackdropClick</a></li><li><a href="global.html#handleBlockedMouseLeave">handleBlockedMouseLeave</a></li><li><a href="global.html#handleBlockedMouseMove">handleBlockedMouseMove</a></li><li><a href="global.html#handleClose">handleClose</a></li><li><a href="global.html#handleCompleteCourse">handleCompleteCourse</a></li><li><a href="global.html#handleCourseDisapproval">handleCourseDisapproval</a></li><li><a href="global.html#handleDeleteCourse">handleDeleteCourse</a></li><li><a href="global.html#handleDigitChange">handleDigitChange</a></li><li><a href="global.html#handleDigitKeyDown">handleDigitKeyDown</a></li><li><a href="global.html#handleDigitPaste">handleDigitPaste</a></li><li><a href="global.html#handleDownloadDocument">handleDownloadDocument</a></li><li><a href="global.html#handleError">handleError</a></li><li><a href="global.html#handleInputChange">handleInputChange</a></li><li><a href="global.html#handleLogout">handleLogout</a></li><li><a href="global.html#handleMenuToggle">handleMenuToggle</a></li><li><a href="global.html#handleModAction">handleModAction</a></li><li><a href="global.html#handleSubmit">handleSubmit</a></li><li><a href="global.html#handleSubmitClasse">handleSubmitClasse</a></li><li><a href="global.html#handleTabChange">handleTabChange</a></li><li><a href="global.html#handleUnblockCourse">handleUnblockCourse</a></li><li><a href="global.html#isAuthenticated">isAuthenticated</a></li><li><a href="global.html#loadCaptchaEngine">loadCaptchaEngine</a></li><li><a href="global.html#logViewEngagement">logViewEngagement</a></li><li><a href="global.html#login">login</a></li><li><a href="global.html#markAsRead">markAsRead</a></li><li><a href="global.html#markAsUnread">markAsUnread</a></li><li><a href="global.html#markContactMessageAsProcessed">markContactMessageAsProcessed</a></li><li><a href="global.html#markCourseAsCompleted">markCourseAsCompleted</a></li><li><a href="global.html#markCourseAsInProgress">markCourseAsInProgress</a></li><li><a href="global.html#mountApp">mountApp</a></li><li><a href="global.html#moveToTrash">moveToTrash</a></li><li><a href="global.html#navItems">navItems</a></li><li><a href="global.html#navigate">navigate</a></li><li><a href="global.html#onSamplesDecoded">onSamplesDecoded</a></li><li><a href="global.html#refreshTwoFASetup">refreshTwoFASetup</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#removeStudentFromClass">removeStudentFromClass</a></li><li><a href="global.html#renderContent">renderContent</a></li><li><a href="global.html#resolveFlag">resolveFlag</a></li><li><a href="global.html#restoreFromTrash">restoreFromTrash</a></li><li><a href="global.html#retrogradeUserRole">retrogradeUserRole</a></li><li><a href="global.html#root">root</a></li><li><a href="global.html#sendContactMessage">sendContactMessage</a></li><li><a href="global.html#sendLiveMessage">sendLiveMessage</a></li><li><a href="global.html#sendMessage">sendMessage</a></li><li><a href="global.html#sendWarning">sendWarning</a></li><li><a href="global.html#setMainTeacher">setMainTeacher</a></li><li><a href="global.html#setup2FA">setup2FA</a></li><li><a href="global.html#signButtons">signButtons</a></li><li><a href="global.html#startLive">startLive</a></li><li><a href="global.html#toggleAll">toggleAll</a></li><li><a href="global.html#toggleClasse">toggleClasse</a></li><li><a href="global.html#toggleMember">toggleMember</a></li><li><a href="global.html#toggleMobileMenu">toggleMobileMenu</a></li><li><a href="global.html#unblockCourse">unblockCourse</a></li><li><a href="global.html#unblockLive">unblockLive</a></li><li><a href="global.html#updateClass">updateClass</a></li><li><a href="global.html#updateComment">updateComment</a></li><li><a href="global.html#updateCourse">updateCourse</a></li><li><a href="global.html#updateLive">updateLive</a></li><li><a href="global.html#updateNotificationPreferences">updateNotificationPreferences</a></li><li><a href="global.html#updateThread">updateThread</a></li><li><a href="global.html#updateUser">updateUser</a></li><li><a href="global.html#updateUserProfile">updateUserProfile</a></li><li><a href="global.html#updateUserProfileHandler">updateUserProfileHandler</a></li><li><a href="global.html#updateVideo">updateVideo</a></li><li><a href="global.html#upgradeUserRole">upgradeUserRole</a></li><li><a href="global.html#uploadAvatar">uploadAvatar</a></li><li><a href="global.html#uploadIllustrationAvatar">uploadIllustrationAvatar</a></li><li><a href="global.html#useEffect">useEffect</a></li><li><a href="global.html#useTutorial">useTutorial</a></li><li><a href="global.html#validateForm">validateForm</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#verify2FASetup">verify2FASetup</a></li><li><a href="global.html#verifyTwoFA">verifyTwoFA</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Sat Jun 07 2025 14:32:34 GMT+0200 (Central European Summer Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

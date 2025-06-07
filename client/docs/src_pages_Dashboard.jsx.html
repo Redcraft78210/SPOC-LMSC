@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: src/pages/Dashboard.jsx</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: src/pages/Dashboard.jsx</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import { useState, useEffect, useRef, useCallback, Suspense, lazy } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { getAvatar } from '../API/ProfileCaller';
+import { jwtDecode } from 'jwt-decode';
+import { X, Pencil, Loader2, Mail, Bell, Menu } from 'lucide-react';
+import PropTypes from 'prop-types';
+
+import NavigationBar from '../components/Navbar';
+import Logo from '../Logo';
+
+
+
+
+const PictureModal = lazy(() => import('../components/PictureModal'));
+const Mailbox = lazy(() => import('../components/Mailbox'));
+const ThemeSettings = lazy(() => import('./Public/Theme'));
+const NotFound = lazy(() => import('./Public/NotFound'));
+
+
+const AdminDashboardHome = lazy(() => import('./Admin/DashboardHome'));
+const UserManagement = lazy(() => import('./Admin/UserManagement'));
+const ClassManagement = lazy(() => import('./Admin/ClassManagement'));
+
+
+const ProfDashboardHome = lazy(() => import('./Professeur/DashboardHome'));
+const CoursesManagement = lazy(() => import('../components/ProfComp/CoursesManagment'));
+const DocumentManager = lazy(() => import('../components/ProfComp/DocumentMng'));
+const VideoManager = lazy(() => import('../components/ProfComp/VideoMng'));
+const VideoRecording = lazy(() => import('../components/ProfComp/Recording'));
+
+
+const EleveDashboardHome = lazy(() => import('./Eleve/DashboardHome'));
+
+
+const CoursesLibrary = lazy(() => import('./CoursesLibrary'));
+const CourseReader = lazy(() => import('./CourseReader'));
+const LiveViewer = lazy(() => import('./LiveViewer'));
+const Forum = lazy(() => import('./Forum'));
+const Settings = lazy(() => import('./Settings'));
+
+
+/**
+ * @fileoverview Composant Dashboard principal qui gère l'interface utilisateur adaptée aux différents rôles
+ * (Administrateur, Professeur, Etudiant) et leurs fonctionnalités respectives.
+ */
+
+/**
+ * Composant affichant un indicateur de chargement animé pendant le chargement des composants lazy.
+ * 
+ * @returns {JSX.Element} Un spinner de chargement centré.
+ */
+const LoadingComponent = () => (
+  &lt;div className="flex items-center justify-center h-full w-full">
+    &lt;div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500">&lt;/div>
+  &lt;/div>
+);
+
+/**
+ * Composant principal du tableau de bord adapté selon le rôle de l'utilisateur.
+ * Gère l'affichage des différentes sections, le profil utilisateur, la navigation et les modales.
+ * 
+ * @param {Object} props - Les propriétés du composant
+ * @param {string} props.content - Identifiant du contenu à afficher (ex: "Home", "CoursesLibrary", etc.)
+ * @param {string} props.token - Token JWT d'authentification
+ * @param {('Administrateur'|'Professeur'|'Etudiant')} props.role - Rôle de l'utilisateur connecté
+ * @returns {JSX.Element} Interface du tableau de bord complète
+ */
+const Dashboard = ({ content, token, role }) => {
+  const navigate = useNavigate();
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showProfilepictureModal, setShowProfilepictureModal] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const divRef = useRef();
+  const [userAvatar, setUserAvatar] = useState(null);
+  const [avatarVersion, setAvatarVersion] = useState(0);
+  const [loadingAvatar, setLoadingAvatar] = useState(false);
+  const [showMailModal, setShowMailModal] = useState(false);
+  const avatarUrlRef = useRef(null);
+
+
+  /**
+   * Déclenche le rechargement de l'avatar utilisateur en mettant à jour le timestamp.
+   * 
+   * @returns {void}
+   */
+  const refreshAvatar = useCallback(() => {
+    setAvatarVersion(Date.now());
+  }, []);
+
+
+  /**
+   * Récupère l'avatar de l'utilisateur depuis l'API.
+   * Crée une URL d'objet pour l'image et gère le nettoyage des ressources.
+   * 
+   * @returns {void}
+   * @throws {Error} Si la récupération de l'avatar échoue
+   */
+  useEffect(() => {
+    const fetchAvatar = async () => {
+      try {
+        setLoadingAvatar(true);
+        if (avatarUrlRef.current) {
+          URL.revokeObjectURL(avatarUrlRef.current);
+        }
+
+        const response = await getAvatar();
+
+        if (response.status === 200) {
+          const imageUrl = URL.createObjectURL(response.data);
+          avatarUrlRef.current = imageUrl;
+          setUserAvatar(imageUrl);
+        }
+      } catch (error) {
+        console.error('Error fetching avatar:', error);
+        setUserAvatar(null);
+      } finally {
+        setLoadingAvatar(false);
+      }
+    };
+
+    fetchAvatar();
+
+    return () => {
+      if (avatarUrlRef.current) {
+        URL.revokeObjectURL(avatarUrlRef.current);
+      }
+    };
+  }, [token, avatarVersion]);
+
+  /**
+   * Gère la fermeture du modal de profil lors d'un clic en dehors de celui-ci.
+   * 
+   * @returns {void}
+   */
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (divRef.current &amp;&amp; !divRef.current.contains(event.target)) {
+        setShowProfileModal(false);
+      }
+    }
+
+    if (showProfileModal) {
+      document.addEventListener('mousedown', handleClickOutside);
+    } else {
+      document.removeEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showProfileModal]);
+
+
+  /**
+   * Ferme le menu mobile lors du changement de contenu.
+   * 
+   * @returns {void}
+   */
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [content]);
+
+  const decodedToken = jwtDecode(token);
+
+  const user = {
+    name:
+      decodedToken.name.charAt(0).toUpperCase() +
+      decodedToken.name.slice(1).toLowerCase(),
+    email: decodedToken.email,
+    role: decodedToken.role,
+  };
+
+  const contentMap = {
+    Home: role === 'Administrateur' ? (
+      &lt;Suspense fallback={&lt;LoadingComponent />}>
+        &lt;AdminDashboardHome user={user} />
+      &lt;/Suspense>
+    ) : role === 'Professeur' ? (
+      &lt;Suspense fallback={&lt;LoadingComponent />}>
+        &lt;ProfDashboardHome user={user} />
+      &lt;/Suspense>
+    ) : (
+      &lt;Suspense fallback={&lt;LoadingComponent />}>
+        &lt;EleveDashboardHome user={user} />
+      &lt;/Suspense>
+    ),
+    CoursesLibrary: &lt;CoursesLibrary authToken={token} userRole={role} />,
+    CourseReader: &lt;CourseReader authToken={token} userRole={role} />,
+    ...(role === 'Administrateur'
+      ? {
+        UserManagement: &lt;UserManagement authToken={token} />,
+        ClassManagement: &lt;ClassManagement authToken={token} />,
+      }
+      : {}),
+    ...(role === 'Professeur'
+      ? {
+        CoursesManagement: &lt;CoursesManagement authToken={token} />,
+        VideoManager: &lt;VideoManager authToken={token} />,
+        VideoRecording: &lt;VideoRecording authToken={token} />,
+        DocumentManager: &lt;DocumentManager authToken={token} />,
+      }
+      : {}),
+    ...(role === 'Etudiant'
+      ? {
+        CoursesLibrary: &lt;CoursesLibrary authToken={token} />,
+        CourseReader: &lt;CourseReader authToken={token} />,
+      }
+      : {}),
+    ThemeSettings: &lt;ThemeSettings />,
+    Forum: &lt;Forum authToken={token} userRole={role} />,
+    LiveViewer: &lt;LiveViewer authToken={token} userRole={role} />,
+    Settings: (
+      &lt;Settings
+        authToken={token}
+        refreshAvatar={refreshAvatar}
+        userAvatar={userAvatar}
+        loadingAvatar={loadingAvatar}
+      />
+    ),
+  };
+
+  /**
+   * Sélectionne le composant à afficher en fonction du contenu demandé et du rôle utilisateur.
+   * 
+   * @returns {JSX.Element} Le composant correspondant au contenu demandé ou NotFound
+   */
+  const renderContent = () => {
+    return contentMap[content] || &lt;NotFound />;
+  };
+
+  return showProfilepictureModal ? (
+    &lt;PictureModal
+      setShowProfilepictureModal={setShowProfilepictureModal}
+      refreshAvatar={refreshAvatar}
+      authToken={token}
+    />
+  ) : (
+    &lt;div className="h-screen w-full bg-white flex flex-col md:flex-row overflow-hidden">
+      {/* Mobile menu overlay */}
+      {isMobileMenuOpen &amp;&amp; (
+        &lt;div
+          className="fixed inset-0 backdrop-blur-md bg-black/10 z-30 md:hidden transition-opacity duration-300 ease-in-out"
+          onClick={() => setIsMobileMenuOpen(false)}
+        >&lt;/div>
+      )}
+
+      &lt;aside
+        className={`fixed inset-y-0 left-0 z-40 bg-gray-800 transition-transform duration-300 ease-in-out md:translate-x-0 md:static md:inset-auto md:z-auto ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+      >
+        &lt;NavigationBar
+          page={content}
+          isAdmin={role === 'Administrateur'}
+          isProf={role === 'Professeur'}
+        />
+      &lt;/aside>
+
+      {showMailModal &amp;&amp; (
+        &lt;Mailbox
+          user={user}
+          role={role}
+          onClose={() => {
+            setShowMailModal(false);
+          }}
+          authToken={token}
+        />
+      )}
+
+      &lt;main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        &lt;header className="h-16 bg-gray-800 flex items-center justify-between px-4 md:px-6">
+          &lt;div className="flex items-center">
+            &lt;button
+              className="md:hidden mr-2 text-white"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              &lt;Menu className="h-6 w-6" />
+            &lt;/button>
+            &lt;a
+              href="#"
+              onClick={e => {
+                e.preventDefault();
+                navigate('/');
+              }}
+              className="flex items-center gap-2"
+            >
+              &lt;Logo fillColor="#F9FAFB" className="h-15 w-auto sm:h-8 md:h-15 lg:h-20 transition-all" />
+            &lt;/a>
+          &lt;/div>
+
+          &lt;div className="flex items-center gap-2">
+            &lt;div className="flex items-center gap-4 text-white">
+              &lt;Bell className="h-5 w-5 md:h-6 md:w-6 mx-1" />
+              &lt;Mail
+                className="h-5 w-5 md:h-6 md:w-6 mx-1 md:mx-3 cursor-pointer"
+                onClick={() => setShowMailModal(true)}
+              />
+              &lt;div className="hidden md:flex flex-col items-end">
+                &lt;div className="text-md font-medium">{`${user.name}`}&lt;/div>
+                &lt;div className="text-sm font-regular">{role}&lt;/div>
+              &lt;/div>
+            &lt;/div>
+
+            &lt;div className="relative flex">
+              &lt;button
+                className="hover:ring-2 hover:ring-blue-400 rounded-full transition-all"
+                onClick={() => setShowProfileModal(true)}
+              >
+                {loadingAvatar ? (
+                  &lt;div className="w-10 h-10 md:w-12 md:h-12 bg-gray-700 rounded-full flex items-center justify-center">
+                    &lt;Loader2 className="h-5 w-5 md:h-6 md:w-6 text-blue-500 animate-spin" />
+                  &lt;/div>
+                ) : !userAvatar ? (
+                  &lt;div className="w-10 h-10 md:w-12 md:h-12 bg-yellow-500 rounded-full flex items-center justify-center">
+                    &lt;span className="text-lg md:text-xl font-bold text-gray-800">
+                      {user.name.charAt(0).toUpperCase()}
+                    &lt;/span>
+                  &lt;/div>
+                ) : (
+                  &lt;img
+                    src={userAvatar}
+                    alt="Avatar"
+                    className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover"
+                    onError={() => setUserAvatar(null)}
+                  />
+                )}
+              &lt;/button>
+              {showProfileModal &amp;&amp; (
+                &lt;div
+                  className="absolute right-0 top-full mt-2 w-[calc(100vw-32px)] max-w-[360px] bg-white border rounded-xl shadow-lg z-50"
+                  ref={divRef}
+                >
+                  &lt;div
+                    className="bg-slate-800 rounded-xl p-4 md:p-6 shadow-xl"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    &lt;X
+                      className="absolute right-3 top-3 cursor-pointer text-white"
+                      onClick={() => setShowProfileModal(false)}
+                    />
+                    &lt;p className="text-center text-white mb-4 md:mb-6 text-sm md:text-base truncate">{`${user.email}`}&lt;/p>
+
+                    &lt;div className="text-center mb-4 relative">
+                      {/* Profile picture container */}
+                      &lt;div className="relative inline-block mx-auto">
+                        {loadingAvatar ? (
+                          &lt;div className="h-16 w-16 md:h-20 md:w-20 rounded-full border-2 bg-gray-700 mx-auto mb-4 flex items-center justify-center">
+                            &lt;Loader2 className="h-6 w-6 md:h-8 md:w-8 text-blue-500 animate-spin" />
+                          &lt;/div>
+                        ) : !userAvatar ? (
+                          &lt;div className="h-16 w-16 md:h-20 md:w-20 rounded-full border-2 bg-yellow-500 mx-auto mb-4 flex items-center justify-center">
+                            &lt;span className="text-xl md:text-2xl font-bold text-gray-800">
+                              {user.name.charAt(0).toUpperCase()}
+                            &lt;/span>
+                          &lt;/div>
+                        ) : (
+                          &lt;img
+                            src={userAvatar}
+                            alt="Avatar"
+                            className="h-16 w-16 md:h-20 md:w-20 rounded-full mx-auto mb-4 object-cover"
+                            onError={() => setUserAvatar(null)}
+                          />
+                        )}
+
+                        {/* Edit button positioned absolutely over the image */}
+                        &lt;button
+                          className="absolute -right-2 top-0 cursor-pointer border border-blue-400 p-1 rounded-full bg-black"
+                          onClick={() => setShowProfilepictureModal(true)}
+                        >
+                          &lt;Pencil className="h-3 w-3 md:h-4 md:w-4 text-blue-500" />
+                        &lt;/button>
+                      &lt;/div>
+
+                      &lt;p className="text-center text-white mt-1 text-lg md:text-xl">
+                        Bonjour {`${user.name} !`}
+                      &lt;/p>
+                    &lt;/div>
+
+                    &lt;a
+                      href="#"
+                      onClick={e => {
+                        e.preventDefault();
+                        navigate('/logout');
+                      }}
+                      className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-center block"
+                    >
+                      Déconnexion
+                    &lt;/a>
+                    &lt;div className="flex flex-wrap justify-center gap-3 mt-4 text-sm md:text-base">
+                      &lt;p>
+                        &lt;a
+                          href="#"
+                          onClick={e => {
+                            e.preventDefault();
+                            navigate('/terms');
+                          }}
+                          className="text-blue-400 hover:underline"
+                        >
+                          Conditions
+                        &lt;/a>
+                      &lt;/p>
+                      &lt;p>
+                        &lt;a
+                          href="#"
+                          onClick={e => {
+                            e.preventDefault();
+                            navigate('/legal');
+                          }}
+                          className="text-blue-400 hover:underline"
+                        >
+                          Mentions légales
+                        &lt;/a>
+                      &lt;/p>
+                    &lt;/div>
+                  &lt;/div>
+                &lt;/div>
+              )}
+            &lt;/div>
+          &lt;/div>
+        &lt;/header>
+
+        &lt;section className="flex-1 overflow-y-auto p-3 md:p-6 bg-gray-50 -webkit-overflow-scrolling-touch">
+          {renderContent()}
+        &lt;/section>
+      &lt;/main>
+    &lt;/div>
+  );
+};
+
+/**
+ * Définition des types de propriétés attendues par le composant Dashboard.
+ */
+Dashboard.propTypes = {
+  content: PropTypes.string.isRequired,
+  token: PropTypes.string.isRequired,
+  role: PropTypes.oneOf(['Administrateur', 'Professeur', 'Etudiant']).isRequired,
+};
+
+export default Dashboard;</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-App.html">App</a></li></ul><h3>Global</h3><ul><li><a href="global.html#About">About</a></li><li><a href="global.html#AccountDisabledModal">AccountDisabledModal</a></li><li><a href="global.html#AdminDashboardHome">AdminDashboardHome</a></li><li><a href="global.html#BASE_URL">BASE_URL</a></li><li><a href="global.html#BulkActions">BulkActions</a></li><li><a href="global.html#ClassManagementTutorial">ClassManagementTutorial</a></li><li><a href="global.html#ClasseCards">ClasseCards</a></li><li><a href="global.html#ClasseCreationModal">ClasseCreationModal</a></li><li><a href="global.html#ClasseManagement">ClasseManagement</a></li><li><a href="global.html#ClasseTable">ClasseTable</a></li><li><a href="global.html#Contact">Contact</a></li><li><a href="global.html#ContentCard">ContentCard</a></li><li><a href="global.html#CourseReader">CourseReader</a></li><li><a href="global.html#CourseReaderTutorial">CourseReaderTutorial</a></li><li><a href="global.html#Courses">Courses</a></li><li><a href="global.html#CoursesLibraryTutorial">CoursesLibraryTutorial</a></li><li><a href="global.html#Dashboard">Dashboard</a></li><li><a href="global.html#DashboardTutorial">DashboardTutorial</a></li><li><a href="global.html#DeleteDocument">DeleteDocument</a></li><li><a href="global.html#DeleteVideo">DeleteVideo</a></li><li><a href="global.html#EleveDashboardHome">EleveDashboardHome</a></li><li><a href="global.html#ErrorMessage">ErrorMessage</a></li><li><a href="global.html#FilterDropdown">FilterDropdown</a></li><li><a href="global.html#FirstLogin">FirstLogin</a></li><li><a href="global.html#Footer">Footer</a></li><li><a href="global.html#Forum">Forum</a></li><li><a href="global.html#GetAll_DataStructure">GetAll_DataStructure</a></li><li><a href="global.html#GetAll_Document">GetAll_Document</a></li><li><a href="global.html#Get_Document_Information">Get_Document_Information</a></li><li><a href="global.html#Get_Video_Information">Get_Video_Information</a></li><li><a href="global.html#Get_special_Document">Get_special_Document</a></li><li><a href="global.html#Get_special_Video">Get_special_Video</a></li><li><a href="global.html#Home">Home</a></li><li><a href="global.html#INACTIVITY_THRESHOLD">INACTIVITY_THRESHOLD</a></li><li><a href="global.html#LegalNotice">LegalNotice</a></li><li><a href="global.html#LiveNotFound">LiveNotFound</a></li><li><a href="global.html#LiveViewer">LiveViewer</a></li><li><a href="global.html#LoadCanvasTemplate">LoadCanvasTemplate</a></li><li><a href="global.html#LoadingComponent">LoadingComponent</a></li><li><a href="global.html#LoadingSpinner">LoadingSpinner</a></li><li><a href="global.html#Logout">Logout</a></li><li><a href="global.html#Mailbox">Mailbox</a></li><li><a href="global.html#MaintenanceBanner">MaintenanceBanner</a></li><li><a href="global.html#MessageDetailSkeleton">MessageDetailSkeleton</a></li><li><a href="global.html#MessageSkeleton">MessageSkeleton</a></li><li><a href="global.html#NavigationBar">NavigationBar</a></li><li><a href="global.html#PictureModal">PictureModal</a></li><li><a href="global.html#PrivacyPolicy">PrivacyPolicy</a></li><li><a href="global.html#PrivacyTab">PrivacyTab</a></li><li><a href="global.html#ProfilePhotoSelector">ProfilePhotoSelector</a></li><li><a href="global.html#PublicNavbar">PublicNavbar</a></li><li><a href="global.html#SearchBar">SearchBar</a></li><li><a href="global.html#SearchUser">SearchUser</a></li><li><a href="global.html#SecureDocumentViewer">SecureDocumentViewer</a></li><li><a href="global.html#SecureVideoPlayer">SecureVideoPlayer</a></li><li><a href="global.html#SecurityTab">SecurityTab</a></li><li><a href="global.html#SendDocument">SendDocument</a></li><li><a href="global.html#SendVideo">SendVideo</a></li><li><a href="global.html#Settings">Settings</a></li><li><a href="global.html#Sign">Sign</a></li><li><a href="global.html#Spinner">Spinner</a></li><li><a href="global.html#StreamReader">StreamReader</a></li><li><a href="global.html#TEN_MINUTES">TEN_MINUTES</a></li><li><a href="global.html#TermsOfUse">TermsOfUse</a></li><li><a href="global.html#ToggleView">ToggleView</a></li><li><a href="global.html#Tutorial">Tutorial</a></li><li><a href="global.html#TutorialContext">TutorialContext</a></li><li><a href="global.html#TutorialProvider">TutorialProvider</a></li><li><a href="global.html#TwoFASetupModal">TwoFASetupModal</a></li><li><a href="global.html#UpdateDocument">UpdateDocument</a></li><li><a href="global.html#UserManagementTutorial">UserManagementTutorial</a></li><li><a href="global.html#WSS_BASE_URL">WSS_BASE_URL</a></li><li><a href="global.html#activateUser">activateUser</a></li><li><a href="global.html#addComment">addComment</a></li><li><a href="global.html#addStudentToClass">addStudentToClass</a></li><li><a href="global.html#allDigitsFilled">allDigitsFilled</a></li><li><a href="global.html#api">api</a></li><li><a href="global.html#authToken">authToken</a></li><li><a href="global.html#authenticatedButtons">authenticatedButtons</a></li><li><a href="global.html#baseURL">baseURL</a></li><li><a href="global.html#blockLive">blockLive</a></li><li><a href="global.html#bulkDelete">bulkDelete</a></li><li><a href="global.html#changePassword">changePassword</a></li><li><a href="global.html#check2FAStatus">check2FAStatus</a></li><li><a href="global.html#checkRegisterCode">checkRegisterCode</a></li><li><a href="global.html#createClass">createClass</a></li><li><a href="global.html#createCourse">createCourse</a></li><li><a href="global.html#createLive">createLive</a></li><li><a href="global.html#createThread">createThread</a></li><li><a href="global.html#createUser">createUser</a></li><li><a href="global.html#deactivateUser">deactivateUser</a></li><li><a href="global.html#deleteAvatar">deleteAvatar</a></li><li><a href="global.html#deleteClass">deleteClass</a></li><li><a href="global.html#deleteClasseHandler">deleteClasseHandler</a></li><li><a href="global.html#deleteComment">deleteComment</a></li><li><a href="global.html#deleteContactMessage">deleteContactMessage</a></li><li><a href="global.html#deleteCourse">deleteCourse</a></li><li><a href="global.html#deleteInviteCode">deleteInviteCode</a></li><li><a href="global.html#deleteLive">deleteLive</a></li><li><a href="global.html#deleteMessage">deleteMessage</a></li><li><a href="global.html#deleteThread">deleteThread</a></li><li><a href="global.html#deleteUser">deleteUser</a></li><li><a href="global.html#disable2FA">disable2FA</a></li><li><a href="global.html#disapproveCourse">disapproveCourse</a></li><li><a href="global.html#disapproveLive">disapproveLive</a></li><li><a href="global.html#downloadAttachment">downloadAttachment</a></li><li><a href="global.html#endLive">endLive</a></li><li><a href="global.html#errorMessages">errorMessages</a></li><li><a href="global.html#fetchClasses">fetchClasses</a></li><li><a href="global.html#fetchCourseData">fetchCourseData</a></li><li><a href="global.html#fetchData">fetchData</a></li><li><a href="global.html#fetchUsers">fetchUsers</a></li><li><a href="global.html#firstLogin">firstLogin</a></li><li><a href="global.html#flagContent">flagContent</a></li><li><a href="global.html#forgotPassword">forgotPassword</a></li><li><a href="global.html#generateInviteCode">generateInviteCode</a></li><li><a href="global.html#getAllClasses">getAllClasses</a></li><li><a href="global.html#getAllContactMessages">getAllContactMessages</a></li><li><a href="global.html#getAllCourses">getAllCourses</a></li><li><a href="global.html#getAllInviteCodes">getAllInviteCodes</a></li><li><a href="global.html#getAllLives">getAllLives</a></li><li><a href="global.html#getAllUsers">getAllUsers</a></li><li><a href="global.html#getAvailableRecipients">getAvailableRecipients</a></li><li><a href="global.html#getAvatar">getAvatar</a></li><li><a href="global.html#getClassById">getClassById</a></li><li><a href="global.html#getClassStudents">getClassStudents</a></li><li><a href="global.html#getContactMessage">getContactMessage</a></li><li><a href="global.html#getCourseById">getCourseById</a></li><li><a href="global.html#getCourseDetails">getCourseDetails</a></li><li><a href="global.html#getCourseProgress">getCourseProgress</a></li><li><a href="global.html#getCoursesByClass">getCoursesByClass</a></li><li><a href="global.html#getFlags">getFlags</a></li><li><a href="global.html#getInboxMessages">getInboxMessages</a></li><li><a href="global.html#getInitialViewMode">getInitialViewMode</a></li><li><a href="global.html#getLiveById">getLiveById</a></li><li><a href="global.html#getLiveMessages">getLiveMessages</a></li><li><a href="global.html#getLiveStreamUrl">getLiveStreamUrl</a></li><li><a href="global.html#getLivesByClass">getLivesByClass</a></li><li><a href="global.html#getMessage">getMessage</a></li><li><a href="global.html#getNotificationPreferences">getNotificationPreferences</a></li><li><a href="global.html#getSentMessages">getSentMessages</a></li><li><a href="global.html#getStudentProgress">getStudentProgress</a></li><li><a href="global.html#getThreadById">getThreadById</a></li><li><a href="global.html#getThreads">getThreads</a></li><li><a href="global.html#getTrashMessages">getTrashMessages</a></li><li><a href="global.html#getUserById">getUserById</a></li><li><a href="global.html#getUserProfile">getUserProfile</a></li><li><a href="global.html#getUserWarnings">getUserWarnings</a></li><li><a href="global.html#getVideoDetails">getVideoDetails</a></li><li><a href="global.html#getVideoStreamUrl">getVideoStreamUrl</a></li><li><a href="global.html#handle2FASubmit">handle2FASubmit</a></li><li><a href="global.html#handleBackdropClick">handleBackdropClick</a></li><li><a href="global.html#handleBlockedMouseLeave">handleBlockedMouseLeave</a></li><li><a href="global.html#handleBlockedMouseMove">handleBlockedMouseMove</a></li><li><a href="global.html#handleClose">handleClose</a></li><li><a href="global.html#handleCompleteCourse">handleCompleteCourse</a></li><li><a href="global.html#handleCourseDisapproval">handleCourseDisapproval</a></li><li><a href="global.html#handleDeleteCourse">handleDeleteCourse</a></li><li><a href="global.html#handleDigitChange">handleDigitChange</a></li><li><a href="global.html#handleDigitKeyDown">handleDigitKeyDown</a></li><li><a href="global.html#handleDigitPaste">handleDigitPaste</a></li><li><a href="global.html#handleDownloadDocument">handleDownloadDocument</a></li><li><a href="global.html#handleError">handleError</a></li><li><a href="global.html#handleInputChange">handleInputChange</a></li><li><a href="global.html#handleLogout">handleLogout</a></li><li><a href="global.html#handleMenuToggle">handleMenuToggle</a></li><li><a href="global.html#handleModAction">handleModAction</a></li><li><a href="global.html#handleSubmit">handleSubmit</a></li><li><a href="global.html#handleSubmitClasse">handleSubmitClasse</a></li><li><a href="global.html#handleTabChange">handleTabChange</a></li><li><a href="global.html#handleUnblockCourse">handleUnblockCourse</a></li><li><a href="global.html#isAuthenticated">isAuthenticated</a></li><li><a href="global.html#loadCaptchaEngine">loadCaptchaEngine</a></li><li><a href="global.html#logViewEngagement">logViewEngagement</a></li><li><a href="global.html#login">login</a></li><li><a href="global.html#markAsRead">markAsRead</a></li><li><a href="global.html#markAsUnread">markAsUnread</a></li><li><a href="global.html#markContactMessageAsProcessed">markContactMessageAsProcessed</a></li><li><a href="global.html#markCourseAsCompleted">markCourseAsCompleted</a></li><li><a href="global.html#markCourseAsInProgress">markCourseAsInProgress</a></li><li><a href="global.html#mountApp">mountApp</a></li><li><a href="global.html#moveToTrash">moveToTrash</a></li><li><a href="global.html#navItems">navItems</a></li><li><a href="global.html#navigate">navigate</a></li><li><a href="global.html#onSamplesDecoded">onSamplesDecoded</a></li><li><a href="global.html#refreshTwoFASetup">refreshTwoFASetup</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#removeStudentFromClass">removeStudentFromClass</a></li><li><a href="global.html#renderContent">renderContent</a></li><li><a href="global.html#resolveFlag">resolveFlag</a></li><li><a href="global.html#restoreFromTrash">restoreFromTrash</a></li><li><a href="global.html#retrogradeUserRole">retrogradeUserRole</a></li><li><a href="global.html#root">root</a></li><li><a href="global.html#sendContactMessage">sendContactMessage</a></li><li><a href="global.html#sendLiveMessage">sendLiveMessage</a></li><li><a href="global.html#sendMessage">sendMessage</a></li><li><a href="global.html#sendWarning">sendWarning</a></li><li><a href="global.html#setMainTeacher">setMainTeacher</a></li><li><a href="global.html#setup2FA">setup2FA</a></li><li><a href="global.html#signButtons">signButtons</a></li><li><a href="global.html#startLive">startLive</a></li><li><a href="global.html#toggleAll">toggleAll</a></li><li><a href="global.html#toggleClasse">toggleClasse</a></li><li><a href="global.html#toggleMember">toggleMember</a></li><li><a href="global.html#toggleMobileMenu">toggleMobileMenu</a></li><li><a href="global.html#unblockCourse">unblockCourse</a></li><li><a href="global.html#unblockLive">unblockLive</a></li><li><a href="global.html#updateClass">updateClass</a></li><li><a href="global.html#updateComment">updateComment</a></li><li><a href="global.html#updateCourse">updateCourse</a></li><li><a href="global.html#updateLive">updateLive</a></li><li><a href="global.html#updateNotificationPreferences">updateNotificationPreferences</a></li><li><a href="global.html#updateThread">updateThread</a></li><li><a href="global.html#updateUser">updateUser</a></li><li><a href="global.html#updateUserProfile">updateUserProfile</a></li><li><a href="global.html#updateUserProfileHandler">updateUserProfileHandler</a></li><li><a href="global.html#updateVideo">updateVideo</a></li><li><a href="global.html#upgradeUserRole">upgradeUserRole</a></li><li><a href="global.html#uploadAvatar">uploadAvatar</a></li><li><a href="global.html#uploadIllustrationAvatar">uploadIllustrationAvatar</a></li><li><a href="global.html#useEffect">useEffect</a></li><li><a href="global.html#useTutorial">useTutorial</a></li><li><a href="global.html#validateForm">validateForm</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#verify2FASetup">verify2FASetup</a></li><li><a href="global.html#verifyTwoFA">verifyTwoFA</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Sat Jun 07 2025 14:32:34 GMT+0200 (Central European Summer Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: src/pages/Public/Sign.jsx</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: src/pages/Public/Sign.jsx</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import { Eye, EyeOff, TriangleAlert, ArrowLeft, Copy } from 'lucide-react';
+import { jwtDecode } from 'jwt-decode';
+import {
+  LoadCanvasTemplate,
+  loadCaptchaEnginge as loadCaptchaEngine,
+  validateCaptcha,
+} from 'react-simple-captcha';
+import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import Logo from '../../Logo';
+import SubmitButton from '../../components/SubmitButton';
+import PropTypes from 'prop-types';
+
+
+import {
+  login,
+  register,
+  checkRegisterCode,
+  verifyTwoFA,
+  refreshTwoFASetup,
+  forgotPassword
+} from '../../API/AuthCaller';
+
+/**
+ * @fileoverview Composant de gestion d'authentification permettant aux utilisateurs de se connecter,
+ * s'inscrire, configurer la double authentification et réinitialiser leur mot de passe.
+ */
+
+/**
+ * Messages d'erreur spécifiques pour les différents cas d'erreur d'authentification.
+ * @type {Object.&lt;string, string>}
+ */
+const errorMessages = {
+  'auth/invalid-credentials': 'Identifiants incorrects',
+  'auth/invalid-register-code': "Code d'inscription invalide/expiré",
+  'auth/email-exists': 'Cet email est déjà utilisé',
+  'auth/user-not-found': 'Utilisateur introuvable',
+  'auth/username-exists': "Ce nom d'utilisateur est déjà utilisé",
+  'auth/2fa-required': 'Vérification 2FA requise',
+  'auth/invalid-2fa-code': 'Code de double authentification incorrect',
+  'auth/weak-password':
+    'Le mot de passe doit contenir au moins 12 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial',
+  default: 'Une erreur est survenue. Veuillez réessayer.',
+};
+
+/**
+ * Affiche une modale informant l'utilisateur que son compte a été désactivé.
+ * 
+ * @component
+ * @param {Object} props - Propriétés du composant
+ * @param {boolean} props.open - Détermine si la modale est visible
+ * @param {Function} props.onClose - Fonction appelée pour fermer la modale
+ * @returns {JSX.Element|null} La modale si ouverte, sinon null
+ */
+const AccountDisabledModal = ({ open, onClose }) => {
+  if (!open) return null;
+
+  return (
+    &lt;div className="fixed inset-0 z-50 backdrop-blur-sm bg-black/30 flex items-center justify-center p-4">
+      &lt;div className="bg-white max-w-md w-full rounded-xl shadow-lg overflow-hidden">
+        &lt;div className="p-6 sm:p-8 text-center">
+          &lt;div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100">
+            &lt;TriangleAlert
+              className="h-8 w-8 text-red-600"
+              aria-hidden="true"
+            />
+          &lt;/div>
+
+          &lt;h3 className="mt-6 text-xl font-semibold text-gray-900">
+            Compte désactivé
+          &lt;/h3>
+
+          &lt;p className="mt-4 text-gray-600">
+            Votre compte a été désactivé. Pour contester cette décision ou obtenir
+            des informations supplémentaires, veuillez contacter l&amp;apos;équipe de modération
+            via notre formulaire de contact.
+          &lt;/p>
+
+          &lt;div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
+            &lt;a
+              href="/contact"
+              className="inline-flex justify-center items-center px-5 py-2.5 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 transition-colors"
+            >
+              Accéder au formulaire
+            &lt;/a>
+
+            &lt;button
+              onClick={onClose}
+              type="button"
+              className="inline-flex justify-center items-center px-5 py-2.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+            >
+              Fermer
+            &lt;/button>
+          &lt;/div>
+        &lt;/div>
+      &lt;/div>
+    &lt;/div>
+  );
+};
+
+
+AccountDisabledModal.propTypes = {
+  open: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+};
+
+/**
+ * Composant principal d'authentification gérant la connexion, l'inscription,
+ * la double authentification et la réinitialisation de mot de passe.
+ * 
+ * @component
+ * @param {Object} props - Propriétés du composant
+ * @param {Function} props.setAuth - Fonction pour définir l'état d'authentification
+ * @returns {JSX.Element} Interface d'authentification
+ */
+const Sign = ({ setAuth }) => {
+  const navigate = useNavigate();
+  const [error, setError] = useState(null);
+  const [isSignUpForm, setIsSignUpForm] = useState(false);
+  const [authStep, setAuthStep] = useState('initial');
+  const [tempToken, setTempToken] = useState(null);
+
+  const [twoFADigits, setTwoFADigits] = useState(['', '', '', '', '', '']);
+  const digitsRefs = useRef([]);
+  const [countEchec2FACode, setCountEchec2FACode] = useState(0);
+  const [username, setUsername] = useState('');
+  const [emailOrUsername, setEmailOrUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [name, setName] = useState('');
+  const [surname, setSurname] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [qrCodeData, setQrCodeData] = useState('');
+  const [manualSecret, setManualSecret] = useState('');
+  const [captchaValue, setCaptchaValue] = useState('');
+  const [lastSubmit, setLastSubmit] = useState(0);
+  const [code, setCode] = useState('');
+  const [showAccountDisabledModal, setShowAccountDisabledModal] = useState(false);
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    setIsSignUpForm(searchParams.get('register'));
+  }, []);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      loadCaptchaEngine(6, '#f9fafb');
+    }, 100);
+
+    return () => clearTimeout(timeout);
+  }, []);
+
+  useEffect(() => {
+    if (countEchec2FACode === 2 || authStep === 'initial') {
+      const timeout = setTimeout(() => {
+        loadCaptchaEngine(6, '#f9fafb');
+      }, 100);
+
+      return () => clearTimeout(timeout);
+    }
+  }, [countEchec2FACode, authStep]);
+
+  useEffect(() => {
+    const token =
+      localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    if (token) {
+      navigate('/dashboard');
+    }
+  }, [navigate]);
+
+  useEffect(() => {
+    setLastSubmit(0);
+  }, [authStep]);
+
+  useEffect(() => {
+    let intervalId;
+    let timeoutId;
+
+    const refresh2FASetup = async () => {
+      try {
+
+        const response = await refreshTwoFASetup({
+          tempToken: tempToken?.value,
+          twoFASetup: { qrCode: qrCodeData, manualSecret }
+        });
+
+        if (response.status !== 200) {
+          throw new Error(response.message || errorMessages.default);
+        }
+
+        const decodedToken = jwtDecode(response.data.tempToken);
+        setTempToken({
+          value: response.data.tempToken,
+          expiresAt: decodedToken.exp * 1000,
+        });
+        setQrCodeData(response.data.twoFASetup.qrCode);
+        setManualSecret(response.data.twoFASetup.manualSecret);
+        setError(null);
+      } catch (error) {
+        setError(errorMessages[error.data?.message] || error.data?.message || errorMessages.default);
+        setAuthStep('initial');
+        setTempToken(null);
+      }
+    };
+
+    if (tempToken?.value) {
+      try {
+        const decodedToken = jwtDecode(tempToken.value);
+        const expirationTime = decodedToken.exp * 1000;
+
+        if (expirationTime > Date.now()) {
+          const timeUntilRefresh = Math.max(
+            1000,
+            (expirationTime - Date.now()) / 2
+          );
+          timeoutId = setTimeout(refresh2FASetup, timeUntilRefresh);
+          intervalId = setInterval(refresh2FASetup, timeUntilRefresh);
+        }
+      } catch (error) {
+        console.error('Erreur de décodage JWT:', error);
+        setError('Token invalide. Veuillez réessayer.');
+        setAuthStep('initial');
+        setTempToken(null);
+      }
+    }
+
+    return () => {
+      clearInterval(intervalId);
+      clearTimeout(timeoutId);
+    };
+  }, [tempToken?.value, qrCodeData, manualSecret]);
+
+  /**
+   * Valide la conformité du mot de passe selon les critères de sécurité.
+   * 
+   * @param {string} pw - Mot de passe à valider
+   * @returns {boolean} True si le mot de passe est valide, sinon False
+   */
+  const validatePassword = pw => {
+    return /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{12,}$/.test(pw);
+  };
+
+  /**
+   * Gère les erreurs d'authentification et affiche le message approprié.
+   * 
+   * @param {Object} error - Objet d'erreur retourné par l'API
+   * @returns {boolean} Toujours false pour indiquer qu'une erreur s'est produite
+   */
+  const handleError = error => {
+
+    if (error?.response?.status === 403 || error?.status === 403) {
+      setShowAccountDisabledModal(true);
+      return false;
+    }
+    setError(() => {
+
+      if (error.message) {
+        const matchingKey = Object.keys(errorMessages).find(key =>
+          key !== 'default' &amp;&amp; error.message.includes(key)
+        );
+
+        if (matchingKey) {
+          return errorMessages[matchingKey];
+        }
+      }
+
+
+      return errorMessages[error.data?.message] ||
+        error.data?.message ||
+        errorMessages.default;
+    });
+    return false;
+  };
+
+  /**
+   * Gère la soumission du formulaire de connexion ou d'inscription.
+   * 
+   * @async
+   * @param {Event} e - Événement de soumission du formulaire
+   * @returns {Promise&lt;boolean>} Résultat de la tentative d'authentification
+   * @throws {Error} Erreur lors de l'authentification
+   */
+  const handleSubmit = async e => {
+    e.preventDefault();
+    if (Date.now() - lastSubmit &lt; 2000) return;
+    setLastSubmit(Date.now());
+    setError(null);
+
+    if (isSignUpForm) {
+
+      if (!email.trim() || !password.trim() || !username.trim()) {
+        return setError('Veuillez remplir tous les champs requis');
+      }
+
+      if (password !== confirmPassword) {
+        return setError('Les mots de passe ne correspondent pas');
+      }
+
+      if (code.trim() === '') {
+        return setError("Veuillez entrer le code d'inscription");
+      }
+
+      if (!validatePassword(password)) {
+        return setError(errorMessages['auth/weak-password']);
+      }
+    } else {
+
+      if (!emailOrUsername.trim() || !password.trim()) {
+        return setError('Veuillez remplir tous les champs requis');
+      }
+    }
+
+
+    if (captchaValue.trim() === '') {
+      return setError('Veuillez entrer le code de vérification (CAPTCHA)');
+    }
+
+    if (captchaValue !== '' &amp;&amp; !validateCaptcha(captchaValue)) {
+      return setError('Le code de vérification (CAPTCHA) est incorrect');
+    }
+
+    try {
+      if (isSignUpForm) {
+
+        const codeCheckResponse = await checkRegisterCode({ code });
+
+        if (!codeCheckResponse.data.isValid) {
+          throw new Error(codeCheckResponse.message || errorMessages['auth/invalid-register-code']);
+        }
+
+
+        const registerResponse = await register({
+          email: email.trim(),
+          username: username.trim(),
+          password: password.trim(),
+          name: name.trim(),
+          surname: surname.trim(),
+          registerCode: code.trim(),
+        });
+
+        if (registerResponse.status !== 200 &amp;&amp; registerResponse.status !== 201) {
+          throw new Error(registerResponse.message || errorMessages.default);
+        }
+
+        const data = registerResponse.data;
+
+        if (data.requires2FA || data.twoFASetup) {
+          setAuthStep(data.twoFASetup ? '2fa-setup' : '2fa-verification');
+          const decodedToken = jwtDecode(data.tempToken);
+          setTempToken({
+            value: data.tempToken,
+            expiresAt: decodedToken.exp * 1000,
+          });
+          if (data.twoFASetup) {
+            setQrCodeData(data.twoFASetup.qrCode);
+            setManualSecret(data.twoFASetup.manualSecret);
+          }
+        } else if (data.token) {
+          handleAuthSuccess(data.token);
+        }
+      } else {
+
+        const isEmail = emailOrUsername.includes('@');
+
+        const loginResponse = await login({
+
+          ...(isEmail ? { email: emailOrUsername.trim() } : { username: emailOrUsername.trim() }),
+          password: password.trim(),
+        });
+
+        if (loginResponse.status === 403) {
+          setShowAccountDisabledModal(true);
+          return false;
+        }
+
+        if (![200, 201, 202].includes(loginResponse.status)) {
+          throw new Error(loginResponse.message || errorMessages.default);
+        }
+
+        const data = loginResponse.data;
+
+        if (data.requires2FA || data.twoFASetup) {
+          setAuthStep(data.twoFASetup ? '2fa-setup' : '2fa-verification');
+          const decodedToken = jwtDecode(data.tempToken);
+          setTempToken({
+            value: data.tempToken,
+            expiresAt: decodedToken.exp * 1000,
+          });
+          if (data.twoFASetup) {
+            setQrCodeData(data.twoFASetup.qrCode);
+            setManualSecret(data.twoFASetup.manualSecret);
+          }
+        } else if (data.token) {
+          handleAuthSuccess(data.token);
+        }
+      }
+      return true;
+    } catch (error) {
+      return handleError(error);
+    }
+  };
+
+
+  const allDigitsFilled = () => twoFADigits.every(digit => digit !== '');
+
+  /**
+   * Gère le changement de valeur dans les champs du code 2FA.
+   * 
+   * @param {number} index - Index du champ modifié
+   * @param {string} value - Nouvelle valeur du champ
+   */
+  const handleDigitChange = (index, value) => {
+
+    if (!/^[0-9]?$/.test(value)) return;
+
+    const newDigits = [...twoFADigits];
+    newDigits[index] = value;
+    setTwoFADigits(newDigits);
+
+
+    if (value &amp;&amp; index &lt; 5) {
+      digitsRefs.current[index + 1].focus();
+    }
+  };
+
+  /**
+   * Gère les événements clavier dans les champs du code 2FA.
+   * 
+   * @param {number} index - Index du champ actuel
+   * @param {KeyboardEvent} e - Événement clavier
+   */
+  const handleDigitKeyDown = (index, e) => {
+
+    if (e.key === 'Backspace') {
+
+      if (twoFADigits[index] !== '') {
+        const newDigits = [...twoFADigits];
+        newDigits[index] = '';
+        setTwoFADigits(newDigits);
+
+      }
+
+      else if (index > 0) {
+        const newDigits = [...twoFADigits];
+        newDigits[index - 1] = '';
+        setTwoFADigits(newDigits);
+        digitsRefs.current[index - 1].focus();
+      }
+    } else if (e.key === 'ArrowLeft' &amp;&amp; index > 0) {
+
+      digitsRefs.current[index - 1].focus();
+    } else if (e.key === 'ArrowRight' &amp;&amp; index &lt; 5) {
+
+      digitsRefs.current[index + 1].focus();
+    } else if (/^[0-9]$/.test(e.key)) {
+
+      const newDigits = [...twoFADigits];
+      newDigits[index] = e.key;
+      setTwoFADigits(newDigits);
+
+
+      if (index &lt; 5) {
+        e.preventDefault();
+        digitsRefs.current[index + 1].focus();
+      }
+    }
+  };
+
+  /**
+   * Gère le collage d'un code 2FA dans les champs de saisie.
+   * 
+   * @param {number} index - Index du champ où le collage est effectué
+   * @param {ClipboardEvent} e - Événement de collage
+   */
+  const handleDigitPaste = (index, e) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text').trim();
+
+    const digits = pastedData.replace(/\D/g, '').slice(0, 6).split('');
+
+    if (digits.length > 0) {
+      const newDigits = [...twoFADigits];
+
+      digits.forEach((digit, i) => {
+        if (index + i &lt; 6) {
+          newDigits[index + i] = digit;
+        }
+      });
+
+      setTwoFADigits(newDigits);
+
+      const nextEmptyIndex = newDigits.findIndex(digit => digit === '');
+      if (nextEmptyIndex !== -1 &amp;&amp; nextEmptyIndex &lt; 6) {
+        digitsRefs.current[nextEmptyIndex].focus();
+      } else if (digits.length > 0) {
+        digitsRefs.current[Math.min(index + digits.length, 5)].focus();
+      }
+    }
+  };
+
+  /**
+   * Gère la soumission du formulaire de vérification 2FA.
+   * 
+   * @async
+   * @param {Event} e - Événement de soumission du formulaire
+   * @returns {Promise&lt;boolean>} Résultat de la vérification 2FA
+   * @throws {Error} Erreur lors de la vérification du code 2FA
+   */
+  const handle2FASubmit = async e => {
+    e.preventDefault();
+    if (Date.now() - lastSubmit &lt; 2000) return;
+    setLastSubmit(Date.now());
+    setError(null);
+
+
+    const fullCode = twoFADigits.join('');
+
+    if (countEchec2FACode >= 2) {
+
+      if (captchaValue.trim() === '') {
+        return setError('Veuillez entrer le code de vérification (CAPTCHA)');
+      }
+      if (captchaValue !== '' &amp;&amp; !validateCaptcha(captchaValue)) {
+        return setError('Le code de vérification (CAPTCHA) est incorrect');
+      }
+    }
+
+    if (fullCode.length !== 6) {
+      return setError('Veuillez entrer un code à 6 chiffres');
+    }
+
+    try {
+
+      const response = await verifyTwoFA({
+        tempToken: tempToken?.value,
+        code: fullCode,
+        setup: authStep === '2fa-setup',
+      });
+
+      if (response.status === 403) {
+        setShowAccountDisabledModal(true);
+        return false;
+      }
+
+      if (response.status !== 200) {
+        throw new Error(response.message || errorMessages.default);
+      }
+
+      if (response.data.token) {
+        handleAuthSuccess(response.data.token);
+        return true;
+      }
+      return true;
+    } catch (error) {
+      setCountEchec2FACode(prev => prev + 1);
+      return handleError(error);
+    }
+  };
+
+  /**
+   * Finalise le processus d'authentification après une connexion réussie.
+   * 
+   * @param {string} token - Token d'authentification
+   */
+  const handleAuthSuccess = token => {
+    setAuth(token);
+    if (rememberMe) {
+      localStorage.setItem('authToken', token);
+      sessionStorage.removeItem('authToken');
+    } else {
+      sessionStorage.setItem('authToken', token);
+      localStorage.removeItem('authToken');
+    }
+    navigate('/dashboard');
+  };
+
+  /**
+   * Gère la soumission du formulaire de récupération de mot de passe.
+   * 
+   * @async
+   * @param {Event} e - Événement de soumission du formulaire
+   * @returns {Promise&lt;boolean|undefined>} Résultat de la demande de récupération
+   * @throws {Error} Erreur lors de la demande de réinitialisation
+   */
+  const handleForgotPasswordSubmit = async e => {
+    e.preventDefault();
+    setError(null);
+
+    if (!emailOrUsername.trim()) {
+      return setError('Veuillez entrer votre email ou nom d\'utilisateur');
+    }
+
+    try {
+
+      const isEmail = emailOrUsername.includes('@');
+
+      const response = await forgotPassword({
+        ...(isEmail ? { email: emailOrUsername.trim() } : { username: emailOrUsername.trim() })
+      });
+
+      if (response.status !== 200) {
+        throw new Error(response.message || errorMessages.default);
+      }
+
+      setError(response.message);
+      setAuthStep('initial');
+    } catch (error) {
+      return handleError(error);
+    }
+  };
+
+  /**
+   * Bascule entre les modes connexion et inscription.
+   * Transfère les données d'email entre les formulaires.
+   */
+  const toggleAuthMode = () => {
+    setIsSignUpForm(!isSignUpForm);
+    setError(null);
+    if (isSignUpForm) {
+      setUsername('');
+      setName('');
+      setSurname('');
+      setConfirmPassword('');
+
+      setEmailOrUsername(email);
+    } else {
+      setEmail(emailOrUsername);
+      setEmailOrUsername('');
+    }
+  };
+
+  /**
+   * Affiche le contenu pour la configuration ou vérification 2FA.
+   * 
+   * @returns {JSX.Element} Formulaire de gestion 2FA
+   */
+  const render2FAContent = () => (
+    &lt;form onSubmit={handle2FASubmit} className="w-full max-w-md mx-auto space-y-8 p-6 rounded-2xl">
+      {/* Section Configuration 2FA */}
+      {authStep === '2fa-setup' &amp;&amp; (
+        &lt;div className="text-center space-y-6">
+          &lt;div className="mb-6">
+            &lt;h3 className="text-2xl font-bold text-gray-800 mb-2">Activer la double authentification&lt;/h3>
+            &lt;p className="text-gray-500 text-sm">Protégez votre compte avec un second niveau de sécurité&lt;/p>
+          &lt;/div>
+
+          &lt;div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm inline-block">
+            &lt;img
+              src={qrCodeData}
+              alt="QR Code 2FA"
+              className="mx-auto w-52 h-52 rounded-xl"
+              aria-describedby="qrCodeDesc"
+            />
+          &lt;/div>
+
+          &lt;div className="space-y-3">
+            &lt;p id="qrCodeDesc" className="text-gray-600 text-sm">
+              Scannez ce QR Code avec votre application d&amp;apos;authentification
+            &lt;/p>
+
+            &lt;div className="pt-2">
+              &lt;p className="text-gray-500 text-xs mb-1">OU entrez ce code manuellement :&lt;/p>
+              &lt;div className="font-mono bg-gray-50 p-3 rounded-lg border border-gray-200 text-gray-700 tracking-wider shadow-inner">
+                {manualSecret}
+                &lt;button
+                  type="button"
+                  onClick={() => navigator.clipboard.writeText(manualSecret)}
+                  className="ml-2 text-blue-500 hover:text-blue-700"
+                  aria-label="Copier le code"
+                >
+                  &lt;Copy className="w-4 h-4 inline" />
+                &lt;/button>
+              &lt;/div>
+            &lt;/div>
+          &lt;/div>
+        &lt;/div>
+      )}
+
+      {/* Section CAPTCHA */}
+      {countEchec2FACode >= 2 &amp;&amp; (
+        &lt;div className="space-y-4 animate-fadeIn">
+          &lt;div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+            &lt;p className="text-red-500 text-sm font-medium mb-3">Veuillez vérifier que vous n&amp;apos;êtes pas un robot&lt;/p>
+            &lt;div className="captcha-container flex justify-center">
+              &lt;LoadCanvasTemplate reloadColor="#002B2F" />
+            &lt;/div>
+          &lt;/div>
+
+          &lt;div className="relative">
+            &lt;input
+              id="captcha"
+              type="text"
+              placeholder="Saisissez le texte ci-dessus"
+              value={captchaValue}
+              onChange={e => setCaptchaValue(e.target.value)}
+              className="w-full h-14 px-4 text-lg bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#002B2F] focus:border-transparent transition-all"
+              required
+            />
+          &lt;/div>
+        &lt;/div>
+      )}
+
+      {/* Champ Code 2FA */}
+      &lt;div className="space-y-3">
+        &lt;div className="flex justify-between mb-2">
+          {twoFADigits.map((digit, index) => (
+            &lt;input
+              key={index}
+              ref={el => (digitsRefs.current[index] = el)}
+              type="text"
+              inputMode="numeric"
+              maxLength="1"
+              value={digit}
+              onChange={e => handleDigitChange(index, e.target.value)}
+              onKeyDown={e => handleDigitKeyDown(index, e)}
+              onPaste={e => handleDigitPaste(index, e)}
+              className="w-14 h-14 border-2 border-gray-200 rounded-xl text-center text-2xl font-bold bg-white focus:border-[#002B2F] focus:ring-2 focus:ring-[#002B2F]/20 transition-all"
+              aria-label={`Chiffre ${index + 1} du code`}
+              autoFocus={index === 0}
+            />
+          ))}
+        &lt;/div>
+
+        &lt;p className="text-gray-500 text-sm text-center">
+          Saisissez les 6 chiffres de votre application d&amp;apos;authentification
+        &lt;/p>
+      &lt;/div>
+
+      {/* Boutons */}
+      &lt;div className="space-y-4 pt-2">
+        &lt;SubmitButton
+          onSubmission={handle2FASubmit}
+          className="w-full py-4 text-lg font-bold text-white bg-[#002B2F] rounded-xl hover:bg-[#00474F] transition-colors shadow-lg hover:shadow-xl disabled:opacity-60"
+          disabled={!allDigitsFilled()}
+        >
+          Vérifier le code
+        &lt;/SubmitButton>
+
+        {authStep !== '2fa-setup' &amp;&amp; (
+          &lt;div className="text-center pt-2">
+            &lt;button
+              type="button"
+              onClick={() => {
+                setAuthStep('initial');
+                setTempToken(null);
+                setTwoFADigits(['', '', '', '', '', '']);
+                setTimeout(() => {
+                  loadCaptchaEngine(6, '#f9fafb');
+                }, 100);
+              }}
+              className="text-[#002B2F] font-medium hover:text-[#00474F] flex items-center justify-center mx-auto"
+            >
+              &lt;ArrowLeft className="w-5 h-5 mr-1" />
+              Retour à la connexion
+            &lt;/button>
+          &lt;/div>
+        )}
+      &lt;/div>
+    &lt;/form>
+  );
+
+  /**
+   * Affiche le formulaire de récupération de mot de passe.
+   * 
+   * @returns {JSX.Element} Formulaire de récupération de mot de passe
+   */
+  const renderForgotPasswordForm = () => (
+    &lt;form onSubmit={handleForgotPasswordSubmit} className="w-full space-y-8">
+      &lt;div className="relative">
+        &lt;input
+          id="emailOrUsername"
+          type="text"
+          placeholder="Email ou nom d'utilisateur"
+          value={emailOrUsername}
+          onChange={e => setEmailOrUsername(e.target.value)}
+          className="w-full h-14 px-6 py-3 text-base md:text-lg bg-white border-2 rounded-lg"
+          required
+          autoFocus
+        />
+      &lt;/div>
+
+      &lt;SubmitButton
+        onSubmission={handleForgotPasswordSubmit}
+        className="w-full py-4 text-lg md:text-xl font-semibold text-white bg-[#002B2F] rounded-lg hover:bg-[#00474F]"
+      />
+
+      &lt;p className="text-center text-base md:text-lg">
+        &lt;button
+          type="button"
+          onClick={() => {
+            setAuthStep('initial');
+            setError(null);
+          }}
+          className="font-bold underline hover:text-[#00474F]"
+        >
+          Retour à la connexion
+        &lt;/button>
+      &lt;/p>
+    &lt;/form>
+  );
+
+  /**
+   * Affiche le formulaire initial de connexion ou d'inscription.
+   * 
+   * @returns {JSX.Element} Formulaire de connexion ou d'inscription
+   */
+  const renderInitialForm = () => (
+    &lt;form onSubmit={handleSubmit} className="w-full space-y-8">
+      {isSignUpForm &amp;&amp; (
+        &lt;>
+          &lt;div className="relative">
+            &lt;input
+              id="username"
+              type="text"
+              placeholder="Nom d'utilisateur"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              className="w-full h-14 px-6 py-3 text-base md:text-lg bg-white border-2 rounded-lg"
+              required
+              minLength="3"
+            />
+          &lt;/div>
+          &lt;div className="flex flex-col md:flex-row gap-4">
+            &lt;input
+              id="name"
+              type="text"
+              placeholder="Prénom"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              className="w-full h-14 px-6 py-3 text-base md:text-lg bg-white border-2 rounded-lg"
+              required
+            />
+            &lt;input
+              id="surname"
+              type="text"
+              placeholder="Nom"
+              value={surname}
+              onChange={e => setSurname(e.target.value)}
+              className="w-full h-14 px-6 py-3 text-base md:text-lg bg-white border-2 rounded-lg"
+              required
+            />
+          &lt;/div>
+          &lt;div className="relative">
+            &lt;input
+              id="email"
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              className="w-full h-14 px-6 py-3 text-base md:text-lg bg-white border-2 rounded-lg"
+              required
+              autoFocus
+            />
+          &lt;/div>
+        &lt;/>
+      )}
+
+      {!isSignUpForm &amp;&amp; (
+        &lt;div className="relative">
+          &lt;input
+            id="emailOrUsername"
+            type="text"
+            placeholder="Email ou nom d'utilisateur"
+            value={emailOrUsername}
+            onChange={e => setEmailOrUsername(e.target.value)}
+            className="w-full h-14 px-6 py-3 text-base md:text-lg bg-white border-2 rounded-lg"
+            required
+            autoFocus
+          />
+        &lt;/div>
+      )}
+
+      {isSignUpForm &amp;&amp; (
+
+        &lt;div className="relative">
+          &lt;input
+            id="code"
+            type="text"
+            placeholder="Code d'inscription"
+            value={code}
+            onChange={e => setCode(e.target.value)}
+            className="w-full h-14 px-6 py-3 text-base md:text-lg bg-white border-2 rounded-lg"
+            required
+          />
+        &lt;/div>
+      )}
+
+      &lt;div className="relative">
+        &lt;input
+          id="password"
+          type={showPassword ? 'text' : 'password'}
+          placeholder="Mot de passe"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          className="w-full h-14 px-6 py-3 text-base md:text-lg bg-white border-2 rounded-lg pr-12"
+          required
+        />
+        &lt;button
+          type="button"
+          onClick={() => setShowPassword(!showPassword)}
+          className="absolute right-4 top-4 text-[#002B2F]"
+          aria-label={
+            showPassword ? 'Cacher mot de passe' : 'Afficher mot de passe'
+          }
+        >
+          {showPassword ? (
+            &lt;EyeOff className="w-6 h-6" />
+          ) : (
+            &lt;Eye className="w-6 h-6" />
+          )}
+        &lt;/button>
+      &lt;/div>
+
+      {isSignUpForm &amp;&amp; (
+        &lt;div className="relative">
+          &lt;input
+            id="confirmPassword"
+            type="password"
+            placeholder="Confirmer le mot de passe"
+            value={confirmPassword}
+            onChange={e => setConfirmPassword(e.target.value)}
+            className="w-full h-14 px-6 py-3 text-base md:text-lg bg-white border-2 rounded-lg"
+            required
+          />
+        &lt;/div>
+      )}
+
+      &lt;div className="captcha-container">
+        &lt;LoadCanvasTemplate />
+      &lt;/div>
+
+      &lt;div className="relative">
+        &lt;input
+          id="captcha"
+          type="text"
+          placeholder="Entrez le texte CAPTCHA"
+          value={captchaValue}
+          onChange={e => setCaptchaValue(e.target.value)}
+          className="w-full h-14 px-6 py-3 text-base md:text-lg bg-white border-2 rounded-lg"
+          required
+        />
+      &lt;/div>
+
+      &lt;SubmitButton
+        onSubmission={handleSubmit}
+        className="w-full py-4 text-lg md:text-xl font-semibold text-white bg-[#002B2F] rounded-lg hover:bg-[#00474F]"
+      />
+
+      &lt;div className="flex items-center space-x-3">
+        &lt;input
+          id="rememberMe"
+          type="checkbox"
+          checked={rememberMe}
+          onChange={e => setRememberMe(e.target.checked)}
+          className="w-5 h-5 text-[#002B2F] rounded"
+        />
+        &lt;label htmlFor="rememberMe" className="text-base md:text-lg">
+          Se souvenir de moi
+        &lt;/label>
+      &lt;/div>
+
+      &lt;p className="text-center text-base md:text-lg">
+        {isSignUpForm ? 'Déjà un compte ? ' : 'Pas de compte ? '}
+        &lt;button
+          type="button"
+          onClick={toggleAuthMode}
+          className="font-bold underline hover:text-[#00474F]"
+        >
+          {isSignUpForm ? 'Connectez-vous ici' : 'Créez-en ici'}
+        &lt;/button>
+      &lt;/p>
+
+      {!isSignUpForm &amp;&amp; (
+        &lt;p className="text-center text-base md:text-lg">
+          &lt;button
+            type="button"
+            onClick={() => setAuthStep('forgot-password')}
+            className="font-bold underline hover:text-[#00474F]"
+          >
+            Mot de passe oublié ?
+          &lt;/button>
+        &lt;/p>
+      )}
+    &lt;/form>
+  );
+
+  return (
+    &lt;section className="flex w-screen h-screen">
+      &lt;div className="m-auto w-full max-w-2xl px-4">
+        &lt;section className="border-2 bg-gray-50 rounded-xl shadow-lg p-8 md:p-12">
+          &lt;div className="text-[#002B2F] text-center">
+            &lt;a
+              href="#"
+              onClick={e => {
+                e.preventDefault();
+                navigate('/');
+              }}
+              className="flex justify-center"
+            >
+              &lt;Logo className="w-24 h-24 md:w-32 md:h-32" fillColor="#002B2F" />
+            &lt;/a>
+          &lt;/div>
+
+          &lt;h1 className="text-4xl md:text-5xl font-bold text-center my-8">
+            {authStep === '2fa-verification' &amp;&amp; 'Vérification 2FA'}
+            {authStep === '2fa-setup' &amp;&amp; 'Activation 2FA'}
+            {authStep === 'forgot-password' &amp;&amp; 'Mot de passe oublié'}
+            {authStep === 'initial' &amp;&amp;
+              (isSignUpForm ? 'Inscription' : 'Connexion')}
+          &lt;/h1>
+
+          {error &amp;&amp; (
+            &lt;div className="text-red-600 text-lg text-center mb-4" role="alert">
+              {error}
+            &lt;/div>
+          )}
+
+          {authStep === 'forgot-password'
+            ? renderForgotPasswordForm()
+            : authStep.startsWith('2fa')
+              ? render2FAContent()
+              : renderInitialForm()}
+        &lt;/section>
+      &lt;/div>
+      {/* MODALE COMPTE DÉSACTIVÉ */}
+      &lt;AccountDisabledModal
+        open={showAccountDisabledModal}
+        onClose={() => setShowAccountDisabledModal(false)}
+      />
+    &lt;/section>
+  );
+};
+
+Sign.propTypes = {
+  setAuth: PropTypes.func,
+};
+
+export default Sign;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-App.html">App</a></li></ul><h3>Global</h3><ul><li><a href="global.html#About">About</a></li><li><a href="global.html#AccountDisabledModal">AccountDisabledModal</a></li><li><a href="global.html#AdminDashboardHome">AdminDashboardHome</a></li><li><a href="global.html#BASE_URL">BASE_URL</a></li><li><a href="global.html#BulkActions">BulkActions</a></li><li><a href="global.html#ClassManagementTutorial">ClassManagementTutorial</a></li><li><a href="global.html#ClasseCards">ClasseCards</a></li><li><a href="global.html#ClasseCreationModal">ClasseCreationModal</a></li><li><a href="global.html#ClasseManagement">ClasseManagement</a></li><li><a href="global.html#ClasseTable">ClasseTable</a></li><li><a href="global.html#Contact">Contact</a></li><li><a href="global.html#ContentCard">ContentCard</a></li><li><a href="global.html#CourseReader">CourseReader</a></li><li><a href="global.html#CourseReaderTutorial">CourseReaderTutorial</a></li><li><a href="global.html#Courses">Courses</a></li><li><a href="global.html#CoursesLibraryTutorial">CoursesLibraryTutorial</a></li><li><a href="global.html#Dashboard">Dashboard</a></li><li><a href="global.html#DashboardTutorial">DashboardTutorial</a></li><li><a href="global.html#DeleteDocument">DeleteDocument</a></li><li><a href="global.html#DeleteVideo">DeleteVideo</a></li><li><a href="global.html#EleveDashboardHome">EleveDashboardHome</a></li><li><a href="global.html#ErrorMessage">ErrorMessage</a></li><li><a href="global.html#FilterDropdown">FilterDropdown</a></li><li><a href="global.html#FirstLogin">FirstLogin</a></li><li><a href="global.html#Footer">Footer</a></li><li><a href="global.html#Forum">Forum</a></li><li><a href="global.html#GetAll_DataStructure">GetAll_DataStructure</a></li><li><a href="global.html#GetAll_Document">GetAll_Document</a></li><li><a href="global.html#Get_Document_Information">Get_Document_Information</a></li><li><a href="global.html#Get_Video_Information">Get_Video_Information</a></li><li><a href="global.html#Get_special_Document">Get_special_Document</a></li><li><a href="global.html#Get_special_Video">Get_special_Video</a></li><li><a href="global.html#Home">Home</a></li><li><a href="global.html#INACTIVITY_THRESHOLD">INACTIVITY_THRESHOLD</a></li><li><a href="global.html#LegalNotice">LegalNotice</a></li><li><a href="global.html#LiveNotFound">LiveNotFound</a></li><li><a href="global.html#LiveViewer">LiveViewer</a></li><li><a href="global.html#LoadCanvasTemplate">LoadCanvasTemplate</a></li><li><a href="global.html#LoadingComponent">LoadingComponent</a></li><li><a href="global.html#LoadingSpinner">LoadingSpinner</a></li><li><a href="global.html#Logout">Logout</a></li><li><a href="global.html#Mailbox">Mailbox</a></li><li><a href="global.html#MaintenanceBanner">MaintenanceBanner</a></li><li><a href="global.html#MessageDetailSkeleton">MessageDetailSkeleton</a></li><li><a href="global.html#MessageSkeleton">MessageSkeleton</a></li><li><a href="global.html#NavigationBar">NavigationBar</a></li><li><a href="global.html#PictureModal">PictureModal</a></li><li><a href="global.html#PrivacyPolicy">PrivacyPolicy</a></li><li><a href="global.html#PrivacyTab">PrivacyTab</a></li><li><a href="global.html#ProfilePhotoSelector">ProfilePhotoSelector</a></li><li><a href="global.html#PublicNavbar">PublicNavbar</a></li><li><a href="global.html#SearchBar">SearchBar</a></li><li><a href="global.html#SearchUser">SearchUser</a></li><li><a href="global.html#SecureDocumentViewer">SecureDocumentViewer</a></li><li><a href="global.html#SecureVideoPlayer">SecureVideoPlayer</a></li><li><a href="global.html#SecurityTab">SecurityTab</a></li><li><a href="global.html#SendDocument">SendDocument</a></li><li><a href="global.html#SendVideo">SendVideo</a></li><li><a href="global.html#Settings">Settings</a></li><li><a href="global.html#Sign">Sign</a></li><li><a href="global.html#Spinner">Spinner</a></li><li><a href="global.html#StreamReader">StreamReader</a></li><li><a href="global.html#TEN_MINUTES">TEN_MINUTES</a></li><li><a href="global.html#TermsOfUse">TermsOfUse</a></li><li><a href="global.html#ToggleView">ToggleView</a></li><li><a href="global.html#Tutorial">Tutorial</a></li><li><a href="global.html#TutorialContext">TutorialContext</a></li><li><a href="global.html#TutorialProvider">TutorialProvider</a></li><li><a href="global.html#TwoFASetupModal">TwoFASetupModal</a></li><li><a href="global.html#UpdateDocument">UpdateDocument</a></li><li><a href="global.html#UserManagementTutorial">UserManagementTutorial</a></li><li><a href="global.html#WSS_BASE_URL">WSS_BASE_URL</a></li><li><a href="global.html#activateUser">activateUser</a></li><li><a href="global.html#addComment">addComment</a></li><li><a href="global.html#addStudentToClass">addStudentToClass</a></li><li><a href="global.html#allDigitsFilled">allDigitsFilled</a></li><li><a href="global.html#api">api</a></li><li><a href="global.html#authToken">authToken</a></li><li><a href="global.html#authenticatedButtons">authenticatedButtons</a></li><li><a href="global.html#baseURL">baseURL</a></li><li><a href="global.html#blockLive">blockLive</a></li><li><a href="global.html#bulkDelete">bulkDelete</a></li><li><a href="global.html#changePassword">changePassword</a></li><li><a href="global.html#check2FAStatus">check2FAStatus</a></li><li><a href="global.html#checkRegisterCode">checkRegisterCode</a></li><li><a href="global.html#createClass">createClass</a></li><li><a href="global.html#createCourse">createCourse</a></li><li><a href="global.html#createLive">createLive</a></li><li><a href="global.html#createThread">createThread</a></li><li><a href="global.html#createUser">createUser</a></li><li><a href="global.html#deactivateUser">deactivateUser</a></li><li><a href="global.html#deleteAvatar">deleteAvatar</a></li><li><a href="global.html#deleteClass">deleteClass</a></li><li><a href="global.html#deleteClasseHandler">deleteClasseHandler</a></li><li><a href="global.html#deleteComment">deleteComment</a></li><li><a href="global.html#deleteContactMessage">deleteContactMessage</a></li><li><a href="global.html#deleteCourse">deleteCourse</a></li><li><a href="global.html#deleteInviteCode">deleteInviteCode</a></li><li><a href="global.html#deleteLive">deleteLive</a></li><li><a href="global.html#deleteMessage">deleteMessage</a></li><li><a href="global.html#deleteThread">deleteThread</a></li><li><a href="global.html#deleteUser">deleteUser</a></li><li><a href="global.html#disable2FA">disable2FA</a></li><li><a href="global.html#disapproveCourse">disapproveCourse</a></li><li><a href="global.html#disapproveLive">disapproveLive</a></li><li><a href="global.html#downloadAttachment">downloadAttachment</a></li><li><a href="global.html#endLive">endLive</a></li><li><a href="global.html#errorMessages">errorMessages</a></li><li><a href="global.html#fetchClasses">fetchClasses</a></li><li><a href="global.html#fetchCourseData">fetchCourseData</a></li><li><a href="global.html#fetchData">fetchData</a></li><li><a href="global.html#fetchUsers">fetchUsers</a></li><li><a href="global.html#firstLogin">firstLogin</a></li><li><a href="global.html#flagContent">flagContent</a></li><li><a href="global.html#forgotPassword">forgotPassword</a></li><li><a href="global.html#generateInviteCode">generateInviteCode</a></li><li><a href="global.html#getAllClasses">getAllClasses</a></li><li><a href="global.html#getAllContactMessages">getAllContactMessages</a></li><li><a href="global.html#getAllCourses">getAllCourses</a></li><li><a href="global.html#getAllInviteCodes">getAllInviteCodes</a></li><li><a href="global.html#getAllLives">getAllLives</a></li><li><a href="global.html#getAllUsers">getAllUsers</a></li><li><a href="global.html#getAvailableRecipients">getAvailableRecipients</a></li><li><a href="global.html#getAvatar">getAvatar</a></li><li><a href="global.html#getClassById">getClassById</a></li><li><a href="global.html#getClassStudents">getClassStudents</a></li><li><a href="global.html#getContactMessage">getContactMessage</a></li><li><a href="global.html#getCourseById">getCourseById</a></li><li><a href="global.html#getCourseDetails">getCourseDetails</a></li><li><a href="global.html#getCourseProgress">getCourseProgress</a></li><li><a href="global.html#getCoursesByClass">getCoursesByClass</a></li><li><a href="global.html#getFlags">getFlags</a></li><li><a href="global.html#getInboxMessages">getInboxMessages</a></li><li><a href="global.html#getInitialViewMode">getInitialViewMode</a></li><li><a href="global.html#getLiveById">getLiveById</a></li><li><a href="global.html#getLiveMessages">getLiveMessages</a></li><li><a href="global.html#getLiveStreamUrl">getLiveStreamUrl</a></li><li><a href="global.html#getLivesByClass">getLivesByClass</a></li><li><a href="global.html#getMessage">getMessage</a></li><li><a href="global.html#getNotificationPreferences">getNotificationPreferences</a></li><li><a href="global.html#getSentMessages">getSentMessages</a></li><li><a href="global.html#getStudentProgress">getStudentProgress</a></li><li><a href="global.html#getThreadById">getThreadById</a></li><li><a href="global.html#getThreads">getThreads</a></li><li><a href="global.html#getTrashMessages">getTrashMessages</a></li><li><a href="global.html#getUserById">getUserById</a></li><li><a href="global.html#getUserProfile">getUserProfile</a></li><li><a href="global.html#getUserWarnings">getUserWarnings</a></li><li><a href="global.html#getVideoDetails">getVideoDetails</a></li><li><a href="global.html#getVideoStreamUrl">getVideoStreamUrl</a></li><li><a href="global.html#handle2FASubmit">handle2FASubmit</a></li><li><a href="global.html#handleBackdropClick">handleBackdropClick</a></li><li><a href="global.html#handleBlockedMouseLeave">handleBlockedMouseLeave</a></li><li><a href="global.html#handleBlockedMouseMove">handleBlockedMouseMove</a></li><li><a href="global.html#handleClose">handleClose</a></li><li><a href="global.html#handleCompleteCourse">handleCompleteCourse</a></li><li><a href="global.html#handleCourseDisapproval">handleCourseDisapproval</a></li><li><a href="global.html#handleDeleteCourse">handleDeleteCourse</a></li><li><a href="global.html#handleDigitChange">handleDigitChange</a></li><li><a href="global.html#handleDigitKeyDown">handleDigitKeyDown</a></li><li><a href="global.html#handleDigitPaste">handleDigitPaste</a></li><li><a href="global.html#handleDownloadDocument">handleDownloadDocument</a></li><li><a href="global.html#handleError">handleError</a></li><li><a href="global.html#handleInputChange">handleInputChange</a></li><li><a href="global.html#handleLogout">handleLogout</a></li><li><a href="global.html#handleMenuToggle">handleMenuToggle</a></li><li><a href="global.html#handleModAction">handleModAction</a></li><li><a href="global.html#handleSubmit">handleSubmit</a></li><li><a href="global.html#handleSubmitClasse">handleSubmitClasse</a></li><li><a href="global.html#handleTabChange">handleTabChange</a></li><li><a href="global.html#handleUnblockCourse">handleUnblockCourse</a></li><li><a href="global.html#isAuthenticated">isAuthenticated</a></li><li><a href="global.html#loadCaptchaEngine">loadCaptchaEngine</a></li><li><a href="global.html#logViewEngagement">logViewEngagement</a></li><li><a href="global.html#login">login</a></li><li><a href="global.html#markAsRead">markAsRead</a></li><li><a href="global.html#markAsUnread">markAsUnread</a></li><li><a href="global.html#markContactMessageAsProcessed">markContactMessageAsProcessed</a></li><li><a href="global.html#markCourseAsCompleted">markCourseAsCompleted</a></li><li><a href="global.html#markCourseAsInProgress">markCourseAsInProgress</a></li><li><a href="global.html#mountApp">mountApp</a></li><li><a href="global.html#moveToTrash">moveToTrash</a></li><li><a href="global.html#navItems">navItems</a></li><li><a href="global.html#navigate">navigate</a></li><li><a href="global.html#onSamplesDecoded">onSamplesDecoded</a></li><li><a href="global.html#refreshTwoFASetup">refreshTwoFASetup</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#removeStudentFromClass">removeStudentFromClass</a></li><li><a href="global.html#renderContent">renderContent</a></li><li><a href="global.html#resolveFlag">resolveFlag</a></li><li><a href="global.html#restoreFromTrash">restoreFromTrash</a></li><li><a href="global.html#retrogradeUserRole">retrogradeUserRole</a></li><li><a href="global.html#root">root</a></li><li><a href="global.html#sendContactMessage">sendContactMessage</a></li><li><a href="global.html#sendLiveMessage">sendLiveMessage</a></li><li><a href="global.html#sendMessage">sendMessage</a></li><li><a href="global.html#sendWarning">sendWarning</a></li><li><a href="global.html#setMainTeacher">setMainTeacher</a></li><li><a href="global.html#setup2FA">setup2FA</a></li><li><a href="global.html#signButtons">signButtons</a></li><li><a href="global.html#startLive">startLive</a></li><li><a href="global.html#toggleAll">toggleAll</a></li><li><a href="global.html#toggleClasse">toggleClasse</a></li><li><a href="global.html#toggleMember">toggleMember</a></li><li><a href="global.html#toggleMobileMenu">toggleMobileMenu</a></li><li><a href="global.html#unblockCourse">unblockCourse</a></li><li><a href="global.html#unblockLive">unblockLive</a></li><li><a href="global.html#updateClass">updateClass</a></li><li><a href="global.html#updateComment">updateComment</a></li><li><a href="global.html#updateCourse">updateCourse</a></li><li><a href="global.html#updateLive">updateLive</a></li><li><a href="global.html#updateNotificationPreferences">updateNotificationPreferences</a></li><li><a href="global.html#updateThread">updateThread</a></li><li><a href="global.html#updateUser">updateUser</a></li><li><a href="global.html#updateUserProfile">updateUserProfile</a></li><li><a href="global.html#updateUserProfileHandler">updateUserProfileHandler</a></li><li><a href="global.html#updateVideo">updateVideo</a></li><li><a href="global.html#upgradeUserRole">upgradeUserRole</a></li><li><a href="global.html#uploadAvatar">uploadAvatar</a></li><li><a href="global.html#uploadIllustrationAvatar">uploadIllustrationAvatar</a></li><li><a href="global.html#useEffect">useEffect</a></li><li><a href="global.html#useTutorial">useTutorial</a></li><li><a href="global.html#validateForm">validateForm</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#verify2FASetup">verify2FASetup</a></li><li><a href="global.html#verifyTwoFA">verifyTwoFA</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Sat Jun 07 2025 14:32:34 GMT+0200 (Central European Summer Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

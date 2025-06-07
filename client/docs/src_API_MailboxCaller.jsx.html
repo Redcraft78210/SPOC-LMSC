@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: src/API/MailboxCaller.jsx</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: src/API/MailboxCaller.jsx</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import api from './api';
+import PropTypes from 'prop-types';
+
+/**
+ * Gère les erreurs retournées par les appels API
+ * @param {Error} error - L'erreur interceptée
+ * @returns {Object} Objet formaté contenant le statut, les données et le message d'erreur
+ */
+const handleError = (error) => {
+
+  if (error.response) {
+    return {
+      status: error.response.status,
+      data: error.response.data,
+      message: error.response.data?.message || error.message,
+    };
+  }
+
+  if (error.request) {
+    return {
+      status: 500,
+      data: null,
+      message: 'Aucune réponse reçue du serveur',
+    };
+  }
+
+  return {
+    status: 500,
+    data: null,
+    message: error.message,
+  };
+};
+
+
+/**
+ * Récupère les messages de la boîte de réception avec pagination et filtres
+ * @param {Object} options - Options pour la requête
+ * @param {number} [options.page=1] - Numéro de page pour la pagination
+ * @param {number} [options.limit=20] - Nombre de messages par page
+ * @param {Object} [options.filters={}] - Filtres à appliquer aux messages
+ * @param {boolean} [options.filters.unread] - Filtre pour les messages non lus
+ * @param {boolean} [options.filters.hasAttachments] - Filtre pour les messages avec pièces jointes
+ * @param {boolean} [options.filters.fromContact] - Filtre pour les messages de contacts
+ * @returns {Promise&lt;Object>} Objet contenant le statut, les données et un message de succès/erreur
+ */
+const getInboxMessages = async ({ page = 1, limit = 20, filters = {} }) => {
+  try {
+    const queryParams = new URLSearchParams({
+      page,
+      limit
+    });
+    
+
+    if (filters.unread) queryParams.append('unread', 'true');
+    if (filters.hasAttachments) queryParams.append('hasAttachments', 'true');
+    if (filters.fromContact) queryParams.append('fromContact', 'true');
+    
+    const response = await api.get(`/messages/inbox?${queryParams.toString()}`);
+    return {
+      status: response.status,
+      data: response.data,
+      message: 'Success',
+    };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+
+/**
+ * Récupère les messages envoyés avec pagination et filtres
+ * @param {Object} options - Options pour la requête
+ * @param {number} [options.page=1] - Numéro de page pour la pagination
+ * @param {number} [options.limit=20] - Nombre de messages par page
+ * @param {Object} [options.filters={}] - Filtres à appliquer aux messages
+ * @param {boolean} [options.filters.unread] - Filtre pour les messages non lus
+ * @param {boolean} [options.filters.hasAttachments] - Filtre pour les messages avec pièces jointes
+ * @param {boolean} [options.filters.fromContact] - Filtre pour les messages de contacts
+ * @returns {Promise&lt;Object>} Objet contenant le statut, les données et un message de succès/erreur
+ */
+const getSentMessages = async ({ page = 1, limit = 20, filters = {} }) => {
+  try {
+    const queryParams = new URLSearchParams({
+      page,
+      limit
+    });
+    
+
+    if (filters.unread) queryParams.append('unread', 'true');
+    if (filters.hasAttachments) queryParams.append('hasAttachments', 'true');
+    if (filters.fromContact) queryParams.append('fromContact', 'true');
+    
+    const response = await api.get(`/messages/sent?${queryParams.toString()}`);
+    return {
+      status: response.status,
+      data: response.data,
+      message: 'Success',
+    };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+
+/**
+ * Récupère les messages de la corbeille avec pagination et filtres
+ * @param {Object} options - Options pour la requête
+ * @param {number} [options.page=1] - Numéro de page pour la pagination
+ * @param {number} [options.limit=20] - Nombre de messages par page
+ * @param {Object} [options.filters={}] - Filtres à appliquer aux messages
+ * @param {boolean} [options.filters.unread] - Filtre pour les messages non lus
+ * @param {boolean} [options.filters.hasAttachments] - Filtre pour les messages avec pièces jointes
+ * @param {boolean} [options.filters.fromContact] - Filtre pour les messages de contacts
+ * @returns {Promise&lt;Object>} Objet contenant le statut, les données et un message de succès/erreur
+ */
+const getTrashMessages = async ({ page = 1, limit = 20, filters = {} }) => {
+  try {
+    const queryParams = new URLSearchParams({
+      page,
+      limit
+    });
+    
+
+    if (filters.unread) queryParams.append('unread', 'true');
+    if (filters.hasAttachments) queryParams.append('hasAttachments', 'true');
+    if (filters.fromContact) queryParams.append('fromContact', 'true');
+    
+    const response = await api.get(`/messages/trash?${queryParams.toString()}`);
+    return {
+      status: response.status,
+      data: response.data,
+      message: 'Success',
+    };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+
+/**
+ * Récupère un message spécifique par son identifiant
+ * @param {Object} options - Options pour la requête
+ * @param {string|number} options.messageId - Identifiant du message à récupérer
+ * @returns {Promise&lt;Object>} Objet contenant le statut, les données du message et un message de succès/erreur
+ */
+const getMessage = async ({ messageId }) => {
+  try {
+    const response = await api.get(`/messages/${messageId}`);
+    return {
+      status: response.status,
+      data: response.data,
+      message: 'Success',
+    };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+
+/**
+ * Envoie un nouveau message avec ou sans pièces jointes
+ * @param {FormData} formData - Données du formulaire contenant les informations du message
+ * @param {string} formData.subject - Sujet du message
+ * @param {string} formData.content - Contenu du message
+ * @param {Array&lt;string|number>} [formData.recipients[]] - Liste des identifiants des destinataires individuels
+ * @param {string} [formData.recipientType] - Type de destinataires (pour envoi groupé)
+ * @param {File[]} [formData.attachments] - Pièces jointes du message
+ * @returns {Promise&lt;Object>} Objet contenant le statut, les données et un message de succès/erreur
+ * @throws {Error} Si formData n'est pas une instance de FormData
+ * @throws {Error} Si le sujet ou le contenu sont manquants
+ * @throws {Error} Si aucun destinataire n'est spécifié
+ */
+const sendMessage = async (formData) => {
+  console.log('Sending message with formData:', formData);
+
+
+
+
+
+
+  if (!(formData instanceof FormData)) {
+    throw new Error('formData must be an instance of FormData');
+  }
+
+
+  if (!formData.has('subject') || !formData.has('content')) {
+    throw new Error('formData must contain subject and content');
+  }
+
+
+  const hasIndividualRecipients = formData.getAll('recipients[]').length > 0;
+  const hasRecipientType = formData.has('recipientType');
+
+  if (!hasIndividualRecipients &amp;&amp; !hasRecipientType) {
+    throw new Error('formData must contain either individual recipients or a recipient type');
+  }
+
+  let endpoint = '/messages/';
+  let contentType = 'multipart/form-data';
+
+  if (formData.has('attachments') || formData.getAll('attachments').length === 0) {
+
+    endpoint = '/messages/no-attachments';
+    contentType = 'application/json';
+  }
+
+  try {
+
+    const response = await api.post(endpoint, formData, {
+
+      headers: {
+        'Content-Type': contentType,
+      },
+    });
+
+    return {
+      status: response.status,
+      data: response.data,
+      message: 'Message sent successfully',
+    };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+
+/**
+ * Marque un message comme lu
+ * @param {Object} options - Options pour la requête
+ * @param {string|number} options.messageId - Identifiant du message à marquer comme lu
+ * @returns {Promise&lt;Object>} Objet contenant le statut, les données et un message de confirmation
+ */
+const markAsRead = async ({ messageId }) => {
+  try {
+    const response = await api.patch(`/messages/${messageId}/read`);
+    return {
+      status: response.status,
+      data: response.data,
+      message: 'Message marked as read',
+    };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+
+/**
+ * Marque un message comme non lu
+ * @param {Object} options - Options pour la requête
+ * @param {string|number} options.messageId - Identifiant du message à marquer comme non lu
+ * @returns {Promise&lt;Object>} Objet contenant le statut, les données et un message de confirmation
+ */
+const markAsUnread = async ({ messageId }) => {
+  try {
+    const response = await api.patch(`/messages/${messageId}/unread`);
+    return {
+      status: response.status,
+      data: response.data,
+      message: 'Message marked as unread',
+    };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+
+/**
+ * Déplace un message vers la corbeille
+ * @param {Object} options - Options pour la requête
+ * @param {string|number} options.messageId - Identifiant du message à déplacer
+ * @returns {Promise&lt;Object>} Objet contenant le statut, les données et un message de confirmation
+ */
+const moveToTrash = async ({ messageId }) => {
+  try {
+    const response = await api.patch(`/messages/${messageId}/trash`);
+    return {
+      status: response.status,
+      data: response.data,
+      message: 'Message moved to trash',
+    };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+
+/**
+ * Restaure un message de la corbeille
+ * @param {Object} options - Options pour la requête
+ * @param {string|number} options.messageId - Identifiant du message à restaurer
+ * @returns {Promise&lt;Object>} Objet contenant le statut, les données et un message de confirmation
+ */
+const restoreFromTrash = async ({ messageId }) => {
+  try {
+    const response = await api.patch(`/messages/${messageId}/restore`);
+    return {
+      status: response.status,
+      data: response.data,
+      message: 'Message restored from trash',
+    };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+
+/**
+ * Supprime définitivement un message
+ * @param {Object} options - Options pour la requête
+ * @param {string|number} options.messageId - Identifiant du message à supprimer
+ * @returns {Promise&lt;Object>} Objet contenant le statut, les données et un message de confirmation
+ */
+const deleteMessage = async ({ messageId }) => {
+  try {
+    const response = await api.delete(`/messages/${messageId}`);
+    return {
+      status: response.status,
+      data: response.data,
+      message: 'Message permanently deleted',
+    };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+
+/**
+ * Télécharge une pièce jointe
+ * @param {Object} options - Options pour la requête
+ * @param {string|number} options.attachmentId - Identifiant de la pièce jointe à télécharger
+ * @returns {Promise&lt;Object>} Objet contenant le statut, les données binaires (blob) et un message de succès/erreur
+ */
+const downloadAttachment = async ({ attachmentId }) => {
+  try {
+    const response = await api.get(`/messages/attachments/${attachmentId}`, {
+      responseType: 'blob',
+    });
+    return {
+      status: response.status,
+      data: response.data,
+      message: 'Success',
+    };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+
+/**
+ * Récupère la liste des destinataires disponibles
+ * @param {Object} options - Options pour la requête
+ * @param {string} [options.type] - Type d'utilisateurs à récupérer (filtre optionnel)
+ * @returns {Promise&lt;Object>} Objet contenant le statut, les données des destinataires et un message de succès/erreur
+ */
+const getAvailableRecipients = async ({ type }) => {
+  try {
+
+    const response = await api.get(`/users`, {
+      params: type ? { type } : {},
+    });
+    return {
+      status: response.status,
+      data: response.data,
+      message: 'Success',
+    };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+
+getInboxMessages.propTypes = {
+  page: PropTypes.number,
+  limit: PropTypes.number,
+};
+
+getSentMessages.propTypes = {
+  page: PropTypes.number,
+  limit: PropTypes.number,
+};
+
+getTrashMessages.propTypes = {
+  page: PropTypes.number,
+  limit: PropTypes.number,
+};
+
+getMessage.propTypes = {
+  messageId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+};
+
+sendMessage.propTypes = {
+  recipients: PropTypes.arrayOf(
+    PropTypes.oneOfType([PropTypes.string, PropTypes.number])
+  ).isRequired,
+  subject: PropTypes.string.isRequired,
+  content: PropTypes.string.isRequired,
+  attachments: PropTypes.arrayOf(PropTypes.instanceOf(File)),
+};
+
+markAsRead.propTypes = {
+  messageId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+};
+
+markAsUnread.propTypes = {
+  messageId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+};
+
+moveToTrash.propTypes = {
+  messageId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+};
+
+restoreFromTrash.propTypes = {
+  messageId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+};
+
+deleteMessage.propTypes = {
+  messageId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+};
+
+downloadAttachment.propTypes = {
+  attachmentId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+};
+
+getAvailableRecipients.propTypes = {
+  type: PropTypes.string,
+};
+
+export {
+  getInboxMessages,
+  getSentMessages,
+  getTrashMessages,
+  getMessage,
+  sendMessage,
+  markAsRead,
+  markAsUnread,
+  moveToTrash,
+  restoreFromTrash,
+  deleteMessage,
+  downloadAttachment,
+  getAvailableRecipients,
+};
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-App.html">App</a></li></ul><h3>Global</h3><ul><li><a href="global.html#About">About</a></li><li><a href="global.html#AccountDisabledModal">AccountDisabledModal</a></li><li><a href="global.html#AdminDashboardHome">AdminDashboardHome</a></li><li><a href="global.html#BASE_URL">BASE_URL</a></li><li><a href="global.html#BulkActions">BulkActions</a></li><li><a href="global.html#ClassManagementTutorial">ClassManagementTutorial</a></li><li><a href="global.html#ClasseCards">ClasseCards</a></li><li><a href="global.html#ClasseCreationModal">ClasseCreationModal</a></li><li><a href="global.html#ClasseManagement">ClasseManagement</a></li><li><a href="global.html#ClasseTable">ClasseTable</a></li><li><a href="global.html#Contact">Contact</a></li><li><a href="global.html#ContentCard">ContentCard</a></li><li><a href="global.html#CourseReader">CourseReader</a></li><li><a href="global.html#CourseReaderTutorial">CourseReaderTutorial</a></li><li><a href="global.html#Courses">Courses</a></li><li><a href="global.html#CoursesLibraryTutorial">CoursesLibraryTutorial</a></li><li><a href="global.html#Dashboard">Dashboard</a></li><li><a href="global.html#DashboardTutorial">DashboardTutorial</a></li><li><a href="global.html#DeleteDocument">DeleteDocument</a></li><li><a href="global.html#DeleteVideo">DeleteVideo</a></li><li><a href="global.html#EleveDashboardHome">EleveDashboardHome</a></li><li><a href="global.html#ErrorMessage">ErrorMessage</a></li><li><a href="global.html#FilterDropdown">FilterDropdown</a></li><li><a href="global.html#FirstLogin">FirstLogin</a></li><li><a href="global.html#Footer">Footer</a></li><li><a href="global.html#Forum">Forum</a></li><li><a href="global.html#GetAll_DataStructure">GetAll_DataStructure</a></li><li><a href="global.html#GetAll_Document">GetAll_Document</a></li><li><a href="global.html#Get_Document_Information">Get_Document_Information</a></li><li><a href="global.html#Get_Video_Information">Get_Video_Information</a></li><li><a href="global.html#Get_special_Document">Get_special_Document</a></li><li><a href="global.html#Get_special_Video">Get_special_Video</a></li><li><a href="global.html#Home">Home</a></li><li><a href="global.html#INACTIVITY_THRESHOLD">INACTIVITY_THRESHOLD</a></li><li><a href="global.html#LegalNotice">LegalNotice</a></li><li><a href="global.html#LiveNotFound">LiveNotFound</a></li><li><a href="global.html#LiveViewer">LiveViewer</a></li><li><a href="global.html#LoadCanvasTemplate">LoadCanvasTemplate</a></li><li><a href="global.html#LoadingComponent">LoadingComponent</a></li><li><a href="global.html#LoadingSpinner">LoadingSpinner</a></li><li><a href="global.html#Logout">Logout</a></li><li><a href="global.html#Mailbox">Mailbox</a></li><li><a href="global.html#MaintenanceBanner">MaintenanceBanner</a></li><li><a href="global.html#MessageDetailSkeleton">MessageDetailSkeleton</a></li><li><a href="global.html#MessageSkeleton">MessageSkeleton</a></li><li><a href="global.html#NavigationBar">NavigationBar</a></li><li><a href="global.html#PictureModal">PictureModal</a></li><li><a href="global.html#PrivacyPolicy">PrivacyPolicy</a></li><li><a href="global.html#PrivacyTab">PrivacyTab</a></li><li><a href="global.html#ProfilePhotoSelector">ProfilePhotoSelector</a></li><li><a href="global.html#PublicNavbar">PublicNavbar</a></li><li><a href="global.html#SearchBar">SearchBar</a></li><li><a href="global.html#SearchUser">SearchUser</a></li><li><a href="global.html#SecureDocumentViewer">SecureDocumentViewer</a></li><li><a href="global.html#SecureVideoPlayer">SecureVideoPlayer</a></li><li><a href="global.html#SecurityTab">SecurityTab</a></li><li><a href="global.html#SendDocument">SendDocument</a></li><li><a href="global.html#SendVideo">SendVideo</a></li><li><a href="global.html#Settings">Settings</a></li><li><a href="global.html#Sign">Sign</a></li><li><a href="global.html#Spinner">Spinner</a></li><li><a href="global.html#StreamReader">StreamReader</a></li><li><a href="global.html#TEN_MINUTES">TEN_MINUTES</a></li><li><a href="global.html#TermsOfUse">TermsOfUse</a></li><li><a href="global.html#ToggleView">ToggleView</a></li><li><a href="global.html#Tutorial">Tutorial</a></li><li><a href="global.html#TutorialContext">TutorialContext</a></li><li><a href="global.html#TutorialProvider">TutorialProvider</a></li><li><a href="global.html#TwoFASetupModal">TwoFASetupModal</a></li><li><a href="global.html#UpdateDocument">UpdateDocument</a></li><li><a href="global.html#UserManagementTutorial">UserManagementTutorial</a></li><li><a href="global.html#WSS_BASE_URL">WSS_BASE_URL</a></li><li><a href="global.html#activateUser">activateUser</a></li><li><a href="global.html#addComment">addComment</a></li><li><a href="global.html#addStudentToClass">addStudentToClass</a></li><li><a href="global.html#allDigitsFilled">allDigitsFilled</a></li><li><a href="global.html#api">api</a></li><li><a href="global.html#authToken">authToken</a></li><li><a href="global.html#authenticatedButtons">authenticatedButtons</a></li><li><a href="global.html#baseURL">baseURL</a></li><li><a href="global.html#blockLive">blockLive</a></li><li><a href="global.html#bulkDelete">bulkDelete</a></li><li><a href="global.html#changePassword">changePassword</a></li><li><a href="global.html#check2FAStatus">check2FAStatus</a></li><li><a href="global.html#checkRegisterCode">checkRegisterCode</a></li><li><a href="global.html#createClass">createClass</a></li><li><a href="global.html#createCourse">createCourse</a></li><li><a href="global.html#createLive">createLive</a></li><li><a href="global.html#createThread">createThread</a></li><li><a href="global.html#createUser">createUser</a></li><li><a href="global.html#deactivateUser">deactivateUser</a></li><li><a href="global.html#deleteAvatar">deleteAvatar</a></li><li><a href="global.html#deleteClass">deleteClass</a></li><li><a href="global.html#deleteClasseHandler">deleteClasseHandler</a></li><li><a href="global.html#deleteComment">deleteComment</a></li><li><a href="global.html#deleteContactMessage">deleteContactMessage</a></li><li><a href="global.html#deleteCourse">deleteCourse</a></li><li><a href="global.html#deleteInviteCode">deleteInviteCode</a></li><li><a href="global.html#deleteLive">deleteLive</a></li><li><a href="global.html#deleteMessage">deleteMessage</a></li><li><a href="global.html#deleteThread">deleteThread</a></li><li><a href="global.html#deleteUser">deleteUser</a></li><li><a href="global.html#disable2FA">disable2FA</a></li><li><a href="global.html#disapproveCourse">disapproveCourse</a></li><li><a href="global.html#disapproveLive">disapproveLive</a></li><li><a href="global.html#downloadAttachment">downloadAttachment</a></li><li><a href="global.html#endLive">endLive</a></li><li><a href="global.html#errorMessages">errorMessages</a></li><li><a href="global.html#fetchClasses">fetchClasses</a></li><li><a href="global.html#fetchCourseData">fetchCourseData</a></li><li><a href="global.html#fetchData">fetchData</a></li><li><a href="global.html#fetchUsers">fetchUsers</a></li><li><a href="global.html#firstLogin">firstLogin</a></li><li><a href="global.html#flagContent">flagContent</a></li><li><a href="global.html#forgotPassword">forgotPassword</a></li><li><a href="global.html#generateInviteCode">generateInviteCode</a></li><li><a href="global.html#getAllClasses">getAllClasses</a></li><li><a href="global.html#getAllContactMessages">getAllContactMessages</a></li><li><a href="global.html#getAllCourses">getAllCourses</a></li><li><a href="global.html#getAllInviteCodes">getAllInviteCodes</a></li><li><a href="global.html#getAllLives">getAllLives</a></li><li><a href="global.html#getAllUsers">getAllUsers</a></li><li><a href="global.html#getAvailableRecipients">getAvailableRecipients</a></li><li><a href="global.html#getAvatar">getAvatar</a></li><li><a href="global.html#getClassById">getClassById</a></li><li><a href="global.html#getClassStudents">getClassStudents</a></li><li><a href="global.html#getContactMessage">getContactMessage</a></li><li><a href="global.html#getCourseById">getCourseById</a></li><li><a href="global.html#getCourseDetails">getCourseDetails</a></li><li><a href="global.html#getCourseProgress">getCourseProgress</a></li><li><a href="global.html#getCoursesByClass">getCoursesByClass</a></li><li><a href="global.html#getFlags">getFlags</a></li><li><a href="global.html#getInboxMessages">getInboxMessages</a></li><li><a href="global.html#getInitialViewMode">getInitialViewMode</a></li><li><a href="global.html#getLiveById">getLiveById</a></li><li><a href="global.html#getLiveMessages">getLiveMessages</a></li><li><a href="global.html#getLiveStreamUrl">getLiveStreamUrl</a></li><li><a href="global.html#getLivesByClass">getLivesByClass</a></li><li><a href="global.html#getMessage">getMessage</a></li><li><a href="global.html#getNotificationPreferences">getNotificationPreferences</a></li><li><a href="global.html#getSentMessages">getSentMessages</a></li><li><a href="global.html#getStudentProgress">getStudentProgress</a></li><li><a href="global.html#getThreadById">getThreadById</a></li><li><a href="global.html#getThreads">getThreads</a></li><li><a href="global.html#getTrashMessages">getTrashMessages</a></li><li><a href="global.html#getUserById">getUserById</a></li><li><a href="global.html#getUserProfile">getUserProfile</a></li><li><a href="global.html#getUserWarnings">getUserWarnings</a></li><li><a href="global.html#getVideoDetails">getVideoDetails</a></li><li><a href="global.html#getVideoStreamUrl">getVideoStreamUrl</a></li><li><a href="global.html#handle2FASubmit">handle2FASubmit</a></li><li><a href="global.html#handleBackdropClick">handleBackdropClick</a></li><li><a href="global.html#handleBlockedMouseLeave">handleBlockedMouseLeave</a></li><li><a href="global.html#handleBlockedMouseMove">handleBlockedMouseMove</a></li><li><a href="global.html#handleClose">handleClose</a></li><li><a href="global.html#handleCompleteCourse">handleCompleteCourse</a></li><li><a href="global.html#handleCourseDisapproval">handleCourseDisapproval</a></li><li><a href="global.html#handleDeleteCourse">handleDeleteCourse</a></li><li><a href="global.html#handleDigitChange">handleDigitChange</a></li><li><a href="global.html#handleDigitKeyDown">handleDigitKeyDown</a></li><li><a href="global.html#handleDigitPaste">handleDigitPaste</a></li><li><a href="global.html#handleDownloadDocument">handleDownloadDocument</a></li><li><a href="global.html#handleError">handleError</a></li><li><a href="global.html#handleInputChange">handleInputChange</a></li><li><a href="global.html#handleLogout">handleLogout</a></li><li><a href="global.html#handleMenuToggle">handleMenuToggle</a></li><li><a href="global.html#handleModAction">handleModAction</a></li><li><a href="global.html#handleSubmit">handleSubmit</a></li><li><a href="global.html#handleSubmitClasse">handleSubmitClasse</a></li><li><a href="global.html#handleTabChange">handleTabChange</a></li><li><a href="global.html#handleUnblockCourse">handleUnblockCourse</a></li><li><a href="global.html#isAuthenticated">isAuthenticated</a></li><li><a href="global.html#loadCaptchaEngine">loadCaptchaEngine</a></li><li><a href="global.html#logViewEngagement">logViewEngagement</a></li><li><a href="global.html#login">login</a></li><li><a href="global.html#markAsRead">markAsRead</a></li><li><a href="global.html#markAsUnread">markAsUnread</a></li><li><a href="global.html#markContactMessageAsProcessed">markContactMessageAsProcessed</a></li><li><a href="global.html#markCourseAsCompleted">markCourseAsCompleted</a></li><li><a href="global.html#markCourseAsInProgress">markCourseAsInProgress</a></li><li><a href="global.html#mountApp">mountApp</a></li><li><a href="global.html#moveToTrash">moveToTrash</a></li><li><a href="global.html#navItems">navItems</a></li><li><a href="global.html#navigate">navigate</a></li><li><a href="global.html#onSamplesDecoded">onSamplesDecoded</a></li><li><a href="global.html#refreshTwoFASetup">refreshTwoFASetup</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#removeStudentFromClass">removeStudentFromClass</a></li><li><a href="global.html#renderContent">renderContent</a></li><li><a href="global.html#resolveFlag">resolveFlag</a></li><li><a href="global.html#restoreFromTrash">restoreFromTrash</a></li><li><a href="global.html#retrogradeUserRole">retrogradeUserRole</a></li><li><a href="global.html#root">root</a></li><li><a href="global.html#sendContactMessage">sendContactMessage</a></li><li><a href="global.html#sendLiveMessage">sendLiveMessage</a></li><li><a href="global.html#sendMessage">sendMessage</a></li><li><a href="global.html#sendWarning">sendWarning</a></li><li><a href="global.html#setMainTeacher">setMainTeacher</a></li><li><a href="global.html#setup2FA">setup2FA</a></li><li><a href="global.html#signButtons">signButtons</a></li><li><a href="global.html#startLive">startLive</a></li><li><a href="global.html#toggleAll">toggleAll</a></li><li><a href="global.html#toggleClasse">toggleClasse</a></li><li><a href="global.html#toggleMember">toggleMember</a></li><li><a href="global.html#toggleMobileMenu">toggleMobileMenu</a></li><li><a href="global.html#unblockCourse">unblockCourse</a></li><li><a href="global.html#unblockLive">unblockLive</a></li><li><a href="global.html#updateClass">updateClass</a></li><li><a href="global.html#updateComment">updateComment</a></li><li><a href="global.html#updateCourse">updateCourse</a></li><li><a href="global.html#updateLive">updateLive</a></li><li><a href="global.html#updateNotificationPreferences">updateNotificationPreferences</a></li><li><a href="global.html#updateThread">updateThread</a></li><li><a href="global.html#updateUser">updateUser</a></li><li><a href="global.html#updateUserProfile">updateUserProfile</a></li><li><a href="global.html#updateUserProfileHandler">updateUserProfileHandler</a></li><li><a href="global.html#updateVideo">updateVideo</a></li><li><a href="global.html#upgradeUserRole">upgradeUserRole</a></li><li><a href="global.html#uploadAvatar">uploadAvatar</a></li><li><a href="global.html#uploadIllustrationAvatar">uploadIllustrationAvatar</a></li><li><a href="global.html#useEffect">useEffect</a></li><li><a href="global.html#useTutorial">useTutorial</a></li><li><a href="global.html#validateForm">validateForm</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#verify2FASetup">verify2FASetup</a></li><li><a href="global.html#verifyTwoFA">verifyTwoFA</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Sat Jun 07 2025 14:32:34 GMT+0200 (Central European Summer Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

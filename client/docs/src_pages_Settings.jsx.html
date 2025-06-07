@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: src/pages/Settings.jsx</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: src/pages/Settings.jsx</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @fileoverview
+ * Interface pour gérer les paramètres utilisateur,
+ * y compris les informations de profil, les préférences de sécurité et les options de confidentialité. 
+ * Elle inclut également des fonctionnalités pour mettre à jour les profils utilisateurs, 
+ * gérer les modifications non enregistrées et administrer les tutoriels utilisateur.
+ * 
+ */
+
+import { useState, useEffect, lazy, Suspense } from 'react'; 
+import PropTypes from 'prop-types';
+import {
+  getUserProfile,
+  updateUserProfile,
+} from '../API/ProfileCaller';
+
+import { toast, Toaster } from 'react-hot-toast';
+
+import {
+  Globe,
+  Lock,
+  TrashIcon,
+  CogIcon,
+  UserCircleIcon,
+  Loader2,
+} from 'lucide-react';
+
+import PictureModal from '../components/PictureModal';
+import { useTutorial } from '../contexts/TutorialContext';
+
+
+const SecurityTab = lazy(() => import('../components/settings/SecurityTab'));
+const PrivacyTab = lazy(() => import('../components/settings/PrivacyTab'));
+
+/**
+ * Composant de gestion des paramètres utilisateur permettant de modifier le profil,
+ * la sécurité et les préférences de confidentialité.
+ * 
+ * @component
+ * @param {Object} props - Les propriétés du composant
+ * @param {string} props.authToken - Token d'authentification de l'utilisateur
+ * @param {Function} props.refreshAvatar - Fonction pour rafraîchir l'avatar de l'utilisateur
+ * @param {string} [props.userAvatar] - URL de l'avatar de l'utilisateur
+ * @param {boolean} props.loadingAvatar - Indicateur de chargement de l'avatar
+ * @returns {JSX.Element} Interface des paramètres utilisateur
+ */
+const Settings = ({ authToken, refreshAvatar, userAvatar, loadingAvatar }) => {
+  const [activeTab, setActiveTab] = useState('general');
+  const [dataSharing, setDataSharing] = useState({
+    analytics: true,
+    personalizedAds: false,
+  });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showProfilepictureModal, setShowProfilepictureModal] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  
+  const [user, setUser] = useState({
+    name: '',
+    surname: '',
+    username: '',
+    email: '',
+    avatar: '',
+    twoFAEnabled: false,
+  });
+
+  const { resetAllTutorials } = useTutorial();
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const response = await getUserProfile();
+        
+        if (response.status === 200) {
+          setUser({
+            name: response.data.name,
+            surname: response.data.surname,
+            username: response.data.username,
+            email: response.data.email,
+            twoFAEnabled: response.data.twoFAEnabled,
+          });
+        }
+      } catch (error) {
+        console.error("Erreur lors du chargement du profil:", error);
+      }
+    };
+    
+    fetchUserProfile();
+  }, [authToken]);
+
+  /**
+   * Gère les changements dans les champs de formulaire
+   * 
+   * @function handleInputChange
+   * @param {Object} e - Événement de changement
+   * @param {string} e.target.id - Identifiant du champ modifié
+   * @param {string} e.target.value - Nouvelle valeur du champ
+   */
+  const handleInputChange = e => {
+    const { id, value } = e.target;
+    setUser(prevUser => ({
+      ...prevUser,
+      [id]: value,
+    }));
+    setHasUnsavedChanges(true);
+  };
+
+  /**
+   * Change l'onglet actif et affiche une confirmation si des modifications non enregistrées existent
+   * 
+   * @function handleTabChange
+   * @param {string} tab - Identifiant de l'onglet à afficher ('general', 'security', ou 'privacy')
+   */
+  const handleTabChange = tab => {
+    if (hasUnsavedChanges) {
+      const confirmChange = window.confirm(
+        'Vous avez des modifications non enregistrées. Êtes-vous sûr de vouloir changer d’onglet ?'
+      );
+      if (!confirmChange) return;
+    }
+    setErrors({});
+    setActiveTab(tab);
+    setHasUnsavedChanges(false);
+  };
+
+  window.onbeforeunload = function () {
+    if (hasUnsavedChanges) {
+      return 'Vous avez des modifications non enregistrées. Êtes-vous sûr de vouloir quitter cette page ?';
+    }
+  };
+
+  /**
+   * Valide les données du formulaire utilisateur
+   * 
+   * @function validateForm
+   * @returns {boolean} Vrai si les données sont valides, faux sinon
+   */
+  const validateForm = () => {
+    const newErrors = {};
+    if (!user.name) newErrors.name = 'Le prénom est requis.';
+    if (!user.surname) newErrors.surname = 'Le nom de famille est requis.';
+    if (!user.username) newErrors.username = 'Le nom d’utilisateur est requis.';
+    if (!user.email) newErrors.email = 'L’email est requis.';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email))
+      newErrors.email = 'L’email n’est pas valide.';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  /**
+   * Met à jour le profil utilisateur avec les données du formulaire
+   * 
+   * @async
+   * @function updateUserProfileHandler
+   * @throws {Error} Erreur lors de la mise à jour du profil
+   */
+  const updateUserProfileHandler = async () => {
+    try {
+      if (!validateForm()) {
+        return;
+      }
+      
+      setLoading(true);
+      const response = await updateUserProfile({
+        name: user.name,
+        surname: user.surname,
+        username: user.username,
+        email: user.email
+      });
+      
+      if (response.status === 200) {
+        setHasUnsavedChanges(false);
+        toast.success('Profil mis à jour avec succès.');
+      } else {
+        toast.error('Erreur lors de la mise à jour du profil');
+      }
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour du profil:", error);
+      toast.error('Une erreur est survenue. Veuillez vérifier les messages d’erreur.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Affiche le contenu correspondant à l'onglet actif
+   * 
+   * @function renderContent
+   * @returns {JSX.Element} Contenu de l'onglet sélectionné
+   */
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'general':
+        return (
+          &lt;div className="space-y-8">
+            &lt;h2
+              id="profile-section"
+              className="text-xl font-semibold text-gray-800 flex items-center space-x-2"
+            >
+              &lt;UserCircleIcon className="h-6 w-6" aria-hidden="true" />
+              &lt;span>Profil&lt;/span>
+            &lt;/h2>
+
+            &lt;div className="flex flex-col items-center">
+              &lt;div className="relative">
+                &lt;div className="text-center mb-4">
+                  &lt;button
+                    className="absolute -top-1 -right-1 z-10 cursor-pointer border border-blue-400 p-1 rounded-full bg-black text-white"
+                    onClick={() => setShowProfilepictureModal(true)}
+                  >
+                    &lt;CogIcon className="h-5 w-5" />
+                  &lt;/button>
+
+                  {/* User avatar or placeholder */}
+                  {loadingAvatar ? (
+                    &lt;div className="h-20 w-20 md:h-24 md:w-24 rounded-full border-2 bg-gray-200 mx-auto flex items-center justify-center">
+                      &lt;Loader2 className="h-6 w-6 text-gray-400 animate-spin" />
+                    &lt;/div>
+                  ) : !userAvatar ? (
+                    &lt;div className="h-20 w-20 md:h-24 md:w-24 rounded-full border-2 bg-yellow-500 mx-auto flex items-center justify-center">
+                      &lt;span className="text-2xl font-bold text-gray-800">
+                        {user.name ? user.name.charAt(0).toUpperCase() : ''}
+                      &lt;/span>
+                    &lt;/div>
+                  ) : (
+                    &lt;img
+                      src={userAvatar}
+                      alt="Avatar"
+                      className="h-20 w-20 md:h-24 md:w-24 rounded-full object-cover border-2 md:border-4 border-black-300 mx-auto"
+                      onError={() => refreshAvatar()}
+                    />
+                  )}
+                &lt;/div>
+              &lt;/div>
+              &lt;p className="text-sm text-gray-600 text-center mt-1">
+                Cliquez sur l&amp;apos;icône pour modifier votre photo de profil.
+              &lt;/p>
+            &lt;/div>
+
+            &lt;div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              &lt;div>
+                &lt;label
+                  htmlFor="first-name"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Prénom
+                &lt;/label>
+                &lt;input
+                  id="name"
+                  type="text"
+                  placeholder="Votre prénom"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  onChange={handleInputChange}
+                  value={user.name || ''}
+                />
+              &lt;/div>
+
+              &lt;div>
+                &lt;label
+                  htmlFor="name"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Nom
+                &lt;/label>
+                &lt;input
+                  id="surname"
+                  type="text"
+                  placeholder="Votre nom"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  onChange={handleInputChange}
+                  value={user.surname || ''}
+                />
+              &lt;/div>
+
+              &lt;div>
+                &lt;label
+                  htmlFor="username"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Nom d’utilisateur
+                &lt;/label>
+                &lt;input
+                  id="username"
+                  type="text"
+                  placeholder="Votre nom d’utilisateur"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  onChange={handleInputChange}
+                  value={user.username || ''}
+                />
+              &lt;/div>
+
+              &lt;div>
+                &lt;label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Email
+                &lt;/label>
+                &lt;input
+                  id="email"
+                  type="email"
+                  placeholder="votre.email@example.com"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  onChange={handleInputChange}
+                  value={user.email || ''}
+                />
+              &lt;/div>
+            &lt;/div>
+          &lt;/div>
+        );
+
+      case 'security':
+        return (
+          &lt;Suspense fallback={&lt;div className="p-4 text-center">&lt;Spinner />&lt;/div>}>
+            &lt;SecurityTab 
+              user={user} 
+              setUser={setUser} 
+              handleInputChange={handleInputChange} 
+            />
+          &lt;/Suspense>
+        );
+
+      case 'privacy':
+        return (
+          &lt;Suspense fallback={&lt;div className="p-4 text-center">&lt;Spinner />&lt;/div>}>
+            &lt;PrivacyTab
+              dataSharing={dataSharing}
+              setDataSharing={setDataSharing}
+              handleInputChange={handleInputChange}
+            />
+          &lt;/Suspense>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  /**
+   * Composant d'indicateur de chargement
+   * 
+   * @function Spinner
+   * @returns {JSX.Element} Animation de chargement
+   */
+  const Spinner = () => (
+    &lt;div className="flex justify-center items-center">
+      &lt;div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600">&lt;/div>
+    &lt;/div>
+  );
+
+  return (
+    &lt;>
+      &lt;Toaster />
+
+      {loading &amp;&amp; (
+        &lt;div className="fixed inset-0 bg-opacity-30 flex items-center justify-center z-50">
+          &lt;Spinner />
+        &lt;/div>
+      )}
+
+      {showProfilepictureModal &amp;&amp; (
+        &lt;PictureModal
+          setShowProfilepictureModal={setShowProfilepictureModal}
+          authToken={authToken}
+          refreshAvatar={refreshAvatar}
+        />
+      )}
+      &lt;div className="min-h-screen bg-gray-50 p-6">
+        &lt;div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-6">
+          &lt;h1 className="text-2xl font-bold text-gray-800 mb-6">Paramètres&lt;/h1>
+
+          &lt;div className="flex space-x-4 mb-6 overflow-x-auto">
+            {['general', 'security', 'privacy'].map(tab => (
+              &lt;button
+                key={tab}
+                onClick={() => handleTabChange(tab)}
+                className={`px-4 py-2 rounded-lg flex items-center space-x-2 whitespace-nowrap ${
+                  activeTab === tab
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                }`}
+              >
+                {tab === 'general' &amp;&amp; &lt;CogIcon className="h-5 w-5" />}
+                {tab === 'security' &amp;&amp; &lt;Lock className="h-5 w-5" />}
+                {tab === 'privacy' &amp;&amp; &lt;Globe className="h-5 w-5" />}
+                &lt;span>
+                  {tab === 'general' &amp;&amp; 'Général'}
+                  {tab === 'security' &amp;&amp; 'Sécurité'}
+                  {tab === 'privacy' &amp;&amp; 'Confidentialité'}
+                &lt;/span>
+              &lt;/button>
+            ))}
+          &lt;/div>
+
+          {renderContent()}
+
+          {/* Error Messages */}
+          {Object.keys(errors).length > 0 &amp;&amp; (
+            &lt;div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              &lt;ul className="text-red-600 text-sm">
+                {Object.entries(errors).map(([field, message]) => (
+                  &lt;li key={field}>{message}&lt;/li>
+                ))}
+              &lt;/ul>
+            &lt;/div>
+          )}
+
+          &lt;div className="mt-8 border-t pt-6">
+            &lt;div className="space-y-4">
+              &lt;h2 className="text-xl font-semibold text-red-600 flex items-center space-x-2">
+                &lt;TrashIcon className="h-6 w-6" />
+                &lt;span>Zone de danger&lt;/span>
+              &lt;/h2>
+              &lt;div className="p-4 bg-red-50 rounded-lg border border-red-200">
+                &lt;div className="flex flex-col justify-space-around space-y-4 ">
+                  &lt;div>
+                    &lt;h3 className="font-medium text-red-800">
+                      Supprimer le compte
+                    &lt;/h3>
+                    &lt;p className="text-sm text-red-600">
+                      Cette action est irréversible et entraînera la suppression
+                      définitive de toutes vos données. Votre compte sera
+                      automatiquement supprimé 30 jours après votre demande,
+                      pour des raisons de sécurité. Si vous vous reconnectez
+                      avant cette échéance, la suppression sera annulée.
+                    &lt;/p>
+                  &lt;/div>
+                  &lt;button
+                    onClick={() => setShowDeleteModal(true)}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition w-fit"
+                  >
+                    Supprimer le compte
+                  &lt;/button>
+                &lt;/div>
+              &lt;/div>
+            &lt;/div>
+          &lt;/div>
+
+          {showDeleteModal &amp;&amp; (
+            &lt;div className="fixed inset-0 backdrop-filter backdrop-blur-sm bg-black/50 flex items-center justify-center p-4 z-50">
+              &lt;div className="bg-white rounded-lg p-6 max-w-md w-full">
+                &lt;h3 className="text-xl font-bold text-red-600 mb-4">
+                  Confirmer la suppression
+                &lt;/h3>
+                &lt;p className="text-gray-600 mb-6">
+                  Êtes-vous sûr de vouloir supprimer définitivement votre compte
+                  ? Toutes vos données seront perdues.
+                &lt;/p>
+                &lt;div className="flex justify-end space-x-4">
+                  &lt;button
+                    onClick={() => setShowDeleteModal(false)}
+                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                  >
+                    Annuler
+                  &lt;/button>
+                  &lt;button
+                    onClick={() => {
+                      setShowDeleteModal(false);
+
+                    }}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                  >
+                    Confirmer la suppression
+                  &lt;/button>
+                &lt;/div>
+              &lt;/div>
+            &lt;/div>
+          )}
+
+          &lt;div className="mt-6 flex justify-end space-x-4">
+            &lt;button
+              className="px-6 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+              onClick={() => {
+                setHasUnsavedChanges(false);
+                window.location.reload();
+              }}
+            >
+              Annuler
+            &lt;/button>
+            &lt;button
+              className={`px-6 py-2 rounded-lg text-white transition ${
+                loading
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-blue-600 hover:bg-blue-700'
+              }`}
+              onClick={updateUserProfileHandler}
+              disabled={loading}
+            >
+              {loading ? 'Enregistrement...' : 'Enregistrer les modifications'}
+            &lt;/button>
+          &lt;/div>
+
+          {/* Tutorials Section */}
+          &lt;section className="bg-white shadow rounded-lg p-6 mb-6">
+            &lt;h2 className="text-lg font-medium text-gray-900 mb-4">Tutoriels&lt;/h2>
+            &lt;div className="space-y-4">
+              &lt;div>
+                &lt;button
+                  onClick={resetAllTutorials}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Réinitialiser tous les tutoriels
+                &lt;/button>
+                &lt;p className="text-sm text-gray-500 mt-1">
+                  Cette action vous permettra de revoir tous les tutoriels comme si vous visitiez l&amp;apos;application pour la première fois.
+                &lt;/p>
+              &lt;/div>
+            &lt;/div>
+          &lt;/section>
+        &lt;/div>
+      &lt;/div>
+    &lt;/>
+  );
+};
+
+/**
+ * Validation des types de propriétés pour le composant Settings
+ * 
+ * @type {Object}
+ */
+Settings.propTypes = {
+  authToken: PropTypes.string.isRequired,
+  refreshAvatar: PropTypes.func.isRequired,
+  userAvatar: PropTypes.string,
+  loadingAvatar: PropTypes.bool.isRequired,
+};
+
+export default Settings;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-App.html">App</a></li></ul><h3>Global</h3><ul><li><a href="global.html#About">About</a></li><li><a href="global.html#AccountDisabledModal">AccountDisabledModal</a></li><li><a href="global.html#AdminDashboardHome">AdminDashboardHome</a></li><li><a href="global.html#BASE_URL">BASE_URL</a></li><li><a href="global.html#BulkActions">BulkActions</a></li><li><a href="global.html#ClassManagementTutorial">ClassManagementTutorial</a></li><li><a href="global.html#ClasseCards">ClasseCards</a></li><li><a href="global.html#ClasseCreationModal">ClasseCreationModal</a></li><li><a href="global.html#ClasseManagement">ClasseManagement</a></li><li><a href="global.html#ClasseTable">ClasseTable</a></li><li><a href="global.html#Contact">Contact</a></li><li><a href="global.html#ContentCard">ContentCard</a></li><li><a href="global.html#CourseReader">CourseReader</a></li><li><a href="global.html#CourseReaderTutorial">CourseReaderTutorial</a></li><li><a href="global.html#Courses">Courses</a></li><li><a href="global.html#CoursesLibraryTutorial">CoursesLibraryTutorial</a></li><li><a href="global.html#Dashboard">Dashboard</a></li><li><a href="global.html#DashboardTutorial">DashboardTutorial</a></li><li><a href="global.html#DeleteDocument">DeleteDocument</a></li><li><a href="global.html#DeleteVideo">DeleteVideo</a></li><li><a href="global.html#EleveDashboardHome">EleveDashboardHome</a></li><li><a href="global.html#ErrorMessage">ErrorMessage</a></li><li><a href="global.html#FilterDropdown">FilterDropdown</a></li><li><a href="global.html#FirstLogin">FirstLogin</a></li><li><a href="global.html#Footer">Footer</a></li><li><a href="global.html#Forum">Forum</a></li><li><a href="global.html#GetAll_DataStructure">GetAll_DataStructure</a></li><li><a href="global.html#GetAll_Document">GetAll_Document</a></li><li><a href="global.html#Get_Document_Information">Get_Document_Information</a></li><li><a href="global.html#Get_Video_Information">Get_Video_Information</a></li><li><a href="global.html#Get_special_Document">Get_special_Document</a></li><li><a href="global.html#Get_special_Video">Get_special_Video</a></li><li><a href="global.html#Home">Home</a></li><li><a href="global.html#INACTIVITY_THRESHOLD">INACTIVITY_THRESHOLD</a></li><li><a href="global.html#LegalNotice">LegalNotice</a></li><li><a href="global.html#LiveNotFound">LiveNotFound</a></li><li><a href="global.html#LiveViewer">LiveViewer</a></li><li><a href="global.html#LoadCanvasTemplate">LoadCanvasTemplate</a></li><li><a href="global.html#LoadingComponent">LoadingComponent</a></li><li><a href="global.html#LoadingSpinner">LoadingSpinner</a></li><li><a href="global.html#Logout">Logout</a></li><li><a href="global.html#Mailbox">Mailbox</a></li><li><a href="global.html#MaintenanceBanner">MaintenanceBanner</a></li><li><a href="global.html#MessageDetailSkeleton">MessageDetailSkeleton</a></li><li><a href="global.html#MessageSkeleton">MessageSkeleton</a></li><li><a href="global.html#NavigationBar">NavigationBar</a></li><li><a href="global.html#PictureModal">PictureModal</a></li><li><a href="global.html#PrivacyPolicy">PrivacyPolicy</a></li><li><a href="global.html#PrivacyTab">PrivacyTab</a></li><li><a href="global.html#ProfilePhotoSelector">ProfilePhotoSelector</a></li><li><a href="global.html#PublicNavbar">PublicNavbar</a></li><li><a href="global.html#SearchBar">SearchBar</a></li><li><a href="global.html#SearchUser">SearchUser</a></li><li><a href="global.html#SecureDocumentViewer">SecureDocumentViewer</a></li><li><a href="global.html#SecureVideoPlayer">SecureVideoPlayer</a></li><li><a href="global.html#SecurityTab">SecurityTab</a></li><li><a href="global.html#SendDocument">SendDocument</a></li><li><a href="global.html#SendVideo">SendVideo</a></li><li><a href="global.html#Settings">Settings</a></li><li><a href="global.html#Sign">Sign</a></li><li><a href="global.html#Spinner">Spinner</a></li><li><a href="global.html#StreamReader">StreamReader</a></li><li><a href="global.html#TEN_MINUTES">TEN_MINUTES</a></li><li><a href="global.html#TermsOfUse">TermsOfUse</a></li><li><a href="global.html#ToggleView">ToggleView</a></li><li><a href="global.html#Tutorial">Tutorial</a></li><li><a href="global.html#TutorialContext">TutorialContext</a></li><li><a href="global.html#TutorialProvider">TutorialProvider</a></li><li><a href="global.html#TwoFASetupModal">TwoFASetupModal</a></li><li><a href="global.html#UpdateDocument">UpdateDocument</a></li><li><a href="global.html#UserManagementTutorial">UserManagementTutorial</a></li><li><a href="global.html#WSS_BASE_URL">WSS_BASE_URL</a></li><li><a href="global.html#activateUser">activateUser</a></li><li><a href="global.html#addComment">addComment</a></li><li><a href="global.html#addStudentToClass">addStudentToClass</a></li><li><a href="global.html#allDigitsFilled">allDigitsFilled</a></li><li><a href="global.html#api">api</a></li><li><a href="global.html#authToken">authToken</a></li><li><a href="global.html#authenticatedButtons">authenticatedButtons</a></li><li><a href="global.html#baseURL">baseURL</a></li><li><a href="global.html#blockLive">blockLive</a></li><li><a href="global.html#bulkDelete">bulkDelete</a></li><li><a href="global.html#changePassword">changePassword</a></li><li><a href="global.html#check2FAStatus">check2FAStatus</a></li><li><a href="global.html#checkRegisterCode">checkRegisterCode</a></li><li><a href="global.html#createClass">createClass</a></li><li><a href="global.html#createCourse">createCourse</a></li><li><a href="global.html#createLive">createLive</a></li><li><a href="global.html#createThread">createThread</a></li><li><a href="global.html#createUser">createUser</a></li><li><a href="global.html#deactivateUser">deactivateUser</a></li><li><a href="global.html#deleteAvatar">deleteAvatar</a></li><li><a href="global.html#deleteClass">deleteClass</a></li><li><a href="global.html#deleteClasseHandler">deleteClasseHandler</a></li><li><a href="global.html#deleteComment">deleteComment</a></li><li><a href="global.html#deleteContactMessage">deleteContactMessage</a></li><li><a href="global.html#deleteCourse">deleteCourse</a></li><li><a href="global.html#deleteInviteCode">deleteInviteCode</a></li><li><a href="global.html#deleteLive">deleteLive</a></li><li><a href="global.html#deleteMessage">deleteMessage</a></li><li><a href="global.html#deleteThread">deleteThread</a></li><li><a href="global.html#deleteUser">deleteUser</a></li><li><a href="global.html#disable2FA">disable2FA</a></li><li><a href="global.html#disapproveCourse">disapproveCourse</a></li><li><a href="global.html#disapproveLive">disapproveLive</a></li><li><a href="global.html#downloadAttachment">downloadAttachment</a></li><li><a href="global.html#endLive">endLive</a></li><li><a href="global.html#errorMessages">errorMessages</a></li><li><a href="global.html#fetchClasses">fetchClasses</a></li><li><a href="global.html#fetchCourseData">fetchCourseData</a></li><li><a href="global.html#fetchData">fetchData</a></li><li><a href="global.html#fetchUsers">fetchUsers</a></li><li><a href="global.html#firstLogin">firstLogin</a></li><li><a href="global.html#flagContent">flagContent</a></li><li><a href="global.html#forgotPassword">forgotPassword</a></li><li><a href="global.html#generateInviteCode">generateInviteCode</a></li><li><a href="global.html#getAllClasses">getAllClasses</a></li><li><a href="global.html#getAllContactMessages">getAllContactMessages</a></li><li><a href="global.html#getAllCourses">getAllCourses</a></li><li><a href="global.html#getAllInviteCodes">getAllInviteCodes</a></li><li><a href="global.html#getAllLives">getAllLives</a></li><li><a href="global.html#getAllUsers">getAllUsers</a></li><li><a href="global.html#getAvailableRecipients">getAvailableRecipients</a></li><li><a href="global.html#getAvatar">getAvatar</a></li><li><a href="global.html#getClassById">getClassById</a></li><li><a href="global.html#getClassStudents">getClassStudents</a></li><li><a href="global.html#getContactMessage">getContactMessage</a></li><li><a href="global.html#getCourseById">getCourseById</a></li><li><a href="global.html#getCourseDetails">getCourseDetails</a></li><li><a href="global.html#getCourseProgress">getCourseProgress</a></li><li><a href="global.html#getCoursesByClass">getCoursesByClass</a></li><li><a href="global.html#getFlags">getFlags</a></li><li><a href="global.html#getInboxMessages">getInboxMessages</a></li><li><a href="global.html#getInitialViewMode">getInitialViewMode</a></li><li><a href="global.html#getLiveById">getLiveById</a></li><li><a href="global.html#getLiveMessages">getLiveMessages</a></li><li><a href="global.html#getLiveStreamUrl">getLiveStreamUrl</a></li><li><a href="global.html#getLivesByClass">getLivesByClass</a></li><li><a href="global.html#getMessage">getMessage</a></li><li><a href="global.html#getNotificationPreferences">getNotificationPreferences</a></li><li><a href="global.html#getSentMessages">getSentMessages</a></li><li><a href="global.html#getStudentProgress">getStudentProgress</a></li><li><a href="global.html#getThreadById">getThreadById</a></li><li><a href="global.html#getThreads">getThreads</a></li><li><a href="global.html#getTrashMessages">getTrashMessages</a></li><li><a href="global.html#getUserById">getUserById</a></li><li><a href="global.html#getUserProfile">getUserProfile</a></li><li><a href="global.html#getUserWarnings">getUserWarnings</a></li><li><a href="global.html#getVideoDetails">getVideoDetails</a></li><li><a href="global.html#getVideoStreamUrl">getVideoStreamUrl</a></li><li><a href="global.html#handle2FASubmit">handle2FASubmit</a></li><li><a href="global.html#handleBackdropClick">handleBackdropClick</a></li><li><a href="global.html#handleBlockedMouseLeave">handleBlockedMouseLeave</a></li><li><a href="global.html#handleBlockedMouseMove">handleBlockedMouseMove</a></li><li><a href="global.html#handleClose">handleClose</a></li><li><a href="global.html#handleCompleteCourse">handleCompleteCourse</a></li><li><a href="global.html#handleCourseDisapproval">handleCourseDisapproval</a></li><li><a href="global.html#handleDeleteCourse">handleDeleteCourse</a></li><li><a href="global.html#handleDigitChange">handleDigitChange</a></li><li><a href="global.html#handleDigitKeyDown">handleDigitKeyDown</a></li><li><a href="global.html#handleDigitPaste">handleDigitPaste</a></li><li><a href="global.html#handleDownloadDocument">handleDownloadDocument</a></li><li><a href="global.html#handleError">handleError</a></li><li><a href="global.html#handleInputChange">handleInputChange</a></li><li><a href="global.html#handleLogout">handleLogout</a></li><li><a href="global.html#handleMenuToggle">handleMenuToggle</a></li><li><a href="global.html#handleModAction">handleModAction</a></li><li><a href="global.html#handleSubmit">handleSubmit</a></li><li><a href="global.html#handleSubmitClasse">handleSubmitClasse</a></li><li><a href="global.html#handleTabChange">handleTabChange</a></li><li><a href="global.html#handleUnblockCourse">handleUnblockCourse</a></li><li><a href="global.html#isAuthenticated">isAuthenticated</a></li><li><a href="global.html#loadCaptchaEngine">loadCaptchaEngine</a></li><li><a href="global.html#logViewEngagement">logViewEngagement</a></li><li><a href="global.html#login">login</a></li><li><a href="global.html#markAsRead">markAsRead</a></li><li><a href="global.html#markAsUnread">markAsUnread</a></li><li><a href="global.html#markContactMessageAsProcessed">markContactMessageAsProcessed</a></li><li><a href="global.html#markCourseAsCompleted">markCourseAsCompleted</a></li><li><a href="global.html#markCourseAsInProgress">markCourseAsInProgress</a></li><li><a href="global.html#mountApp">mountApp</a></li><li><a href="global.html#moveToTrash">moveToTrash</a></li><li><a href="global.html#navItems">navItems</a></li><li><a href="global.html#navigate">navigate</a></li><li><a href="global.html#onSamplesDecoded">onSamplesDecoded</a></li><li><a href="global.html#refreshTwoFASetup">refreshTwoFASetup</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#removeStudentFromClass">removeStudentFromClass</a></li><li><a href="global.html#renderContent">renderContent</a></li><li><a href="global.html#resolveFlag">resolveFlag</a></li><li><a href="global.html#restoreFromTrash">restoreFromTrash</a></li><li><a href="global.html#retrogradeUserRole">retrogradeUserRole</a></li><li><a href="global.html#root">root</a></li><li><a href="global.html#sendContactMessage">sendContactMessage</a></li><li><a href="global.html#sendLiveMessage">sendLiveMessage</a></li><li><a href="global.html#sendMessage">sendMessage</a></li><li><a href="global.html#sendWarning">sendWarning</a></li><li><a href="global.html#setMainTeacher">setMainTeacher</a></li><li><a href="global.html#setup2FA">setup2FA</a></li><li><a href="global.html#signButtons">signButtons</a></li><li><a href="global.html#startLive">startLive</a></li><li><a href="global.html#toggleAll">toggleAll</a></li><li><a href="global.html#toggleClasse">toggleClasse</a></li><li><a href="global.html#toggleMember">toggleMember</a></li><li><a href="global.html#toggleMobileMenu">toggleMobileMenu</a></li><li><a href="global.html#unblockCourse">unblockCourse</a></li><li><a href="global.html#unblockLive">unblockLive</a></li><li><a href="global.html#updateClass">updateClass</a></li><li><a href="global.html#updateComment">updateComment</a></li><li><a href="global.html#updateCourse">updateCourse</a></li><li><a href="global.html#updateLive">updateLive</a></li><li><a href="global.html#updateNotificationPreferences">updateNotificationPreferences</a></li><li><a href="global.html#updateThread">updateThread</a></li><li><a href="global.html#updateUser">updateUser</a></li><li><a href="global.html#updateUserProfile">updateUserProfile</a></li><li><a href="global.html#updateUserProfileHandler">updateUserProfileHandler</a></li><li><a href="global.html#updateVideo">updateVideo</a></li><li><a href="global.html#upgradeUserRole">upgradeUserRole</a></li><li><a href="global.html#uploadAvatar">uploadAvatar</a></li><li><a href="global.html#uploadIllustrationAvatar">uploadIllustrationAvatar</a></li><li><a href="global.html#useEffect">useEffect</a></li><li><a href="global.html#useTutorial">useTutorial</a></li><li><a href="global.html#validateForm">validateForm</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#verify2FASetup">verify2FASetup</a></li><li><a href="global.html#verifyTwoFA">verifyTwoFA</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Sat Jun 07 2025 14:32:34 GMT+0200 (Central European Summer Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

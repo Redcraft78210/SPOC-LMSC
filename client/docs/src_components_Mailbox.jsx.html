@@ -1,0 +1,1887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: src/components/Mailbox.jsx</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: src/components/Mailbox.jsx</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import { useState, useEffect, useRef, useCallback, useMemo, useTransition } from 'react';
+import PropTypes from 'prop-types';
+import {
+  getInboxMessages,
+  getSentMessages,
+  getTrashMessages,
+  getMessage,
+  markAsRead,
+  moveToTrash,
+  downloadAttachment,
+  sendMessage,
+
+  deleteMessage as permanentlyDeleteMessage,
+  getAvailableRecipients
+} from '../API/MailboxCaller';
+import {
+  Inbox,
+  Send,
+  Trash2,
+  Search,
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+  Paperclip,
+  Download,
+  X,
+  Clock,
+  AlertTriangle,
+  User,
+  UserCheck,
+  ShieldAlert,
+  Users,
+  Menu,
+  File,
+  FileText,
+  Image,
+  Music,
+  Video,
+} from 'lucide-react';
+import { toast, Toaster } from 'react-hot-toast';
+import { Editor } from '@toast-ui/react-editor';
+
+import Viewer from '@toast-ui/editor/dist/toastui-editor-viewer';
+import '@toast-ui/editor/dist/toastui-editor.css';
+
+/**
+ * Composant de messagerie permettant aux utilisateurs de gérer leurs emails
+ * @component
+ * @param {Object} props - Les propriétés du composant
+ * @param {Object} props.user - Informations sur l'utilisateur connecté
+ * @param {string|number} props.user.id - Identifiant de l'utilisateur
+ * @param {string} props.user.name - Prénom de l'utilisateur
+ * @param {string} props.user.surname - Nom de famille de l'utilisateur
+ * @param {string} props.user.email - Email de l'utilisateur
+ * @param {'Administrateur'|'Professeur'|'Etudiant'} props.role - Rôle de l'utilisateur
+ * @param {Function} props.onClose - Fonction appelée lors de la fermeture du composant
+ * @returns {JSX.Element} Interface de messagerie
+ */
+const Mailbox = ({ role, onClose, user }) => {
+  const [view, setView] = useState('inbox');
+  const [messages, setMessages] = useState([]);
+  const [selectedMessage, setSelectedMessage] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showComposeModal, setShowComposeModal] = useState(false);
+  const [replyData, setReplyData] = useState(null);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalMessages: 0,
+  });
+
+
+  const [isPending, startTransition] = useTransition();
+
+
+  const [downloadingAttachments, setDownloadingAttachments] = useState({});
+  const [loadingMessageDetails, setLoadingMessageDetails] = useState(false);
+  const [deletingMessage, setDeletingMessage] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+
+  const [filters, setFilters] = useState({
+    unread: false,
+    hasAttachments: false,
+    fromContact: false,
+  });
+
+  const fileInputRef = useRef(null);
+
+  /**
+   * Récupère la fonction d'API correspondant à la vue actuelle
+   * @function
+   * @param {string} view - Vue active ('inbox', 'sent', 'trash')
+   * @returns {Function} Fonction d'API pour récupérer les messages
+   */
+  const getEndpointForView = useCallback(() => {
+    switch (view) {
+      case 'inbox':
+        return getInboxMessages;
+      case 'sent':
+        return getSentMessages;
+      case 'trash':
+        return getTrashMessages;
+      default:
+        return getInboxMessages;
+    }
+  }, [view]);
+
+  /**
+   * Récupère les messages depuis l'API en fonction de la vue active
+   * @async
+   * @function
+   * @returns {Promise&lt;void>}
+   * @throws {Error} Si la requête échoue
+   */
+  const fetchMessages = useCallback(async () => {
+    try {
+      setLoading(true);
+      const fetchFunction = getEndpointForView();
+      const response = await fetchFunction({
+        page: pagination.currentPage,
+        limit: 20,
+        filters
+      });
+
+      if (response.status === 200) {
+
+        startTransition(() => {
+          setMessages(response.data.messages);
+          setPagination({
+            currentPage: response.data.currentPage,
+            totalPages: response.data.totalPages,
+            totalMessages: response.data.total
+          });
+        });
+      } else {
+        console.error("Error fetching messages:", response.message);
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement des messages:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [filters, pagination.currentPage, getEndpointForView, startTransition]);
+
+  useEffect(() => {
+    fetchMessages();
+  }, [fetchMessages, refreshKey]);
+
+  /**
+   * Gère la sélection d'un message et le marque comme lu si nécessaire
+   * @async
+   * @function
+   * @param {string|number} messageId - ID du message à sélectionner
+   * @returns {Promise&lt;void>}
+   * @throws {Error} Si la requête échoue
+   */
+  const handleMessageSelect = async messageId => {
+    try {
+
+      setSelectedMessage(null);
+
+
+      const messageToUpdate = messages.find(msg => msg.id === messageId);
+      if (messageToUpdate &amp;&amp; !messageToUpdate.read &amp;&amp; view === 'inbox') {
+
+        startTransition(() => {
+          setMessages(prevMessages =>
+            prevMessages.map(msg =>
+              msg.id === messageId ? { ...msg, read: true } : msg
+            )
+          );
+        });
+        
+
+        markAsRead({ messageId }).catch(error => {
+          console.error("Erreur lors du marquage comme lu:", error);
+        });
+      }
+
+
+      startTransition(() => {
+        setLoadingMessageDetails(true);
+      });
+
+      const response = await getMessage({ messageId });
+
+      if (response.status === 200) {
+        startTransition(() => {
+          setSelectedMessage(response.data);
+        });
+      } else {
+        console.error("Error fetching message details:", response.message);
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement du message:", error);
+    } finally {
+      startTransition(() => {
+        setLoadingMessageDetails(false);
+        setMobileMenuOpen(false);
+      });
+    }
+  };
+
+  /**
+   * Supprime un message ou le déplace vers la corbeille selon la vue active
+   * @async
+   * @function
+   * @param {string|number} messageId - ID du message à supprimer
+   * @returns {Promise&lt;void>}
+   * @throws {Error} Si la requête échoue
+   */
+  const deleteMessageHandler = async messageId => {
+    try {
+      setDeletingMessage(true);
+      let response;
+
+      if (view === 'trash') {
+        response = await permanentlyDeleteMessage({ messageId });
+      } else {
+        response = await moveToTrash({ messageId });
+      }
+
+      if (response.status === 200) {
+        if (selectedMessage &amp;&amp; selectedMessage.id === messageId) {
+          setSelectedMessage(null);
+        }
+        fetchMessages();
+      } else {
+        console.error("Error deleting message:", response.message);
+      }
+    } catch (error) {
+      console.error("Erreur lors de la suppression du message:", error);
+    } finally {
+      setDeletingMessage(false);
+    }
+  };
+
+  /**
+   * Télécharge une pièce jointe
+   * @async
+   * @function
+   * @param {string|number} attachmentId - ID de la pièce jointe
+   * @param {string} filename - Nom du fichier
+   * @returns {Promise&lt;void>}
+   * @throws {Error} Si le téléchargement échoue
+   */
+  const downloadAttachmentHandler = async (attachmentId, filename) => {
+    try {
+      setDownloadingAttachments(prev => ({ ...prev, [attachmentId]: true }));
+      const response = await downloadAttachment({ attachmentId });
+
+      if (response &amp;&amp; response.status === 200) {
+
+        const blob = response.data;
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+
+
+        setTimeout(() => {
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        }, 100);
+      } else {
+
+        const errorMessage = response?.message || "Unknown error";
+        console.error("Error downloading attachment:", errorMessage);
+      }
+    } catch (error) {
+      console.error("Erreur lors du téléchargement de la pièce jointe:", error);
+    } finally {
+      setDownloadingAttachments(prev => ({ ...prev, [attachmentId]: false }));
+    }
+  };
+
+  const filteredMessages = useMemo(() => {
+    const searchLower = searchQuery.toLowerCase();
+    return messages.filter(msg =>
+      [msg.subject, msg.sender?.name, msg.recipient?.name, msg.content]
+        .filter(Boolean)
+        .some(field => field.toLowerCase().includes(searchLower))
+    );
+  }, [messages, searchQuery]);
+
+  /**
+   * Composant pour composer un nouveau message ou répondre à un message existant
+   * @component
+   * @returns {JSX.Element} Formulaire de composition de message
+   */
+  const ComposeMail = () => {
+    const [recipients, setRecipients] = useState([]);
+    const [availableRecipients, setAvailableRecipients] = useState([]);
+    const [subject, setSubject] = useState(replyData?.subject || '');
+    const [attachments, setAttachments] = useState([]);
+    const [sending, setSending] = useState(false);
+    const [recipientType, setRecipientType] = useState('individual');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const recipientsInitialized = useRef(false);
+    const [loadingRecipients, setLoadingRecipients] = useState(false);
+    const searchInputRef = useRef(null);
+    const editorRef = useRef(null);
+
+
+    useEffect(() => {
+      if (recipients.length > 1 &amp;&amp; recipientType !== 'multiple') {
+        setRecipientType('multiple');
+      }
+    }, [recipients, recipientType]);
+
+
+    const attachmentRegexList = [
+      /ci-joint/i,
+      /pièce[s]? jointe[s]?/i,
+      /fichier[s]? joint[s]?/i,
+      /attachement[s]?/i,
+      /en annexe/i,
+      /joint[s]? à ce mail/i,
+      /joint[s]? à ce message/i,
+      /joint[s]? à cet email/i,
+      /veuillez trouver/i,
+      /vous trouverez.*joint/i,
+      /je vous envoie.*fichier/i,
+      /document[s]? joint[s]?/i,
+      /photo[s]? jointe[s]?/i,
+      /image[s]? jointe[s]?/i,
+      /pdf joint/i,
+      /joint.*pdf/i,
+      /joint.*excel/i,
+      /joint.*document/i,
+    ];
+
+
+    /**
+     * Vérifie si le texte contient des mentions de pièces jointes
+     * @function
+     * @param {string} text - Contenu du message
+     * @returns {boolean} Vrai si le texte mentionne des pièces jointes
+     */
+    const checkForAttachmentMention = (text) => {
+      return attachmentRegexList.some(regex => regex.test(text));
+    };
+
+    /**
+     * Récupère la liste des destinataires disponibles
+     * @async
+     * @function
+     * @returns {Promise&lt;void>}
+     * @throws {Error} Si la requête échoue
+     */
+    const fetchAvailableRecipients = useCallback(async () => {
+      try {
+        setLoadingRecipients(true);
+        const response = await getAvailableRecipients({
+          type: recipientType
+        });
+
+        if (response.status === 200) {
+          setAvailableRecipients(response.data || []);
+        } else {
+          console.error("Error fetching recipients:", response.message);
+        }
+      } catch (error) {
+        console.error("Erreur lors du chargement des destinataires:", error);
+      } finally {
+        setLoadingRecipients(false);
+      }
+    }, [recipientType]);
+
+    useEffect(() => {
+      fetchAvailableRecipients();
+    }, [fetchAvailableRecipients]);
+
+
+    useEffect(() => {
+      if (
+        replyData &amp;&amp;
+        availableRecipients.length > 0 &amp;&amp;
+        !recipientsInitialized.current
+      ) {
+
+        setSubject(replyData.subject);
+
+
+        const replyRecipient = availableRecipients.find(
+          r => r.id === replyData.recipientId
+        );
+        if (replyRecipient) {
+          setRecipients([replyRecipient]);
+          setRecipientType('individual');
+          recipientsInitialized.current = true;
+        }
+      }
+    }, [replyData, availableRecipients]);
+
+
+    useEffect(() => {
+      const handleClickOutside = event => {
+        if (
+          searchInputRef.current &amp;&amp;
+          !searchInputRef.current.contains(event.target)
+        ) {
+          setShowSuggestions(false);
+        }
+      };
+
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }, []);
+
+    /**
+     * Gère le changement de fichiers lors de l'ajout de pièces jointes
+     * @function
+     * @param {Event} e - Événement de changement
+     * @returns {void}
+     */
+    const handleFileChange = e => {
+      const files = Array.from(e.target.files);
+
+
+      const validFiles = files.filter(file => file.size &lt;= 10 * 1024 * 1024);
+      const invalidFiles = files.filter(file => file.size > 10 * 1024 * 1024);
+
+      if (invalidFiles.length > 0) {
+        toast.error(
+          `${invalidFiles.length} fichier(s) dépassent la limite de 10 Mo`
+        );
+      }
+
+
+      setAttachments([...attachments, ...validFiles]);
+    };
+
+    /**
+     * Supprime une pièce jointe du formulaire
+     * @function
+     * @param {number} index - Index de la pièce jointe à supprimer
+     * @returns {void}
+     */
+    const removeAttachment = index => {
+      setAttachments(attachments.filter((_, i) => i !== index));
+    };
+
+    /**
+     * Gère les changements dans le champ de recherche de destinataires
+     * @function
+     * @param {Event} e - Événement de changement
+     * @returns {void}
+     */
+    const handleSearchChange = e => {
+      setSearchQuery(e.target.value);
+      setShowSuggestions(true);
+    };
+
+    /**
+     * Ajoute un destinataire sélectionné à la liste
+     * @function
+     * @param {string|number} userId - ID du destinataire
+     * @returns {void}
+     */
+    const handleRecipientSelect = input => {
+      const userId = input.toString();
+      const selectedUser = availableRecipients.find(
+        user => user.id.toString() === userId
+      );
+
+      if (selectedUser) {
+        setRecipients(prevRecipients => {
+
+          if (!prevRecipients.some(r => r.id === selectedUser.id)) {
+            return [...prevRecipients, selectedUser];
+          }
+          return prevRecipients;
+        });
+      }
+
+      setSearchQuery('');
+      setShowSuggestions(false);
+    };
+
+    /**
+     * Définit le type de destinataire spécial (tous les étudiants, tous les professeurs, etc.)
+     * @function
+     * @param {string} type - Type de destinataire spécial
+     * @returns {void}
+     */
+    const handleSpecialRecipientSelect = type => {
+      if (type !== recipientType) {
+        setRecipientType(type);
+        setRecipients([]);
+      }
+    };
+
+    /**
+     * Envoie le message
+     * @async
+     * @function
+     * @param {Event} e - Événement de soumission
+     * @returns {Promise&lt;void>}
+     * @throws {Error} Si l'envoi échoue
+     */
+    const handleSubmit = async e => {
+      e.preventDefault();
+
+
+      const editorContent = editorRef.current?.getInstance().getMarkdown() || '';
+
+      if (recipients.length === 0 &amp;&amp; recipientType === 'individual') {
+        toast.error("Veuillez sélectionner au moins un destinataire");
+        return;
+      }
+
+      if (!subject.trim()) {
+        toast.error("Veuillez saisir un objet");
+        return;
+      }
+
+      if (!editorContent.trim()) {
+        toast.error("Veuillez saisir un message");
+        return;
+      }
+
+
+      if (attachments.length === 0 &amp;&amp; checkForAttachmentMention(editorContent)) {
+        const confirmSend = window.confirm(
+          "Vous semblez mentionner des pièces jointes dans votre message, mais aucun fichier n'a été ajouté. Souhaitez-vous quand même envoyer le message sans pièces jointes?"
+        );
+
+        if (!confirmSend) {
+          return;
+        }
+      }
+
+      setSending(true);
+
+      try {
+        const formData = new FormData();
+
+
+        recipients.forEach(recipient => {
+          formData.append('recipients[]', recipient.id);
+        });
+
+        console.log("FormData recipients:", recipients.map(r => r.id));
+        console.log("FormData subject:", subject.trim());
+        console.log("FormData content:", editorContent.trim());
+        console.log("FormData attachments:", attachments);
+
+        formData.append('recipientType', recipientType);
+        formData.append('subject', subject.trim());
+        formData.append('content', editorContent.trim());
+
+
+        if (replyData) {
+          formData.append('replyTo', replyData.id);
+        }
+
+
+        Array.from(attachments).forEach(file => {
+          formData.append('attachments', file);
+        });
+
+        const response = await sendMessage(formData);
+
+        if (response.status === 201) {
+          toast.success("Message envoyé avec succès");
+          closeComposeModal();
+          fetchMessages();
+        } else {
+          toast.error(response.message || "Erreur lors de l'envoi du message");
+        }
+      } catch (error) {
+        console.error("Erreur lors de l'envoi du message:", error);
+        toast.error("Erreur lors de l'envoi du message");
+      } finally {
+        setSending(false);
+      }
+    };
+
+
+    useEffect(() => {
+      if (replyData &amp;&amp; editorRef.current) {
+
+        const originalContent = replyData.originalMessage?.content || '';
+        const quoteContent = originalContent
+          .split('\n')
+          .map(line => `> ${line}`)
+          .join('\n');
+
+        const replyTemplate = `\n\n---\n${quoteContent}`;
+
+
+        editorRef.current.getInstance().setMarkdown(replyTemplate);
+      }
+    }, [replyData]);
+
+
+    useEffect(() => {
+      if (editorRef.current) {
+        const editorInstance = editorRef.current.getInstance();
+
+        const dropZone = document.querySelector('.toastui-editor-defaultUI');
+        if (dropZone) {
+          dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+          });
+
+          dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+          });
+
+          dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+
+            if (e.dataTransfer.files.length) {
+              const files = Array.from(e.dataTransfer.files);
+
+              const validFiles = files.filter(file => file.size &lt;= 10 * 1024 * 1024);
+
+
+              const imageFiles = validFiles.filter(file => file.type.startsWith('image/'));
+              const otherFiles = validFiles.filter(file => !file.type.startsWith('image/'));
+
+
+              if (otherFiles.length > 0) {
+                setAttachments(prev => [...prev, ...otherFiles]);
+                toast.success(`${otherFiles.length} fichier(s) ajouté(s) aux pièces jointes`);
+              }
+
+
+              if (imageFiles.length > 0) {
+
+                imageFiles.forEach(file => {
+                  const reader = new FileReader();
+                  reader.onload = (e) => {
+
+                    editorInstance.insertImage({
+                      src: e.target.result,
+                      alt: file.name
+                    });
+                  };
+                  reader.readAsDataURL(file);
+                });
+
+                toast.success(`${imageFiles.length} image(s) insérée(s) dans l'éditeur`);
+              }
+            }
+          });
+        }
+
+
+        return () => {
+          if (dropZone) {
+            dropZone.removeEventListener('dragover', () => { });
+            dropZone.removeEventListener('dragleave', () => { });
+            dropZone.removeEventListener('drop', () => { });
+          }
+        };
+      }
+    }, [editorRef.current]);
+
+    return (
+      &lt;div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-9940 p-2 sm:p-4">
+        &lt;div className="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
+          &lt;div className="p-3 sm:p-6 border-b">
+            &lt;div className="flex justify-between items-center">
+              &lt;h2 className="text-lg sm:text-xl font-semibold text-gray-800">
+                Nouveau Message
+              &lt;/h2>
+              &lt;button
+                onClick={closeComposeModal}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                &lt;X className="h-5 w-5 sm:h-6 sm:w-6" />
+              &lt;/button>
+            &lt;/div>
+          &lt;/div>
+
+          &lt;form
+            onSubmit={handleSubmit}
+            className="p-3 sm:p-6 overflow-y-auto max-h-[calc(90vh-80px)]"
+          >
+            {/* Recipient Type Selection */}
+            &lt;div className="mb-4">
+              &lt;label className="block text-sm font-medium text-gray-700 mb-2">
+                Type de destinataire
+              &lt;/label>
+              &lt;div className="flex flex-wrap gap-2">
+                {recipientType === 'multiple' ? (
+                  &lt;button
+                    type="button"
+                    onClick={() => handleSpecialRecipientSelect('multiple')}
+                    className={`px-2 py-1.5 sm:px-3 sm:py-2 rounded-md text-xs sm:text-sm flex items-center gap-1 ${recipientType === 'multiple'
+                      ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                      }`}
+                  >
+                    &lt;User size={14} className="sm:size-6" />
+                    Multiple
+                  &lt;/button>) : (
+                  &lt;button
+                    type="button"
+                    onClick={() => handleSpecialRecipientSelect('individual')}
+                    className={`px-2 py-1.5 sm:px-3 sm:py-2 rounded-md text-xs sm:text-sm flex items-center gap-1 ${recipientType === 'individual'
+                      ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                      }`}
+                  >
+                    &lt;User size={14} className="sm:size-6" />
+                    Individuel
+                  &lt;/button>)}
+
+                {role !== 'Etudiant' ? (
+                  &lt;>
+                    &lt;button
+                      type="button"
+                      onClick={() =>
+                        handleSpecialRecipientSelect('all-students')
+                      }
+                      className={`px-2 py-1.5 sm:px-3 sm:py-2 rounded-md text-xs sm:text-sm flex items-center gap-1 ${recipientType === 'all-students'
+                        ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                        }`}
+                    >
+                      &lt;Users size={14} className="sm:size-6" />
+                      Tous les étudiants
+                    &lt;/button>
+
+                    &lt;button
+                      type="button"
+                      onClick={() =>
+                        handleSpecialRecipientSelect('all-teachers')
+                      }
+                      className={`px-2 py-1.5 sm:px-3 sm:py-2 rounded-md text-xs sm:text-sm flex items-center gap-1 ${recipientType === 'all-teachers'
+                        ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                        }`}
+                    >
+                      &lt;UserCheck size={14} className="sm:size-6" />
+                      Tous les professeurs
+                    &lt;/button>
+                  &lt;/>
+                ) : (
+                  &lt;button
+                    type="button"
+                    onClick={() => handleSpecialRecipientSelect('all-admins')}
+                    className={`px-2 py-1.5 sm:px-3 sm:py-2 rounded-md text-xs sm:text-sm flex items-center gap-1 ${recipientType === 'all-admins'
+                      ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                      }`}
+                  >
+                    &lt;ShieldAlert size={14} className="sm:size-6" />
+                    Tous les administrateurs
+                  &lt;/button>
+                )}
+              &lt;/div>
+            &lt;/div>
+
+            {/* Individual Recipients Selection */}
+            {(recipientType === 'individual' || recipientType === 'multiple') &amp;&amp; (
+              &lt;div className="mb-4">
+                &lt;label
+                  htmlFor="recipients"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  {(() => {
+                    switch (recipients.length) {
+                      case 0:
+                        return 'Aucun destinataire sélectionné';
+                      case 1:
+                        return '1 destinataire sélectionné';
+                      default:
+                        return `${recipients.length} destinataires sélectionnés`;
+                    }
+                  })()}
+                  {loadingRecipients &amp;&amp; (
+                    &lt;span className="ml-2 inline-flex items-center">
+                      &lt;svg
+                        className="animate-spin h-4 w-4 text-blue-600"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        &lt;circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        >&lt;/circle>
+                        &lt;path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        >&lt;/path>
+                      &lt;/svg>
+                    &lt;/span>
+                  )}
+                &lt;/label>
+
+                {/* Selected Recipients Tags */}
+                &lt;div className="flex flex-wrap gap-2 mb-2">
+                  {recipients.map(recipient => (
+                    &lt;div
+                      key={recipient.id}
+                      className="flex items-center bg-blue-100 text-blue-800 px-2 py-1 rounded-md"
+                    >
+                      &lt;span className="text-xs sm:text-sm">
+                        {recipient.name} {recipient.surname}
+                      &lt;/span>
+                      &lt;button
+                        type="button"
+                        onClick={() =>
+                          setRecipients(
+                            recipients.filter(r => r.id !== recipient.id)
+                          )
+                        }
+                        className="ml-1 text-blue-600 hover:text-blue-800"
+                      >
+                        &lt;X size={14} />
+                      &lt;/button>
+                    &lt;/div>
+                  ))}
+                &lt;/div>
+
+                {/* Search Input and Results */}
+                &lt;div className="relative" ref={searchInputRef}>
+                  &lt;input
+                    type="text"
+                    placeholder="Rechercher des destinataires..."
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    disabled={loadingRecipients}
+                  />
+
+                  {showSuggestions &amp;&amp; searchQuery &amp;&amp; !loadingRecipients &amp;&amp; (
+                    &lt;div className="absolute z-10 w-full mt-1 bg-white shadow-lg rounded-md border border-gray-300 max-h-60 overflow-y-auto">
+                      {availableRecipients
+                        .filter(
+                          user =>
+                            !recipients.some(r => r.id === user.id) &amp;&amp;
+                            (user.name
+                              .toLowerCase()
+                              .includes(searchQuery.toLowerCase()) ||
+                              user.surname
+                                .toLowerCase()
+                                .includes(searchQuery.toLowerCase()))
+                        )
+                        .map(user => (
+                          &lt;div
+                            key={user.id}
+                            className="p-2 hover:bg-gray-100 cursor-pointer"
+                            onClick={() => {
+                              handleRecipientSelect(user.id);
+                              setSearchQuery('');
+                            }}
+                          >
+                            &lt;div className="font-medium">
+                              {user.name} {user.surname}
+                            &lt;/div>
+                          &lt;/div>
+                        ))}
+
+                      {availableRecipients.filter(
+                        user =>
+                          !recipients.some(r => r.id === user.id) &amp;&amp;
+                          (user.name
+                            .toLowerCase()
+                            .includes(searchQuery.toLowerCase()) ||
+                            user.surname
+                              .toLowerCase()
+                              .includes(searchQuery.toLowerCase()))
+                      ).length === 0 &amp;&amp; (
+                          &lt;div className="p-2 text-gray-500">
+                            Aucun destinataire trouvé
+                          &lt;/div>
+                        )}
+                    &lt;/div>
+                  )}
+                &lt;/div>
+              &lt;/div>
+            )}
+
+            {/* Subject */}
+            &lt;div className="mb-4">
+              &lt;label
+                htmlFor="subject"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Sujet
+              &lt;/label>
+              &lt;input
+                id="subject"
+                type="text"
+                value={subject}
+                onChange={e => setSubject(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                required
+              />
+            &lt;/div>
+
+            {/* Remplacer le textarea par Toast UI Editor */}
+            &lt;div className="mb-4">
+              &lt;label
+                htmlFor="content"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Message
+              &lt;/label>
+              &lt;div className="border border-gray-300 rounded-md">
+                &lt;Editor
+                  ref={editorRef}
+                  initialValue="&lt;p>&lt;/p>"
+                  previewStyle="tab"
+                  height="300px"
+                  initialEditType="wysiwyg"
+                  useCommandShortcut={true}
+                  toolbarItems={[
+                    ['heading', 'bold', 'italic', 'strike'],
+                    ['hr', 'quote'],
+                    ['ul', 'ol', 'task', 'indent', 'outdent'],
+                    ['table', 'link'],
+                    ['code', 'codeblock']
+                  ]}
+                />
+              &lt;/div>
+            &lt;/div>
+
+            {/* Attachments */}
+            &lt;div className="mb-4">
+              &lt;label className="block text-sm font-medium text-gray-700 mb-2">
+                Pièces jointes
+              &lt;/label>
+              &lt;input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                multiple
+                className="hidden"
+              />
+              &lt;button
+                type="button"
+                onClick={() => fileInputRef.current.click()}
+                className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-200 flex items-center gap-2 text-sm"
+              >
+                &lt;Paperclip size={16} />
+                Ajouter des pièces jointes
+              &lt;/button>
+
+              {/* Attachment List */}
+              {attachments.length > 0 &amp;&amp; (
+                &lt;div className="mt-3 space-y-2">
+                  {attachments.map((file, index) => (
+                    &lt;div
+                      key={index}
+                      className="flex items-center justify-between bg-gray-50 p-2 rounded-md"
+                    >
+                      &lt;div className="flex items-center gap-2 overflow-hidden">
+                        &lt;Paperclip size={16} className="text-gray-500 flex-shrink-0" />
+                        &lt;span className="text-xs sm:text-sm text-gray-700 truncate">
+                          {file.name}
+                        &lt;/span>
+                        &lt;span className="text-xs text-gray-500 whitespace-nowrap">
+                          ({(file.size / 1024).toFixed(1)} KB)
+                        &lt;/span>
+                      &lt;/div>
+                      &lt;button
+                        type="button"
+                        onClick={() => removeAttachment(index)}
+                        className="text-gray-400 hover:text-red-500 flex-shrink-0 ml-2"
+                      >
+                        &lt;X size={16} />
+                      &lt;/button>
+                    &lt;/div>
+                  ))}
+                &lt;/div>
+              )}
+            &lt;/div>
+
+            {/* Submit Button */}
+            &lt;div className="flex justify-end gap-3 mt-6">
+              &lt;button
+                type="button"
+                onClick={closeComposeModal}
+                className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-200 text-sm"
+                disabled={sending}
+              >
+                Annuler
+              &lt;/button>
+              &lt;button
+                type="submit"
+                className="px-3 py-1.5 sm:px-4 sm:py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50 text-sm"
+                disabled={sending}
+              >
+                {sending ? (
+                  &lt;>
+                    &lt;svg
+                      className="animate-spin h-4 w-4 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      &lt;circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      >&lt;/circle>
+                      &lt;path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      >&lt;/path>
+                    &lt;/svg>
+                    Envoi en cours...
+                  &lt;/>
+                ) : (
+                  &lt;>
+                    &lt;Send size={16} />
+                    Envoyer
+                  &lt;/>
+                )}
+              &lt;/button>
+            &lt;/div>
+          &lt;/form>
+        &lt;/div>
+      &lt;/div>
+    );
+  };
+
+
+  const closeComposeModal = () => {
+    setShowComposeModal(false);
+    setReplyData(null);
+  };
+
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
+  };
+
+  const handleTabClick = (newView) => {
+
+    if (view === newView) {
+      setLoading(true);
+
+      setRefreshKey(prev => prev + 1);
+      return;
+    }
+
+    setMessages([]);
+
+
+    setLoading(true);
+    setView(newView);
+    setSelectedMessage(null);
+    setPagination({ ...pagination, currentPage: 1 });
+    setMobileMenuOpen(false);
+  };
+
+  /**
+   * Composant pour afficher le contenu d'un message avec Toast UI Viewer
+   * @component
+   * @param {Object} props - Propriétés du composant
+   * @param {string} props.content - Contenu du message à afficher
+   * @returns {JSX.Element} Visualiseur de contenu
+   */
+  const ToastViewer = ({ content }) => {
+    const viewerRef = useRef();
+
+    useEffect(() => {
+      const viewerInstance = new Viewer({
+        el: viewerRef.current,
+        initialValue: content,
+      });
+
+      return () => {
+
+        viewerInstance.destroy();
+      };
+    }, [content]);
+    return &lt;div ref={viewerRef}>&lt;/div>;
+  };
+
+  /**
+   * Composant squelette pour l'affichage pendant le chargement d'un message dans la liste
+   * @component
+   * @returns {JSX.Element} Animation de chargement pour un message
+   */
+  const MessageSkeleton = () => {
+    return (
+      &lt;div className="w-full p-3 sm:p-4 border border-gray-100 animate-pulse">
+        &lt;div className="flex items-start justify-between mb-1">
+          &lt;div className="h-4 bg-gray-200 rounded w-1/4">&lt;/div>
+          &lt;div className="h-3 bg-gray-200 rounded w-1/6">&lt;/div>
+        &lt;/div>
+        &lt;div className="h-4 bg-gray-200 rounded w-3/4 mt-2">&lt;/div>
+        &lt;div className="h-3 bg-gray-200 rounded w-1/2 mt-2">&lt;/div>
+        &lt;div className="flex mt-2 gap-1">
+          &lt;div className="h-5 bg-gray-200 rounded-full w-16">&lt;/div>
+        &lt;/div>
+      &lt;/div>
+    );
+  };
+
+
+  /**
+   * Composant squelette pour l'affichage pendant le chargement des détails d'un message
+   * @component
+   * @returns {JSX.Element} Animation de chargement pour les détails d'un message
+   */
+  const MessageDetailSkeleton = () => {
+    return (
+      &lt;div className="flex-1 flex flex-col bg-white">
+        &lt;div className="p-3 sm:p-4 border-b border-gray-200 animate-pulse">
+          &lt;div className="h-6 bg-gray-200 rounded w-3/4 mb-3">&lt;/div>
+          &lt;div className="h-4 bg-gray-200 rounded w-1/2 mb-2">&lt;/div>
+          &lt;div className="h-4 bg-gray-200 rounded w-1/3">&lt;/div>
+        &lt;/div>
+        &lt;div className="flex-1 p-3 sm:p-6 animate-pulse">
+          &lt;div className="h-4 bg-gray-200 rounded w-full mb-2">&lt;/div>
+          &lt;div className="h-4 bg-gray-200 rounded w-full mb-2">&lt;/div>
+          &lt;div className="h-4 bg-gray-200 rounded w-3/4">&lt;/div>
+          &lt;div className="mt-8 pt-4 border-t border-gray-200">
+            &lt;div className="h-5 bg-gray-200 rounded w-1/4 mb-3">&lt;/div>
+            &lt;div className="h-12 bg-gray-200 rounded w-full mb-2">&lt;/div>
+          &lt;/div>
+        &lt;/div>
+      &lt;/div>
+    );
+  };
+
+  /**
+   * Validation des types de propriétés pour le composant Mailbox
+   * @type {Object}
+   */
+  Mailbox.propTypes = {
+    user: PropTypes.shape({
+      id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+      name: PropTypes.string,
+      surname: PropTypes.string,
+      email: PropTypes.string,
+    }).isRequired,
+    role: PropTypes.oneOf(['Administrateur', 'Professeur', 'Etudiant']).isRequired,
+    onClose: PropTypes.func.isRequired,
+  };
+
+  return (
+    &lt;div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-9950">
+      {isPending &amp;&amp; (
+        &lt;div className="fixed top-2 right-2 bg-blue-100 text-blue-800 px-3 py-1 rounded-md text-sm flex items-center gap-2 z-[9960]">
+          &lt;svg className="animate-spin h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            &lt;circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4">&lt;/circle>
+            &lt;path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">&lt;/path>
+          &lt;/svg>
+          Actualisation...
+        &lt;/div>
+      )}
+      &lt;div className="bg-white rounded-lg shadow-xl w-full max-w-7xl max-h-[60vh] h-[95vh] overflow-hidden mx-2 sm:mx-4 flex flex-col">
+        &lt;Toaster position="top-center" reverseOrder={false} />
+        {/* Header */}
+        &lt;div className="bg-white border-b border-gray-200 px-3 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
+          &lt;div className="flex items-center gap-2">
+            &lt;button
+              className="md:hidden text-gray-600"
+              onClick={toggleMobileMenu}
+            >
+              &lt;Menu size={20} />
+            &lt;/button>
+            &lt;h1 className="text-xl sm:text-2xl font-bold text-gray-800">Messagerie&lt;/h1>
+          &lt;/div>
+          &lt;button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-500"
+            title="Fermer"
+          >
+            &lt;X className="h-5 w-5 sm:h-6 sm:w-6" />
+          &lt;/button>
+        &lt;/div>
+
+        {/* Main Content */}
+        &lt;div className="flex flex-1 overflow-hidden">
+          {/* Sidebar - Hidden on mobile by default */}
+          &lt;div className={`${mobileMenuOpen ? 'absolute inset-0 z-30 bg-white' : 'hidden md:flex'
+            } w-full md:w-64 md:static bg-white border-r border-gray-200 flex-col`}>
+            {/* Mobile Menu Header */}
+            {mobileMenuOpen &amp;&amp; (
+              &lt;div className="flex justify-between items-center p-3 border-b border-gray-200">
+                &lt;h2 className="font-medium">Menu&lt;/h2>
+                &lt;button onClick={() => setMobileMenuOpen(false)}>
+                  &lt;X size={20} />
+                &lt;/button>
+              &lt;/div>
+            )}
+
+            {/* Compose Button */}
+            &lt;div className="p-3 sm:p-4">
+              &lt;button
+                onClick={() => {
+                  setShowComposeModal(true);
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full bg-blue-600 text-white py-2 px-3 sm:px-4 rounded-md hover:bg-blue-700 flex items-center justify-center gap-2 text-sm"
+              >
+                &lt;Plus size={16} />
+                Nouveau Message
+              &lt;/button>
+            &lt;/div>
+
+            {/* Folders */}
+            &lt;nav className="flex-1 overflow-y-auto">
+              &lt;ul>
+                &lt;li>
+                  &lt;button
+                    onClick={() => handleTabClick('inbox')}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-left ${view === 'inbox' ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50'
+                      }`}
+                  >
+                    &lt;Inbox size={18} />
+                    &lt;span>Boîte de réception&lt;/span>
+                  &lt;/button>
+                &lt;/li>
+                &lt;li>
+                  &lt;button
+                    onClick={() => handleTabClick('sent')}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-left ${view === 'sent' ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50'
+                      }`}
+                  >
+                    &lt;Send size={18} />
+                    &lt;span>Messages envoyés&lt;/span>
+                  &lt;/button>
+                &lt;/li>
+                &lt;li>
+                  &lt;button
+                    onClick={() => handleTabClick('trash')}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-left ${view === 'trash' ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-50'
+                      }`}
+                  >
+                    &lt;Trash2 size={18} />
+                    &lt;span>Corbeille&lt;/span>
+                  &lt;/button>
+                &lt;/li>
+              &lt;/ul>
+            &lt;/nav>
+
+            {/* Filters */}
+            &lt;div className="p-3 sm:p-4 border-t border-gray-200">
+              &lt;h3 className="text-sm font-medium text-gray-500 mb-3">
+                Filtres
+              &lt;/h3>
+              &lt;div className="space-y-2">
+                &lt;label className="flex items-center">
+                  &lt;input
+                    type="checkbox"
+                    checked={filters.unread}
+                    onChange={() => {
+                      setFilters({ ...filters, unread: !filters.unread });
+                      setMobileMenuOpen(false);
+                    }}
+                    className="rounded text-blue-600 mr-2"
+                  />
+                  &lt;span className="text-sm text-gray-700">Non lus&lt;/span>
+                &lt;/label>
+                &lt;label className="flex items-center">
+                  &lt;input
+                    type="checkbox"
+                    checked={filters.hasAttachments}
+                    onChange={() => {
+                      setFilters({
+                        ...filters,
+                        hasAttachments: !filters.hasAttachments,
+                      });
+                      setMobileMenuOpen(false);
+                    }}
+                    className="rounded text-blue-600 mr-2"
+                  />
+                  &lt;span className="text-sm text-gray-700">
+                    Avec pièces jointes
+                  &lt;/span>
+                &lt;/label>
+                &lt;label className="flex items-center">
+                  &lt;input
+                    type="checkbox"
+                    checked={filters.fromContact}
+                    onChange={() => {
+                      setFilters({
+                        ...filters,
+                        fromContact: !filters.fromContact,
+                      });
+                      setMobileMenuOpen(false);
+                    }}
+                    className="rounded text-blue-600 mr-2"
+                  />
+                  &lt;span className="text-sm text-gray-700">
+                    Formulaire de contact
+                  &lt;/span>
+                &lt;/label>
+              &lt;/div>
+            &lt;/div>
+          &lt;/div>
+
+          {/* Messages List &amp; View */}
+          &lt;div className="flex-1 flex overflow-hidden">
+            {/* Messages List */}
+            &lt;div
+              className={`${selectedMessage ? 'hidden md:flex' : 'flex'
+                } flex-col w-full md:w-1/2 lg:w-2/5 bg-white border-r border-gray-200`}
+            >
+              {/* Search Bar */}
+              &lt;div className="p-3 sm:p-4 border-b border-gray-200">
+                &lt;div className="relative">
+                  &lt;input
+                    type="text"
+                    placeholder="Rechercher des messages..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    className="w-full p-2 pl-8 sm:pl-10 pr-2 sm:pr-4 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  />
+                  &lt;Search
+                    className="absolute left-2 sm:left-3 top-2.5 text-gray-400"
+                    size={16}
+                  />
+                &lt;/div>
+              &lt;/div>
+
+              {/* Messages List - Optimisé pour éviter le flickering */}
+              &lt;div className="flex-1 overflow-y-auto">
+                {loading &amp;&amp; (
+
+                  &lt;div className="space-y-1">
+                    {Array(5).fill(0).map((_, index) => (
+                      &lt;MessageSkeleton key={index} />
+                    ))}
+                  &lt;/div>
+                )}
+                {filteredMessages.length === 0 ? (
+                  &lt;div className="flex items-center justify-center h-full">
+                    &lt;div className="text-center">
+                      &lt;Inbox className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-2" />
+                      &lt;p className="text-gray-600 text-sm">Aucun message trouvé&lt;/p>
+                    &lt;/div>
+                  &lt;/div>
+                ) : (
+                  filteredMessages.map(message => (
+                    &lt;button
+                      key={message.id}
+                      onClick={() => handleMessageSelect(message.id)}
+                      className={`w-full text-left p-3 sm:p-4 border border-gray-100 hover:bg-gray-50 
+        ${!message.read &amp;&amp; view === 'inbox' ? 'bg-blue-50' : ''} 
+        ${selectedMessage?.id === message.id ? 'bg-indigo-100 border-l-4 border-indigo-500' : ''}`}
+                    >
+                      &lt;div className="flex items-start justify-between mb-1">
+                        &lt;h3
+                          className={`text-xs sm:text-sm font-medium ${!message.read &amp;&amp; view === 'inbox'
+                            ? 'text-blue-700 font-semibold'
+                            : 'text-gray-800'
+                            }`}
+                        >
+                          {view === 'sent'
+                            ? message.recipient?.name
+                            : message.sender?.name}
+                        &lt;/h3>
+                        &lt;span className="text-xs text-gray-500 ml-1 whitespace-nowrap">
+                          {new Date(message.createdAt).toLocaleDateString()}
+                        &lt;/span>
+                      &lt;/div>
+                      &lt;h4 className="text-xs sm:text-sm font-medium text-gray-800 truncate">
+                        {message.subject}
+                      &lt;/h4>
+                      &lt;div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-2">
+                        {message.fromContactForm &amp;&amp; (
+                          &lt;span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                            Contact
+                          &lt;/span>
+                        )}
+                        {message.attachments &amp;&amp;
+                          message.attachments.length > 0 &amp;&amp; (
+                            &lt;span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                              &lt;Paperclip size={10} className="mr-1" />
+                              {message.attachments.length}
+                            &lt;/span>
+                          )}
+                        {!message.read &amp;&amp; view === 'inbox' &amp;&amp; (
+                          &lt;span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            Non lu
+                          &lt;/span>
+                        )}
+                      &lt;/div>
+                    &lt;/button>
+                  ))
+                )}
+              &lt;/div>
+
+              {/* Pagination */}
+              &lt;div className="flex items-center justify-between p-3 sm:p-4 border-t border-gray-200">
+                &lt;span className="text-xs sm:text-sm text-gray-500">
+                  {pagination.totalMessages} message
+                  {pagination.totalMessages !== 1 ? 's' : ''}
+                &lt;/span>
+                &lt;div className="flex items-center">
+                  &lt;button
+                    onClick={() =>
+                      setPagination({
+                        ...pagination,
+                        currentPage: Math.max(1, pagination.currentPage - 1),
+                      })
+                    }
+                    disabled={pagination.currentPage === 1}
+                    className="p-1 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    &lt;ChevronLeft size={16} className="sm:size-8" />
+                  &lt;/button>
+                  &lt;span className="mx-2 text-xs sm:text-sm text-gray-600">
+                    Page {pagination.currentPage} sur{' '}
+                    {pagination.totalPages || 1}
+                  &lt;/span>
+                  &lt;button
+                    onClick={() =>
+                      setPagination({
+                        ...pagination,
+                        currentPage: Math.min(
+                          pagination.totalPages,
+                          pagination.currentPage + 1
+                        ),
+                      })
+                    }
+                    disabled={pagination.currentPage >= pagination.totalPages}
+                    className="p-1 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    &lt;ChevronRight size={16} className="sm:size-8" />
+                  &lt;/button>
+                &lt;/div>
+              &lt;/div>
+            &lt;/div>
+
+            {/* Message Detail View */}
+            {loadingMessageDetails ? (
+
+              &lt;MessageDetailSkeleton />
+            ) : selectedMessage ? (
+              &lt;div className={`flex-1 flex flex-col bg-white ${selectedMessage ? 'block md:flex' : 'hidden md:flex'}`}>
+                {/* Message Header */}
+                &lt;div className="p-3 sm:p-4 border-b border-gray-200 flex justify-between items-start relative">
+                  {/* Remove the loading overlay that was here */}
+                  &lt;div className="flex-1 min-w-0">
+                    &lt;h2 className="text-lg sm:text-xl font-medium text-gray-900 truncate">
+                      {selectedMessage.subject}
+                    &lt;/h2>
+                    &lt;div className="flex flex-col flex-wrap gap-x-4 gap-y-1 mt-2">
+                      &lt;div className="flex items-center text-xs sm:text-sm text-gray-500">
+                        {!selectedMessage.fromContactForm &amp;&amp; (
+                          &lt;>
+                            &lt;span className="font-medium text-gray-800 mr-1">De :&lt;/span>
+                            &lt;span className="truncate">{selectedMessage.sender.email === user.email ? "Vous" : selectedMessage.sender?.name}&lt;/span>
+                          &lt;/>
+                        )}
+                      &lt;/div>
+                      &lt;div className="flex items-center text-xs sm:text-sm text-gray-500">
+                        {["all-students", "all-admins", "all-teachers"].includes(selectedMessage?.recipientType) ? (
+                          &lt;span className="font-medium text-gray-800 mr-1">
+                            À :{" "}
+                            {(() => {
+                              switch (selectedMessage?.recipientType) {
+                                case "all-students":
+                                  return "Tous les étudiants";
+                                case "all-admins":
+                                  return "Tous les administrateurs";
+                                case "all-teachers":
+                                  return "Tous les enseignants";
+                                default:
+                                  return "Inconnu";
+                              }
+                            })()}
+                          &lt;/span>
+                        ) : (
+                          &lt;>
+                            &lt;span className="font-medium text-gray-800 mr-1">À :&lt;/span>
+                            {(() => {
+                              const userIsRecipient = selectedMessage.recipients?.some(r => r?.email === user.email);
+
+
+                              const displayedRecipients = [
+                                ...(userIsRecipient ? ["Vous"] : []),
+                                ...(selectedMessage.recipients?.map(r => r?.name || "") ?? []),
+                              ];
+
+
+
+
+
+
+                              const filteredRecipients = displayedRecipients.filter(name => name &amp;&amp; name !== user.name &amp;&amp; name !== "");
+
+                              return filteredRecipients.map((name, index) => (
+                                &lt;span key={index} className="truncate">
+                                  {name}
+                                  {index &lt; filteredRecipients.length - 1 &amp;&amp; &lt;>,&amp;nbsp;&lt;/>}
+                                &lt;/span>
+                              ));
+                            })()}
+                          &lt;/>
+                        )}
+
+                      &lt;/div>
+                      &lt;div className="flex items-center text-xs sm:text-sm text-gray-500">
+                        &lt;Clock size={12} className="mr-1 flex-shrink-0" />
+                        &lt;span className="truncate">
+                          &lt;span className="truncate">
+                            {new Date(selectedMessage.createdAt).toLocaleString(
+                              navigator?.language || 'fr-FR',
+                              {
+                                weekday: 'long',
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit',
+                              }
+                            )}
+                          &lt;/span>
+                        &lt;/span>
+                      &lt;/div>
+                    &lt;/div>
+                  &lt;/div>
+                  &lt;div className="flex items-center ml-2">
+                    &lt;button
+                      onClick={() => setSelectedMessage(null)}
+                      className="md:hidden p-2 text-gray-500 hover:text-gray-700"
+                    >
+                      &lt;ChevronLeft size={20} />
+                    &lt;/button>
+                    &lt;button
+                      onClick={() => deleteMessageHandler(selectedMessage.id)}
+                      className={`p-2 text-gray-500 hover:text-red-600 ${deletingMessage ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                      disabled={deletingMessage}
+                      title="Supprimer"
+                    >
+                      {deletingMessage ? (
+                        &lt;svg
+                          className="animate-spin h-5 w-5 text-gray-500"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          &lt;circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          >&lt;/circle>
+                          &lt;path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          >&lt;/path>
+                        &lt;/svg>
+                      ) : (
+                        &lt;Trash2 size={20} />
+                      )}
+                    &lt;/button>
+                  &lt;/div>
+                &lt;/div>
+
+                {/* Message Content */}
+                &lt;div className="flex-1 overflow-y-auto p-3 sm:p-6">
+                  {/* Alert for virus scan results */}
+                  {selectedMessage.attachments &amp;&amp;
+                    selectedMessage.attachments.some(
+                      att => att.scanStatus === 'infected'
+                    ) &amp;&amp; (
+                      &lt;div className="mb-4 sm:mb-6 p-2 sm:p-3 bg-red-50 border border-red-200 rounded-md flex items-start">
+                        &lt;AlertTriangle
+                          className="text-red-500 mr-2 sm:mr-3 flex-shrink-0 mt-0.5"
+                          size={18}
+                        />
+                        &lt;div>
+                          &lt;p className="text-sm text-red-800 font-medium">
+                            Attention : Fichiers potentiellement dangereux
+                            détectés
+                          &lt;/p>
+                          &lt;p className="text-xs sm:text-sm text-red-600 mt-1">
+                            Certaines pièces jointes ont été identifiées comme
+                            potentiellement malveillantes et ont été mises en
+                            quarantaine.
+                          &lt;/p>
+                        &lt;/div>
+                      &lt;/div>
+                    )}
+
+                  {/* Message Body */}
+                  &lt;div className="prose max-w-none text-sm sm:text-base">
+                    &lt;ToastViewer content={selectedMessage.content} />
+                  &lt;/div>
+
+                  {/* Attachments */}
+                  {selectedMessage.Attachments &amp;&amp;
+                    selectedMessage.Attachments.length > 0 &amp;&amp; (
+                      &lt;div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200">
+                        &lt;h3 className="text-sm sm:text-base font-medium text-gray-900 mb-3">
+                          Pièces jointes ({selectedMessage.Attachments.length})
+                        &lt;/h3>
+                        &lt;div className="space-y-2 sm:space-y-3">
+                          {selectedMessage.Attachments.map(attachment => (
+                            &lt;div
+                              key={attachment.id}
+                              className={`flex items-center justify-between p-2 sm:p-3 rounded-md ${attachment.scanStatus === 'infected'
+                                ? 'bg-red-50 border border-red-200'
+                                : 'bg-gray-50 border border-gray-200'
+                                }`}
+                            >
+                              &lt;div className="flex items-center min-w-0">
+                                &lt;Paperclip
+                                  size={16}
+                                  className={`flex-shrink-0 ${attachment.scanStatus === 'infected'
+                                    ? 'text-red-500'
+                                    : 'text-gray-500'
+                                    }`}
+                                />
+                                &lt;div className="ml-2 sm:ml-3 overflow-hidden">
+                                  &lt;p
+                                    className={`text-xs sm:text-sm font-medium truncate ${attachment.scanStatus === 'infected'
+                                      ? 'text-red-700'
+                                      : 'text-gray-900'
+                                      }`}
+                                  >
+                                    {attachment.filename}
+                                  &lt;/p>
+                                  &lt;p className="text-xs text-gray-500 mt-0.5 flex items-center">
+                                    &lt;span className="text-gray-700 px-1.5 py-0.5 rounded text-xs mr-2">
+                                      {(() => {
+                                        switch (attachment.mimeType.split('/')[0]) {
+                                          case "application":
+                                            return (
+                                              &lt;File size={15} className="mr-1" />
+                                            );
+
+                                          case "audio":
+                                            return (
+                                              &lt;Music size={15} className="mr-1" />
+                                            );
+                                          case "video":
+                                            return (
+                                              &lt;Video size={15} className="mr-1" />
+                                            );
+                                          case "text":
+                                            return (
+                                              &lt;FileText size={15} className="mr-1" />
+                                            );
+                                          case "image":
+                                            return (
+                                              &lt;Image size={15} className="mr-1" />
+                                            );
+                                          default:
+                                            return (
+                                              &lt;Paperclip size={15} className="mr-1" />
+                                            );
+                                        }
+                                      })()}
+                                    &lt;/span>
+                                    {(attachment.fileSize / 1024).toFixed(1)} KB
+                                  &lt;/p>
+                                &lt;/div>
+                              &lt;/div>
+
+                              {attachment.scanStatus === 'clean' ? (
+                                &lt;button
+                                  onClick={() =>
+                                    downloadAttachmentHandler(
+                                      attachment.id,
+                                      attachment.filename
+                                    )
+                                  }
+                                  className={`ml-2 sm:ml-3 p-1.5 text-blue-700 hover:bg-blue-50 rounded-md flex items-center flex-shrink-0 ${downloadingAttachments?.[attachment.id]
+                                    ? 'cursor-wait opacity-70'
+                                    : ''
+                                    }`}
+                                  disabled={
+                                    downloadingAttachments?.[attachment.id]
+                                  }
+                                >
+                                  {downloadingAttachments?.[attachment.id] ? (
+                                    &lt;svg
+                                      className="animate-spin h-4 w-4 sm:h-5 sm:w-5"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      &lt;circle
+                                        className="opacity-25"
+                                        cx="12"
+                                        cy="12"
+                                        r="10"
+                                        stroke="currentColor"
+                                        strokeWidth="4"
+                                      >&lt;/circle>
+                                      &lt;path
+                                        className="opacity-75"
+                                        fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                      >&lt;/path>
+                                    &lt;/svg>
+                                  ) : (
+                                    &lt;Download size={16} />
+                                  )}
+                                &lt;/button>
+                              ) : attachment.scanStatus === 'infected' ? (
+                                &lt;span className="ml-2 sm:ml-3 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded bg-red-100 text-red-700 text-xs flex items-center gap-1 flex-shrink-0">
+                                  &lt;AlertTriangle size={12} className="mr-0.5" />
+                                  Infecté
+                                &lt;/span>
+                              ) : (
+                                &lt;span className="ml-2 sm:ml-3 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded bg-yellow-100 text-yellow-800 text-xs flex items-center gap-1 flex-shrink-0">
+                                  &lt;Clock size={12} className="mr-0.5" />
+                                  Analyse...
+                                &lt;/span>
+                              )}
+                            &lt;/div>
+                          ))}
+                        &lt;/div>
+                      &lt;/div>
+                    )}
+                &lt;/div>
+                &lt;div className="p-3 sm:p-4 border-t border-gray-200">
+                  &lt;button
+                    onClick={() => {
+
+                      setReplyData({
+                        subject: `Re: ${selectedMessage.subject}`,
+                        recipientId: selectedMessage.sender?.id,
+                        originalMessage: selectedMessage,
+                      });
+                      setShowComposeModal(true);
+                    }}
+                    className="px-3 py-1.5 sm:px-4 sm:py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2 text-sm"
+                  >
+                    &lt;Send size={14} className="sm:size-6" />
+                    Répondre
+                  &lt;/button>
+                &lt;/div>
+              &lt;/div>
+            ) : (
+
+              &lt;div className="flex-1 items-center justify-center bg-white hidden md:flex">
+                &lt;p className="text-gray-500 text-sm sm:text-base">
+                  Sélectionnez un message pour le lire
+                &lt;/p>
+              &lt;/div>
+            )}
+          &lt;/div>
+        &lt;/div>
+
+        {/* Compose Modal */}
+        {showComposeModal &amp;&amp; &lt;ComposeMail />}
+      &lt;/div>
+    &lt;/div>
+  );
+};
+
+
+/**
+ * Composant squelette pour l'affichage pendant le chargement d'un message dans la liste
+ * @component
+ * @returns {JSX.Element} Animation de chargement pour un message
+ */
+const MessageSkeleton = () => {
+  return (
+    &lt;div className="w-full p-3 sm:p-4 border border-gray-100 animate-pulse">
+      &lt;div className="flex items-start justify-between mb-1">
+        &lt;div className="h-4 bg-gray-200 rounded w-1/4">&lt;/div>
+        &lt;div className="h-3 bg-gray-200 rounded w-1/6">&lt;/div>
+      &lt;/div>
+      &lt;div className="h-4 bg-gray-200 rounded w-3/4 mt-2">&lt;/div>
+      &lt;div className="h-3 bg-gray-200 rounded w-1/2 mt-2">&lt;/div>
+      &lt;div className="flex mt-2 gap-1">
+        &lt;div className="h-5 bg-gray-200 rounded-full w-16">&lt;/div>
+      &lt;/div>
+    &lt;/div>
+  );
+};
+
+
+/**
+ * Composant squelette pour l'affichage pendant le chargement des détails d'un message
+ * @component
+ * @returns {JSX.Element} Animation de chargement pour les détails d'un message
+ */
+const MessageDetailSkeleton = () => {
+  return (
+    &lt;div className="flex-1 flex flex-col bg-white">
+      &lt;div className="p-3 sm:p-4 border-b border-gray-200 animate-pulse">
+        &lt;div className="h-6 bg-gray-200 rounded w-3/4 mb-3">&lt;/div>
+        &lt;div className="h-4 bg-gray-200 rounded w-1/2 mb-2">&lt;/div>
+        &lt;div className="h-4 bg-gray-200 rounded w-1/3">&lt;/div>
+      &lt;/div>
+      &lt;div className="flex-1 p-3 sm:p-6 animate-pulse">
+        &lt;div className="h-4 bg-gray-200 rounded w-full mb-2">&lt;/div>
+        &lt;div className="h-4 bg-gray-200 rounded w-full mb-2">&lt;/div>
+        &lt;div className="h-4 bg-gray-200 rounded w-3/4">&lt;/div>
+        &lt;div className="mt-8 pt-4 border-t border-gray-200">
+          &lt;div className="h-5 bg-gray-200 rounded w-1/4 mb-3">&lt;/div>
+          &lt;div className="h-12 bg-gray-200 rounded w-full mb-2">&lt;/div>
+        &lt;/div>
+      &lt;/div>
+    &lt;/div>
+  );
+};
+
+Mailbox.propTypes = {
+  user: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    name: PropTypes.string,
+    surname: PropTypes.string,
+    email: PropTypes.string,
+  }).isRequired,
+  role: PropTypes.oneOf(['Administrateur', 'Professeur', 'Etudiant']).isRequired,
+  onClose: PropTypes.func.isRequired,
+};
+
+export default Mailbox;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-App.html">App</a></li></ul><h3>Global</h3><ul><li><a href="global.html#About">About</a></li><li><a href="global.html#AccountDisabledModal">AccountDisabledModal</a></li><li><a href="global.html#AdminDashboardHome">AdminDashboardHome</a></li><li><a href="global.html#BASE_URL">BASE_URL</a></li><li><a href="global.html#BulkActions">BulkActions</a></li><li><a href="global.html#ClassManagementTutorial">ClassManagementTutorial</a></li><li><a href="global.html#ClasseCards">ClasseCards</a></li><li><a href="global.html#ClasseCreationModal">ClasseCreationModal</a></li><li><a href="global.html#ClasseManagement">ClasseManagement</a></li><li><a href="global.html#ClasseTable">ClasseTable</a></li><li><a href="global.html#Contact">Contact</a></li><li><a href="global.html#ContentCard">ContentCard</a></li><li><a href="global.html#CourseReader">CourseReader</a></li><li><a href="global.html#CourseReaderTutorial">CourseReaderTutorial</a></li><li><a href="global.html#Courses">Courses</a></li><li><a href="global.html#CoursesLibraryTutorial">CoursesLibraryTutorial</a></li><li><a href="global.html#Dashboard">Dashboard</a></li><li><a href="global.html#DashboardTutorial">DashboardTutorial</a></li><li><a href="global.html#DeleteDocument">DeleteDocument</a></li><li><a href="global.html#DeleteVideo">DeleteVideo</a></li><li><a href="global.html#EleveDashboardHome">EleveDashboardHome</a></li><li><a href="global.html#ErrorMessage">ErrorMessage</a></li><li><a href="global.html#FilterDropdown">FilterDropdown</a></li><li><a href="global.html#FirstLogin">FirstLogin</a></li><li><a href="global.html#Footer">Footer</a></li><li><a href="global.html#Forum">Forum</a></li><li><a href="global.html#GetAll_DataStructure">GetAll_DataStructure</a></li><li><a href="global.html#GetAll_Document">GetAll_Document</a></li><li><a href="global.html#Get_Document_Information">Get_Document_Information</a></li><li><a href="global.html#Get_Video_Information">Get_Video_Information</a></li><li><a href="global.html#Get_special_Document">Get_special_Document</a></li><li><a href="global.html#Get_special_Video">Get_special_Video</a></li><li><a href="global.html#Home">Home</a></li><li><a href="global.html#INACTIVITY_THRESHOLD">INACTIVITY_THRESHOLD</a></li><li><a href="global.html#LegalNotice">LegalNotice</a></li><li><a href="global.html#LiveNotFound">LiveNotFound</a></li><li><a href="global.html#LiveViewer">LiveViewer</a></li><li><a href="global.html#LoadCanvasTemplate">LoadCanvasTemplate</a></li><li><a href="global.html#LoadingComponent">LoadingComponent</a></li><li><a href="global.html#LoadingSpinner">LoadingSpinner</a></li><li><a href="global.html#Logout">Logout</a></li><li><a href="global.html#Mailbox">Mailbox</a></li><li><a href="global.html#MaintenanceBanner">MaintenanceBanner</a></li><li><a href="global.html#MessageDetailSkeleton">MessageDetailSkeleton</a></li><li><a href="global.html#MessageSkeleton">MessageSkeleton</a></li><li><a href="global.html#NavigationBar">NavigationBar</a></li><li><a href="global.html#PictureModal">PictureModal</a></li><li><a href="global.html#PrivacyPolicy">PrivacyPolicy</a></li><li><a href="global.html#PrivacyTab">PrivacyTab</a></li><li><a href="global.html#ProfilePhotoSelector">ProfilePhotoSelector</a></li><li><a href="global.html#PublicNavbar">PublicNavbar</a></li><li><a href="global.html#SearchBar">SearchBar</a></li><li><a href="global.html#SearchUser">SearchUser</a></li><li><a href="global.html#SecureDocumentViewer">SecureDocumentViewer</a></li><li><a href="global.html#SecureVideoPlayer">SecureVideoPlayer</a></li><li><a href="global.html#SecurityTab">SecurityTab</a></li><li><a href="global.html#SendDocument">SendDocument</a></li><li><a href="global.html#SendVideo">SendVideo</a></li><li><a href="global.html#Settings">Settings</a></li><li><a href="global.html#Sign">Sign</a></li><li><a href="global.html#Spinner">Spinner</a></li><li><a href="global.html#StreamReader">StreamReader</a></li><li><a href="global.html#TEN_MINUTES">TEN_MINUTES</a></li><li><a href="global.html#TermsOfUse">TermsOfUse</a></li><li><a href="global.html#ToggleView">ToggleView</a></li><li><a href="global.html#Tutorial">Tutorial</a></li><li><a href="global.html#TutorialContext">TutorialContext</a></li><li><a href="global.html#TutorialProvider">TutorialProvider</a></li><li><a href="global.html#TwoFASetupModal">TwoFASetupModal</a></li><li><a href="global.html#UpdateDocument">UpdateDocument</a></li><li><a href="global.html#UserManagementTutorial">UserManagementTutorial</a></li><li><a href="global.html#WSS_BASE_URL">WSS_BASE_URL</a></li><li><a href="global.html#activateUser">activateUser</a></li><li><a href="global.html#addComment">addComment</a></li><li><a href="global.html#addStudentToClass">addStudentToClass</a></li><li><a href="global.html#allDigitsFilled">allDigitsFilled</a></li><li><a href="global.html#api">api</a></li><li><a href="global.html#authToken">authToken</a></li><li><a href="global.html#authenticatedButtons">authenticatedButtons</a></li><li><a href="global.html#baseURL">baseURL</a></li><li><a href="global.html#blockLive">blockLive</a></li><li><a href="global.html#bulkDelete">bulkDelete</a></li><li><a href="global.html#changePassword">changePassword</a></li><li><a href="global.html#check2FAStatus">check2FAStatus</a></li><li><a href="global.html#checkRegisterCode">checkRegisterCode</a></li><li><a href="global.html#createClass">createClass</a></li><li><a href="global.html#createCourse">createCourse</a></li><li><a href="global.html#createLive">createLive</a></li><li><a href="global.html#createThread">createThread</a></li><li><a href="global.html#createUser">createUser</a></li><li><a href="global.html#deactivateUser">deactivateUser</a></li><li><a href="global.html#deleteAvatar">deleteAvatar</a></li><li><a href="global.html#deleteClass">deleteClass</a></li><li><a href="global.html#deleteClasseHandler">deleteClasseHandler</a></li><li><a href="global.html#deleteComment">deleteComment</a></li><li><a href="global.html#deleteContactMessage">deleteContactMessage</a></li><li><a href="global.html#deleteCourse">deleteCourse</a></li><li><a href="global.html#deleteInviteCode">deleteInviteCode</a></li><li><a href="global.html#deleteLive">deleteLive</a></li><li><a href="global.html#deleteMessage">deleteMessage</a></li><li><a href="global.html#deleteThread">deleteThread</a></li><li><a href="global.html#deleteUser">deleteUser</a></li><li><a href="global.html#disable2FA">disable2FA</a></li><li><a href="global.html#disapproveCourse">disapproveCourse</a></li><li><a href="global.html#disapproveLive">disapproveLive</a></li><li><a href="global.html#downloadAttachment">downloadAttachment</a></li><li><a href="global.html#endLive">endLive</a></li><li><a href="global.html#errorMessages">errorMessages</a></li><li><a href="global.html#fetchClasses">fetchClasses</a></li><li><a href="global.html#fetchCourseData">fetchCourseData</a></li><li><a href="global.html#fetchData">fetchData</a></li><li><a href="global.html#fetchUsers">fetchUsers</a></li><li><a href="global.html#firstLogin">firstLogin</a></li><li><a href="global.html#flagContent">flagContent</a></li><li><a href="global.html#forgotPassword">forgotPassword</a></li><li><a href="global.html#generateInviteCode">generateInviteCode</a></li><li><a href="global.html#getAllClasses">getAllClasses</a></li><li><a href="global.html#getAllContactMessages">getAllContactMessages</a></li><li><a href="global.html#getAllCourses">getAllCourses</a></li><li><a href="global.html#getAllInviteCodes">getAllInviteCodes</a></li><li><a href="global.html#getAllLives">getAllLives</a></li><li><a href="global.html#getAllUsers">getAllUsers</a></li><li><a href="global.html#getAvailableRecipients">getAvailableRecipients</a></li><li><a href="global.html#getAvatar">getAvatar</a></li><li><a href="global.html#getClassById">getClassById</a></li><li><a href="global.html#getClassStudents">getClassStudents</a></li><li><a href="global.html#getContactMessage">getContactMessage</a></li><li><a href="global.html#getCourseById">getCourseById</a></li><li><a href="global.html#getCourseDetails">getCourseDetails</a></li><li><a href="global.html#getCourseProgress">getCourseProgress</a></li><li><a href="global.html#getCoursesByClass">getCoursesByClass</a></li><li><a href="global.html#getFlags">getFlags</a></li><li><a href="global.html#getInboxMessages">getInboxMessages</a></li><li><a href="global.html#getInitialViewMode">getInitialViewMode</a></li><li><a href="global.html#getLiveById">getLiveById</a></li><li><a href="global.html#getLiveMessages">getLiveMessages</a></li><li><a href="global.html#getLiveStreamUrl">getLiveStreamUrl</a></li><li><a href="global.html#getLivesByClass">getLivesByClass</a></li><li><a href="global.html#getMessage">getMessage</a></li><li><a href="global.html#getNotificationPreferences">getNotificationPreferences</a></li><li><a href="global.html#getSentMessages">getSentMessages</a></li><li><a href="global.html#getStudentProgress">getStudentProgress</a></li><li><a href="global.html#getThreadById">getThreadById</a></li><li><a href="global.html#getThreads">getThreads</a></li><li><a href="global.html#getTrashMessages">getTrashMessages</a></li><li><a href="global.html#getUserById">getUserById</a></li><li><a href="global.html#getUserProfile">getUserProfile</a></li><li><a href="global.html#getUserWarnings">getUserWarnings</a></li><li><a href="global.html#getVideoDetails">getVideoDetails</a></li><li><a href="global.html#getVideoStreamUrl">getVideoStreamUrl</a></li><li><a href="global.html#handle2FASubmit">handle2FASubmit</a></li><li><a href="global.html#handleBackdropClick">handleBackdropClick</a></li><li><a href="global.html#handleBlockedMouseLeave">handleBlockedMouseLeave</a></li><li><a href="global.html#handleBlockedMouseMove">handleBlockedMouseMove</a></li><li><a href="global.html#handleClose">handleClose</a></li><li><a href="global.html#handleCompleteCourse">handleCompleteCourse</a></li><li><a href="global.html#handleCourseDisapproval">handleCourseDisapproval</a></li><li><a href="global.html#handleDeleteCourse">handleDeleteCourse</a></li><li><a href="global.html#handleDigitChange">handleDigitChange</a></li><li><a href="global.html#handleDigitKeyDown">handleDigitKeyDown</a></li><li><a href="global.html#handleDigitPaste">handleDigitPaste</a></li><li><a href="global.html#handleDownloadDocument">handleDownloadDocument</a></li><li><a href="global.html#handleError">handleError</a></li><li><a href="global.html#handleInputChange">handleInputChange</a></li><li><a href="global.html#handleLogout">handleLogout</a></li><li><a href="global.html#handleMenuToggle">handleMenuToggle</a></li><li><a href="global.html#handleModAction">handleModAction</a></li><li><a href="global.html#handleSubmit">handleSubmit</a></li><li><a href="global.html#handleSubmitClasse">handleSubmitClasse</a></li><li><a href="global.html#handleTabChange">handleTabChange</a></li><li><a href="global.html#handleUnblockCourse">handleUnblockCourse</a></li><li><a href="global.html#isAuthenticated">isAuthenticated</a></li><li><a href="global.html#loadCaptchaEngine">loadCaptchaEngine</a></li><li><a href="global.html#logViewEngagement">logViewEngagement</a></li><li><a href="global.html#login">login</a></li><li><a href="global.html#markAsRead">markAsRead</a></li><li><a href="global.html#markAsUnread">markAsUnread</a></li><li><a href="global.html#markContactMessageAsProcessed">markContactMessageAsProcessed</a></li><li><a href="global.html#markCourseAsCompleted">markCourseAsCompleted</a></li><li><a href="global.html#markCourseAsInProgress">markCourseAsInProgress</a></li><li><a href="global.html#mountApp">mountApp</a></li><li><a href="global.html#moveToTrash">moveToTrash</a></li><li><a href="global.html#navItems">navItems</a></li><li><a href="global.html#navigate">navigate</a></li><li><a href="global.html#onSamplesDecoded">onSamplesDecoded</a></li><li><a href="global.html#refreshTwoFASetup">refreshTwoFASetup</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#removeStudentFromClass">removeStudentFromClass</a></li><li><a href="global.html#renderContent">renderContent</a></li><li><a href="global.html#resolveFlag">resolveFlag</a></li><li><a href="global.html#restoreFromTrash">restoreFromTrash</a></li><li><a href="global.html#retrogradeUserRole">retrogradeUserRole</a></li><li><a href="global.html#root">root</a></li><li><a href="global.html#sendContactMessage">sendContactMessage</a></li><li><a href="global.html#sendLiveMessage">sendLiveMessage</a></li><li><a href="global.html#sendMessage">sendMessage</a></li><li><a href="global.html#sendWarning">sendWarning</a></li><li><a href="global.html#setMainTeacher">setMainTeacher</a></li><li><a href="global.html#setup2FA">setup2FA</a></li><li><a href="global.html#signButtons">signButtons</a></li><li><a href="global.html#startLive">startLive</a></li><li><a href="global.html#toggleAll">toggleAll</a></li><li><a href="global.html#toggleClasse">toggleClasse</a></li><li><a href="global.html#toggleMember">toggleMember</a></li><li><a href="global.html#toggleMobileMenu">toggleMobileMenu</a></li><li><a href="global.html#unblockCourse">unblockCourse</a></li><li><a href="global.html#unblockLive">unblockLive</a></li><li><a href="global.html#updateClass">updateClass</a></li><li><a href="global.html#updateComment">updateComment</a></li><li><a href="global.html#updateCourse">updateCourse</a></li><li><a href="global.html#updateLive">updateLive</a></li><li><a href="global.html#updateNotificationPreferences">updateNotificationPreferences</a></li><li><a href="global.html#updateThread">updateThread</a></li><li><a href="global.html#updateUser">updateUser</a></li><li><a href="global.html#updateUserProfile">updateUserProfile</a></li><li><a href="global.html#updateUserProfileHandler">updateUserProfileHandler</a></li><li><a href="global.html#updateVideo">updateVideo</a></li><li><a href="global.html#upgradeUserRole">upgradeUserRole</a></li><li><a href="global.html#uploadAvatar">uploadAvatar</a></li><li><a href="global.html#uploadIllustrationAvatar">uploadIllustrationAvatar</a></li><li><a href="global.html#useEffect">useEffect</a></li><li><a href="global.html#useTutorial">useTutorial</a></li><li><a href="global.html#validateForm">validateForm</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#verify2FASetup">verify2FASetup</a></li><li><a href="global.html#verifyTwoFA">verifyTwoFA</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Sat Jun 07 2025 14:32:34 GMT+0200 (Central European Summer Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

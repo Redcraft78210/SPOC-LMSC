@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: src/pages/Public/Contact.jsx</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: src/pages/Public/Contact.jsx</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @fileoverview
+ * Component for the public contact page that allows users to send messages with attachments.
+ * Features include a rich text editor, file attachment system, and attachment mention detection.
+ */
+
+import { useState, useEffect, useRef } from 'react';
+import PublicNavbar from '../../components/PublicComp/PublicNavbar';
+import Footer from '../../components/PublicComp/Footer';
+import { Paperclip, X } from 'lucide-react';
+import { sendContactMessage } from '../../API/ContactCaller';
+import toast, { Toaster } from 'react-hot-toast';
+
+import { Editor } from '@toast-ui/react-editor';
+import '@toast-ui/editor/dist/toastui-editor.css';
+
+/**
+ * Contact page component with form submission and file attachment capabilities
+ * 
+ * @returns {JSX.Element} The contact page with form and supporting UI elements
+ */
+const Contact = () => {
+  /**
+   * Form data state containing user input fields
+   * @type {Object}
+   * @property {string} name - User's full name
+   * @property {string} email - User's email address
+   * @property {string} motif - Contact reason/category
+   * @property {string} objet - Subject of the message
+   * @property {string} message - Content of the message
+   */
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    motif: '',
+    objet: '',
+    message: '',
+  });
+  
+  /**
+   * Reference to the rich text editor instance
+   * @type {React.RefObject}
+   */
+  const editorRef = useRef(null);
+
+  /**
+   * Array of file attachments to be sent with the message
+   * @type {File[]}
+   */
+  const [attachments, setAttachments] = useState([]);
+  
+  /**
+   * Current status of the form submission
+   * @type {string}
+   */
+  const [status, setStatus] = useState('');
+  
+  /**
+   * Reference to the hidden file input element
+   * @type {React.RefObject}
+   */
+  const fileInputRef = useRef(null);
+
+  /**
+   * Regular expressions to detect mentions of attachments in message text
+   * @type {RegExp[]}
+   */
+  const attachmentRegexList = [
+    /ci-joint/i,
+    /pièce[s]? jointe[s]?/i,
+    /fichier[s]? joint[s]?/i,
+    /attachement[s]?/i,
+    /en annexe/i,
+    /joint[s]? à ce mail/i,
+    /joint[s]? à ce message/i,
+    /joint[s]? à cet email/i,
+    /veuillez trouver/i,
+    /vous trouverez.*joint/i,
+    /je vous envoie.*fichier/i,
+    /document[s]? joint[s]?/i,
+    /photo[s]? jointe[s]?/i,
+    /image[s]? jointe[s]?/i,
+    /pdf joint/i,
+    /joint.*pdf/i,
+    /joint.*excel/i,
+    /joint.*document/i,
+  ];
+
+  /**
+   * Checks if the text contains any mention of attachments based on regex patterns
+   * 
+   * @param {string} text - The text to check for attachment mentions
+   * @returns {boolean} True if text contains attachment mentions, false otherwise
+   */
+  const checkForAttachmentMention = (text) => {
+    return attachmentRegexList.some(regex => regex.test(text));
+  };
+
+  /**
+   * Handles changes to form input fields
+   * 
+   * @param {React.ChangeEvent&lt;HTMLInputElement|HTMLSelectElement>} e - The change event
+   */
+  const handleChange = e => {
+    const { name, value } = e.target;
+    setFormData(prevData => ({
+      ...prevData,
+      [name]: value,
+    }));
+  };
+
+  /**
+   * Processes file selection for attachments with size validation
+   * 
+   * @param {React.ChangeEvent&lt;HTMLInputElement>} e - The file input change event
+   */
+  const handleFileChange = e => {
+    const files = Array.from(e.target.files);
+
+    const validFiles = files.filter(file => file.size &lt;= 10 * 1024 * 1024);
+    const invalidFiles = files.filter(file => file.size > 10 * 1024 * 1024);
+
+    if (invalidFiles.length > 0) {
+      alert(`${invalidFiles.length} fichier(s) dépassent la limite de 10 Mo`);
+    }
+
+    setAttachments([...attachments, ...validFiles]);
+  };
+
+  /**
+   * Removes a specific attachment from the attachments array
+   * 
+   * @param {number} index - The index of the attachment to remove
+   */
+  const removeAttachment = index => {
+    setAttachments(attachments.filter((_, i) => i !== index));
+  };
+
+  /**
+   * Handles form submission with attachment validation
+   * 
+   * @async
+   * @param {React.FormEvent} e - The form submission event
+   * @throws {Error} When the API call to send the message fails
+   */
+  const handleSubmit = async e => {
+    e.preventDefault();
+    setStatus('loading');
+
+    if (attachments.length === 0 &amp;&amp; checkForAttachmentMention(formData.message)) {
+      const confirmSend = window.confirm(
+        "Vous semblez mentionner des pièces jointes dans votre message, mais aucun fichier n'a été ajouté. Souhaitez-vous quand même envoyer le message sans pièces jointes?"
+      );
+
+      if (!confirmSend) {
+        setStatus('');
+        return;
+      }
+    }
+
+    const editorContent = editorRef.current?.getInstance().getMarkdown() || '';
+
+    try {
+      const response = await sendContactMessage({
+        name: formData.name,
+        email: formData.email,
+        motif: formData.motif,
+        objet: formData.objet,
+        message: editorContent,
+        attachments: attachments
+      });
+
+      if (response.status >= 200 &amp;&amp; response.status &lt; 300) {
+        setStatus('success');
+        toast.success('Votre message a été envoyé avec succès !');
+        setFormData({ name: '', email: '', motif: '', objet: '', message: '' });
+        setAttachments([]);
+      } else {
+        console.error("Erreur lors de l'envoi du formulaire :", response.message);
+        setStatus('error');
+        toast.error("Une erreur est survenue. Veuillez réessayer.");
+      }
+    } catch (error) {
+      console.error("Erreur lors de l'envoi du formulaire :", error);
+      setStatus('error');
+      toast.error("Une erreur est survenue. Veuillez réessayer.");
+    }
+  };
+
+  /**
+   * Sets up drag and drop functionality for the editor
+   * Handles file drops with size validation and special handling for images
+   */
+  useEffect(() => {
+    if (editorRef.current) {
+      const editorInstance = editorRef.current.getInstance();
+
+      const dropZone = document.querySelector('.toastui-editor-defaultUI');
+      if (dropZone) {
+        dropZone.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          dropZone.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+          dropZone.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          dropZone.classList.remove('drag-over');
+
+          if (e.dataTransfer.files.length) {
+            const files = Array.from(e.dataTransfer.files);
+
+            const validFiles = files.filter(file => file.size &lt;= 10 * 1024 * 1024);
+
+
+            const imageFiles = validFiles.filter(file => file.type.startsWith('image/'));
+            const otherFiles = validFiles.filter(file => !file.type.startsWith('image/'));
+
+
+            if (otherFiles.length > 0) {
+              setAttachments(prev => [...prev, ...otherFiles]);
+              toast.success(`${otherFiles.length} fichier(s) ajouté(s) aux pièces jointes`);
+            }
+
+
+            if (imageFiles.length > 0) {
+
+              imageFiles.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+
+                  editorInstance.insertImage({
+                    src: e.target.result,
+                    alt: file.name
+                  });
+                };
+                reader.readAsDataURL(file);
+              });
+
+              toast.success(`${imageFiles.length} image(s) insérée(s) dans l'éditeur`);
+            }
+          }
+        });
+      }
+
+      return () => {
+        if (dropZone) {
+          dropZone.removeEventListener('dragover', () => { });
+          dropZone.removeEventListener('dragleave', () => { });
+          dropZone.removeEventListener('drop', () => { });
+        }
+      };
+    }
+  }, [editorRef.current]);
+
+  return (
+    &lt;div className="min-h-screen bg-gray-50">
+      {/* Add Toaster component */}
+      &lt;Toaster
+        position="top-right"
+        toastOptions={{
+          success: {
+            style: {
+              background: '#e5f7ee',
+              color: '#0f766e',
+              border: '1px solid #0f766e',
+            },
+            duration: 5000,
+          },
+          error: {
+            style: {
+              background: '#fee2e2',
+              color: '#b91c1c',
+              border: '1px solid #b91c1c',
+            },
+            duration: 5000,
+          },
+        }}
+      />
+
+      {/* Navigation */}
+      &lt;PublicNavbar />
+
+      {/* Hero Section */}
+      &lt;header className="pt-32 pb-20 bg-gradient-to-r from-blue-600 to-blue-800 text-white">
+        &lt;div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          &lt;h1 className="text-5xl font-bold mb-6">Contactez-Nous&lt;/h1>
+          &lt;p className="text-xl mb-8">
+            Une question, une suggestion ou un problème ? Nous sommes là pour
+            vous aider.
+          &lt;/p>
+        &lt;/div>
+      &lt;/header>
+
+      {/* Contact Form Section */}
+      &lt;section className="py-20 bg-white">
+        &lt;div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          &lt;h2 className="text-3xl font-bold text-gray-800 mb-8 text-center">
+            Envoyez-nous un message
+          &lt;/h2>
+          &lt;form className="space-y-6" onSubmit={handleSubmit}>
+            &lt;div>
+              &lt;label className="block text-sm font-medium text-gray-700 mb-2">
+                Nom complet
+              &lt;/label>
+              &lt;input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                placeholder="Votre nom"
+                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              />
+            &lt;/div>
+            &lt;div>
+              &lt;label className="block text-sm font-medium text-gray-700 mb-2">
+                Adresse email
+              &lt;/label>
+              &lt;input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="votre.email@example.com"
+                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              />
+            &lt;/div>
+            &lt;div>
+              &lt;label className="block text-sm font-medium text-gray-700 mb-2">
+                Motif de contact
+              &lt;/label>
+              &lt;select
+                name="motif"
+                value={formData.motif}
+                onChange={handleChange}
+                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              >
+                &lt;option value="" disabled>
+                  Sélectionnez un motif
+                &lt;/option>
+                &lt;option value="information">Information générale&lt;/option>
+                &lt;option value="support">Support technique&lt;/option>
+                &lt;option value="service_client">Service client&lt;/option>
+                &lt;option value="rgpd">Faire valoir mes droits RGPD&lt;/option>
+                &lt;option value="partenariat">Partenariat&lt;/option>
+                &lt;option value="autre">Autre&lt;/option>
+              &lt;/select>
+            &lt;/div>
+            &lt;div>
+              &lt;label className="block text-sm font-medium text-gray-700 mb-2">
+                Objet du message
+              &lt;/label>
+              &lt;input
+                type="text"
+                name="objet"
+                value={formData.objet}
+                onChange={handleChange}
+                placeholder="Sujet de votre message"
+                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              />
+            &lt;/div>
+            &lt;div>
+              &lt;label className="block text-sm font-medium text-gray-700 mb-2">
+                Message
+              &lt;/label>
+              &lt;div className="border border-gray-300 rounded-md">
+                &lt;Editor
+                  ref={editorRef}
+                  initialValue="&lt;p>&lt;/p>"
+                  previewStyle="tab"
+                  height="300px"
+                  initialEditType="wysiwyg"
+                  useCommandShortcut={true}
+                  toolbarItems={[
+                    ['heading', 'bold', 'italic', 'strike'],
+                    ['hr', 'quote'],
+                    ['ul', 'ol', 'task', 'indent', 'outdent'],
+                    ['table', 'link'],
+                    ['code', 'codeblock']
+                  ]}
+                />
+              &lt;/div>
+            &lt;/div>
+
+            {/* Attachments Section */}
+            &lt;div>
+              &lt;label className="block text-sm font-medium text-gray-700 mb-2">
+                Pièces jointes (optionnel)
+              &lt;/label>
+              &lt;input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                multiple
+                className="hidden"
+              />
+              &lt;button
+                type="button"
+                onClick={() => fileInputRef.current.click()}
+                className="px-4 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-200 flex items-center gap-2"
+              >
+                &lt;Paperclip size={16} />
+                Ajouter des pièces jointes
+              &lt;/button>
+              &lt;p className="text-xs text-gray-500 mt-1">Limite de 10 Mo par fichier&lt;/p>
+
+              {/* Attachment List */}
+              {attachments.length > 0 &amp;&amp; (
+                &lt;div className="mt-3 space-y-2">
+                  {attachments.map((file, index) => (
+                    &lt;div
+                      key={index}
+                      className="flex items-center justify-between bg-gray-50 p-2 rounded-md"
+                    >
+                      &lt;div className="flex items-center gap-2 overflow-hidden">
+                        &lt;Paperclip size={16} className="text-gray-500 flex-shrink-0" />
+                        &lt;span className="text-sm text-gray-700 truncate">
+                          {file.name}
+                        &lt;/span>
+                        &lt;span className="text-xs text-gray-500 whitespace-nowrap">
+                          ({(file.size / 1024).toFixed(1)} KB)
+                        &lt;/span>
+                      &lt;/div>
+                      &lt;button
+                        type="button"
+                        onClick={() => removeAttachment(index)}
+                        className="text-gray-400 hover:text-red-500 flex-shrink-0 ml-2"
+                      >
+                        &lt;X size={16} />
+                      &lt;/button>
+                    &lt;/div>
+                  ))}
+                &lt;/div>
+              )}
+            &lt;/div>
+
+            &lt;div className="text-center">
+              &lt;button
+                type="submit"
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                disabled={status === 'loading'}
+              >
+                {status === 'loading' ? 'Envoi en cours...' : 'Envoyer'}
+              &lt;/button>
+            &lt;/div>
+          &lt;/form>
+        &lt;/div>
+      &lt;/section>
+
+      {/* Contact Information Section */}
+      &lt;section className="py-20 bg-gray-50">
+        &lt;div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          &lt;h2 className="text-3xl font-bold text-gray-800 mb-8">
+            Nos Coordonnées
+          &lt;/h2>
+          &lt;div className="grid md:grid-cols-3 gap-8">
+            &lt;div>
+              &lt;h3 className="text-xl font-semibold text-gray-800 mb-2">
+                Adresse
+              &lt;/h3>
+              &lt;p className="text-gray-600">
+                2 avenue jean jaurès, 78210 Saint-Cyr-l&amp;apos;École
+              &lt;/p>
+            &lt;/div>
+            &lt;div>
+              &lt;h3 className="text-xl font-semibold text-gray-800 mb-2">
+                Téléphone
+              &lt;/h3>
+              &lt;p className="text-gray-600">+33 1 23 45 67 89&lt;/p>
+            &lt;/div>
+            &lt;div>
+              &lt;h3 className="text-xl font-semibold text-gray-800 mb-2">
+                Email
+              &lt;/h3>
+              &lt;p className="text-gray-600">support@spoc-lmsc.com&lt;/p>
+            &lt;/div>
+          &lt;/div>
+        &lt;/div>
+      &lt;/section>
+
+      {/* Footer */}
+      &lt;Footer />
+    &lt;/div>
+  );
+};
+
+export default Contact;</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-App.html">App</a></li></ul><h3>Global</h3><ul><li><a href="global.html#About">About</a></li><li><a href="global.html#AccountDisabledModal">AccountDisabledModal</a></li><li><a href="global.html#AdminDashboardHome">AdminDashboardHome</a></li><li><a href="global.html#BASE_URL">BASE_URL</a></li><li><a href="global.html#BulkActions">BulkActions</a></li><li><a href="global.html#ClassManagementTutorial">ClassManagementTutorial</a></li><li><a href="global.html#ClasseCards">ClasseCards</a></li><li><a href="global.html#ClasseCreationModal">ClasseCreationModal</a></li><li><a href="global.html#ClasseManagement">ClasseManagement</a></li><li><a href="global.html#ClasseTable">ClasseTable</a></li><li><a href="global.html#Contact">Contact</a></li><li><a href="global.html#ContentCard">ContentCard</a></li><li><a href="global.html#CourseReader">CourseReader</a></li><li><a href="global.html#CourseReaderTutorial">CourseReaderTutorial</a></li><li><a href="global.html#Courses">Courses</a></li><li><a href="global.html#CoursesLibraryTutorial">CoursesLibraryTutorial</a></li><li><a href="global.html#Dashboard">Dashboard</a></li><li><a href="global.html#DashboardTutorial">DashboardTutorial</a></li><li><a href="global.html#DeleteDocument">DeleteDocument</a></li><li><a href="global.html#DeleteVideo">DeleteVideo</a></li><li><a href="global.html#EleveDashboardHome">EleveDashboardHome</a></li><li><a href="global.html#ErrorMessage">ErrorMessage</a></li><li><a href="global.html#FilterDropdown">FilterDropdown</a></li><li><a href="global.html#FirstLogin">FirstLogin</a></li><li><a href="global.html#Footer">Footer</a></li><li><a href="global.html#Forum">Forum</a></li><li><a href="global.html#GetAll_DataStructure">GetAll_DataStructure</a></li><li><a href="global.html#GetAll_Document">GetAll_Document</a></li><li><a href="global.html#Get_Document_Information">Get_Document_Information</a></li><li><a href="global.html#Get_Video_Information">Get_Video_Information</a></li><li><a href="global.html#Get_special_Document">Get_special_Document</a></li><li><a href="global.html#Get_special_Video">Get_special_Video</a></li><li><a href="global.html#Home">Home</a></li><li><a href="global.html#INACTIVITY_THRESHOLD">INACTIVITY_THRESHOLD</a></li><li><a href="global.html#LegalNotice">LegalNotice</a></li><li><a href="global.html#LiveNotFound">LiveNotFound</a></li><li><a href="global.html#LiveViewer">LiveViewer</a></li><li><a href="global.html#LoadCanvasTemplate">LoadCanvasTemplate</a></li><li><a href="global.html#LoadingComponent">LoadingComponent</a></li><li><a href="global.html#LoadingSpinner">LoadingSpinner</a></li><li><a href="global.html#Logout">Logout</a></li><li><a href="global.html#Mailbox">Mailbox</a></li><li><a href="global.html#MaintenanceBanner">MaintenanceBanner</a></li><li><a href="global.html#MessageDetailSkeleton">MessageDetailSkeleton</a></li><li><a href="global.html#MessageSkeleton">MessageSkeleton</a></li><li><a href="global.html#NavigationBar">NavigationBar</a></li><li><a href="global.html#PictureModal">PictureModal</a></li><li><a href="global.html#PrivacyPolicy">PrivacyPolicy</a></li><li><a href="global.html#PrivacyTab">PrivacyTab</a></li><li><a href="global.html#ProfilePhotoSelector">ProfilePhotoSelector</a></li><li><a href="global.html#PublicNavbar">PublicNavbar</a></li><li><a href="global.html#SearchBar">SearchBar</a></li><li><a href="global.html#SearchUser">SearchUser</a></li><li><a href="global.html#SecureDocumentViewer">SecureDocumentViewer</a></li><li><a href="global.html#SecureVideoPlayer">SecureVideoPlayer</a></li><li><a href="global.html#SecurityTab">SecurityTab</a></li><li><a href="global.html#SendDocument">SendDocument</a></li><li><a href="global.html#SendVideo">SendVideo</a></li><li><a href="global.html#Settings">Settings</a></li><li><a href="global.html#Sign">Sign</a></li><li><a href="global.html#Spinner">Spinner</a></li><li><a href="global.html#StreamReader">StreamReader</a></li><li><a href="global.html#TEN_MINUTES">TEN_MINUTES</a></li><li><a href="global.html#TermsOfUse">TermsOfUse</a></li><li><a href="global.html#ToggleView">ToggleView</a></li><li><a href="global.html#Tutorial">Tutorial</a></li><li><a href="global.html#TutorialContext">TutorialContext</a></li><li><a href="global.html#TutorialProvider">TutorialProvider</a></li><li><a href="global.html#TwoFASetupModal">TwoFASetupModal</a></li><li><a href="global.html#UpdateDocument">UpdateDocument</a></li><li><a href="global.html#UserManagementTutorial">UserManagementTutorial</a></li><li><a href="global.html#WSS_BASE_URL">WSS_BASE_URL</a></li><li><a href="global.html#activateUser">activateUser</a></li><li><a href="global.html#addComment">addComment</a></li><li><a href="global.html#addStudentToClass">addStudentToClass</a></li><li><a href="global.html#allDigitsFilled">allDigitsFilled</a></li><li><a href="global.html#api">api</a></li><li><a href="global.html#authToken">authToken</a></li><li><a href="global.html#authenticatedButtons">authenticatedButtons</a></li><li><a href="global.html#baseURL">baseURL</a></li><li><a href="global.html#blockLive">blockLive</a></li><li><a href="global.html#bulkDelete">bulkDelete</a></li><li><a href="global.html#changePassword">changePassword</a></li><li><a href="global.html#check2FAStatus">check2FAStatus</a></li><li><a href="global.html#checkRegisterCode">checkRegisterCode</a></li><li><a href="global.html#createClass">createClass</a></li><li><a href="global.html#createCourse">createCourse</a></li><li><a href="global.html#createLive">createLive</a></li><li><a href="global.html#createThread">createThread</a></li><li><a href="global.html#createUser">createUser</a></li><li><a href="global.html#deactivateUser">deactivateUser</a></li><li><a href="global.html#deleteAvatar">deleteAvatar</a></li><li><a href="global.html#deleteClass">deleteClass</a></li><li><a href="global.html#deleteClasseHandler">deleteClasseHandler</a></li><li><a href="global.html#deleteComment">deleteComment</a></li><li><a href="global.html#deleteContactMessage">deleteContactMessage</a></li><li><a href="global.html#deleteCourse">deleteCourse</a></li><li><a href="global.html#deleteInviteCode">deleteInviteCode</a></li><li><a href="global.html#deleteLive">deleteLive</a></li><li><a href="global.html#deleteMessage">deleteMessage</a></li><li><a href="global.html#deleteThread">deleteThread</a></li><li><a href="global.html#deleteUser">deleteUser</a></li><li><a href="global.html#disable2FA">disable2FA</a></li><li><a href="global.html#disapproveCourse">disapproveCourse</a></li><li><a href="global.html#disapproveLive">disapproveLive</a></li><li><a href="global.html#downloadAttachment">downloadAttachment</a></li><li><a href="global.html#endLive">endLive</a></li><li><a href="global.html#errorMessages">errorMessages</a></li><li><a href="global.html#fetchClasses">fetchClasses</a></li><li><a href="global.html#fetchCourseData">fetchCourseData</a></li><li><a href="global.html#fetchData">fetchData</a></li><li><a href="global.html#fetchUsers">fetchUsers</a></li><li><a href="global.html#firstLogin">firstLogin</a></li><li><a href="global.html#flagContent">flagContent</a></li><li><a href="global.html#forgotPassword">forgotPassword</a></li><li><a href="global.html#generateInviteCode">generateInviteCode</a></li><li><a href="global.html#getAllClasses">getAllClasses</a></li><li><a href="global.html#getAllContactMessages">getAllContactMessages</a></li><li><a href="global.html#getAllCourses">getAllCourses</a></li><li><a href="global.html#getAllInviteCodes">getAllInviteCodes</a></li><li><a href="global.html#getAllLives">getAllLives</a></li><li><a href="global.html#getAllUsers">getAllUsers</a></li><li><a href="global.html#getAvailableRecipients">getAvailableRecipients</a></li><li><a href="global.html#getAvatar">getAvatar</a></li><li><a href="global.html#getClassById">getClassById</a></li><li><a href="global.html#getClassStudents">getClassStudents</a></li><li><a href="global.html#getContactMessage">getContactMessage</a></li><li><a href="global.html#getCourseById">getCourseById</a></li><li><a href="global.html#getCourseDetails">getCourseDetails</a></li><li><a href="global.html#getCourseProgress">getCourseProgress</a></li><li><a href="global.html#getCoursesByClass">getCoursesByClass</a></li><li><a href="global.html#getFlags">getFlags</a></li><li><a href="global.html#getInboxMessages">getInboxMessages</a></li><li><a href="global.html#getInitialViewMode">getInitialViewMode</a></li><li><a href="global.html#getLiveById">getLiveById</a></li><li><a href="global.html#getLiveMessages">getLiveMessages</a></li><li><a href="global.html#getLiveStreamUrl">getLiveStreamUrl</a></li><li><a href="global.html#getLivesByClass">getLivesByClass</a></li><li><a href="global.html#getMessage">getMessage</a></li><li><a href="global.html#getNotificationPreferences">getNotificationPreferences</a></li><li><a href="global.html#getSentMessages">getSentMessages</a></li><li><a href="global.html#getStudentProgress">getStudentProgress</a></li><li><a href="global.html#getThreadById">getThreadById</a></li><li><a href="global.html#getThreads">getThreads</a></li><li><a href="global.html#getTrashMessages">getTrashMessages</a></li><li><a href="global.html#getUserById">getUserById</a></li><li><a href="global.html#getUserProfile">getUserProfile</a></li><li><a href="global.html#getUserWarnings">getUserWarnings</a></li><li><a href="global.html#getVideoDetails">getVideoDetails</a></li><li><a href="global.html#getVideoStreamUrl">getVideoStreamUrl</a></li><li><a href="global.html#handle2FASubmit">handle2FASubmit</a></li><li><a href="global.html#handleBackdropClick">handleBackdropClick</a></li><li><a href="global.html#handleBlockedMouseLeave">handleBlockedMouseLeave</a></li><li><a href="global.html#handleBlockedMouseMove">handleBlockedMouseMove</a></li><li><a href="global.html#handleClose">handleClose</a></li><li><a href="global.html#handleCompleteCourse">handleCompleteCourse</a></li><li><a href="global.html#handleCourseDisapproval">handleCourseDisapproval</a></li><li><a href="global.html#handleDeleteCourse">handleDeleteCourse</a></li><li><a href="global.html#handleDigitChange">handleDigitChange</a></li><li><a href="global.html#handleDigitKeyDown">handleDigitKeyDown</a></li><li><a href="global.html#handleDigitPaste">handleDigitPaste</a></li><li><a href="global.html#handleDownloadDocument">handleDownloadDocument</a></li><li><a href="global.html#handleError">handleError</a></li><li><a href="global.html#handleInputChange">handleInputChange</a></li><li><a href="global.html#handleLogout">handleLogout</a></li><li><a href="global.html#handleMenuToggle">handleMenuToggle</a></li><li><a href="global.html#handleModAction">handleModAction</a></li><li><a href="global.html#handleSubmit">handleSubmit</a></li><li><a href="global.html#handleSubmitClasse">handleSubmitClasse</a></li><li><a href="global.html#handleTabChange">handleTabChange</a></li><li><a href="global.html#handleUnblockCourse">handleUnblockCourse</a></li><li><a href="global.html#isAuthenticated">isAuthenticated</a></li><li><a href="global.html#loadCaptchaEngine">loadCaptchaEngine</a></li><li><a href="global.html#logViewEngagement">logViewEngagement</a></li><li><a href="global.html#login">login</a></li><li><a href="global.html#markAsRead">markAsRead</a></li><li><a href="global.html#markAsUnread">markAsUnread</a></li><li><a href="global.html#markContactMessageAsProcessed">markContactMessageAsProcessed</a></li><li><a href="global.html#markCourseAsCompleted">markCourseAsCompleted</a></li><li><a href="global.html#markCourseAsInProgress">markCourseAsInProgress</a></li><li><a href="global.html#mountApp">mountApp</a></li><li><a href="global.html#moveToTrash">moveToTrash</a></li><li><a href="global.html#navItems">navItems</a></li><li><a href="global.html#navigate">navigate</a></li><li><a href="global.html#onSamplesDecoded">onSamplesDecoded</a></li><li><a href="global.html#refreshTwoFASetup">refreshTwoFASetup</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#removeStudentFromClass">removeStudentFromClass</a></li><li><a href="global.html#renderContent">renderContent</a></li><li><a href="global.html#resolveFlag">resolveFlag</a></li><li><a href="global.html#restoreFromTrash">restoreFromTrash</a></li><li><a href="global.html#retrogradeUserRole">retrogradeUserRole</a></li><li><a href="global.html#root">root</a></li><li><a href="global.html#sendContactMessage">sendContactMessage</a></li><li><a href="global.html#sendLiveMessage">sendLiveMessage</a></li><li><a href="global.html#sendMessage">sendMessage</a></li><li><a href="global.html#sendWarning">sendWarning</a></li><li><a href="global.html#setMainTeacher">setMainTeacher</a></li><li><a href="global.html#setup2FA">setup2FA</a></li><li><a href="global.html#signButtons">signButtons</a></li><li><a href="global.html#startLive">startLive</a></li><li><a href="global.html#toggleAll">toggleAll</a></li><li><a href="global.html#toggleClasse">toggleClasse</a></li><li><a href="global.html#toggleMember">toggleMember</a></li><li><a href="global.html#toggleMobileMenu">toggleMobileMenu</a></li><li><a href="global.html#unblockCourse">unblockCourse</a></li><li><a href="global.html#unblockLive">unblockLive</a></li><li><a href="global.html#updateClass">updateClass</a></li><li><a href="global.html#updateComment">updateComment</a></li><li><a href="global.html#updateCourse">updateCourse</a></li><li><a href="global.html#updateLive">updateLive</a></li><li><a href="global.html#updateNotificationPreferences">updateNotificationPreferences</a></li><li><a href="global.html#updateThread">updateThread</a></li><li><a href="global.html#updateUser">updateUser</a></li><li><a href="global.html#updateUserProfile">updateUserProfile</a></li><li><a href="global.html#updateUserProfileHandler">updateUserProfileHandler</a></li><li><a href="global.html#updateVideo">updateVideo</a></li><li><a href="global.html#upgradeUserRole">upgradeUserRole</a></li><li><a href="global.html#uploadAvatar">uploadAvatar</a></li><li><a href="global.html#uploadIllustrationAvatar">uploadIllustrationAvatar</a></li><li><a href="global.html#useEffect">useEffect</a></li><li><a href="global.html#useTutorial">useTutorial</a></li><li><a href="global.html#validateForm">validateForm</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#verify2FASetup">verify2FASetup</a></li><li><a href="global.html#verifyTwoFA">verifyTwoFA</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Sat Jun 07 2025 14:32:34 GMT+0200 (Central European Summer Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

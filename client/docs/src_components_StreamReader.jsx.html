@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: src/components/StreamReader.jsx</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: src/components/StreamReader.jsx</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import { useRef, useEffect, useState } from 'react';
+import PropTypes from 'prop-types';
+import { Player } from 'broadwayjs';
+import {
+  Play,
+  Pause,
+  Volume2,
+  VolumeOff,
+  Maximize,
+  Shrink,
+} from 'lucide-react';
+
+/**
+ * Base WebSocket URL for streaming API connection
+ * @constant {string}
+ */
+const WSS_BASE_URL = 'wss://172.16.87.30/api';
+
+/**
+ * StreamReader component for displaying video and audio streams from a WebSocket connection
+ *
+ * @component
+ * @param {Object} props - Component props
+ * @param {string} props.authToken - Authentication token for WebSocket connection
+ * @param {boolean} [props.controls=true] - Whether to show video controls
+ * @param {string} [props.status] - Current stream status ('ongoing', etc.)
+ * @returns {JSX.Element} Rendered component
+ */
+const StreamReader = ({ authToken, controls, status }) => {
+  const containerRef = useRef();
+  const playerRef = useRef();
+  const controlsTimerRef = useRef(null);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [showControls, setShowControls] = useState(true);
+
+  const [connectionStatus, setConnectionStatus] = useState('connecting');
+  const wsRef = useRef(null);
+  const audioDecoderRef = useRef(null);
+
+  /**
+   * Handles mouse movement over the player to show controls
+   * Sets a timer to hide controls after 3 seconds of inactivity if video is playing
+   *
+   * @function
+   * @returns {void}
+   */
+  const handleMouseMove = () => {
+    setShowControls(true);
+    if (controlsTimerRef.current) {
+      clearTimeout(controlsTimerRef.current);
+    }
+
+    controlsTimerRef.current = setTimeout(() => {
+      if (isPlaying) {
+        setShowControls(false);
+      }
+    }, 3000);
+  };
+
+  /**
+   * Toggles play/pause state of the video stream
+   *
+   * @function
+   * @returns {void}
+   */
+  const togglePlay = () => {
+    setIsPlaying(!isPlaying);
+  };
+
+  /**
+   * Toggles audio mute state
+   *
+   * @function
+   * @returns {void}
+   */
+  const toggleMute = () => {
+    setIsMuted(!isMuted);
+  };
+
+  /**
+   * Toggles fullscreen mode for the video player
+   *
+   * @function
+   * @returns {void}
+   * @throws {Error} If fullscreen request fails
+   */
+  const toggleFullScreen = () => {
+    if (!document.fullscreenElement) {
+      playerRef.current.requestFullscreen().catch((err) => {
+        console.error(
+          `Error attempting to enable full-screen mode: ${err.message}`
+        );
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  };
+
+  /**
+   * Effect to handle fullscreen state changes
+   * Adds and removes event listeners for fullscreen changes
+   *
+   * @effect
+   * @returns {Function} Cleanup function that removes event listeners
+   */
+  useEffect(() => {
+    const handleFullScreenChange = () => {
+      setIsFullScreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullScreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullScreenChange);
+    };
+  }, []);
+
+  /**
+   * Main effect to initialize video player, audio decoder, and WebSocket connection
+   * Sets up the stream playback and handles incoming WebSocket messages
+   *
+   * @effect
+   * @param {Array} dependencies - Effect dependencies [isPlaying, authToken]
+   * @returns {Function} Cleanup function that closes connections and cleans up resources
+   */
+  useEffect(() => {
+    const WSURL = `${WSS_BASE_URL}/stream?token=${authToken}`;
+
+    const player = new Player({
+      useWorker: true,
+      workerFile: '/Decoder.js',
+      webgl: true,
+    });
+
+    if (containerRef.current) {
+      const existingCanvas = containerRef.current.querySelector('canvas');
+      if (existingCanvas) {
+        containerRef.current.removeChild(existingCanvas);
+      }
+      containerRef.current.appendChild(player.canvas);
+      player.canvas.classList.add('videoPlayer');
+
+      player.canvas.style.width = '100%';
+      player.canvas.style.height = '100%';
+      player.canvas.style.objectFit = 'contain';
+    }
+
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+    document.addEventListener(
+      'click',
+      function () {
+        if (audioContext.state === 'suspended') {
+          audioContext.resume();
+        }
+      },
+      { once: true }
+    );
+
+    /**
+     * AudioDecoder class for decoding audio data from the stream
+     *
+     * @class
+     * @param {Object} config - Configuration object
+     * @param {Function} config.onSamplesDecoded - Callback function when samples are decoded
+     * @returns {Object} AudioDecoder instance
+     */
+    const audioDecoder = new AudioDecoder({
+      /**
+       * Callback when audio samples are decoded
+       * Creates and plays an audio buffer from the decoded samples
+       *
+       * @function
+       * @param {Float32Array} samples - Decoded audio samples
+       * @param {number} sampleRate - Audio sample rate in Hz
+       * @param {number} channels - Number of audio channels
+       * @returns {void}
+       */
+      onSamplesDecoded: function (samples, sampleRate, channels) {
+        if (!isPlaying) return;
+
+        const audioBuffer = audioContext.createBuffer(
+          channels,
+          samples.length / channels,
+          sampleRate
+        );
+
+        for (let channel = 0; channel &lt; channels; channel++) {
+          const channelData = audioBuffer.getChannelData(channel);
+          for (let i = 0; i &lt; samples.length / channels; i++) {
+            channelData[i] = samples[i * channels + channel];
+          }
+        }
+
+        const source = audioContext.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(audioContext.destination);
+        source.start();
+
+        console.log(
+          `Playing audio: ${samples.length} samples, ${sampleRate}Hz, ${channels} channels`
+        );
+      },
+    }).init();
+
+    audioDecoderRef.current = audioDecoder;
+
+    const ws = new WebSocket(WSURL);
+    ws.binaryType = 'arraybuffer';
+    wsRef.current = ws;
+
+    ws.onopen = function () {
+      setConnectionStatus('connected');
+    };
+
+    ws.onclose = function () {
+      setConnectionStatus('disconnected');
+    };
+
+    ws.onerror = function () {
+      console.error('WebSocket error occurred');
+      setConnectionStatus('error');
+    };
+
+    /**
+     * WebSocket message handler
+     * Processes incoming data and routes it to the appropriate decoder
+     *
+     * @function
+     * @param {MessageEvent} event - WebSocket message event
+     * @returns {void}
+     */
+    ws.onmessage = (event) => {
+      if (!isPlaying) return;
+
+      const data = new Uint8Array(event.data);
+
+      if (data[0] === 1) {
+        // Handle audio data
+        if (audioDecoderRef.current) {
+          audioDecoderRef.current.decode(data.slice(1));
+        } else {
+          console.error('Audio decoder not initialized');
+        }
+      } else {
+        player.decode(data);
+      }
+    };
+
+    const container = containerRef.current;
+
+    return () => {
+      ws.close();
+      if (container &amp;&amp; player.canvas) {
+        container.removeChild(player.canvas);
+      }
+      if (controlsTimerRef.current) {
+        clearTimeout(controlsTimerRef.current);
+      }
+      audioDecoder.reset();
+    };
+  }, [isPlaying, authToken]);
+
+  return (
+    &lt;>
+      &lt;div
+        className="relative w-full aspect-video bg-black rounded-xl shadow-lg overflow-hidden group"
+        ref={playerRef}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => isPlaying &amp;&amp; setShowControls(false)}
+      >
+        &lt;div
+          className="w-full h-full flex items-center justify-center"
+          ref={containerRef}
+        />
+
+        &lt;div
+          className={`
+            absolute inset-0 flex flex-col justify-between pointer-events-none
+            transition-opacity duration-300
+            ${showControls ? 'opacity-100' : 'opacity-0'}
+            group-hover:opacity-100
+          `}
+        >
+          &lt;div className="flex justify-end px-4 pt-2">
+            {status === 'ongoing' &amp;&amp; (
+              &lt;div
+                className={`flex items-center gap-2 ${
+                  connectionStatus === 'connected'
+                    ? 'text-red-500'
+                    : 'text-gray-400'
+                }`}
+              >
+                &lt;span
+                  className={`w-3 h-3 rounded-full ${
+                    connectionStatus === 'connected'
+                      ? 'bg-red-500 animate-pulse'
+                      : 'bg-gray-400'
+                  }`}
+                >&lt;/span>
+                &lt;span className="uppercase text-xs font-semibold tracking-widest">
+                  {connectionStatus === 'connected'
+                    ? 'LIVE'
+                    : 'CONNECTING'}
+                &lt;/span>
+              &lt;/div>
+            )}
+          &lt;/div>
+
+          {!isPlaying &amp;&amp; (
+            &lt;div className="absolute inset-0 flex items-center justify-center pointer-events-auto">
+              &lt;button
+                className="bg-black/60 rounded-full p-6 shadow-lg hover:bg-black/80 transition"
+                onClick={togglePlay}
+              >
+                &lt;Play className="w-8 h-8 text-white" />
+              &lt;/button>
+            &lt;/div>
+          )}
+
+          {controls &amp;&amp; (
+            &lt;div className="w-full px-4 pb-3 pointer-events-auto">
+              &lt;div className="h-1 w-full bg-gray-700 rounded mb-2 overflow-hidden">
+                &lt;div
+                  className="h-full bg-blue-600 transition-all duration-300"
+                  style={{ width: '100%' }}
+                />
+              &lt;/div>
+              &lt;div className="flex items-center gap-4">
+                &lt;button
+                  className="text-white hover:text-blue-400 transition"
+                  onClick={togglePlay}
+                >
+                  {isPlaying ? &lt;Pause /> : &lt;Play />}
+                &lt;/button>
+                &lt;button
+                  className="text-white hover:text-blue-400&lt;/svg> transition"
+                  onClick={toggleMute}
+                >
+                  {isMuted ? &lt;VolumeOff /> : &lt;Volume2 />}
+                &lt;/button>
+                &lt;span className="text-xs text-gray-300">
+                  {connectionStatus === 'connected'
+                    ? 'Stream Connected'
+                    : 'Connecting...'}
+                &lt;/span>
+                &lt;button
+                  className="ml-auto text-white ho&lt;/svg>ver:text-blue-400 transition"
+                  onClick={toggleFullScreen}
+                >
+                  {isFullScreen ? &lt;Shrink /> : &lt;Maximize />}
+                &lt;/button>
+              &lt;/div>
+            &lt;/div>
+          )}
+        &lt;/div>
+      &lt;/div>
+    &lt;/>
+  );
+};
+
+/**
+ * PropTypes for the StreamReader component
+ *
+ * @type {Object}
+ * @property {string} authToken - Authentication token for WebSocket connection (required)
+ * @property {boolean} [controls] - Whether to show video controls
+ * @property {string} [status] - Current stream status ('ongoing', etc.)
+ */
+StreamReader.propTypes = {
+  authToken: PropTypes.string.isRequired,
+  controls: PropTypes.bool,
+  status: PropTypes.string,
+};
+
+export { StreamReader };
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-App.html">App</a></li></ul><h3>Global</h3><ul><li><a href="global.html#About">About</a></li><li><a href="global.html#AccountDisabledModal">AccountDisabledModal</a></li><li><a href="global.html#AdminDashboardHome">AdminDashboardHome</a></li><li><a href="global.html#BASE_URL">BASE_URL</a></li><li><a href="global.html#BulkActions">BulkActions</a></li><li><a href="global.html#ClassManagementTutorial">ClassManagementTutorial</a></li><li><a href="global.html#ClasseCards">ClasseCards</a></li><li><a href="global.html#ClasseCreationModal">ClasseCreationModal</a></li><li><a href="global.html#ClasseManagement">ClasseManagement</a></li><li><a href="global.html#ClasseTable">ClasseTable</a></li><li><a href="global.html#Contact">Contact</a></li><li><a href="global.html#ContentCard">ContentCard</a></li><li><a href="global.html#CourseReader">CourseReader</a></li><li><a href="global.html#CourseReaderTutorial">CourseReaderTutorial</a></li><li><a href="global.html#Courses">Courses</a></li><li><a href="global.html#CoursesLibraryTutorial">CoursesLibraryTutorial</a></li><li><a href="global.html#Dashboard">Dashboard</a></li><li><a href="global.html#DashboardTutorial">DashboardTutorial</a></li><li><a href="global.html#DeleteDocument">DeleteDocument</a></li><li><a href="global.html#DeleteVideo">DeleteVideo</a></li><li><a href="global.html#EleveDashboardHome">EleveDashboardHome</a></li><li><a href="global.html#ErrorMessage">ErrorMessage</a></li><li><a href="global.html#FilterDropdown">FilterDropdown</a></li><li><a href="global.html#FirstLogin">FirstLogin</a></li><li><a href="global.html#Footer">Footer</a></li><li><a href="global.html#Forum">Forum</a></li><li><a href="global.html#GetAll_DataStructure">GetAll_DataStructure</a></li><li><a href="global.html#GetAll_Document">GetAll_Document</a></li><li><a href="global.html#Get_Document_Information">Get_Document_Information</a></li><li><a href="global.html#Get_Video_Information">Get_Video_Information</a></li><li><a href="global.html#Get_special_Document">Get_special_Document</a></li><li><a href="global.html#Get_special_Video">Get_special_Video</a></li><li><a href="global.html#Home">Home</a></li><li><a href="global.html#INACTIVITY_THRESHOLD">INACTIVITY_THRESHOLD</a></li><li><a href="global.html#LegalNotice">LegalNotice</a></li><li><a href="global.html#LiveNotFound">LiveNotFound</a></li><li><a href="global.html#LiveViewer">LiveViewer</a></li><li><a href="global.html#LoadCanvasTemplate">LoadCanvasTemplate</a></li><li><a href="global.html#LoadingComponent">LoadingComponent</a></li><li><a href="global.html#LoadingSpinner">LoadingSpinner</a></li><li><a href="global.html#Logout">Logout</a></li><li><a href="global.html#Mailbox">Mailbox</a></li><li><a href="global.html#MaintenanceBanner">MaintenanceBanner</a></li><li><a href="global.html#MessageDetailSkeleton">MessageDetailSkeleton</a></li><li><a href="global.html#MessageSkeleton">MessageSkeleton</a></li><li><a href="global.html#NavigationBar">NavigationBar</a></li><li><a href="global.html#PictureModal">PictureModal</a></li><li><a href="global.html#PrivacyPolicy">PrivacyPolicy</a></li><li><a href="global.html#PrivacyTab">PrivacyTab</a></li><li><a href="global.html#ProfilePhotoSelector">ProfilePhotoSelector</a></li><li><a href="global.html#PublicNavbar">PublicNavbar</a></li><li><a href="global.html#SearchBar">SearchBar</a></li><li><a href="global.html#SearchUser">SearchUser</a></li><li><a href="global.html#SecureDocumentViewer">SecureDocumentViewer</a></li><li><a href="global.html#SecureVideoPlayer">SecureVideoPlayer</a></li><li><a href="global.html#SecurityTab">SecurityTab</a></li><li><a href="global.html#SendDocument">SendDocument</a></li><li><a href="global.html#SendVideo">SendVideo</a></li><li><a href="global.html#Settings">Settings</a></li><li><a href="global.html#Sign">Sign</a></li><li><a href="global.html#Spinner">Spinner</a></li><li><a href="global.html#StreamReader">StreamReader</a></li><li><a href="global.html#TEN_MINUTES">TEN_MINUTES</a></li><li><a href="global.html#TermsOfUse">TermsOfUse</a></li><li><a href="global.html#ToggleView">ToggleView</a></li><li><a href="global.html#Tutorial">Tutorial</a></li><li><a href="global.html#TutorialContext">TutorialContext</a></li><li><a href="global.html#TutorialProvider">TutorialProvider</a></li><li><a href="global.html#TwoFASetupModal">TwoFASetupModal</a></li><li><a href="global.html#UpdateDocument">UpdateDocument</a></li><li><a href="global.html#UserManagementTutorial">UserManagementTutorial</a></li><li><a href="global.html#WSS_BASE_URL">WSS_BASE_URL</a></li><li><a href="global.html#activateUser">activateUser</a></li><li><a href="global.html#addComment">addComment</a></li><li><a href="global.html#addStudentToClass">addStudentToClass</a></li><li><a href="global.html#allDigitsFilled">allDigitsFilled</a></li><li><a href="global.html#api">api</a></li><li><a href="global.html#authToken">authToken</a></li><li><a href="global.html#authenticatedButtons">authenticatedButtons</a></li><li><a href="global.html#baseURL">baseURL</a></li><li><a href="global.html#blockLive">blockLive</a></li><li><a href="global.html#bulkDelete">bulkDelete</a></li><li><a href="global.html#changePassword">changePassword</a></li><li><a href="global.html#check2FAStatus">check2FAStatus</a></li><li><a href="global.html#checkRegisterCode">checkRegisterCode</a></li><li><a href="global.html#createClass">createClass</a></li><li><a href="global.html#createCourse">createCourse</a></li><li><a href="global.html#createLive">createLive</a></li><li><a href="global.html#createThread">createThread</a></li><li><a href="global.html#createUser">createUser</a></li><li><a href="global.html#deactivateUser">deactivateUser</a></li><li><a href="global.html#deleteAvatar">deleteAvatar</a></li><li><a href="global.html#deleteClass">deleteClass</a></li><li><a href="global.html#deleteClasseHandler">deleteClasseHandler</a></li><li><a href="global.html#deleteComment">deleteComment</a></li><li><a href="global.html#deleteContactMessage">deleteContactMessage</a></li><li><a href="global.html#deleteCourse">deleteCourse</a></li><li><a href="global.html#deleteInviteCode">deleteInviteCode</a></li><li><a href="global.html#deleteLive">deleteLive</a></li><li><a href="global.html#deleteMessage">deleteMessage</a></li><li><a href="global.html#deleteThread">deleteThread</a></li><li><a href="global.html#deleteUser">deleteUser</a></li><li><a href="global.html#disable2FA">disable2FA</a></li><li><a href="global.html#disapproveCourse">disapproveCourse</a></li><li><a href="global.html#disapproveLive">disapproveLive</a></li><li><a href="global.html#downloadAttachment">downloadAttachment</a></li><li><a href="global.html#endLive">endLive</a></li><li><a href="global.html#errorMessages">errorMessages</a></li><li><a href="global.html#fetchClasses">fetchClasses</a></li><li><a href="global.html#fetchCourseData">fetchCourseData</a></li><li><a href="global.html#fetchData">fetchData</a></li><li><a href="global.html#fetchUsers">fetchUsers</a></li><li><a href="global.html#firstLogin">firstLogin</a></li><li><a href="global.html#flagContent">flagContent</a></li><li><a href="global.html#forgotPassword">forgotPassword</a></li><li><a href="global.html#generateInviteCode">generateInviteCode</a></li><li><a href="global.html#getAllClasses">getAllClasses</a></li><li><a href="global.html#getAllContactMessages">getAllContactMessages</a></li><li><a href="global.html#getAllCourses">getAllCourses</a></li><li><a href="global.html#getAllInviteCodes">getAllInviteCodes</a></li><li><a href="global.html#getAllLives">getAllLives</a></li><li><a href="global.html#getAllUsers">getAllUsers</a></li><li><a href="global.html#getAvailableRecipients">getAvailableRecipients</a></li><li><a href="global.html#getAvatar">getAvatar</a></li><li><a href="global.html#getClassById">getClassById</a></li><li><a href="global.html#getClassStudents">getClassStudents</a></li><li><a href="global.html#getContactMessage">getContactMessage</a></li><li><a href="global.html#getCourseById">getCourseById</a></li><li><a href="global.html#getCourseDetails">getCourseDetails</a></li><li><a href="global.html#getCourseProgress">getCourseProgress</a></li><li><a href="global.html#getCoursesByClass">getCoursesByClass</a></li><li><a href="global.html#getFlags">getFlags</a></li><li><a href="global.html#getInboxMessages">getInboxMessages</a></li><li><a href="global.html#getInitialViewMode">getInitialViewMode</a></li><li><a href="global.html#getLiveById">getLiveById</a></li><li><a href="global.html#getLiveMessages">getLiveMessages</a></li><li><a href="global.html#getLiveStreamUrl">getLiveStreamUrl</a></li><li><a href="global.html#getLivesByClass">getLivesByClass</a></li><li><a href="global.html#getMessage">getMessage</a></li><li><a href="global.html#getNotificationPreferences">getNotificationPreferences</a></li><li><a href="global.html#getSentMessages">getSentMessages</a></li><li><a href="global.html#getStudentProgress">getStudentProgress</a></li><li><a href="global.html#getThreadById">getThreadById</a></li><li><a href="global.html#getThreads">getThreads</a></li><li><a href="global.html#getTrashMessages">getTrashMessages</a></li><li><a href="global.html#getUserById">getUserById</a></li><li><a href="global.html#getUserProfile">getUserProfile</a></li><li><a href="global.html#getUserWarnings">getUserWarnings</a></li><li><a href="global.html#getVideoDetails">getVideoDetails</a></li><li><a href="global.html#getVideoStreamUrl">getVideoStreamUrl</a></li><li><a href="global.html#handle2FASubmit">handle2FASubmit</a></li><li><a href="global.html#handleBackdropClick">handleBackdropClick</a></li><li><a href="global.html#handleBlockedMouseLeave">handleBlockedMouseLeave</a></li><li><a href="global.html#handleBlockedMouseMove">handleBlockedMouseMove</a></li><li><a href="global.html#handleClose">handleClose</a></li><li><a href="global.html#handleCompleteCourse">handleCompleteCourse</a></li><li><a href="global.html#handleCourseDisapproval">handleCourseDisapproval</a></li><li><a href="global.html#handleDeleteCourse">handleDeleteCourse</a></li><li><a href="global.html#handleDigitChange">handleDigitChange</a></li><li><a href="global.html#handleDigitKeyDown">handleDigitKeyDown</a></li><li><a href="global.html#handleDigitPaste">handleDigitPaste</a></li><li><a href="global.html#handleDownloadDocument">handleDownloadDocument</a></li><li><a href="global.html#handleError">handleError</a></li><li><a href="global.html#handleInputChange">handleInputChange</a></li><li><a href="global.html#handleLogout">handleLogout</a></li><li><a href="global.html#handleMenuToggle">handleMenuToggle</a></li><li><a href="global.html#handleModAction">handleModAction</a></li><li><a href="global.html#handleSubmit">handleSubmit</a></li><li><a href="global.html#handleSubmitClasse">handleSubmitClasse</a></li><li><a href="global.html#handleTabChange">handleTabChange</a></li><li><a href="global.html#handleUnblockCourse">handleUnblockCourse</a></li><li><a href="global.html#isAuthenticated">isAuthenticated</a></li><li><a href="global.html#loadCaptchaEngine">loadCaptchaEngine</a></li><li><a href="global.html#logViewEngagement">logViewEngagement</a></li><li><a href="global.html#login">login</a></li><li><a href="global.html#markAsRead">markAsRead</a></li><li><a href="global.html#markAsUnread">markAsUnread</a></li><li><a href="global.html#markContactMessageAsProcessed">markContactMessageAsProcessed</a></li><li><a href="global.html#markCourseAsCompleted">markCourseAsCompleted</a></li><li><a href="global.html#markCourseAsInProgress">markCourseAsInProgress</a></li><li><a href="global.html#mountApp">mountApp</a></li><li><a href="global.html#moveToTrash">moveToTrash</a></li><li><a href="global.html#navItems">navItems</a></li><li><a href="global.html#navigate">navigate</a></li><li><a href="global.html#onSamplesDecoded">onSamplesDecoded</a></li><li><a href="global.html#refreshTwoFASetup">refreshTwoFASetup</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#removeStudentFromClass">removeStudentFromClass</a></li><li><a href="global.html#renderContent">renderContent</a></li><li><a href="global.html#resolveFlag">resolveFlag</a></li><li><a href="global.html#restoreFromTrash">restoreFromTrash</a></li><li><a href="global.html#retrogradeUserRole">retrogradeUserRole</a></li><li><a href="global.html#root">root</a></li><li><a href="global.html#sendContactMessage">sendContactMessage</a></li><li><a href="global.html#sendLiveMessage">sendLiveMessage</a></li><li><a href="global.html#sendMessage">sendMessage</a></li><li><a href="global.html#sendWarning">sendWarning</a></li><li><a href="global.html#setMainTeacher">setMainTeacher</a></li><li><a href="global.html#setup2FA">setup2FA</a></li><li><a href="global.html#signButtons">signButtons</a></li><li><a href="global.html#startLive">startLive</a></li><li><a href="global.html#toggleAll">toggleAll</a></li><li><a href="global.html#toggleClasse">toggleClasse</a></li><li><a href="global.html#toggleMember">toggleMember</a></li><li><a href="global.html#toggleMobileMenu">toggleMobileMenu</a></li><li><a href="global.html#unblockCourse">unblockCourse</a></li><li><a href="global.html#unblockLive">unblockLive</a></li><li><a href="global.html#updateClass">updateClass</a></li><li><a href="global.html#updateComment">updateComment</a></li><li><a href="global.html#updateCourse">updateCourse</a></li><li><a href="global.html#updateLive">updateLive</a></li><li><a href="global.html#updateNotificationPreferences">updateNotificationPreferences</a></li><li><a href="global.html#updateThread">updateThread</a></li><li><a href="global.html#updateUser">updateUser</a></li><li><a href="global.html#updateUserProfile">updateUserProfile</a></li><li><a href="global.html#updateUserProfileHandler">updateUserProfileHandler</a></li><li><a href="global.html#updateVideo">updateVideo</a></li><li><a href="global.html#upgradeUserRole">upgradeUserRole</a></li><li><a href="global.html#uploadAvatar">uploadAvatar</a></li><li><a href="global.html#uploadIllustrationAvatar">uploadIllustrationAvatar</a></li><li><a href="global.html#useEffect">useEffect</a></li><li><a href="global.html#useTutorial">useTutorial</a></li><li><a href="global.html#validateForm">validateForm</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#verify2FASetup">verify2FASetup</a></li><li><a href="global.html#verifyTwoFA">verifyTwoFA</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Sat Jun 07 2025 14:32:34 GMT+0200 (Central European Summer Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

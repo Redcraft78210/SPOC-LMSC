@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: models/Thread.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: models/Thread.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @fileoverview Modèle Sequelize pour la gestion des threads de discussion dans l'application SPOC-LMSC.
+ * Ce module définit la structure de données pour les threads qui servent de sujets de discussion
+ * dans les forums et espaces de communication de la plateforme éducative.
+ */
+
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
+
+/**
+ * Modèle Sequelize représentant un thread de discussion dans le système de forum.
+ * Les threads sont créés par les utilisateurs pour initier des discussions sur des sujets
+ * spécifiques et peuvent recevoir des commentaires d'autres utilisateurs.
+ * 
+ * @class Thread
+ * @extends {Sequelize.Model}
+ * 
+ * @property {string} id - Identifiant unique UUID du thread (clé primaire, généré automatiquement)
+ * @property {string} title - Titre du thread de discussion (obligatoire)
+ * @property {string} content - Contenu principal du thread (obligatoire, type TEXT pour les longs textes)
+ * @property {string} authorId - UUID de l'auteur du thread (obligatoire, référence vers la table users)
+ * @property {Date} createdAt - Date et heure de création du thread (par défaut: maintenant)
+ * 
+ * @example
+ * // Création d'un nouveau thread de discussion
+ * const nouveauThread = await Thread.create({
+ *   title: 'Question sur le cours de JavaScript',
+ *   content: 'Je ne comprends pas le concept des closures, pourriez-vous m\'expliquer ?',
+ *   authorId: '550e8400-e29b-41d4-a716-446655440000'
+ * });
+ * 
+ * @example
+ * // Recherche de threads par auteur
+ * const threadsUtilisateur = await Thread.findAll({
+ *   where: { authorId: '550e8400-e29b-41d4-a716-446655440000' },
+ *   order: [['createdAt', 'DESC']]
+ * });
+ * 
+ * @example
+ * // Recherche de threads par titre
+ * const threadsJavaScript = await Thread.findAll({
+ *   where: { title: { [Op.like]: '%JavaScript%' } }
+ * });
+ */
+const Thread = sequelize.define('Thread', {
+    id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true,
+    },
+    title: {
+        type: DataTypes.STRING,
+        allowNull: false,
+    },
+    content: {
+        type: DataTypes.TEXT,
+        allowNull: false,
+    },
+    authorId: {
+        type: DataTypes.UUID,
+        allowNull: false,
+    },
+    createdAt: {
+        type: DataTypes.DATE,
+        defaultValue: DataTypes.NOW,
+    },
+}, {
+    tableName: 'threads',
+    timestamps: false,
+});
+
+module.exports = Thread;
+
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-chatController.html">chatController</a></li><li><a href="module-chatRoutes.html">chatRoutes</a></li><li><a href="module-controllers_authController.html">controllers/authController</a></li><li><a href="module-controllers_avatarController.html">controllers/avatarController</a></li><li><a href="module-controllers_classController.html">controllers/classController</a></li><li><a href="module-controllers_messageController.html">controllers/messageController</a></li><li><a href="module-controllers_moderationController.html">controllers/moderationController</a></li><li><a href="module-controllers_progressTracking.html">controllers/progressTracking</a></li><li><a href="module-controllers_userController.html">controllers/userController</a></li><li><a href="module-documentController.html">documentController</a></li><li><a href="module-documentRoutes.html">documentRoutes</a></li><li><a href="module-forumController.html">forumController</a></li><li><a href="module-forumRoutes.html">forumRoutes</a></li><li><a href="module-middlewares_userValidation.html">middlewares/userValidation</a></li><li><a href="module-recordingController.html">recordingController</a></li><li><a href="module-recordingRoutes.html">recordingRoutes</a></li><li><a href="module-routes_authRoutes.html">routes/authRoutes</a></li><li><a href="module-routes_avatarRoutes.html">routes/avatarRoutes</a></li><li><a href="module-routes_classRoutes.html">routes/classRoutes</a></li><li><a href="module-routes_messageRoutes.html">routes/messageRoutes</a></li><li><a href="module-routes_moderationRoutes.html">routes/moderationRoutes</a></li><li><a href="module-routes_progressTracking.html">routes/progressTracking</a></li><li><a href="module-routes_userRoutes.html">routes/userRoutes</a></li><li><a href="module-socketManager.html">socketManager</a></li><li><a href="module-videoController.html">videoController</a></li><li><a href="module-videoRoutes.html">videoRoutes</a></li><li><a href="module-virusScanService.html">virusScanService</a></li><li><a href="module-%25257BObject%25257D.html">{Object}</a></li></ul><h3>Classes</h3><ul><li><a href="global.html#Admin">Admin</a></li><li><a href="global.html#Attachment">Attachment</a></li><li><a href="global.html#ChatMessage">ChatMessage</a></li><li><a href="global.html#Classe">Classe</a></li><li><a href="global.html#Code">Code</a></li><li><a href="global.html#Comment">Comment</a></li><li><a href="global.html#Course">Course</a></li><li><a href="global.html#CourseDocument">CourseDocument</a></li><li><a href="global.html#CourseProgress">CourseProgress</a></li><li><a href="global.html#CourseVideo">CourseVideo</a></li><li><a href="global.html#Document">Document</a></li><li><a href="global.html#Flag">Flag</a></li><li><a href="global.html#LiveAttendance">LiveAttendance</a></li><li><a href="global.html#Lives">Lives</a></li><li><a href="global.html#Message">Message</a></li><li><a href="global.html#Recipient">Recipient</a></li><li><a href="Stats.html">Stats</a></li><li><a href="global.html#Student">Student</a></li><li><a href="global.html#StudentClass">StudentClass</a></li><li><a href="global.html#Teacher">Teacher</a></li><li><a href="TeacherClass.html">TeacherClass</a></li><li><a href="global.html#Thread">Thread</a></li><li><a href="global.html#TrashMessage">TrashMessage</a></li><li><a href="global.html#User">User</a></li><li><a href="global.html#UserAvatar">UserAvatar</a></li><li><a href="global.html#Video">Video</a></li><li><a href="global.html#Warning">Warning</a></li><li><a href="module-models.ClassLives.html">ClassLives</a></li></ul><h3>Global</h3><ul><li><a href="global.html#ClassLives">ClassLives</a></li><li><a href="global.html#DEFAULTS">DEFAULTS</a></li><li><a href="global.html#MessageId">MessageId</a></li><li><a href="global.html#addLive">addLive</a></li><li><a href="global.html#allowedOrigins">allowedOrigins</a></li><li><a href="global.html#authMiddleware">authMiddleware</a></li><li><a href="global.html#blockCourse">blockCourse</a></li><li><a href="global.html#blockLive">blockLive</a></li><li><a href="global.html#buildAndRun">buildAndRun</a></li><li><a href="global.html#class_id">class_id</a></li><li><a href="global.html#content">content</a></li><li><a href="global.html#createCode">createCode</a></li><li><a href="global.html#createCourse">createCourse</a></li><li><a href="global.html#createQuarantineContainer">createQuarantineContainer</a></li><li><a href="global.html#createdAt">createdAt</a></li><li><a href="global.html#deleteCode">deleteCode</a></li><li><a href="global.html#deleteCourse">deleteCourse</a></li><li><a href="global.html#deleteLive">deleteLive</a></li><li><a href="global.html#description">description</a></li><li><a href="global.html#disapproveLive">disapproveLive</a></li><li><a href="global.html#editLive">editLive</a></li><li><a href="global.html#email">email</a></li><li><a href="global.html#endLive">endLive</a></li><li><a href="global.html#fileSize">fileSize</a></li><li><a href="global.html#filename">filename</a></li><li><a href="global.html#firstLogin">firstLogin</a></li><li><a href="global.html#generateRandomCode">generateRandomCode</a></li><li><a href="global.html#getAllCodes">getAllCodes</a></li><li><a href="global.html#getAllCourses">getAllCourses</a></li><li><a href="global.html#getAllLives">getAllLives</a></li><li><a href="global.html#getCourse">getCourse</a></li><li><a href="global.html#getLive">getLive</a></li><li><a href="global.html#getLiveByClass">getLiveByClass</a></li><li><a href="global.html#getMainCourse">getMainCourse</a></li><li><a href="global.html#httpServer">httpServer</a></li><li><a href="global.html#id">id</a></li><li><a href="global.html#imageExists">imageExists</a></li><li><a href="global.html#imageToByteArray">imageToByteArray</a></li><li><a href="global.html#live_id">live_id</a></li><li><a href="global.html#main_teacher_id">main_teacher_id</a></li><li><a href="global.html#mimeType">mimeType</a></li><li><a href="global.html#name">name</a></li><li><a href="global.html#password">password</a></li><li><a href="global.html#runCommand">runCommand</a></li><li><a href="global.html#scanStatus">scanStatus</a></li><li><a href="global.html#sequelize">sequelize</a></li><li><a href="global.html#setupStreaming">setupStreaming</a></li><li><a href="global.html#startLive">startLive</a></li><li><a href="global.html#statut">statut</a></li><li><a href="global.html#surname">surname</a></li><li><a href="global.html#twoFAEnabled">twoFAEnabled</a></li><li><a href="global.html#twoFASecret">twoFASecret</a></li><li><a href="global.html#unblockCourse">unblockCourse</a></li><li><a href="global.html#unblockLive">unblockLive</a></li><li><a href="global.html#updateCourse">updateCourse</a></li><li><a href="global.html#updateVideoCoverImages">updateVideoCoverImages</a></li><li><a href="global.html#updatedAt">updatedAt</a></li><li><a href="global.html#user_id">user_id</a></li><li><a href="global.html#username">username</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Sat Jun 07 2025 14:03:57 GMT+0200 (Central European Summer Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

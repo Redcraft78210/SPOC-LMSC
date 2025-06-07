@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: controllers/userController.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: controllers/userController.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @fileoverview Contrôleur pour la gestion des utilisateurs
+ * Ce module contient des fonctions pour gérer les profils utilisateurs, les permissions,
+ * l'authentification à deux facteurs, et les opérations administratives sur les comptes.
+ * @module controllers/userController
+ * @requires models
+ * @requires bcrypt
+ * @requires zxcvbn
+ */
+const { User, sequelize } = require('../models');
+const bcrypt = require('bcrypt');
+const zxcvbn = require('zxcvbn');
+
+/**
+ * Récupère le profil de l'utilisateur actuellement authentifié
+ * @async
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.user - L'utilisateur authentifié
+ * @param {number} req.user.id - L'ID de l'utilisateur authentifié
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} Données du profil utilisateur
+ * @throws {Error} Erreur 404 si l'utilisateur n'est pas trouvé
+ * @throws {Error} Erreur 500 en cas d'erreur serveur
+ */
+const getProfile = async (req, res) => {
+    try {
+        const user = await User.findByPk(req.user.id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        return res.status(200).json({
+            id: user.id,
+            name: user.name,
+            surname: user.surname,
+            username: user.username,
+            email: user.email,
+            twoFAEnabled: user.twoFAEnabled
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+
+/**
+ * Met à jour le profil de l'utilisateur authentifié
+ * @async
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.user - L'utilisateur authentifié
+ * @param {number} req.user.id - L'ID de l'utilisateur authentifié
+ * @param {Object} req.body - Les données à mettre à jour
+ * @param {string} [req.body.name] - Le nouveau prénom
+ * @param {string} [req.body.surname] - Le nouveau nom de famille
+ * @param {string} [req.body.username] - Le nouveau nom d'utilisateur
+ * @param {string} [req.body.email] - La nouvelle adresse email
+ * @param {string} [req.body.password] - Le nouveau mot de passe
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} Message de confirmation et données mises à jour
+ * @throws {Error} Erreur 404 si l'utilisateur n'est pas trouvé
+ * @throws {Error} Erreur 500 en cas d'erreur serveur
+ */
+const updateProfile = async (req, res) => {
+    const { name, surname, username, email, password } = req.body;
+
+    try {
+        const user = await User.findByPk(req.user.id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        user.name = name || user.name;
+        user.surname = surname || user.surname;
+        user.username = username || user.username;
+        user.email = email || user.email;
+
+        if (password) {
+            user.password = await bcrypt.hash(password, 10);
+        }
+
+        await user.save();
+
+        return res.status(200).json({
+            message: 'Profile updated successfully',
+            user: {
+                id: user.id,
+                name: user.name,
+                surname: user.surname,
+                username: user.username,
+                email: user.email,
+            }
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+/**
+ * Change le statut d'un utilisateur entre 'actif' et 'inactif'
+ * @async
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.user - L'utilisateur authentifié
+ * @param {number} req.user.id - L'ID de l'utilisateur authentifié
+ * @param {Object} req.params - Les paramètres de la requête
+ * @param {number} req.params.id - L'ID de l'utilisateur dont le statut doit être modifié
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} Message de confirmation
+ * @throws {Error} Erreur 403 si l'utilisateur tente de modifier son propre statut
+ * @throws {Error} Erreur 404 si l'utilisateur cible n'est pas trouvé
+ * @throws {Error} Erreur 500 en cas d'erreur serveur
+ */
+const changeStatus = async (req, res) => {
+    try {
+        const user = await User.findByPk(req.params.id);
+        const newStatus = user.statut === 'actif' ? 'inactif' : 'actif';
+
+        if (req.user.id === user.id) {
+            return res.status(403).json({ message: 'You cannot change your own status' });
+        }
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        user.statut = newStatus;
+        await user.save();
+
+        return res.status(200).json({ message: 'Status changed successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+/**
+ * Récupère le statut de l'authentification à deux facteurs pour l'utilisateur authentifié
+ * @async
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.user - L'utilisateur authentifié
+ * @param {number} req.user.id - L'ID de l'utilisateur authentifié
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} Statut d'activation de la 2FA
+ * @throws {Error} Erreur 404 si l'utilisateur n'est pas trouvé
+ * @throws {Error} Erreur 500 en cas d'erreur serveur
+ */
+const get2FAStatus = async (req, res) => {
+    try {
+        const userId = req.user.id
+        const user = await User.findByPk(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        return res.status(200).json({ is2FAEnabled: user.twoFAEnabled });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+/**
+ * Désactive l'authentification à deux facteurs pour l'utilisateur authentifié
+ * @async
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.user - L'utilisateur authentifié
+ * @param {number} req.user.id - L'ID de l'utilisateur authentifié
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} Message de confirmation
+ * @throws {Error} Erreur 404 si l'utilisateur n'est pas trouvé
+ * @throws {Error} Erreur 500 en cas d'erreur serveur
+ */
+const disable2FA = async (req, res) => {
+    try {
+        const userId = req.user.id
+        const user = await User.findByPk(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        if (user.twoFAEnabled) {
+            user.twoFAEnabled = false;
+            user.twoFASecret = null;
+        }
+        await user.save();
+
+        return res.status(200).json({ message: 'Status changed successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+/**
+ * Change le mot de passe de l'utilisateur authentifié après validation
+ * @async
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.user - L'utilisateur authentifié
+ * @param {number} req.user.id - L'ID de l'utilisateur authentifié
+ * @param {Object} req.body - Les données de la requête
+ * @param {string} req.body.oldPassword - L'ancien mot de passe
+ * @param {string} req.body.newPassword - Le nouveau mot de passe
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} Message de confirmation
+ * @throws {Error} Erreur 400 si l'ancien mot de passe est incorrect ou si le nouveau est trop faible
+ * @throws {Error} Erreur 404 si l'utilisateur n'est pas trouvé
+ * @throws {Error} Erreur 500 en cas d'erreur serveur
+ */
+const changePassword = async (req, res) => {
+    const { oldPassword, newPassword } = req.body;
+
+    try {
+        const user = await User.findByPk(req.user.id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const isMatch = await bcrypt.compare(oldPassword, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ message: 'Old password is incorrect' });
+        }
+
+
+        const passwordStrength = zxcvbn(newPassword);
+        if (passwordStrength.score &lt; 3) {
+            return res.status(400).json({
+                message: 'Password is too weak',
+                feedback: passwordStrength.feedback.suggestions,
+                score: passwordStrength.score
+            });
+        }
+
+        user.password = await bcrypt.hash(newPassword, 10);
+        await user.save();
+
+        return res.status(200).json({ message: 'Password changed successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+/**
+ * Supprime le profil de l'utilisateur authentifié
+ * @async
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.user - L'utilisateur authentifié
+ * @param {number} req.user.id - L'ID de l'utilisateur authentifié
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} Message de confirmation
+ * @throws {Error} Erreur 404 si l'utilisateur n'est pas trouvé
+ * @throws {Error} Erreur 500 en cas d'erreur serveur
+ */
+const deleteProfile = async (req, res) => {
+    try {
+        const user = await User.findByPk(req.user.id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        await user.destroy();
+        return res.status(200).json({ message: 'Profile deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+/**
+ * Récupère la liste de tous les utilisateurs avec filtrage optionnel par rôle
+ * @async
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.user - L'utilisateur authentifié
+ * @param {string} req.user.role - Le rôle de l'utilisateur authentifié
+ * @param {Object} req.query - Les paramètres de requête
+ * @param {string} [req.query.role] - Filtre par rôle
+ * @param {boolean} [req.query.mailboxrecipients] - Format spécial pour les destinataires de messages
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Array} Liste des utilisateurs filtrés
+ * @throws {Error} Erreur 404 si aucun utilisateur n'est trouvé
+ * @throws {Error} Erreur 500 en cas d'erreur serveur
+ */
+const getAllUsers = async (req, res) => {
+    const { role, mailboxrecipients } = req.query;
+    const userRole = req.user.role;
+    console.log(userRole);
+
+    try {
+
+
+        let where = {};
+        if (role) {
+            where.role = role;
+        }
+
+
+        if (userRole === 'Etudiant') {
+            where.role = { [sequelize.Op.ne]: 'Administrateur' }; // Exclure 'Administrateur'
+        }
+
+        const users = await User.findAll({ where });
+
+
+        if (!users.length) {
+            return res.status(404).json({ message: 'No users found' });
+        }
+
+        const result = users.map(({ id, name, surname, email, statut, role }) => {
+
+            const output = { id, surname, role };
+
+
+            if (!mailboxrecipients) {
+                output.name = name;
+                output.email = email;
+                output.active = statut;
+            } else {
+                output.name = role === "Professeur" ? "Professeur" : name;
+            }
+
+            return output;
+        });
+
+        return res.status(200).json(result);
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+/**
+ * Récupère un utilisateur par son ID
+ * @async
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.params - Les paramètres de la requête
+ * @param {number} req.params.id - L'ID de l'utilisateur à récupérer
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} Données de l'utilisateur
+ * @throws {Error} Erreur 404 si l'utilisateur n'est pas trouvé
+ * @throws {Error} Erreur 500 en cas d'erreur serveur
+ */
+const getUserById = async (req, res) => {
+    try {
+        const user = await User.findByPk(req.params.id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        return res.status(200).json(user);
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+/**
+ * Met à jour un utilisateur par son ID
+ * @async
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.params - Les paramètres de la requête
+ * @param {number} req.params.id - L'ID de l'utilisateur à mettre à jour
+ * @param {Object} req.body - Les données à mettre à jour
+ * @param {string} [req.body.name] - Le nouveau prénom
+ * @param {string} [req.body.surname] - Le nouveau nom de famille
+ * @param {string} [req.body.email] - La nouvelle adresse email
+ * @param {string} [req.body.currentPassword] - Le mot de passe actuel
+ * @param {string} [req.body.newPassword] - Le nouveau mot de passe
+ * @param {string} [req.body.role] - Le nouveau rôle
+ * @param {boolean} [req.body.isPasswordGeneratedByAdmin] - Indique si le mot de passe a été généré par un admin
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} Message de confirmation et données mises à jour
+ * @throws {Error} Erreur 400 si le mot de passe actuel est incorrect
+ * @throws {Error} Erreur 404 si l'utilisateur n'est pas trouvé
+ * @throws {Error} Erreur 500 en cas d'erreur serveur
+ */
+const updateUserById = async (req, res) => {
+    const { name, surname, email, currentPassword, newPassword, password, role, isPasswordGeneratedByAdmin } = req.body;
+
+    try {
+        const user = await User.findByPk(req.params.id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        user.name = name || user.name;
+        user.surname = surname || user.surname;
+        user.email = email || user.email;
+        user.role = role || user.role;
+
+        if (currentPassword) {
+            const isMatch = await bcrypt.compare(currentPassword, user.password);
+            if (!isMatch) {
+                return res.status(400).json({ message: 'Current password is incorrect' });
+            }
+            user.password = await bcrypt.hash(newPassword, 10);
+        } else if (newPassword) {
+            user.password = await bcrypt.hash(newPassword, 10);
+        }
+
+        if (isPasswordGeneratedByAdmin) {
+            user.firstLogin = true;
+        }
+
+        await user.save();
+
+        return res.status(200).json({
+            message: 'User updated successfully',
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+            }
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+/**
+ * Supprime un utilisateur par son ID
+ * @async
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.params - Les paramètres de la requête
+ * @param {number} req.params.id - L'ID de l'utilisateur à supprimer
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} Message de confirmation
+ * @throws {Error} Erreur 404 si l'utilisateur n'est pas trouvé
+ * @throws {Error} Erreur 500 en cas d'erreur serveur
+ */
+const deleteUserById = async (req, res) => {
+    try {
+        const user = await User.findByPk(req.params.id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        await user.destroy();
+        return res.status(200).json({ message: 'User deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+/**
+ * Rétrograde le rôle d'un utilisateur (Administrateur → Professeur → Etudiant)
+ * @async
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.params - Les paramètres de la requête
+ * @param {number} req.params.id - L'ID de l'utilisateur à rétrograder
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} Message de confirmation
+ * @throws {Error} Erreur 404 si l'utilisateur n'est pas trouvé
+ * @throws {Error} Erreur 500 en cas d'erreur serveur
+ */
+const retrogradeUser = async (req, res) => {
+    try {
+        const user = await User.findByPk(req.params.id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+
+        switch (user.role) {
+            case 'Administrateur':
+                user.role = 'Professeur';
+                break;
+            case 'Professeur':
+                user.role = 'Etudiant';
+                break;
+        }
+        await user.save();
+        return res.status(200).json({ message: 'User retrograded successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+/**
+ * Promeut le rôle d'un utilisateur (Etudiant → Professeur → Administrateur)
+ * @async
+ * @param {Object} req - L'objet requête Express
+ * @param {Object} req.params - Les paramètres de la requête
+ * @param {number} req.params.id - L'ID de l'utilisateur à promouvoir
+ * @param {Object} res - L'objet réponse Express
+ * @returns {Object} Message de confirmation
+ * @throws {Error} Erreur 404 si l'utilisateur n'est pas trouvé
+ * @throws {Error} Erreur 500 en cas d'erreur serveur
+ */
+const upgradeUser = async (req, res) => {
+    try {
+        const user = await User.findByPk(req.params.id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+
+        switch (user.role) {
+            case 'Etudiant':
+                user.role = 'Professeur';
+                break;
+            case 'Professeur':
+                user.role = 'Administrateur';
+                break;
+        }
+        await user.save();
+        return res.status(200).json({ message: 'User upgraded successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Server error' });
+    }
+};
+
+module.exports = {
+    getProfile,
+    updateProfile,
+    changePassword,
+    get2FAStatus,
+    disable2FA,
+    changeStatus,
+    deleteProfile,
+    getAllUsers,
+    getUserById,
+    updateUserById,
+    deleteUserById,
+    retrogradeUser,
+    upgradeUser
+};</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-chatController.html">chatController</a></li><li><a href="module-chatRoutes.html">chatRoutes</a></li><li><a href="module-controllers_authController.html">controllers/authController</a></li><li><a href="module-controllers_avatarController.html">controllers/avatarController</a></li><li><a href="module-controllers_classController.html">controllers/classController</a></li><li><a href="module-controllers_messageController.html">controllers/messageController</a></li><li><a href="module-controllers_moderationController.html">controllers/moderationController</a></li><li><a href="module-controllers_progressTracking.html">controllers/progressTracking</a></li><li><a href="module-controllers_userController.html">controllers/userController</a></li><li><a href="module-documentController.html">documentController</a></li><li><a href="module-documentRoutes.html">documentRoutes</a></li><li><a href="module-forumController.html">forumController</a></li><li><a href="module-forumRoutes.html">forumRoutes</a></li><li><a href="module-middlewares_userValidation.html">middlewares/userValidation</a></li><li><a href="module-recordingController.html">recordingController</a></li><li><a href="module-recordingRoutes.html">recordingRoutes</a></li><li><a href="module-routes_authRoutes.html">routes/authRoutes</a></li><li><a href="module-routes_avatarRoutes.html">routes/avatarRoutes</a></li><li><a href="module-routes_classRoutes.html">routes/classRoutes</a></li><li><a href="module-routes_messageRoutes.html">routes/messageRoutes</a></li><li><a href="module-routes_moderationRoutes.html">routes/moderationRoutes</a></li><li><a href="module-routes_progressTracking.html">routes/progressTracking</a></li><li><a href="module-routes_userRoutes.html">routes/userRoutes</a></li><li><a href="module-socketManager.html">socketManager</a></li><li><a href="module-videoController.html">videoController</a></li><li><a href="module-videoRoutes.html">videoRoutes</a></li><li><a href="module-virusScanService.html">virusScanService</a></li><li><a href="module-%25257BObject%25257D.html">{Object}</a></li></ul><h3>Classes</h3><ul><li><a href="global.html#Admin">Admin</a></li><li><a href="global.html#Attachment">Attachment</a></li><li><a href="global.html#ChatMessage">ChatMessage</a></li><li><a href="global.html#Classe">Classe</a></li><li><a href="global.html#Code">Code</a></li><li><a href="global.html#Comment">Comment</a></li><li><a href="global.html#Course">Course</a></li><li><a href="global.html#CourseDocument">CourseDocument</a></li><li><a href="global.html#CourseProgress">CourseProgress</a></li><li><a href="global.html#CourseVideo">CourseVideo</a></li><li><a href="global.html#Document">Document</a></li><li><a href="global.html#Flag">Flag</a></li><li><a href="global.html#LiveAttendance">LiveAttendance</a></li><li><a href="global.html#Lives">Lives</a></li><li><a href="global.html#Message">Message</a></li><li><a href="global.html#Recipient">Recipient</a></li><li><a href="Stats.html">Stats</a></li><li><a href="global.html#Student">Student</a></li><li><a href="global.html#StudentClass">StudentClass</a></li><li><a href="global.html#Teacher">Teacher</a></li><li><a href="TeacherClass.html">TeacherClass</a></li><li><a href="global.html#Thread">Thread</a></li><li><a href="global.html#TrashMessage">TrashMessage</a></li><li><a href="global.html#User">User</a></li><li><a href="global.html#UserAvatar">UserAvatar</a></li><li><a href="global.html#Video">Video</a></li><li><a href="global.html#Warning">Warning</a></li><li><a href="module-models.ClassLives.html">ClassLives</a></li></ul><h3>Global</h3><ul><li><a href="global.html#ClassLives">ClassLives</a></li><li><a href="global.html#DEFAULTS">DEFAULTS</a></li><li><a href="global.html#MessageId">MessageId</a></li><li><a href="global.html#addLive">addLive</a></li><li><a href="global.html#allowedOrigins">allowedOrigins</a></li><li><a href="global.html#authMiddleware">authMiddleware</a></li><li><a href="global.html#blockCourse">blockCourse</a></li><li><a href="global.html#blockLive">blockLive</a></li><li><a href="global.html#buildAndRun">buildAndRun</a></li><li><a href="global.html#class_id">class_id</a></li><li><a href="global.html#content">content</a></li><li><a href="global.html#createCode">createCode</a></li><li><a href="global.html#createCourse">createCourse</a></li><li><a href="global.html#createQuarantineContainer">createQuarantineContainer</a></li><li><a href="global.html#createdAt">createdAt</a></li><li><a href="global.html#deleteCode">deleteCode</a></li><li><a href="global.html#deleteCourse">deleteCourse</a></li><li><a href="global.html#deleteLive">deleteLive</a></li><li><a href="global.html#description">description</a></li><li><a href="global.html#disapproveLive">disapproveLive</a></li><li><a href="global.html#editLive">editLive</a></li><li><a href="global.html#email">email</a></li><li><a href="global.html#endLive">endLive</a></li><li><a href="global.html#fileSize">fileSize</a></li><li><a href="global.html#filename">filename</a></li><li><a href="global.html#firstLogin">firstLogin</a></li><li><a href="global.html#generateRandomCode">generateRandomCode</a></li><li><a href="global.html#getAllCodes">getAllCodes</a></li><li><a href="global.html#getAllCourses">getAllCourses</a></li><li><a href="global.html#getAllLives">getAllLives</a></li><li><a href="global.html#getCourse">getCourse</a></li><li><a href="global.html#getLive">getLive</a></li><li><a href="global.html#getLiveByClass">getLiveByClass</a></li><li><a href="global.html#getMainCourse">getMainCourse</a></li><li><a href="global.html#httpServer">httpServer</a></li><li><a href="global.html#id">id</a></li><li><a href="global.html#imageExists">imageExists</a></li><li><a href="global.html#imageToByteArray">imageToByteArray</a></li><li><a href="global.html#live_id">live_id</a></li><li><a href="global.html#main_teacher_id">main_teacher_id</a></li><li><a href="global.html#mimeType">mimeType</a></li><li><a href="global.html#name">name</a></li><li><a href="global.html#password">password</a></li><li><a href="global.html#runCommand">runCommand</a></li><li><a href="global.html#scanStatus">scanStatus</a></li><li><a href="global.html#sequelize">sequelize</a></li><li><a href="global.html#setupStreaming">setupStreaming</a></li><li><a href="global.html#startLive">startLive</a></li><li><a href="global.html#statut">statut</a></li><li><a href="global.html#surname">surname</a></li><li><a href="global.html#twoFAEnabled">twoFAEnabled</a></li><li><a href="global.html#twoFASecret">twoFASecret</a></li><li><a href="global.html#unblockCourse">unblockCourse</a></li><li><a href="global.html#unblockLive">unblockLive</a></li><li><a href="global.html#updateCourse">updateCourse</a></li><li><a href="global.html#updateVideoCoverImages">updateVideoCoverImages</a></li><li><a href="global.html#updatedAt">updatedAt</a></li><li><a href="global.html#user_id">user_id</a></li><li><a href="global.html#username">username</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Sat Jun 07 2025 14:03:57 GMT+0200 (Central European Summer Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

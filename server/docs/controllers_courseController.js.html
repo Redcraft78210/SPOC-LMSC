@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: controllers/courseController.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: controllers/courseController.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @fileoverview Contrôleur de gestion des cours pour l'application SPOC-LMSC.
+ * Fournit des fonctionnalités CRUD pour les cours, ainsi que des opérations spécifiques
+ * comme le blocage/déblocage de cours et la gestion des médias associés.
+ */
+
+const { Course, Video, Document, Teacher, CourseVideo, CourseDocument } = require('../models');
+const fs = require('fs');
+const path = require('path');
+
+/**
+ * Convertit une image en tableau d'octets.
+ * 
+ * @param {string} imagePath - Chemin vers le fichier image à convertir
+ * @returns {Array&lt;number>|null} Tableau d'octets représentant l'image ou null en cas d'échec
+ */
+const imageToByteArray = (imagePath) => {
+  try {
+    const absolutePath = path.resolve(imagePath);
+    const imageBuffer = fs.readFileSync(absolutePath);
+    return Array.from(imageBuffer);
+  } catch (error) {
+    console.error('Error converting image to byte array:', error);
+    return null;
+  }
+};
+
+/**
+ * Met à jour les images de couverture pour les vidéos en utilisant une image par défaut.
+ * 
+ * @async
+ * @returns {Promise&lt;void>} - Promise qui se résout quand la mise à jour est terminée
+ * @throws {Error} Si la mise à jour des images échoue
+ */
+const updateVideoCoverImages = async () => {
+  try {
+    const imagePath = path.join(__dirname, '../images/0.png');
+    const imageBytes = imageToByteArray(imagePath);
+
+    if (!imageBytes) {
+      console.error('Failed to convert image to byte array. Skipping video updates.');
+      return;
+    }
+
+    const videos = await Video.findAll();
+
+    for (const video of videos) {
+      await video.update({ duration: 370, cover_image: Buffer.from(imageBytes) });
+      break;
+    }
+
+    console.log('Video cover images updated successfully.');
+  } catch (error) {
+    console.error('Error updating video cover images:', error);
+  }
+};
+
+/**
+ * Récupère tous les cours et les structure par professeur, matière et chapitre.
+ * Filtre les résultats selon le rôle de l'utilisateur.
+ * 
+ * @async
+ * @param {Object} req - Objet requête Express
+ * @param {Object} req.user - Données de l'utilisateur authentifié
+ * @param {string} req.user.role - Rôle de l'utilisateur
+ * @param {Object} res - Objet réponse Express
+ * @returns {Promise&lt;void>} - Retourne les données structurées au format JSON
+ * @throws {Error} Si la récupération des cours échoue
+ */
+const getAllCourses = async (req, res) => {
+
+  let userRole = req.user.role;
+  let whereCondition = {is_published: true};
+  if (userRole === 'Etudiant') {
+    whereCondition = {
+      is_published: true,
+      status: 'published',
+    };
+  }
+  try {
+    const courses = await Course.findAll({
+      where: {
+        ...whereCondition,
+      },
+      include: [
+        {
+          model: Video,
+          through: {
+            model: CourseVideo,
+            where: { is_main: true }
+          },
+          required: false
+        },
+        {
+          model: Document,
+          through: {
+            model: CourseDocument,
+            where: { is_main: true }
+          },
+          required: false
+        },
+        {
+          model: Teacher,
+          attributes: ['surname'],
+          required: false
+        }
+      ]
+    });
+
+
+    const structuredData = {};
+
+    courses.forEach(course => {
+      const professor = course.Teacher ? 'Professeur ' + course.Teacher.surname : 'Unknown Professor';
+      const subject = course.matiere || 'Unknown Subject';
+      const topic = course.chapitre || 'Unknown Topic';
+
+      if (!structuredData[professor]) {
+        structuredData[professor] = {};
+      }
+
+      if (!structuredData[professor][subject]) {
+        structuredData[professor][subject] = {};
+      }
+
+      if (!structuredData[professor][subject][topic]) {
+        structuredData[professor][subject][topic] = {};
+      }
+
+      const cover_image = (course.Videos &amp;&amp; course.Videos.length > 0 &amp;&amp; course.Videos[0].cover_image)
+        ? course.Videos[0].cover_image.toString('base64')
+        : null;
+
+
+      structuredData[professor][subject][topic] = {
+        titre: course.title,
+        description: course.description,
+        date_creation: course.createdAt,
+        ...(userRole !== 'Etudiant' ? { status: course.status, block_reason: course.block_reason } : {}),
+        id: course.id,
+        type: 'cours',
+        video: course.Videos.length > 0 ? {
+          id: course.Videos[0].id,
+          fingerprint: course.Videos[0].fingerprint,
+          duration: course.Videos[0].duration,
+          cover_image,
+          preview_image: course.Videos[0].preview_image,
+        } : null,
+        nombre_de_documents: course.Documents ? course.Documents.length : 0
+      };
+    });
+
+    res.status(200).json(structuredData);
+  } catch (error) {
+    console.error('Error fetching all courses:', error);
+    res.status(500).json({ error: 'An error occurred while fetching courses.' });
+  }
+};
+
+/**
+ * Récupère un cours spécifique avec ses vidéos et documents associés.
+ * 
+ * @async
+ * @param {Object} req - Objet requête Express
+ * @param {Object} req.params - Paramètres de la requête
+ * @param {string} req.params.id - ID du cours à récupérer
+ * @param {Object} res - Objet réponse Express
+ * @returns {Promise&lt;void>} - Retourne le cours au format JSON
+ * @throws {Error} Si la récupération du cours échoue
+ */
+const getCourse = async (req, res) => {
+  try {
+    const cours = await Course.findByPk(req.params.id, {
+      include: [
+        { model: Video },
+        { model: Document }
+      ]
+    });
+
+    if (!cours) {
+      return res.status(404).json({ error: 'Cours not found' });
+    }
+
+    res.status(200).json(cours);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Récupère un cours spécifique avec uniquement sa vidéo principale et ses documents principaux.
+ * 
+ * @async
+ * @param {Object} req - Objet requête Express
+ * @param {Object} req.params - Paramètres de la requête
+ * @param {string} req.params.id - ID du cours à récupérer
+ * @param {Object} res - Objet réponse Express
+ * @returns {Promise&lt;void>} - Retourne le cours formaté au format JSON
+ * @throws {Error} Si la récupération du cours échoue
+ */
+const getMainCourse = async (req, res) => {
+  try {
+    const cours = await Course.findByPk(req.params.id, {
+      include: [
+        {
+          model: Video,
+          through: {
+            model: CourseVideo,
+            where: { is_main: true }
+          },
+          required: false
+        },
+        {
+          model: Document,
+          through: {
+            model: CourseDocument,
+            where: { is_main: true }
+          },
+          required: false
+        }
+      ]
+    });
+
+    if (!cours) {
+      return res.status(404).json({ error: 'Cours not found' });
+    }
+
+    const response = {
+      "id": cours.id,
+      "Matière": cours.matiere,
+      "chapitre": cours.chapitre,
+      "titre": cours.title,
+      "date_creation": cours.createdAt,
+      "description": cours.description,
+      "status": cours.status,
+      "block_reason": cours.block_reason || null,
+      "video": cours.Videos.length > 0 ? {
+        "video_id": cours.Videos[0].id,
+        "date_mise_en_ligne": cours.Videos[0].createdAt,
+        "fingerprint": cours.Videos[0].fingerprint,
+      } : null,
+      "documents": cours.Documents.length > 0 ? cours.Documents.map(doc => ({
+        "id": doc.id,
+        "title": doc.title,
+        "description": doc.description || "Description du document",
+        "date_mise_en_ligne": doc.createdAt,
+        "fingerprint": doc.fingerprint,
+      })) : []
+    };
+
+    res.status(200).json(response);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Bloque un cours en changeant son statut et en enregistrant la raison.
+ * 
+ * @async
+ * @param {Object} req - Objet requête Express
+ * @param {Object} req.params - Paramètres de la requête
+ * @param {string} req.params.id - ID du cours à bloquer
+ * @param {Object} req.body - Corps de la requête
+ * @param {string} req.body.block_reason - Raison du blocage
+ * @param {Object} res - Objet réponse Express
+ * @returns {Promise&lt;void>} - Retourne le cours mis à jour
+ * @throws {Error} Si le blocage du cours échoue
+ */
+const blockCourse = async (req, res) => {
+  try {
+    const cours = await Course.findByPk(req.params.id);
+
+    if (!cours) {
+      return res.status(404).json({ error: 'Cours not found' });
+    }
+
+    const { block_reason } = req.body;
+
+    await cours.update({
+      status: 'blocked',
+      block_reason
+    });
+
+    res.status(200).json(cours);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Débloque un cours en changeant son statut à 'published'.
+ * 
+ * @async
+ * @param {Object} req - Objet requête Express
+ * @param {Object} req.params - Paramètres de la requête
+ * @param {string} req.params.id - ID du cours à débloquer
+ * @param {Object} res - Objet réponse Express
+ * @returns {Promise&lt;void>} - Retourne le cours mis à jour
+ * @throws {Error} Si le déblocage du cours échoue
+ */
+const unblockCourse = async (req, res) => {
+  try {
+    const cours = await Course.findByPk(req.params.id);
+
+    if (!cours) {
+      return res.status(404).json({ error: 'Cours not found' });
+    }
+
+    await cours.update({
+      status: 'published',
+      block_reason: null
+    });
+
+    res.status(200).json(cours);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Supprime un cours de la base de données.
+ * 
+ * @async
+ * @param {Object} req - Objet requête Express
+ * @param {Object} req.params - Paramètres de la requête
+ * @param {string} req.params.id - ID du cours à supprimer
+ * @param {Object} res - Objet réponse Express
+ * @returns {Promise&lt;void>} - Retourne un message de confirmation
+ * @throws {Error} Si la suppression du cours échoue
+ */
+const deleteCourse = async (req, res) => {
+  try {
+    const cours = await Course.findByPk(req.params.id);
+
+    if (!cours) {
+      return res.status(404).json({ error: 'Cours not found' });
+    }
+
+    await cours.destroy();
+
+    res.status(200).json({ message: 'Cours deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Met à jour les informations d'un cours existant.
+ * 
+ * @async
+ * @param {Object} req - Objet requête Express
+ * @param {Object} req.params - Paramètres de la requête
+ * @param {string} req.params.id - ID du cours à mettre à jour
+ * @param {Object} req.body - Corps de la requête
+ * @param {string} [req.body.matiere] - Matière du cours
+ * @param {string} [req.body.chapitre] - Chapitre du cours
+ * @param {string} [req.body.titre] - Titre du cours
+ * @param {string} [req.body.date_creation] - Date de création
+ * @param {string} [req.body.description] - Description du cours
+ * @param {Object} res - Objet réponse Express
+ * @returns {Promise&lt;void>} - Retourne le cours mis à jour
+ * @throws {Error} Si la mise à jour du cours échoue
+ */
+const updateCourse = async (req, res) => {
+  try {
+    const cours = await Course.findByPk(req.params.id);
+
+    if (!cours) {
+      return res.status(404).json({ error: 'Cours not found' });
+    }
+
+    const { matiere, chapitre, titre, date_creation, description } = req.body;
+
+    await cours.update({
+      matiere,
+      chapitre,
+      titre,
+      date_creation,
+      description
+    });
+
+    res.status(200).json(cours);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Crée un nouveau cours dans la base de données.
+ * 
+ * @async
+ * @param {Object} req - Objet requête Express
+ * @param {Object} req.body - Corps de la requête
+ * @param {string} req.body.matiere - Matière du cours
+ * @param {string} req.body.chapitre - Chapitre du cours
+ * @param {string} req.body.titre - Titre du cours
+ * @param {string} req.body.date_creation - Date de création
+ * @param {string} req.body.description - Description du cours
+ * @param {Object} res - Objet réponse Express
+ * @returns {Promise&lt;void>} - Retourne le cours créé
+ * @throws {Error} Si la création du cours échoue
+ */
+const createCourse = async (req, res) => {
+  try {
+    const { matiere, chapitre, titre, date_creation, description } = req.body;
+
+    const cours = await Course.create({
+      matiere,
+      chapitre,
+      titre,
+      date_creation,
+      description
+    });
+
+    res.status(201).json(cours);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+module.exports = { getAllCourses, getCourse, getMainCourse, deleteCourse, updateCourse, createCourse, blockCourse, unblockCourse };
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-chatController.html">chatController</a></li><li><a href="module-chatRoutes.html">chatRoutes</a></li><li><a href="module-controllers_authController.html">controllers/authController</a></li><li><a href="module-controllers_avatarController.html">controllers/avatarController</a></li><li><a href="module-controllers_classController.html">controllers/classController</a></li><li><a href="module-controllers_messageController.html">controllers/messageController</a></li><li><a href="module-controllers_moderationController.html">controllers/moderationController</a></li><li><a href="module-controllers_progressTracking.html">controllers/progressTracking</a></li><li><a href="module-controllers_userController.html">controllers/userController</a></li><li><a href="module-documentController.html">documentController</a></li><li><a href="module-documentRoutes.html">documentRoutes</a></li><li><a href="module-forumController.html">forumController</a></li><li><a href="module-forumRoutes.html">forumRoutes</a></li><li><a href="module-middlewares_userValidation.html">middlewares/userValidation</a></li><li><a href="module-recordingController.html">recordingController</a></li><li><a href="module-recordingRoutes.html">recordingRoutes</a></li><li><a href="module-routes_authRoutes.html">routes/authRoutes</a></li><li><a href="module-routes_avatarRoutes.html">routes/avatarRoutes</a></li><li><a href="module-routes_classRoutes.html">routes/classRoutes</a></li><li><a href="module-routes_messageRoutes.html">routes/messageRoutes</a></li><li><a href="module-routes_moderationRoutes.html">routes/moderationRoutes</a></li><li><a href="module-routes_progressTracking.html">routes/progressTracking</a></li><li><a href="module-routes_userRoutes.html">routes/userRoutes</a></li><li><a href="module-socketManager.html">socketManager</a></li><li><a href="module-videoController.html">videoController</a></li><li><a href="module-videoRoutes.html">videoRoutes</a></li><li><a href="module-virusScanService.html">virusScanService</a></li><li><a href="module-%25257BObject%25257D.html">{Object}</a></li></ul><h3>Classes</h3><ul><li><a href="global.html#Admin">Admin</a></li><li><a href="global.html#Attachment">Attachment</a></li><li><a href="global.html#ChatMessage">ChatMessage</a></li><li><a href="global.html#Classe">Classe</a></li><li><a href="global.html#Code">Code</a></li><li><a href="global.html#Comment">Comment</a></li><li><a href="global.html#Course">Course</a></li><li><a href="global.html#CourseDocument">CourseDocument</a></li><li><a href="global.html#CourseProgress">CourseProgress</a></li><li><a href="global.html#CourseVideo">CourseVideo</a></li><li><a href="global.html#Document">Document</a></li><li><a href="global.html#Flag">Flag</a></li><li><a href="global.html#LiveAttendance">LiveAttendance</a></li><li><a href="global.html#Lives">Lives</a></li><li><a href="global.html#Message">Message</a></li><li><a href="global.html#Recipient">Recipient</a></li><li><a href="Stats.html">Stats</a></li><li><a href="global.html#Student">Student</a></li><li><a href="global.html#StudentClass">StudentClass</a></li><li><a href="global.html#Teacher">Teacher</a></li><li><a href="TeacherClass.html">TeacherClass</a></li><li><a href="global.html#Thread">Thread</a></li><li><a href="global.html#TrashMessage">TrashMessage</a></li><li><a href="global.html#User">User</a></li><li><a href="global.html#UserAvatar">UserAvatar</a></li><li><a href="global.html#Video">Video</a></li><li><a href="global.html#Warning">Warning</a></li><li><a href="module-models.ClassLives.html">ClassLives</a></li></ul><h3>Global</h3><ul><li><a href="global.html#ClassLives">ClassLives</a></li><li><a href="global.html#DEFAULTS">DEFAULTS</a></li><li><a href="global.html#MessageId">MessageId</a></li><li><a href="global.html#addLive">addLive</a></li><li><a href="global.html#allowedOrigins">allowedOrigins</a></li><li><a href="global.html#authMiddleware">authMiddleware</a></li><li><a href="global.html#blockCourse">blockCourse</a></li><li><a href="global.html#blockLive">blockLive</a></li><li><a href="global.html#buildAndRun">buildAndRun</a></li><li><a href="global.html#class_id">class_id</a></li><li><a href="global.html#content">content</a></li><li><a href="global.html#createCode">createCode</a></li><li><a href="global.html#createCourse">createCourse</a></li><li><a href="global.html#createQuarantineContainer">createQuarantineContainer</a></li><li><a href="global.html#createdAt">createdAt</a></li><li><a href="global.html#deleteCode">deleteCode</a></li><li><a href="global.html#deleteCourse">deleteCourse</a></li><li><a href="global.html#deleteLive">deleteLive</a></li><li><a href="global.html#description">description</a></li><li><a href="global.html#disapproveLive">disapproveLive</a></li><li><a href="global.html#editLive">editLive</a></li><li><a href="global.html#email">email</a></li><li><a href="global.html#endLive">endLive</a></li><li><a href="global.html#fileSize">fileSize</a></li><li><a href="global.html#filename">filename</a></li><li><a href="global.html#firstLogin">firstLogin</a></li><li><a href="global.html#generateRandomCode">generateRandomCode</a></li><li><a href="global.html#getAllCodes">getAllCodes</a></li><li><a href="global.html#getAllCourses">getAllCourses</a></li><li><a href="global.html#getAllLives">getAllLives</a></li><li><a href="global.html#getCourse">getCourse</a></li><li><a href="global.html#getLive">getLive</a></li><li><a href="global.html#getLiveByClass">getLiveByClass</a></li><li><a href="global.html#getMainCourse">getMainCourse</a></li><li><a href="global.html#httpServer">httpServer</a></li><li><a href="global.html#id">id</a></li><li><a href="global.html#imageExists">imageExists</a></li><li><a href="global.html#imageToByteArray">imageToByteArray</a></li><li><a href="global.html#live_id">live_id</a></li><li><a href="global.html#main_teacher_id">main_teacher_id</a></li><li><a href="global.html#mimeType">mimeType</a></li><li><a href="global.html#name">name</a></li><li><a href="global.html#password">password</a></li><li><a href="global.html#runCommand">runCommand</a></li><li><a href="global.html#scanStatus">scanStatus</a></li><li><a href="global.html#sequelize">sequelize</a></li><li><a href="global.html#setupStreaming">setupStreaming</a></li><li><a href="global.html#startLive">startLive</a></li><li><a href="global.html#statut">statut</a></li><li><a href="global.html#surname">surname</a></li><li><a href="global.html#twoFAEnabled">twoFAEnabled</a></li><li><a href="global.html#twoFASecret">twoFASecret</a></li><li><a href="global.html#unblockCourse">unblockCourse</a></li><li><a href="global.html#unblockLive">unblockLive</a></li><li><a href="global.html#updateCourse">updateCourse</a></li><li><a href="global.html#updateVideoCoverImages">updateVideoCoverImages</a></li><li><a href="global.html#updatedAt">updatedAt</a></li><li><a href="global.html#user_id">user_id</a></li><li><a href="global.html#username">username</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Sat Jun 07 2025 14:03:57 GMT+0200 (Central European Summer Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

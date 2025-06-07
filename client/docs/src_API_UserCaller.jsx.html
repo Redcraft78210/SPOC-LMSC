@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: src/API/UserCaller.jsx</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: src/API/UserCaller.jsx</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import api from './api';
+import PropTypes from 'prop-types';
+
+/**
+ * Gère les erreurs d'API de manière uniforme
+ * 
+ * @param {Error} error - L'erreur à traiter
+ * @returns {Object} Objet contenant le statut, les données et le message d'erreur formatés
+ */
+const handleError = (error) => {
+
+  if (error.response) {
+    return {
+      status: error.response.status,
+      data: error.response.data,
+      message: error.response.data?.message || error.message,
+    };
+  }
+
+  if (error.request) {
+    return {
+      status: 500,
+      data: null,
+      message: 'Aucune réponse reçue du serveur',
+    };
+  }
+
+  return {
+    status: 500,
+    data: null,
+    message: error.message,
+  };
+};
+
+
+/**
+ * Récupère tous les utilisateurs du système
+ * 
+ * @async
+ * @returns {Promise&lt;Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ * 
+ * @example
+ * const result = await getAllUsers();
+ * if (result.status === 200) {
+ *   const users = result.data;
+ * }
+ */
+const getAllUsers = async () => {
+  try {
+    const response = await api.get('/users/');
+    return {
+      status: response.status,
+      data: response.data,
+      message: 'Success',
+    };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+
+/**
+ * Récupère un utilisateur par son identifiant
+ * 
+ * @async
+ * @param {Object} params - Paramètres de la fonction
+ * @param {(string|number)} params.userId - Identifiant de l'utilisateur à récupérer
+ * @returns {Promise&lt;Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ */
+const getUserById = async ({ userId }) => {
+  try {
+    const response = await api.get(`/users/${userId}`);
+    return {
+      status: response.status,
+      data: response.data,
+      message: 'Success',
+    };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+
+/**
+ * Crée un nouvel utilisateur dans le système
+ * 
+ * @async
+ * @param {Object} userData - Données de l'utilisateur à créer
+ * @param {string} userData.name - Prénom de l'utilisateur
+ * @param {string} userData.surname - Nom de l'utilisateur
+ * @param {string} userData.email - Adresse email de l'utilisateur
+ * @param {string} userData.role - Rôle de l'utilisateur
+ * @param {string} [userData.password] - Mot de passe de l'utilisateur
+ * @returns {Promise&lt;Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ */
+const createUser = async (userData) => {
+  try {
+    const response = await api.post('/users/', userData);
+    return {
+      status: response.status,
+      data: response.data,
+      message: 'User created successfully',
+    };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+
+/**
+ * Met à jour les informations d'un utilisateur existant
+ * 
+ * @async
+ * @param {Object} params - Paramètres de la fonction
+ * @param {(string|number)} params.userId - Identifiant de l'utilisateur à mettre à jour
+ * @param {Object} params.userData - Nouvelles données de l'utilisateur
+ * @returns {Promise&lt;Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ */
+const updateUser = async ({ userId, userData }) => {
+  try {
+    const response = await api.put(`/users/${userId}`, userData);
+    return {
+      status: response.status,
+      data: response.data,
+      message: 'User updated successfully',
+    };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+
+/**
+ * Supprime un utilisateur du système
+ * 
+ * @async
+ * @param {Object} params - Paramètres de la fonction
+ * @param {(string|number)} params.userId - Identifiant de l'utilisateur à supprimer
+ * @returns {Promise&lt;Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ */
+const deleteUser = async ({ userId }) => {
+  try {
+    const response = await api.delete(`/users/${userId}`);
+    return {
+      status: response.status,
+      data: response.data,
+      message: 'User deleted successfully',
+    };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+
+/**
+ * Active un compte utilisateur
+ * 
+ * @async
+ * @param {Object} params - Paramètres de la fonction
+ * @param {(string|number)} params.userId - Identifiant de l'utilisateur à activer
+ * @returns {Promise&lt;Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ */
+const activateUser = async ({ userId }) => {
+  try {
+    const response = await api.patch(`/users/${userId}`);
+    return {
+      status: response.status,
+      data: response.data,
+      message: 'User activated successfully',
+    };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+
+/**
+ * Désactive un compte utilisateur
+ * 
+ * @async
+ * @param {Object} params - Paramètres de la fonction
+ * @param {(string|number)} params.userId - Identifiant de l'utilisateur à désactiver
+ * @returns {Promise&lt;Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ */
+const deactivateUser = async ({ userId }) => {
+  try {
+    const response = await api.patch(`/users/${userId}`);
+    return {
+      status: response.status,
+      data: response.data,
+      message: 'User deactivated successfully',
+    };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+
+/**
+ * Génère un code d'invitation pour l'inscription d'un nouvel utilisateur
+ * 
+ * @async
+ * @param {Object} params - Paramètres de la fonction
+ * @param {string} params.role - Rôle attribué à l'utilisateur qui utilisera ce code
+ * @param {number} [params.usageLimit] - Nombre d'utilisations autorisées pour ce code
+ * @param {string} [params.validityPeriod] - Période de validité du code
+ * @param {(string|number)} [params.classId] - Identifiant de la classe associée au code
+ * @returns {Promise&lt;Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ */
+const generateInviteCode = async ({ role, usageLimit, validityPeriod, classId }) => {
+  try {
+    const payload = { role };
+    if (usageLimit !== undefined) payload.usageLimit = usageLimit;
+    if (validityPeriod !== undefined) payload.validityPeriod = validityPeriod;
+    if (classId !== undefined &amp;&amp; classId !== null) payload.classId = classId;
+
+    const response = await api.post('/codes', payload);
+    return {
+      status: response.status,
+      data: response.data,
+      message: 'Invite code generated successfully',
+    };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+
+/**
+ * Récupère tous les codes d'invitation du système
+ * 
+ * @async
+ * @returns {Promise&lt;Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ */
+const getAllInviteCodes = async () => {
+  try {
+    const response = await api.get('/codes');
+    return {
+      status: response.status,
+      data: response.data,
+      message: 'Success',
+    };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+
+/**
+ * Supprime un code d'invitation
+ * 
+ * @async
+ * @param {Object} params - Paramètres de la fonction
+ * @param {(string|number)} params.codeId - Identifiant du code à supprimer
+ * @returns {Promise&lt;Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ */
+const deleteInviteCode = async ({ codeId }) => {
+  try {
+    const response = await api.delete(`/codes/${codeId}`);
+    return {
+      status: response.status,
+      data: response.data,
+      message: 'Invite code deleted successfully',
+    };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+
+/**
+ * Rétrograde le rôle d'un utilisateur
+ * 
+ * @async
+ * @param {Object} params - Paramètres de la fonction
+ * @param {(string|number)} params.userId - Identifiant de l'utilisateur à rétrograder
+ * @returns {Promise&lt;Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ */
+const retrogradeUserRole = async ({ userId }) => {
+  try {
+    const response = await api.patch(`/users/retrograde/${userId}`);
+    return {
+      status: response.status,
+      data: response.data,
+      message: 'Utilisateur rétrogradé avec succès',
+    };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+
+/**
+ * Promeut le rôle d'un utilisateur
+ * 
+ * @async
+ * @param {Object} params - Paramètres de la fonction
+ * @param {(string|number)} params.userId - Identifiant de l'utilisateur à promouvoir
+ * @returns {Promise&lt;Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ */
+const upgradeUserRole = async ({ userId }) => {
+  try {
+    const response = await api.patch(`/users/upgrade/${userId}`);
+    return {
+      status: response.status,
+      data: response.data,
+      message: 'Utilisateur promu avec succès',
+    };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+
+/**
+ * Change le mot de passe d'un utilisateur
+ * 
+ * @async
+ * @param {Object} params - Paramètres de la fonction
+ * @param {string} params.oldPassword - Ancien mot de passe de l'utilisateur
+ * @param {string} params.newPassword - Nouveau mot de passe de l'utilisateur
+ * @returns {Promise&lt;Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ */
+const changePassword = async ({ oldPassword, newPassword }) => {
+  try {
+    const response = await api.put('/users/change-password', { oldPassword, newPassword });
+    return {
+      status: response.status,
+      data: response.data,
+      message: 'Password changed successfully',
+    };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+
+/**
+ * Désactive l'authentification à deux facteurs pour l'utilisateur actuel
+ * 
+ * @async
+ * @returns {Promise&lt;Object>} Résultat de la requête contenant le statut, les données et un message
+ * @throws {Error} Erreurs capturées et traitées par handleError
+ */
+const disable2FA = async () => {
+  try {
+    const response = await api.delete('/auth/2fa');
+    return {
+      status: response.status,
+      data: response.data,
+      message: 'Success',
+    };
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+
+getAllUsers.propTypes = {};
+
+getUserById.propTypes = {
+  userId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+};
+
+changePassword.propTypes = {
+  oldPassword: PropTypes.string.isRequired,
+  newPassword: PropTypes.string.isRequired,
+};
+
+createUser.propTypes = {
+  userData: PropTypes.shape({
+    name: PropTypes.string.isRequired,
+    surname: PropTypes.string.isRequired,
+    email: PropTypes.string.isRequired,
+    role: PropTypes.string.isRequired,
+    password: PropTypes.string,
+  }).isRequired,
+};
+
+updateUser.propTypes = {
+  userId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+  userData: PropTypes.object.isRequired,
+};
+
+deleteUser.propTypes = {
+  userId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+};
+
+activateUser.propTypes = {
+  userId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+};
+
+deactivateUser.propTypes = {
+  userId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+};
+
+generateInviteCode.propTypes = {
+  role: PropTypes.string.isRequired,
+  expiresIn: PropTypes.string,
+};
+
+getAllInviteCodes.propTypes = {};
+
+deleteInviteCode.propTypes = {
+  codeId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+};
+
+retrogradeUserRole.propTypes = {
+  userId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+};
+
+upgradeUserRole.propTypes = {
+  userId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+};
+
+export {
+  getAllUsers,
+  getUserById,
+  createUser,
+  changePassword,
+  updateUser,
+  disable2FA,
+  deleteUser,
+  activateUser,
+  deactivateUser,
+  generateInviteCode,
+  getAllInviteCodes,
+  deleteInviteCode,
+  retrogradeUserRole,
+  upgradeUserRole,
+};
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-App.html">App</a></li></ul><h3>Global</h3><ul><li><a href="global.html#About">About</a></li><li><a href="global.html#AccountDisabledModal">AccountDisabledModal</a></li><li><a href="global.html#AdminDashboardHome">AdminDashboardHome</a></li><li><a href="global.html#BASE_URL">BASE_URL</a></li><li><a href="global.html#BulkActions">BulkActions</a></li><li><a href="global.html#ClassManagementTutorial">ClassManagementTutorial</a></li><li><a href="global.html#ClasseCards">ClasseCards</a></li><li><a href="global.html#ClasseCreationModal">ClasseCreationModal</a></li><li><a href="global.html#ClasseManagement">ClasseManagement</a></li><li><a href="global.html#ClasseTable">ClasseTable</a></li><li><a href="global.html#Contact">Contact</a></li><li><a href="global.html#ContentCard">ContentCard</a></li><li><a href="global.html#CourseReader">CourseReader</a></li><li><a href="global.html#CourseReaderTutorial">CourseReaderTutorial</a></li><li><a href="global.html#Courses">Courses</a></li><li><a href="global.html#CoursesLibraryTutorial">CoursesLibraryTutorial</a></li><li><a href="global.html#Dashboard">Dashboard</a></li><li><a href="global.html#DashboardTutorial">DashboardTutorial</a></li><li><a href="global.html#DeleteDocument">DeleteDocument</a></li><li><a href="global.html#DeleteVideo">DeleteVideo</a></li><li><a href="global.html#EleveDashboardHome">EleveDashboardHome</a></li><li><a href="global.html#ErrorMessage">ErrorMessage</a></li><li><a href="global.html#FilterDropdown">FilterDropdown</a></li><li><a href="global.html#FirstLogin">FirstLogin</a></li><li><a href="global.html#Footer">Footer</a></li><li><a href="global.html#Forum">Forum</a></li><li><a href="global.html#GetAll_DataStructure">GetAll_DataStructure</a></li><li><a href="global.html#GetAll_Document">GetAll_Document</a></li><li><a href="global.html#Get_Document_Information">Get_Document_Information</a></li><li><a href="global.html#Get_Video_Information">Get_Video_Information</a></li><li><a href="global.html#Get_special_Document">Get_special_Document</a></li><li><a href="global.html#Get_special_Video">Get_special_Video</a></li><li><a href="global.html#Home">Home</a></li><li><a href="global.html#INACTIVITY_THRESHOLD">INACTIVITY_THRESHOLD</a></li><li><a href="global.html#LegalNotice">LegalNotice</a></li><li><a href="global.html#LiveNotFound">LiveNotFound</a></li><li><a href="global.html#LiveViewer">LiveViewer</a></li><li><a href="global.html#LoadCanvasTemplate">LoadCanvasTemplate</a></li><li><a href="global.html#LoadingComponent">LoadingComponent</a></li><li><a href="global.html#LoadingSpinner">LoadingSpinner</a></li><li><a href="global.html#Logout">Logout</a></li><li><a href="global.html#Mailbox">Mailbox</a></li><li><a href="global.html#MaintenanceBanner">MaintenanceBanner</a></li><li><a href="global.html#MessageDetailSkeleton">MessageDetailSkeleton</a></li><li><a href="global.html#MessageSkeleton">MessageSkeleton</a></li><li><a href="global.html#NavigationBar">NavigationBar</a></li><li><a href="global.html#PictureModal">PictureModal</a></li><li><a href="global.html#PrivacyPolicy">PrivacyPolicy</a></li><li><a href="global.html#PrivacyTab">PrivacyTab</a></li><li><a href="global.html#ProfilePhotoSelector">ProfilePhotoSelector</a></li><li><a href="global.html#PublicNavbar">PublicNavbar</a></li><li><a href="global.html#SearchBar">SearchBar</a></li><li><a href="global.html#SearchUser">SearchUser</a></li><li><a href="global.html#SecureDocumentViewer">SecureDocumentViewer</a></li><li><a href="global.html#SecureVideoPlayer">SecureVideoPlayer</a></li><li><a href="global.html#SecurityTab">SecurityTab</a></li><li><a href="global.html#SendDocument">SendDocument</a></li><li><a href="global.html#SendVideo">SendVideo</a></li><li><a href="global.html#Settings">Settings</a></li><li><a href="global.html#Sign">Sign</a></li><li><a href="global.html#Spinner">Spinner</a></li><li><a href="global.html#StreamReader">StreamReader</a></li><li><a href="global.html#TEN_MINUTES">TEN_MINUTES</a></li><li><a href="global.html#TermsOfUse">TermsOfUse</a></li><li><a href="global.html#ToggleView">ToggleView</a></li><li><a href="global.html#Tutorial">Tutorial</a></li><li><a href="global.html#TutorialContext">TutorialContext</a></li><li><a href="global.html#TutorialProvider">TutorialProvider</a></li><li><a href="global.html#TwoFASetupModal">TwoFASetupModal</a></li><li><a href="global.html#UpdateDocument">UpdateDocument</a></li><li><a href="global.html#UserManagementTutorial">UserManagementTutorial</a></li><li><a href="global.html#WSS_BASE_URL">WSS_BASE_URL</a></li><li><a href="global.html#activateUser">activateUser</a></li><li><a href="global.html#addComment">addComment</a></li><li><a href="global.html#addStudentToClass">addStudentToClass</a></li><li><a href="global.html#allDigitsFilled">allDigitsFilled</a></li><li><a href="global.html#api">api</a></li><li><a href="global.html#authToken">authToken</a></li><li><a href="global.html#authenticatedButtons">authenticatedButtons</a></li><li><a href="global.html#baseURL">baseURL</a></li><li><a href="global.html#blockLive">blockLive</a></li><li><a href="global.html#bulkDelete">bulkDelete</a></li><li><a href="global.html#changePassword">changePassword</a></li><li><a href="global.html#check2FAStatus">check2FAStatus</a></li><li><a href="global.html#checkRegisterCode">checkRegisterCode</a></li><li><a href="global.html#createClass">createClass</a></li><li><a href="global.html#createCourse">createCourse</a></li><li><a href="global.html#createLive">createLive</a></li><li><a href="global.html#createThread">createThread</a></li><li><a href="global.html#createUser">createUser</a></li><li><a href="global.html#deactivateUser">deactivateUser</a></li><li><a href="global.html#deleteAvatar">deleteAvatar</a></li><li><a href="global.html#deleteClass">deleteClass</a></li><li><a href="global.html#deleteClasseHandler">deleteClasseHandler</a></li><li><a href="global.html#deleteComment">deleteComment</a></li><li><a href="global.html#deleteContactMessage">deleteContactMessage</a></li><li><a href="global.html#deleteCourse">deleteCourse</a></li><li><a href="global.html#deleteInviteCode">deleteInviteCode</a></li><li><a href="global.html#deleteLive">deleteLive</a></li><li><a href="global.html#deleteMessage">deleteMessage</a></li><li><a href="global.html#deleteThread">deleteThread</a></li><li><a href="global.html#deleteUser">deleteUser</a></li><li><a href="global.html#disable2FA">disable2FA</a></li><li><a href="global.html#disapproveCourse">disapproveCourse</a></li><li><a href="global.html#disapproveLive">disapproveLive</a></li><li><a href="global.html#downloadAttachment">downloadAttachment</a></li><li><a href="global.html#endLive">endLive</a></li><li><a href="global.html#errorMessages">errorMessages</a></li><li><a href="global.html#fetchClasses">fetchClasses</a></li><li><a href="global.html#fetchCourseData">fetchCourseData</a></li><li><a href="global.html#fetchData">fetchData</a></li><li><a href="global.html#fetchUsers">fetchUsers</a></li><li><a href="global.html#firstLogin">firstLogin</a></li><li><a href="global.html#flagContent">flagContent</a></li><li><a href="global.html#forgotPassword">forgotPassword</a></li><li><a href="global.html#generateInviteCode">generateInviteCode</a></li><li><a href="global.html#getAllClasses">getAllClasses</a></li><li><a href="global.html#getAllContactMessages">getAllContactMessages</a></li><li><a href="global.html#getAllCourses">getAllCourses</a></li><li><a href="global.html#getAllInviteCodes">getAllInviteCodes</a></li><li><a href="global.html#getAllLives">getAllLives</a></li><li><a href="global.html#getAllUsers">getAllUsers</a></li><li><a href="global.html#getAvailableRecipients">getAvailableRecipients</a></li><li><a href="global.html#getAvatar">getAvatar</a></li><li><a href="global.html#getClassById">getClassById</a></li><li><a href="global.html#getClassStudents">getClassStudents</a></li><li><a href="global.html#getContactMessage">getContactMessage</a></li><li><a href="global.html#getCourseById">getCourseById</a></li><li><a href="global.html#getCourseDetails">getCourseDetails</a></li><li><a href="global.html#getCourseProgress">getCourseProgress</a></li><li><a href="global.html#getCoursesByClass">getCoursesByClass</a></li><li><a href="global.html#getFlags">getFlags</a></li><li><a href="global.html#getInboxMessages">getInboxMessages</a></li><li><a href="global.html#getInitialViewMode">getInitialViewMode</a></li><li><a href="global.html#getLiveById">getLiveById</a></li><li><a href="global.html#getLiveMessages">getLiveMessages</a></li><li><a href="global.html#getLiveStreamUrl">getLiveStreamUrl</a></li><li><a href="global.html#getLivesByClass">getLivesByClass</a></li><li><a href="global.html#getMessage">getMessage</a></li><li><a href="global.html#getNotificationPreferences">getNotificationPreferences</a></li><li><a href="global.html#getSentMessages">getSentMessages</a></li><li><a href="global.html#getStudentProgress">getStudentProgress</a></li><li><a href="global.html#getThreadById">getThreadById</a></li><li><a href="global.html#getThreads">getThreads</a></li><li><a href="global.html#getTrashMessages">getTrashMessages</a></li><li><a href="global.html#getUserById">getUserById</a></li><li><a href="global.html#getUserProfile">getUserProfile</a></li><li><a href="global.html#getUserWarnings">getUserWarnings</a></li><li><a href="global.html#getVideoDetails">getVideoDetails</a></li><li><a href="global.html#getVideoStreamUrl">getVideoStreamUrl</a></li><li><a href="global.html#handle2FASubmit">handle2FASubmit</a></li><li><a href="global.html#handleBackdropClick">handleBackdropClick</a></li><li><a href="global.html#handleBlockedMouseLeave">handleBlockedMouseLeave</a></li><li><a href="global.html#handleBlockedMouseMove">handleBlockedMouseMove</a></li><li><a href="global.html#handleClose">handleClose</a></li><li><a href="global.html#handleCompleteCourse">handleCompleteCourse</a></li><li><a href="global.html#handleCourseDisapproval">handleCourseDisapproval</a></li><li><a href="global.html#handleDeleteCourse">handleDeleteCourse</a></li><li><a href="global.html#handleDigitChange">handleDigitChange</a></li><li><a href="global.html#handleDigitKeyDown">handleDigitKeyDown</a></li><li><a href="global.html#handleDigitPaste">handleDigitPaste</a></li><li><a href="global.html#handleDownloadDocument">handleDownloadDocument</a></li><li><a href="global.html#handleError">handleError</a></li><li><a href="global.html#handleInputChange">handleInputChange</a></li><li><a href="global.html#handleLogout">handleLogout</a></li><li><a href="global.html#handleMenuToggle">handleMenuToggle</a></li><li><a href="global.html#handleModAction">handleModAction</a></li><li><a href="global.html#handleSubmit">handleSubmit</a></li><li><a href="global.html#handleSubmitClasse">handleSubmitClasse</a></li><li><a href="global.html#handleTabChange">handleTabChange</a></li><li><a href="global.html#handleUnblockCourse">handleUnblockCourse</a></li><li><a href="global.html#isAuthenticated">isAuthenticated</a></li><li><a href="global.html#loadCaptchaEngine">loadCaptchaEngine</a></li><li><a href="global.html#logViewEngagement">logViewEngagement</a></li><li><a href="global.html#login">login</a></li><li><a href="global.html#markAsRead">markAsRead</a></li><li><a href="global.html#markAsUnread">markAsUnread</a></li><li><a href="global.html#markContactMessageAsProcessed">markContactMessageAsProcessed</a></li><li><a href="global.html#markCourseAsCompleted">markCourseAsCompleted</a></li><li><a href="global.html#markCourseAsInProgress">markCourseAsInProgress</a></li><li><a href="global.html#mountApp">mountApp</a></li><li><a href="global.html#moveToTrash">moveToTrash</a></li><li><a href="global.html#navItems">navItems</a></li><li><a href="global.html#navigate">navigate</a></li><li><a href="global.html#onSamplesDecoded">onSamplesDecoded</a></li><li><a href="global.html#refreshTwoFASetup">refreshTwoFASetup</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#removeStudentFromClass">removeStudentFromClass</a></li><li><a href="global.html#renderContent">renderContent</a></li><li><a href="global.html#resolveFlag">resolveFlag</a></li><li><a href="global.html#restoreFromTrash">restoreFromTrash</a></li><li><a href="global.html#retrogradeUserRole">retrogradeUserRole</a></li><li><a href="global.html#root">root</a></li><li><a href="global.html#sendContactMessage">sendContactMessage</a></li><li><a href="global.html#sendLiveMessage">sendLiveMessage</a></li><li><a href="global.html#sendMessage">sendMessage</a></li><li><a href="global.html#sendWarning">sendWarning</a></li><li><a href="global.html#setMainTeacher">setMainTeacher</a></li><li><a href="global.html#setup2FA">setup2FA</a></li><li><a href="global.html#signButtons">signButtons</a></li><li><a href="global.html#startLive">startLive</a></li><li><a href="global.html#toggleAll">toggleAll</a></li><li><a href="global.html#toggleClasse">toggleClasse</a></li><li><a href="global.html#toggleMember">toggleMember</a></li><li><a href="global.html#toggleMobileMenu">toggleMobileMenu</a></li><li><a href="global.html#unblockCourse">unblockCourse</a></li><li><a href="global.html#unblockLive">unblockLive</a></li><li><a href="global.html#updateClass">updateClass</a></li><li><a href="global.html#updateComment">updateComment</a></li><li><a href="global.html#updateCourse">updateCourse</a></li><li><a href="global.html#updateLive">updateLive</a></li><li><a href="global.html#updateNotificationPreferences">updateNotificationPreferences</a></li><li><a href="global.html#updateThread">updateThread</a></li><li><a href="global.html#updateUser">updateUser</a></li><li><a href="global.html#updateUserProfile">updateUserProfile</a></li><li><a href="global.html#updateUserProfileHandler">updateUserProfileHandler</a></li><li><a href="global.html#updateVideo">updateVideo</a></li><li><a href="global.html#upgradeUserRole">upgradeUserRole</a></li><li><a href="global.html#uploadAvatar">uploadAvatar</a></li><li><a href="global.html#uploadIllustrationAvatar">uploadIllustrationAvatar</a></li><li><a href="global.html#useEffect">useEffect</a></li><li><a href="global.html#useTutorial">useTutorial</a></li><li><a href="global.html#validateForm">validateForm</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#verify2FASetup">verify2FASetup</a></li><li><a href="global.html#verifyTwoFA">verifyTwoFA</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Sat Jun 07 2025 14:32:34 GMT+0200 (Central European Summer Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

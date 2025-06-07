@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: controllers/authController.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: controllers/authController.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @fileoverview Contrôleur d'authentification gérant l'inscription, la connexion, 
+ * l'authentification à deux facteurs (2FA) et la vérification des codes d'enregistrement.
+ * @module controllers/authController
+ */
+
+// filepath: /home/816ctbe/Documents/SPOC-LMSC/server/controllers/authController.js
+const { User, Code, StudentClass } = require('../models');
+const { Op } = require('sequelize');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const { authenticator } = require('otplib');
+const qrcode = require('qrcode');
+
+/**
+ * Messages d'erreur utilisés dans le contrôleur d'authentification
+ * @constant {Object}
+ */
+const ERROR_MESSAGES = {
+  INVALID_2FA_CODE: 'auth/invalid-2fa-code',
+  INVALID_REGISTER_CODE: 'auth/invalid-register-code',
+  EXPIRED_TOKEN: 'auth/session-expired',
+  MISSING_2FA_CODE: 'auth/2fa-required',
+  MISSING_FIELDS: 'auth/missing-fields',
+  INVALID_ROLE: 'auth/invalid-role',
+  EMAIL_EXISTS: 'auth/email-exists',
+  USERNAME_EXISTS: 'auth/username-exists',
+  INVALID_CREDENTIALS: 'auth/invalid-credentials',
+  SERVER_ERROR: 'default'
+};
+
+/**
+ * Génère un token temporaire pour l'authentification à deux facteurs
+ * 
+ * @param {number} userId - Identifiant de l'utilisateur
+ * @param {boolean} isSetup - Indique si le token est utilisé pour la configuration 2FA
+ * @returns {string} Token JWT temporaire
+ * 
+ * @example
+ * const tempToken = generateTempToken(123, true); // Pour configuration 2FA
+ * const tempToken = generateTempToken(123, false); // Pour vérification 2FA
+ */
+const generateTempToken = (userId, isSetup) => {
+  return jwt.sign(
+    { userId, purpose: isSetup ? 'Setup2FA' : '2FA' },
+    process.env.JWT_SECRET,
+    { expiresIn: isSetup ? '2m' : '10m', algorithm: 'HS256' }
+  );
+};
+
+/**
+ * Vérifie la validité d'un code d'enregistrement
+ * 
+ * @param {Object} req - Requête Express
+ * @param {Object} res - Réponse Express
+ * @param {Function|null} next - Middleware suivant
+ * @param {boolean} internal - Indique si l'appel est interne ou non
+ * @param {Object|null} registerCode - Code d'enregistrement en cas d'appel interne
+ * @returns {Object|undefined} Retourne un objet avec isValid si internal est true, sinon répond via res
+ * @throws {Error} En cas d'erreur serveur
+ */
+const checkRegisterCode = async (req, res, next = null, internal = false, registerCode = null) => {
+  const code = registerCode?.code || req.body?.code;
+
+  if (!code) {
+    return internal ? { isValid: false } : res.status(400).json({ message: ERROR_MESSAGES.MISSING_FIELDS });
+  }
+
+  try {
+    const codeRecord = await Code.findOne({ where: { value: code } });
+
+    if (!codeRecord) {
+      return internal ? { isValid: false } : res.status(400).json({ message: ERROR_MESSAGES.INVALID_REGISTER_CODE });
+    }
+
+    if (new Date() > codeRecord.expiresAt) {
+      return internal ? { isValid: false } : res.status(400).json({ message: ERROR_MESSAGES.INVALID_REGISTER_CODE });
+    }
+
+    if (codeRecord.remainingUses &lt;= 0) {
+      return internal ? { isValid: false } : res.status(400).json({ message: ERROR_MESSAGES.INVALID_REGISTER_CODE });
+    }
+
+    return internal ? { isValid: true } : res.json({ isValid: true });
+  } catch (error) {
+    console.error('Error checking register code:', error);
+    return internal ? { isValid: false } : res.status(500).json({ message: ERROR_MESSAGES.SERVER_ERROR });
+  }
+}
+
+/**
+ * Inscrit un nouvel utilisateur
+ * 
+ * @param {Object} req - Requête Express contenant les informations d'inscription
+ * @param {string} req.body.email - Email de l'utilisateur
+ * @param {string} req.body.username - Nom d'utilisateur
+ * @param {string} req.body.registerCode - Code d'enregistrement
+ * @param {string} req.body.password - Mot de passe
+ * @param {string} req.body.name - Prénom
+ * @param {string} req.body.surname - Nom de famille
+ * @param {Object} res - Réponse Express
+ * @returns {Object} Retourne un token temporaire et les informations de configuration 2FA
+ * @throws {Error} En cas d'erreur d'inscription
+ */
+const register = async (req, res) => {
+  const { email, username, registerCode, password, name, surname } = req.body;
+  const requiredFields = ['email', 'username', 'registerCode', 'password', 'name', 'surname'];
+
+  if (requiredFields.some(field => !req.body[field])) {
+    return res.status(400).json({ message: ERROR_MESSAGES.MISSING_FIELDS });
+  }
+
+  const registerCodeCheck = await checkRegisterCode(req, res, null, true, { code: registerCode });
+  if (!registerCodeCheck.isValid) {
+    return res.status(400).json({ message: ERROR_MESSAGES.INVALID_REGISTER_CODE });
+  }
+
+  const codeRecord = await Code.findOne({ where: { value: registerCode } });
+  if (codeRecord) {
+    codeRecord.remainingUses -= 1;
+    await codeRecord.save();
+  }
+
+  const { role, classId } = codeRecord;
+
+  try {
+    const [existingEmail, existingUsername] = await Promise.all([
+      User.findOne({ where: { email } }),
+      User.findOne({ where: { username } })
+    ]);
+
+    if (existingEmail) return res.status(409).json({ message: ERROR_MESSAGES.EMAIL_EXISTS });
+    if (existingUsername) return res.status(409).json({ message: ERROR_MESSAGES.USERNAME_EXISTS });
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+    const secret = authenticator.generateSecret();
+
+    const newUser = await User.create({
+      email,
+      username,
+      password: hashedPassword,
+      name,
+      surname,
+      firstLogin: false,
+      twoFASecret: secret,
+      twoFAEnabled: false,
+      role
+    });
+
+    if (classId) {
+      await StudentClass.create({ student_id: newUser.id, class_id: classId });
+    }
+
+    const qrCode = await qrcode.toDataURL(authenticator.keyuri(email, process.env.APP_NAME, secret));
+    const tempToken = generateTempToken(newUser.id, true);
+
+    return res.status(201).json({
+      tempToken,
+      twoFASetup: {
+        qrCode,
+        manualSecret: secret
+      }
+    });
+
+  } catch (error) {
+    console.error('Registration error:', error);
+    return res.status(500).json({ message: ERROR_MESSAGES.SERVER_ERROR });
+  }
+};
+
+/**
+ * Inscrit manuellement un utilisateur (généralement utilisé par les administrateurs)
+ * 
+ * @param {Object} req - Requête Express
+ * @param {string} req.body.email - Email de l'utilisateur
+ * @param {string} req.body.password - Mot de passe
+ * @param {string} req.body.role - Rôle de l'utilisateur
+ * @param {string} req.body.name - Prénom
+ * @param {string} req.body.surname - Nom de famille
+ * @param {Object} res - Réponse Express
+ * @returns {Object} Retourne un token JWT
+ * @throws {Error} En cas d'erreur d'inscription
+ */
+const manualRegister = async (req, res) => {
+  const { email, password, role, name, surname } = req.body;
+  const requiredFields = ['email', 'password', 'role', 'name', 'surname'];
+
+  if (requiredFields.some(field => !req.body[field])) {
+    return res.status(400).json({ message: ERROR_MESSAGES.MISSING_FIELDS });
+  }
+
+  try {
+    const [existingEmail, existingUsername] = await Promise.all([
+      User.findOne({ where: { email } }),
+    ]);
+
+    if (existingEmail) return res.status(409).json({ message: ERROR_MESSAGES.EMAIL_EXISTS });
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+
+    const newUser = await User.create({
+      email,
+      password: hashedPassword,
+      name,
+      surname,
+      firstLogin: true,
+      twoFAEnabled: false,
+      role
+    });
+
+    const tokenPayload = {
+      id: newUser.id,
+      email: newUser.email,
+      name: newUser.name,
+      role: newUser.role // Toujours en français
+    };
+
+    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '1h' });
+    return res.json({ token });
+
+  } catch (error) {
+    console.error('Registration error:', error);
+    return res.status(500).json({ message: ERROR_MESSAGES.SERVER_ERROR });
+  }
+};
+
+/**
+ * Authentifie un utilisateur existant
+ * 
+ * @param {Object} req - Requête Express
+ * @param {string} [req.body.email] - Email de l'utilisateur (optionnel si username est fourni)
+ * @param {string} [req.body.username] - Nom d'utilisateur (optionnel si email est fourni)
+ * @param {string} req.body.password - Mot de passe
+ * @param {Object} res - Réponse Express
+ * @returns {Object} Retourne un token JWT ou un token temporaire si 2FA est activé
+ * @throws {Error} En cas d'erreur d'authentification
+ */
+const login = async (req, res) => {
+  const { email, username, password } = req.body;
+
+  if ((!email &amp;&amp; !username) || !password) {
+    return res.status(400).json({ message: ERROR_MESSAGES.MISSING_FIELDS });
+  }
+
+  try {
+    let user;
+    if (email) {
+      user = await User.findOne({ where: { email } });
+    } else {
+      user = await User.findOne({ where: { username } });
+    }
+    if (!user) return res.status(401).json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS });
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) return res.status(401).json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS });
+
+    const isAccountLocked = user.statut === 'inactif';
+    if (isAccountLocked) {
+      return res.status(403).json({ message: 'Account is locked. Please contact support using contact form.' });
+    }
+
+    if (user.twoFAEnabled) {
+      const tempToken = generateTempToken(user.id);
+      return res.status(202).json({
+        requires2FA: true,
+        tempToken,
+        message: '2FA required'
+      });
+    }
+
+    const tokenPayload = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role, // Toujours en français
+      ...(user.firstLogin &amp;&amp; { firstLogin: true })
+    };
+
+    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: user.firstLogin ? '10m' : '1h' });
+    return res.json({ token });
+
+  } catch (error) {
+    console.error('Login error:', error);
+    return res.status(500).json({ message: ERROR_MESSAGES.SERVER_ERROR });
+  }
+};
+
+/**
+ * Vérifie un code d'authentification à deux facteurs
+ * 
+ * @param {Object} req - Requête Express
+ * @param {string} req.body.code - Code 2FA
+ * @param {string} req.body.tempToken - Token temporaire
+ * @param {boolean} [req.body.setup] - Indique si c'est pour la configuration initiale
+ * @param {Object} res - Réponse Express
+ * @returns {Object} Retourne un token JWT
+ * @throws {Error} En cas d'erreur de vérification
+ */
+const verify2FA = async (req, res) => {
+  const { code, tempToken, setup } = req.body;
+
+  if (!code || !tempToken) {
+    return res.status(400).json({ message: ERROR_MESSAGES.MISSING_2FA_CODE });
+  }
+
+  try {
+    const decoded = jwt.verify(tempToken, process.env.JWT_SECRET);
+    if (decoded.purpose !== '2FA' &amp;&amp; decoded.purpose !== 'Setup2FA') {
+      return res.status(401).json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS });
+    }
+
+    const user = await User.findByPk(decoded.userId);
+    if (!user) return res.status(404).json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS });
+
+    const verified = authenticator.check(code, user.twoFASecret);
+    if (!verified) return res.status(401).json({ message: ERROR_MESSAGES.INVALID_2FA_CODE });
+
+    if (setup) {
+      user.twoFAEnabled = true;
+      await user.save();
+    }
+
+    const tokenPayload = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role, // Toujours en français
+      ...(user.firstLogin &amp;&amp; { firstLogin: true })
+    };
+
+    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '1h' });
+    return res.json({ token });
+
+  } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ message: ERROR_MESSAGES.EXPIRED_TOKEN });
+    }
+    console.error('2FA verification error:', error);
+    return res.status(500).json({ message: ERROR_MESSAGES.SERVER_ERROR });
+  }
+};
+
+/**
+ * Active l'authentification à deux facteurs pour un utilisateur
+ * 
+ * @param {Object} req - Requête Express
+ * @param {Object} req.user - Utilisateur authentifié
+ * @param {number} req.user.id - ID de l'utilisateur
+ * @param {Object} res - Réponse Express
+ * @returns {Object} Retourne un token temporaire et les informations de configuration 2FA
+ * @throws {Error} En cas d'erreur d'activation
+ */
+const activate2FA = async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const user = await User.findByPk(userId);
+    if (!user) {
+      return res.status(401).json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS });
+    }
+
+    const email = user.email;
+    const secret = authenticator.generateSecret();
+    user.twoFASecret = secret;
+
+    await user.save();
+
+    const qrCode = await qrcode.toDataURL(authenticator.keyuri(email, process.env.APP_NAME, secret));
+    const tempToken = generateTempToken(user.id, true);
+
+    return res.status(201).json({
+      tempToken,
+      twoFASetup: {
+        qrCode,
+        manualSecret: secret
+      }
+    });
+
+  } catch (error) {
+    console.error('Erreur activation 2FA:', error);
+    return res.status(500).json({ message: ERROR_MESSAGES.SERVER_ERROR });
+  }
+};
+
+/**
+ * Rafraîchit la configuration de l'authentification à deux facteurs
+ * 
+ * @param {Object} req - Requête Express
+ * @param {string} req.body.tempToken - Token temporaire
+ * @param {Object} res - Réponse Express
+ * @returns {Object} Retourne un nouveau token temporaire
+ * @throws {Error} En cas d'erreur de rafraîchissement
+ */
+const refresh2FASetup = async (req, res) => {
+  const { tempToken } = req.body;
+
+  if (!tempToken) {
+    return res.status(400).json({ message: ERROR_MESSAGES.MISSING_FIELDS });
+  }
+
+  try {
+    const decoded = jwt.verify(tempToken, process.env.JWT_SECRET);
+    if (decoded.purpose !== 'Setup2FA') {
+      return res.status(401).json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS });
+    }
+
+    const user = await User.findByPk(decoded.userId);
+    if (!user) return res.status(404).json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS });
+
+    const newTempToken = generateTempToken(user.id, true);
+    return res.status(201).json({ tempToken: newTempToken });
+
+  } catch (error) {
+    console.error('2FA refresh error:', error);
+    return res.status(500).json({ message: ERROR_MESSAGES.SERVER_ERROR });
+  }
+};
+
+/**
+ * Gère la première connexion d'un utilisateur avec mise à jour des informations et configuration 2FA
+ * 
+ * @param {Object} req - Requête Express
+ * @param {string} req.body.username - Nouveau nom d'utilisateur
+ * @param {string} req.body.password - Nouveau mot de passe
+ * @param {Object} req.user - Utilisateur authentifié
+ * @param {number} req.user.id - ID de l'utilisateur
+ * @param {Object} res - Réponse Express
+ * @returns {Object} Retourne un token JWT ou des informations de configuration 2FA
+ * @throws {Error} En cas d'erreur de configuration
+ */
+const firstLogin = async (req, res) => {
+  const { username, password } = req.body;
+  const userId = req.user.id;
+
+  if (!password || !username) {
+    return res.status(400).json({ message: ERROR_MESSAGES.MISSING_FIELDS });
+  }
+
+  try {
+    const user = await User.findByPk(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: ERROR_MESSAGES.INVALID_CREDENTIALS });
+    }
+
+    if (!user.firstLogin) {
+      return res.status(400).json({ message: 'User has already completed first login.' });
+    }
+
+    const existingUser = await User.findOne({ where: { username, id: { [Op.ne]: userId } } });
+    if (existingUser) {
+      return res.status(409).json({ message: ERROR_MESSAGES.USERNAME_EXISTS });
+    }
+
+    user.firstLogin = false;
+    user.password = await bcrypt.hash(password, 12);
+    user.username = username;
+
+
+    if (user.twoFAEnabled) {
+      const tokenPayload = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role, // Toujours en français
+        ...(user.firstLogin &amp;&amp; { firstLogin: true })
+      };
+
+      const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '1h' });
+      return res.json({ token });
+    }
+
+    const email = user.email;
+    const secret = authenticator.generateSecret();
+    user.twoFASecret = secret;
+
+    await user.save();
+
+    const qrCode = await qrcode.toDataURL(authenticator.keyuri(email, process.env.APP_NAME, secret));
+    const tempToken = generateTempToken(user.id, true);
+
+    return res.status(200).json({
+      tempToken,
+      twoFASetup: {
+        qrCode,
+        manualSecret: secret
+      }
+    });
+
+  } catch (error) {
+    console.error('First login error:', error);
+    return res.status(500).json({ message: ERROR_MESSAGES.SERVER_ERROR });
+  }
+};
+
+module.exports = {
+  manualRegister,
+  register,
+  login,
+  activate2FA,
+  verify2FA,
+  refresh2FASetup,
+  checkRegisterCode,
+  firstLogin
+};</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-chatController.html">chatController</a></li><li><a href="module-chatRoutes.html">chatRoutes</a></li><li><a href="module-controllers_authController.html">controllers/authController</a></li><li><a href="module-controllers_avatarController.html">controllers/avatarController</a></li><li><a href="module-controllers_classController.html">controllers/classController</a></li><li><a href="module-controllers_messageController.html">controllers/messageController</a></li><li><a href="module-controllers_moderationController.html">controllers/moderationController</a></li><li><a href="module-controllers_progressTracking.html">controllers/progressTracking</a></li><li><a href="module-controllers_userController.html">controllers/userController</a></li><li><a href="module-documentController.html">documentController</a></li><li><a href="module-documentRoutes.html">documentRoutes</a></li><li><a href="module-forumController.html">forumController</a></li><li><a href="module-forumRoutes.html">forumRoutes</a></li><li><a href="module-middlewares_userValidation.html">middlewares/userValidation</a></li><li><a href="module-recordingController.html">recordingController</a></li><li><a href="module-recordingRoutes.html">recordingRoutes</a></li><li><a href="module-routes_authRoutes.html">routes/authRoutes</a></li><li><a href="module-routes_avatarRoutes.html">routes/avatarRoutes</a></li><li><a href="module-routes_classRoutes.html">routes/classRoutes</a></li><li><a href="module-routes_messageRoutes.html">routes/messageRoutes</a></li><li><a href="module-routes_moderationRoutes.html">routes/moderationRoutes</a></li><li><a href="module-routes_progressTracking.html">routes/progressTracking</a></li><li><a href="module-routes_userRoutes.html">routes/userRoutes</a></li><li><a href="module-socketManager.html">socketManager</a></li><li><a href="module-videoController.html">videoController</a></li><li><a href="module-videoRoutes.html">videoRoutes</a></li><li><a href="module-virusScanService.html">virusScanService</a></li><li><a href="module-%25257BObject%25257D.html">{Object}</a></li></ul><h3>Classes</h3><ul><li><a href="global.html#Admin">Admin</a></li><li><a href="global.html#Attachment">Attachment</a></li><li><a href="global.html#ChatMessage">ChatMessage</a></li><li><a href="global.html#Classe">Classe</a></li><li><a href="global.html#Code">Code</a></li><li><a href="global.html#Comment">Comment</a></li><li><a href="global.html#Course">Course</a></li><li><a href="global.html#CourseDocument">CourseDocument</a></li><li><a href="global.html#CourseProgress">CourseProgress</a></li><li><a href="global.html#CourseVideo">CourseVideo</a></li><li><a href="global.html#Document">Document</a></li><li><a href="global.html#Flag">Flag</a></li><li><a href="global.html#LiveAttendance">LiveAttendance</a></li><li><a href="global.html#Lives">Lives</a></li><li><a href="global.html#Message">Message</a></li><li><a href="global.html#Recipient">Recipient</a></li><li><a href="Stats.html">Stats</a></li><li><a href="global.html#Student">Student</a></li><li><a href="global.html#StudentClass">StudentClass</a></li><li><a href="global.html#Teacher">Teacher</a></li><li><a href="TeacherClass.html">TeacherClass</a></li><li><a href="global.html#Thread">Thread</a></li><li><a href="global.html#TrashMessage">TrashMessage</a></li><li><a href="global.html#User">User</a></li><li><a href="global.html#UserAvatar">UserAvatar</a></li><li><a href="global.html#Video">Video</a></li><li><a href="global.html#Warning">Warning</a></li><li><a href="module-models.ClassLives.html">ClassLives</a></li></ul><h3>Global</h3><ul><li><a href="global.html#ClassLives">ClassLives</a></li><li><a href="global.html#DEFAULTS">DEFAULTS</a></li><li><a href="global.html#MessageId">MessageId</a></li><li><a href="global.html#addLive">addLive</a></li><li><a href="global.html#allowedOrigins">allowedOrigins</a></li><li><a href="global.html#authMiddleware">authMiddleware</a></li><li><a href="global.html#blockCourse">blockCourse</a></li><li><a href="global.html#blockLive">blockLive</a></li><li><a href="global.html#buildAndRun">buildAndRun</a></li><li><a href="global.html#class_id">class_id</a></li><li><a href="global.html#content">content</a></li><li><a href="global.html#createCode">createCode</a></li><li><a href="global.html#createCourse">createCourse</a></li><li><a href="global.html#createQuarantineContainer">createQuarantineContainer</a></li><li><a href="global.html#createdAt">createdAt</a></li><li><a href="global.html#deleteCode">deleteCode</a></li><li><a href="global.html#deleteCourse">deleteCourse</a></li><li><a href="global.html#deleteLive">deleteLive</a></li><li><a href="global.html#description">description</a></li><li><a href="global.html#disapproveLive">disapproveLive</a></li><li><a href="global.html#editLive">editLive</a></li><li><a href="global.html#email">email</a></li><li><a href="global.html#endLive">endLive</a></li><li><a href="global.html#fileSize">fileSize</a></li><li><a href="global.html#filename">filename</a></li><li><a href="global.html#firstLogin">firstLogin</a></li><li><a href="global.html#generateRandomCode">generateRandomCode</a></li><li><a href="global.html#getAllCodes">getAllCodes</a></li><li><a href="global.html#getAllCourses">getAllCourses</a></li><li><a href="global.html#getAllLives">getAllLives</a></li><li><a href="global.html#getCourse">getCourse</a></li><li><a href="global.html#getLive">getLive</a></li><li><a href="global.html#getLiveByClass">getLiveByClass</a></li><li><a href="global.html#getMainCourse">getMainCourse</a></li><li><a href="global.html#httpServer">httpServer</a></li><li><a href="global.html#id">id</a></li><li><a href="global.html#imageExists">imageExists</a></li><li><a href="global.html#imageToByteArray">imageToByteArray</a></li><li><a href="global.html#live_id">live_id</a></li><li><a href="global.html#main_teacher_id">main_teacher_id</a></li><li><a href="global.html#mimeType">mimeType</a></li><li><a href="global.html#name">name</a></li><li><a href="global.html#password">password</a></li><li><a href="global.html#runCommand">runCommand</a></li><li><a href="global.html#scanStatus">scanStatus</a></li><li><a href="global.html#sequelize">sequelize</a></li><li><a href="global.html#setupStreaming">setupStreaming</a></li><li><a href="global.html#startLive">startLive</a></li><li><a href="global.html#statut">statut</a></li><li><a href="global.html#surname">surname</a></li><li><a href="global.html#twoFAEnabled">twoFAEnabled</a></li><li><a href="global.html#twoFASecret">twoFASecret</a></li><li><a href="global.html#unblockCourse">unblockCourse</a></li><li><a href="global.html#unblockLive">unblockLive</a></li><li><a href="global.html#updateCourse">updateCourse</a></li><li><a href="global.html#updateVideoCoverImages">updateVideoCoverImages</a></li><li><a href="global.html#updatedAt">updatedAt</a></li><li><a href="global.html#user_id">user_id</a></li><li><a href="global.html#username">username</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Sat Jun 07 2025 14:03:57 GMT+0200 (Central European Summer Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

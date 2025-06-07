@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: src/components/settings/SecurityTab.jsx</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: src/components/settings/SecurityTab.jsx</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import { useState, useRef, useEffect, lazy, Suspense } from 'react';
+import PropTypes from 'prop-types';
+import { Lock, Loader2 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import {
+
+
+
+  validateCaptcha,
+} from 'react-simple-captcha';
+
+import { changePassword } from '../../API/UserCaller';
+
+import { setup2FA, verify2FASetup, disable2FA } from '../../API/AuthCaller';
+
+/**
+ * A lazy-loaded component that renders a canvas template for CAPTCHA verification
+ * @type {React.LazyExoticComponent&lt;React.ComponentType>}
+ */
+const LoadCanvasTemplate = lazy(() =>
+  import('react-simple-captcha').then(module => ({ default: module.LoadCanvasTemplate }))
+);
+
+/**
+ * A lazy-loaded function to initialize the CAPTCHA engine
+ * @type {React.LazyExoticComponent&lt;Function>}
+ */
+const loadCaptchaEngine = lazy(() =>
+  import('react-simple-captcha').then(module => ({ default: module.loadCaptchaEnginge }))
+);
+
+/**
+ * Renders a spinning loader animation
+ * @returns {JSX.Element} A spinner component
+ */
+const Spinner = () => (
+  &lt;Loader2 className="h-4 w-4 animate-spin" />
+);
+
+/**
+ * Modal component for setting up Two-Factor Authentication
+ * @type {React.LazyExoticComponent&lt;React.ComponentType>}
+ */
+const TwoFASetupModal = lazy(() => {
+  return new Promise(resolve => {
+
+    setTimeout(() => {
+      resolve({
+        default: ({ qrCodeData, manualSecret, handle2FASubmit, countEchec2FACode,
+          captchaValue, setCaptchaValue, twoFADigits, handleDigitChange,
+          handleDigitKeyDown, handleDigitPaste, digitsRefs, setAuthStep, loading }) => (
+          &lt;div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center transition-all duration-300 ease-out z-10">
+            &lt;div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md transform transition-all duration-300 ease-in-out">
+              &lt;div className="text-center space-y-7 mb-4">
+                &lt;h3 className="text-xl font-semibold">Configuration 2FA&lt;/h3>
+                &lt;img
+                  src={qrCodeData}
+                  alt="QR Code 2FA"
+                  className="mx-auto w-48 h-48 rounded-3xl shadow-lg mb-4 bg-white p-1 border-2 border-gray-200"
+                  loading="lazy"
+                />
+                &lt;p className="text-sm text-gray-600">
+                  Scannez le QR Code avec votre application d&amp;apos;authentification ou
+                  entrez ce code manuellement :
+                &lt;/p>
+                &lt;div className="font-mono bg-gray-100 p-2 rounded-lg">
+                  {manualSecret}
+                &lt;/div>
+              &lt;/div>
+
+              &lt;form onSubmit={handle2FASubmit} className="space-y-4">
+                {countEchec2FACode >= 2 &amp;&amp; (
+                  &lt;>
+                    &lt;Suspense fallback={&lt;div className="h-16 bg-gray-100 animate-pulse rounded-lg">&lt;/div>}>
+                      &lt;LoadCanvasTemplate reloadColor="red" />
+                    &lt;/Suspense>
+                    &lt;input
+                      type="text"
+                      placeholder="Entrez le texte CAPTCHA"
+                      value={captchaValue}
+                      onChange={e => setCaptchaValue(e.target.value)}
+                      className="w-full px-4 py-2 border rounded-lg"
+                    />
+                  &lt;/>
+                )}
+                &lt;div className="flex space-x-2 items-center justify-center">
+                  {twoFADigits.map((digit, index) => (
+                    &lt;input
+                      key={index}
+                      type="text"
+                      value={digit}
+                      onChange={e => handleDigitChange(index, e.target.value)}
+                      onKeyDown={e => handleDigitKeyDown(index, e)}
+                      onPaste={e => handleDigitPaste(index, e)}
+                      ref={el => (digitsRefs.current[index] = el)}
+                      maxLength="1"
+                      className="w-12 h-12 text-center border rounded-lg"
+                    />
+                  ))}
+                &lt;/div>
+                &lt;div className="flex items-center space-x-2 mt-10 gap-20">
+                  &lt;button
+                    type="button"
+                    className="mx-auto flex-1 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                    onClick={() => setAuthStep('2fa')}
+                  >
+                    Annuler
+                  &lt;/button>
+
+                  &lt;button
+                    type="submit"
+                    className="mx-auto flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center"
+                    disabled={loading}
+                  >
+                    {loading ? &lt;Spinner /> : 'Vérifier le code'}
+                  &lt;/button>
+                &lt;/div>
+              &lt;/form>
+            &lt;/div>
+          &lt;/div>
+        )
+      });
+    }, 100);
+  });
+});
+
+/**
+ * Component for managing security settings including password changes and 2FA
+ * 
+ * @param {Object} props - Component props
+ * @param {Object} props.user - User object containing user information
+ * @param {Function} props.setUser - Function to update user state
+ * @param {Function} props.handleInputChange - Function to handle input changes
+ * @returns {JSX.Element} Security settings tab
+ */
+const SecurityTab = ({ user, handleInputChange }) => {
+  const [twoFADigits, setTwoFADigits] = useState(['', '', '', '', '', '']);
+  const digitsRefs = useRef([]);
+  const [qrCodeData, setQrCodeData] = useState('');
+  const [manualSecret, setManualSecret] = useState('');
+  const [authStep, setAuthStep] = useState('initial');
+  const [captchaValue, setCaptchaValue] = useState('');
+  const [countEchec2FACode, setCountEchec2FACode] = useState(0);
+  const [tempToken, setTempToken] = useState(null);
+  const [twoFactorAuth, setTwoFactorAuth] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  /**
+   * Updates the component state when user data changes
+   * @returns {void}
+   */
+  useEffect(() => {
+
+    if (user &amp;&amp; user.twoFAEnabled !== undefined) {
+      setTwoFactorAuth(user.twoFAEnabled);
+    }
+  }, [user]);
+
+  /**
+   * Initializes CAPTCHA when failed verification attempts exceed threshold
+   * @returns {void}
+   */
+  useEffect(() => {
+    if (countEchec2FACode >= 2) {
+
+      const initCaptcha = async () => {
+        try {
+
+          const LoadCaptchaEngineFn = await loadCaptchaEngine;
+          LoadCaptchaEngineFn(6, '#f9fafb');
+        } catch (error) {
+          console.error('Error loading CAPTCHA engine:', error);
+        }
+      };
+
+      initCaptcha();
+    }
+  }, [countEchec2FACode]);
+
+  /**
+   * Handles changes to 2FA verification code input fields
+   * 
+   * @param {number} index - Index of the digit being changed
+   * @param {string} value - New value for the digit
+   * @returns {void}
+   */
+  const handleDigitChange = (index, value) => {
+
+    if (!/^[0-9]?$/.test(value)) return;
+
+    const newDigits = [...twoFADigits];
+    newDigits[index] = value;
+    setTwoFADigits(newDigits);
+
+
+    if (value &amp;&amp; index &lt; 5) {
+      digitsRefs.current[index + 1].focus();
+    }
+  };
+
+  /**
+   * Handles keyboard events for 2FA verification code input fields
+   * 
+   * @param {number} index - Index of the current digit field
+   * @param {KeyboardEvent} e - Keyboard event
+   * @returns {void}
+   */
+  const handleDigitKeyDown = (index, e) => {
+
+    if (e.key === 'Backspace') {
+
+      if (twoFADigits[index] !== '') {
+        const newDigits = [...twoFADigits];
+        newDigits[index] = '';
+        setTwoFADigits(newDigits);
+
+      }
+
+      else if (index > 0) {
+        const newDigits = [...twoFADigits];
+        newDigits[index - 1] = '';
+        setTwoFADigits(newDigits);
+        digitsRefs.current[index - 1].focus();
+      }
+    } else if (e.key === 'ArrowLeft' &amp;&amp; index > 0) {
+
+      digitsRefs.current[index - 1].focus();
+    } else if (e.key === 'ArrowRight' &amp;&amp; index &lt; 5) {
+
+      digitsRefs.current[index + 1].focus();
+    } else if (/^[0-9]$/.test(e.key)) {
+
+      const newDigits = [...twoFADigits];
+      newDigits[index] = e.key;
+      setTwoFADigits(newDigits);
+
+
+      if (index &lt; 5) {
+        e.preventDefault();
+        digitsRefs.current[index + 1].focus();
+      }
+    }
+  };
+
+  /**
+   * Handles paste events for 2FA verification code input fields
+   * 
+   * @param {number} index - Index of the current digit field
+   * @param {ClipboardEvent} e - Clipboard event
+   * @returns {void}
+   */
+  const handleDigitPaste = (index, e) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text').trim();
+
+    const digits = pastedData.replace(/\D/g, '').slice(0, 6).split('');
+
+    if (digits.length > 0) {
+      const newDigits = [...twoFADigits];
+
+      digits.forEach((digit, i) => {
+        if (index + i &lt; 6) {
+          newDigits[index + i] = digit;
+        }
+      });
+
+      setTwoFADigits(newDigits);
+
+      const nextEmptyIndex = newDigits.findIndex(digit => digit === '');
+      if (nextEmptyIndex !== -1 &amp;&amp; nextEmptyIndex &lt; 6) {
+        digitsRefs.current[nextEmptyIndex].focus();
+      } else if (digits.length > 0) {
+        digitsRefs.current[Math.min(index + digits.length, 5)].focus();
+      }
+    }
+  };
+
+  /**
+   * Handles submission of 2FA verification code
+   * 
+   * @param {Event} e - Form submission event
+   * @returns {Promise&lt;void>}
+   * @throws {Error} When verification fails
+   */
+  const handle2FASubmit = async e => {
+    e.preventDefault();
+
+    if (countEchec2FACode >= 2) {
+      if (captchaValue.trim() === '') {
+        return toast.error('Veuillez entrer le code de vérification (CAPTCHA)');
+      }
+      if (!validateCaptcha(captchaValue)) {
+        return toast.error('Le code de vérification (CAPTCHA) est incorrect');
+      }
+    }
+
+
+    const fullCode = twoFADigits.join('');
+
+    if (fullCode.length !== 6) {
+      return toast.error('Veuillez entrer un code à 6 chiffres');
+    }
+
+    setLoading(true);
+    try {
+      const { data } = await verify2FASetup({ code: fullCode, tempToken });
+
+      if (data.token) {
+        setTwoFactorAuth(true);
+        setTempToken(null);
+        setTwoFADigits(['', '', '', '', '', '']);
+        setCountEchec2FACode(0);
+        setAuthStep('initial');
+        toast.success('2FA activé avec succès.');
+      } else {
+        setCountEchec2FACode(prev => prev + 1);
+        toast.error('Code 2FA invalide. Veuillez réessayer.');
+      }
+    } catch (error) {
+      setCountEchec2FACode(prev => prev + 1);
+      console.error('Erreur lors de la vérification 2FA:', error);
+      toast.error('Code 2FA invalide. Veuillez réessayer.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Initiates the 2FA setup process
+   * 
+   * @param {Event} e - Click event
+   * @returns {Promise&lt;void>}
+   * @throws {Error} When 2FA setup fails
+   */
+  const handle2FASetup = async e => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const response = await setup2FA();
+
+      if (response.status === 201) {
+        setTempToken(response.data.tempToken);
+        setQrCodeData(response.data.twoFASetup.qrCode);
+        setManualSecret(response.data.twoFASetup.manualSecret);
+        setAuthStep('setup');
+      }
+    } catch (error) {
+      console.error("Erreur lors de la configuration 2FA:", error);
+      toast.error("Erreur lors de la configuration 2FA");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Resets and restarts the 2FA setup process
+   * 
+   * @param {Event} e - Click event
+   * @returns {Promise&lt;void>}
+   * @throws {Error} When 2FA reset fails
+   */
+  const handle2FAReset = async e => {
+    e.preventDefault();
+    try {
+      await disable2FA();
+      await handle2FASetup(e);
+    } catch (error) {
+      console.error('Erreur lors du reset 2FA:', error);
+      toast.error('Une erreur est survenue lors du reset 2FA.');
+    }
+  };
+
+  /**
+   * Disables two-factor authentication for the current user
+   * 
+   * @returns {Promise&lt;void>}
+   * @throws {Error} When 2FA disabling fails
+   */
+  const disable2FAHandler = async () => {
+    try {
+      const response = await disable2FA();
+      if (response.status === 200) {
+        setTwoFactorAuth(!twoFactorAuth);
+        toast.success("L'authentification 2FA a été désactivée avec succès.");
+      }
+    } catch (error) {
+      if (error.response) {
+        console.error('Erreur serveur:', error.response.data);
+        toast.error(error.response.data.message || 'Une erreur serveur est survenue.');
+      } else if (error.request) {
+        console.error('Erreur réseau:', error.request);
+        toast.error('Impossible de contacter le serveur. Veuillez vérifier votre connexion réseau.');
+      } else {
+        console.error('Erreur inconnue:', error);
+        toast.error('Une erreur inconnue est survenue. Veuillez réessayer.');
+      }
+    }
+  };
+
+  /**
+   * Validates and processes password change request
+   * 
+   * @returns {Promise&lt;void>}
+   * @throws {Error} When password validation or update fails
+   */
+  const handleSavePassword = async () => {
+
+    setErrors({});
+
+    const currentPassword = document.querySelector(
+      'input[placeholder="Entrez votre mot de passe actuel"]'
+    ).value;
+    const newPassword = document.querySelector(
+      'input[placeholder="Entrez un nouveau mot de passe"]'
+    ).value;
+    const confirmPassword = document.querySelector(
+      'input[placeholder="Confirmez le nouveau mot de passe"]'
+    ).value;
+
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setErrors({ general: 'Veuillez remplir tous les champs.' });
+      return toast.error('Veuillez remplir tous les champs.');
+    }
+
+
+    if (newPassword !== confirmPassword) {
+      setErrors({ confirmPassword: 'Les nouveaux mots de passe ne correspondent pas.' });
+      return toast.error('Les nouveaux mots de passe ne correspondent pas.');
+    }
+
+
+    if (newPassword === currentPassword) {
+      setErrors({ newPassword: 'Mot de passe identique au mot de passe actuel. Veuillez choisir un autre mot de passe.' });
+      return toast.error(
+        'Mot de passe identique au mot de passe actuel.\n Veuillez choisir un autre mot de passe.'
+      );
+    }
+
+
+    if (newPassword.length &lt; 12) {
+      setErrors({ newPassword: 'Le nouveau mot de passe doit contenir au moins 12 caractères.' });
+      return toast.error(
+        'Le nouveau mot de passe doit contenir au moins 12 caractères.'
+      );
+    }
+
+    setLoading(true);
+    try {
+
+      const owaspModule = await import('owasp-password-strength-test');
+      const passwordTest = owaspModule.default;
+      
+
+      passwordTest.config({
+        minLength: 12,
+        minOptionalTestsToPass: 3
+      });
+      
+      const testResult = passwordTest.test(newPassword);
+      
+      if (!testResult.strong) {
+        const errorMessage = 'Le mot de passe ne respecte pas les critères de sécurité: ' + 
+          testResult.errors.join(', ');
+        setErrors({ newPassword: errorMessage });
+        setLoading(false);
+        return toast.error(errorMessage);
+      }
+
+      await changePassword(currentPassword, newPassword);
+      toast.success('Mot de passe mis à jour avec succès.');
+
+
+      document.querySelector('input[placeholder="Entrez votre mot de passe actuel"]').value = '';
+      document.querySelector('input[placeholder="Entrez un nouveau mot de passe"]').value = '';
+      document.querySelector('input[placeholder="Confirmez le nouveau mot de passe"]').value = '';
+    } catch (error) {
+      if (error.response) {
+        console.error('Erreur serveur:', error.response.data);
+        setErrors({ currentPassword: error.response.data.message || 'Une erreur serveur est survenue.' });
+        toast.error(error.response.data.message || 'Une erreur serveur est survenue.');
+      } else if (error.request) {
+        console.error('Erreur réseau:', error.request);
+        setErrors({ general: 'Impossible de contacter le serveur. Veuillez vérifier votre connexion réseau.' });
+        toast.error('Impossible de contacter le serveur. Veuillez vérifier votre connexion réseau.');
+      } else {
+        console.error('Erreur inconnue:', error);
+        setErrors({ general: 'Une erreur inconnue est survenue. Veuillez réessayer.' });
+        toast.error('Une erreur inconnue est survenue. Veuillez réessayer.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Toggle switch component
+   * 
+   * @param {Object} props - Component props
+   * @param {boolean} props.checked - Whether the switch is toggled on
+   * @param {Function} props.onChange - Function to call when switch state changes
+   * @param {boolean} props.disabled - Whether the switch is disabled
+   * @returns {JSX.Element} Switch component
+   */
+  const Switch = ({ checked, onChange, disabled }) => {
+    return (
+      &lt;button
+        onClick={() => !disabled &amp;&amp; onChange(!checked)}
+        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${checked ? 'bg-blue-600' : 'bg-gray-200'
+          } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+        disabled={disabled}
+      >
+        &lt;span
+          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'
+            }`}
+        />
+      &lt;/button>
+    );
+  };
+
+  /**
+   * Displays error message for a form field
+   * 
+   * @param {Object} props - Component props
+   * @param {string} props.field - Field name to display errors for
+   * @returns {JSX.Element|null} Error message or null if no error
+   */
+  const ErrorMessage = ({ field }) => {
+    if (!errors[field]) return null;
+
+    return (
+      &lt;p className="mt-1 text-sm text-red-600">
+        {errors[field]}
+      &lt;/p>
+    );
+  };
+
+  return (
+    &lt;div className="space-y-8">
+      &lt;div className="space-y-6">
+        &lt;h2 className="text-xl font-semibold text-gray-800 flex items-center space-x-2">
+          &lt;Lock className="h-6 w-6" />
+          &lt;span>Authentification&lt;/span>
+        &lt;/h2>
+
+        &lt;div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+          &lt;div>
+            &lt;h3 className="font-medium">Authentification à deux facteurs&lt;/h3>
+            &lt;p className="text-sm text-gray-500">
+              Ajoutez une couche de sécurité supplémentaire
+            &lt;/p>
+          &lt;/div>
+          &lt;div className="flex items-center space-x-4">
+            &lt;Switch
+              checked={twoFactorAuth}
+              onChange={disable2FAHandler}
+              disabled={!twoFactorAuth}
+            />
+
+            {!twoFactorAuth ? (
+              &lt;button
+                onClick={e => handle2FASetup(e)}
+                className="px-4 py-2 text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 flex items-center space-x-2"
+                disabled={loading}
+              >
+                {loading ? &lt;Spinner /> : 'Configurer'}
+              &lt;/button>
+            ) : (
+              &lt;button
+                onClick={e => handle2FAReset(e)}
+                className="px-4 py-2 text-red-600 border border-red-600 rounded-lg hover:bg-red-50 flex items-center space-x-2"
+                disabled={loading}
+              >
+                {loading ? &lt;Spinner /> : 'Réinitialiser'}
+              &lt;/button>
+            )}
+          &lt;/div>
+        &lt;/div>
+
+        &lt;div className="space-y-6">
+          &lt;h2 className="text-xl font-semibold text-gray-800 flex items-center space-x-2">
+            &lt;Lock className="h-6 w-6" />
+            &lt;span>Modifier le mot de passe&lt;/span>
+          &lt;/h2>
+          &lt;div className="space-y-4">
+            &lt;div>
+              &lt;label className="block text-sm font-medium mb-2">
+                Mot de passe actuel
+              &lt;/label>
+              &lt;input
+                type="password"
+                placeholder="Entrez votre mot de passe actuel"
+                className={`w-full px-4 py-3 bg-white border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.currentPassword ? 'border-red-500' : ''}`}
+                onChange={(e) => {
+                  handleInputChange(e);
+                  if (errors.currentPassword || errors.general) {
+                    setErrors({ ...errors, currentPassword: null, general: null });
+                  }
+                }}
+              />
+              &lt;ErrorMessage field="currentPassword" />
+            &lt;/div>
+            &lt;div>
+              &lt;label className="block text-sm font-medium mb-2">
+                Nouveau mot de passe
+              &lt;/label>
+              &lt;input
+                type="password"
+                placeholder="Entrez un nouveau mot de passe"
+                className={`w-full px-4 py-3 bg-white border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.newPassword ? 'border-red-500' : ''}`}
+                onChange={(e) => {
+                  handleInputChange(e);
+                  if (errors.newPassword) {
+                    setErrors({ ...errors, newPassword: null });
+                  }
+                }}
+              />
+              &lt;ErrorMessage field="newPassword" />
+            &lt;/div>
+            &lt;div>
+              &lt;label className="block text-sm font-medium mb-2">
+                Confirmer le nouveau mot de passe
+              &lt;/label>
+              &lt;input
+                type="password"
+                placeholder="Confirmez le nouveau mot de passe"
+                className={`w-full px-4 py-3 bg-white border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${errors.confirmPassword ? 'border-red-500' : ''}`}
+                onChange={(e) => {
+                  handleInputChange(e);
+                  if (errors.confirmPassword) {
+                    setErrors({ ...errors, confirmPassword: null });
+                  }
+                }}
+              />
+              &lt;ErrorMessage field="confirmPassword" />
+            &lt;/div>
+            &lt;ErrorMessage field="general" />
+            &lt;button
+              onClick={handleSavePassword}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center space-x-2"
+              disabled={loading}
+            >
+              {loading ? &lt;Spinner /> : 'Enregistrer le nouveau mot de passe'}
+            &lt;/button>
+          &lt;/div>
+        &lt;/div>
+      &lt;/div>
+
+      {authStep === 'setup' &amp;&amp; (
+        &lt;Suspense fallback={
+          &lt;div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center">
+            &lt;div className="bg-white rounded-xl p-8 w-full max-w-md flex flex-col items-center">
+              &lt;Spinner />
+              &lt;p className="mt-4 text-gray-600">Chargement...&lt;/p>
+            &lt;/div>
+          &lt;/div>
+        }>
+          &lt;TwoFASetupModal
+            qrCodeData={qrCodeData}
+            manualSecret={manualSecret}
+            handle2FASubmit={handle2FASubmit}
+            countEchec2FACode={countEchec2FACode}
+            captchaValue={captchaValue}
+            setCaptchaValue={setCaptchaValue}
+            twoFADigits={twoFADigits}
+            handleDigitChange={handleDigitChange}
+            handleDigitKeyDown={handleDigitKeyDown}
+            handleDigitPaste={handleDigitPaste}
+            digitsRefs={digitsRefs}
+            setAuthStep={setAuthStep}
+            loading={loading}
+          />
+        &lt;/Suspense>
+      )}
+    &lt;/div>
+  );
+};
+
+/**
+ * PropTypes for the SecurityTab component
+ */
+SecurityTab.propTypes = {
+  user: PropTypes.object.isRequired,
+  setUser: PropTypes.func.isRequired,
+  handleInputChange: PropTypes.func.isRequired,
+};
+
+export default SecurityTab;</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-App.html">App</a></li></ul><h3>Global</h3><ul><li><a href="global.html#About">About</a></li><li><a href="global.html#AccountDisabledModal">AccountDisabledModal</a></li><li><a href="global.html#AdminDashboardHome">AdminDashboardHome</a></li><li><a href="global.html#BASE_URL">BASE_URL</a></li><li><a href="global.html#BulkActions">BulkActions</a></li><li><a href="global.html#ClassManagementTutorial">ClassManagementTutorial</a></li><li><a href="global.html#ClasseCards">ClasseCards</a></li><li><a href="global.html#ClasseCreationModal">ClasseCreationModal</a></li><li><a href="global.html#ClasseManagement">ClasseManagement</a></li><li><a href="global.html#ClasseTable">ClasseTable</a></li><li><a href="global.html#Contact">Contact</a></li><li><a href="global.html#ContentCard">ContentCard</a></li><li><a href="global.html#CourseReader">CourseReader</a></li><li><a href="global.html#CourseReaderTutorial">CourseReaderTutorial</a></li><li><a href="global.html#Courses">Courses</a></li><li><a href="global.html#CoursesLibraryTutorial">CoursesLibraryTutorial</a></li><li><a href="global.html#Dashboard">Dashboard</a></li><li><a href="global.html#DashboardTutorial">DashboardTutorial</a></li><li><a href="global.html#DeleteDocument">DeleteDocument</a></li><li><a href="global.html#DeleteVideo">DeleteVideo</a></li><li><a href="global.html#EleveDashboardHome">EleveDashboardHome</a></li><li><a href="global.html#ErrorMessage">ErrorMessage</a></li><li><a href="global.html#FilterDropdown">FilterDropdown</a></li><li><a href="global.html#FirstLogin">FirstLogin</a></li><li><a href="global.html#Footer">Footer</a></li><li><a href="global.html#Forum">Forum</a></li><li><a href="global.html#GetAll_DataStructure">GetAll_DataStructure</a></li><li><a href="global.html#GetAll_Document">GetAll_Document</a></li><li><a href="global.html#Get_Document_Information">Get_Document_Information</a></li><li><a href="global.html#Get_Video_Information">Get_Video_Information</a></li><li><a href="global.html#Get_special_Document">Get_special_Document</a></li><li><a href="global.html#Get_special_Video">Get_special_Video</a></li><li><a href="global.html#Home">Home</a></li><li><a href="global.html#INACTIVITY_THRESHOLD">INACTIVITY_THRESHOLD</a></li><li><a href="global.html#LegalNotice">LegalNotice</a></li><li><a href="global.html#LiveNotFound">LiveNotFound</a></li><li><a href="global.html#LiveViewer">LiveViewer</a></li><li><a href="global.html#LoadCanvasTemplate">LoadCanvasTemplate</a></li><li><a href="global.html#LoadingComponent">LoadingComponent</a></li><li><a href="global.html#LoadingSpinner">LoadingSpinner</a></li><li><a href="global.html#Logout">Logout</a></li><li><a href="global.html#Mailbox">Mailbox</a></li><li><a href="global.html#MaintenanceBanner">MaintenanceBanner</a></li><li><a href="global.html#MessageDetailSkeleton">MessageDetailSkeleton</a></li><li><a href="global.html#MessageSkeleton">MessageSkeleton</a></li><li><a href="global.html#NavigationBar">NavigationBar</a></li><li><a href="global.html#PictureModal">PictureModal</a></li><li><a href="global.html#PrivacyPolicy">PrivacyPolicy</a></li><li><a href="global.html#PrivacyTab">PrivacyTab</a></li><li><a href="global.html#ProfilePhotoSelector">ProfilePhotoSelector</a></li><li><a href="global.html#PublicNavbar">PublicNavbar</a></li><li><a href="global.html#SearchBar">SearchBar</a></li><li><a href="global.html#SearchUser">SearchUser</a></li><li><a href="global.html#SecureDocumentViewer">SecureDocumentViewer</a></li><li><a href="global.html#SecureVideoPlayer">SecureVideoPlayer</a></li><li><a href="global.html#SecurityTab">SecurityTab</a></li><li><a href="global.html#SendDocument">SendDocument</a></li><li><a href="global.html#SendVideo">SendVideo</a></li><li><a href="global.html#Settings">Settings</a></li><li><a href="global.html#Sign">Sign</a></li><li><a href="global.html#Spinner">Spinner</a></li><li><a href="global.html#StreamReader">StreamReader</a></li><li><a href="global.html#TEN_MINUTES">TEN_MINUTES</a></li><li><a href="global.html#TermsOfUse">TermsOfUse</a></li><li><a href="global.html#ToggleView">ToggleView</a></li><li><a href="global.html#Tutorial">Tutorial</a></li><li><a href="global.html#TutorialContext">TutorialContext</a></li><li><a href="global.html#TutorialProvider">TutorialProvider</a></li><li><a href="global.html#TwoFASetupModal">TwoFASetupModal</a></li><li><a href="global.html#UpdateDocument">UpdateDocument</a></li><li><a href="global.html#UserManagementTutorial">UserManagementTutorial</a></li><li><a href="global.html#WSS_BASE_URL">WSS_BASE_URL</a></li><li><a href="global.html#activateUser">activateUser</a></li><li><a href="global.html#addComment">addComment</a></li><li><a href="global.html#addStudentToClass">addStudentToClass</a></li><li><a href="global.html#allDigitsFilled">allDigitsFilled</a></li><li><a href="global.html#api">api</a></li><li><a href="global.html#authToken">authToken</a></li><li><a href="global.html#authenticatedButtons">authenticatedButtons</a></li><li><a href="global.html#baseURL">baseURL</a></li><li><a href="global.html#blockLive">blockLive</a></li><li><a href="global.html#bulkDelete">bulkDelete</a></li><li><a href="global.html#changePassword">changePassword</a></li><li><a href="global.html#check2FAStatus">check2FAStatus</a></li><li><a href="global.html#checkRegisterCode">checkRegisterCode</a></li><li><a href="global.html#createClass">createClass</a></li><li><a href="global.html#createCourse">createCourse</a></li><li><a href="global.html#createLive">createLive</a></li><li><a href="global.html#createThread">createThread</a></li><li><a href="global.html#createUser">createUser</a></li><li><a href="global.html#deactivateUser">deactivateUser</a></li><li><a href="global.html#deleteAvatar">deleteAvatar</a></li><li><a href="global.html#deleteClass">deleteClass</a></li><li><a href="global.html#deleteClasseHandler">deleteClasseHandler</a></li><li><a href="global.html#deleteComment">deleteComment</a></li><li><a href="global.html#deleteContactMessage">deleteContactMessage</a></li><li><a href="global.html#deleteCourse">deleteCourse</a></li><li><a href="global.html#deleteInviteCode">deleteInviteCode</a></li><li><a href="global.html#deleteLive">deleteLive</a></li><li><a href="global.html#deleteMessage">deleteMessage</a></li><li><a href="global.html#deleteThread">deleteThread</a></li><li><a href="global.html#deleteUser">deleteUser</a></li><li><a href="global.html#disable2FA">disable2FA</a></li><li><a href="global.html#disapproveCourse">disapproveCourse</a></li><li><a href="global.html#disapproveLive">disapproveLive</a></li><li><a href="global.html#downloadAttachment">downloadAttachment</a></li><li><a href="global.html#endLive">endLive</a></li><li><a href="global.html#errorMessages">errorMessages</a></li><li><a href="global.html#fetchClasses">fetchClasses</a></li><li><a href="global.html#fetchCourseData">fetchCourseData</a></li><li><a href="global.html#fetchData">fetchData</a></li><li><a href="global.html#fetchUsers">fetchUsers</a></li><li><a href="global.html#firstLogin">firstLogin</a></li><li><a href="global.html#flagContent">flagContent</a></li><li><a href="global.html#forgotPassword">forgotPassword</a></li><li><a href="global.html#generateInviteCode">generateInviteCode</a></li><li><a href="global.html#getAllClasses">getAllClasses</a></li><li><a href="global.html#getAllContactMessages">getAllContactMessages</a></li><li><a href="global.html#getAllCourses">getAllCourses</a></li><li><a href="global.html#getAllInviteCodes">getAllInviteCodes</a></li><li><a href="global.html#getAllLives">getAllLives</a></li><li><a href="global.html#getAllUsers">getAllUsers</a></li><li><a href="global.html#getAvailableRecipients">getAvailableRecipients</a></li><li><a href="global.html#getAvatar">getAvatar</a></li><li><a href="global.html#getClassById">getClassById</a></li><li><a href="global.html#getClassStudents">getClassStudents</a></li><li><a href="global.html#getContactMessage">getContactMessage</a></li><li><a href="global.html#getCourseById">getCourseById</a></li><li><a href="global.html#getCourseDetails">getCourseDetails</a></li><li><a href="global.html#getCourseProgress">getCourseProgress</a></li><li><a href="global.html#getCoursesByClass">getCoursesByClass</a></li><li><a href="global.html#getFlags">getFlags</a></li><li><a href="global.html#getInboxMessages">getInboxMessages</a></li><li><a href="global.html#getInitialViewMode">getInitialViewMode</a></li><li><a href="global.html#getLiveById">getLiveById</a></li><li><a href="global.html#getLiveMessages">getLiveMessages</a></li><li><a href="global.html#getLiveStreamUrl">getLiveStreamUrl</a></li><li><a href="global.html#getLivesByClass">getLivesByClass</a></li><li><a href="global.html#getMessage">getMessage</a></li><li><a href="global.html#getNotificationPreferences">getNotificationPreferences</a></li><li><a href="global.html#getSentMessages">getSentMessages</a></li><li><a href="global.html#getStudentProgress">getStudentProgress</a></li><li><a href="global.html#getThreadById">getThreadById</a></li><li><a href="global.html#getThreads">getThreads</a></li><li><a href="global.html#getTrashMessages">getTrashMessages</a></li><li><a href="global.html#getUserById">getUserById</a></li><li><a href="global.html#getUserProfile">getUserProfile</a></li><li><a href="global.html#getUserWarnings">getUserWarnings</a></li><li><a href="global.html#getVideoDetails">getVideoDetails</a></li><li><a href="global.html#getVideoStreamUrl">getVideoStreamUrl</a></li><li><a href="global.html#handle2FASubmit">handle2FASubmit</a></li><li><a href="global.html#handleBackdropClick">handleBackdropClick</a></li><li><a href="global.html#handleBlockedMouseLeave">handleBlockedMouseLeave</a></li><li><a href="global.html#handleBlockedMouseMove">handleBlockedMouseMove</a></li><li><a href="global.html#handleClose">handleClose</a></li><li><a href="global.html#handleCompleteCourse">handleCompleteCourse</a></li><li><a href="global.html#handleCourseDisapproval">handleCourseDisapproval</a></li><li><a href="global.html#handleDeleteCourse">handleDeleteCourse</a></li><li><a href="global.html#handleDigitChange">handleDigitChange</a></li><li><a href="global.html#handleDigitKeyDown">handleDigitKeyDown</a></li><li><a href="global.html#handleDigitPaste">handleDigitPaste</a></li><li><a href="global.html#handleDownloadDocument">handleDownloadDocument</a></li><li><a href="global.html#handleError">handleError</a></li><li><a href="global.html#handleInputChange">handleInputChange</a></li><li><a href="global.html#handleLogout">handleLogout</a></li><li><a href="global.html#handleMenuToggle">handleMenuToggle</a></li><li><a href="global.html#handleModAction">handleModAction</a></li><li><a href="global.html#handleSubmit">handleSubmit</a></li><li><a href="global.html#handleSubmitClasse">handleSubmitClasse</a></li><li><a href="global.html#handleTabChange">handleTabChange</a></li><li><a href="global.html#handleUnblockCourse">handleUnblockCourse</a></li><li><a href="global.html#isAuthenticated">isAuthenticated</a></li><li><a href="global.html#loadCaptchaEngine">loadCaptchaEngine</a></li><li><a href="global.html#logViewEngagement">logViewEngagement</a></li><li><a href="global.html#login">login</a></li><li><a href="global.html#markAsRead">markAsRead</a></li><li><a href="global.html#markAsUnread">markAsUnread</a></li><li><a href="global.html#markContactMessageAsProcessed">markContactMessageAsProcessed</a></li><li><a href="global.html#markCourseAsCompleted">markCourseAsCompleted</a></li><li><a href="global.html#markCourseAsInProgress">markCourseAsInProgress</a></li><li><a href="global.html#mountApp">mountApp</a></li><li><a href="global.html#moveToTrash">moveToTrash</a></li><li><a href="global.html#navItems">navItems</a></li><li><a href="global.html#navigate">navigate</a></li><li><a href="global.html#onSamplesDecoded">onSamplesDecoded</a></li><li><a href="global.html#refreshTwoFASetup">refreshTwoFASetup</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#removeStudentFromClass">removeStudentFromClass</a></li><li><a href="global.html#renderContent">renderContent</a></li><li><a href="global.html#resolveFlag">resolveFlag</a></li><li><a href="global.html#restoreFromTrash">restoreFromTrash</a></li><li><a href="global.html#retrogradeUserRole">retrogradeUserRole</a></li><li><a href="global.html#root">root</a></li><li><a href="global.html#sendContactMessage">sendContactMessage</a></li><li><a href="global.html#sendLiveMessage">sendLiveMessage</a></li><li><a href="global.html#sendMessage">sendMessage</a></li><li><a href="global.html#sendWarning">sendWarning</a></li><li><a href="global.html#setMainTeacher">setMainTeacher</a></li><li><a href="global.html#setup2FA">setup2FA</a></li><li><a href="global.html#signButtons">signButtons</a></li><li><a href="global.html#startLive">startLive</a></li><li><a href="global.html#toggleAll">toggleAll</a></li><li><a href="global.html#toggleClasse">toggleClasse</a></li><li><a href="global.html#toggleMember">toggleMember</a></li><li><a href="global.html#toggleMobileMenu">toggleMobileMenu</a></li><li><a href="global.html#unblockCourse">unblockCourse</a></li><li><a href="global.html#unblockLive">unblockLive</a></li><li><a href="global.html#updateClass">updateClass</a></li><li><a href="global.html#updateComment">updateComment</a></li><li><a href="global.html#updateCourse">updateCourse</a></li><li><a href="global.html#updateLive">updateLive</a></li><li><a href="global.html#updateNotificationPreferences">updateNotificationPreferences</a></li><li><a href="global.html#updateThread">updateThread</a></li><li><a href="global.html#updateUser">updateUser</a></li><li><a href="global.html#updateUserProfile">updateUserProfile</a></li><li><a href="global.html#updateUserProfileHandler">updateUserProfileHandler</a></li><li><a href="global.html#updateVideo">updateVideo</a></li><li><a href="global.html#upgradeUserRole">upgradeUserRole</a></li><li><a href="global.html#uploadAvatar">uploadAvatar</a></li><li><a href="global.html#uploadIllustrationAvatar">uploadIllustrationAvatar</a></li><li><a href="global.html#useEffect">useEffect</a></li><li><a href="global.html#useTutorial">useTutorial</a></li><li><a href="global.html#validateForm">validateForm</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#verify2FASetup">verify2FASetup</a></li><li><a href="global.html#verifyTwoFA">verifyTwoFA</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.4</a> on Sat Jun 07 2025 14:32:34 GMT+0200 (Central European Summer Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
