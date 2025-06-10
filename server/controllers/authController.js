@@ -448,23 +448,25 @@ const firstLogin = async (req, res) => {
       return res.status(400).json({ message: 'User has already completed first login.' });
     }
 
-    const existingUser = await User.findOne({ where: { username, id: { [Op.ne]: userId } } });
-    if (existingUser) {
+    const existingUsername = await User.findOne({ where: { username, id: { [Op.ne]: userId } } });
+    if (existingUsername) {
       return res.status(409).json({ message: ERROR_MESSAGES.USERNAME_EXISTS });
     }
 
+    const hashedPassword = await bcrypt.hash(password, 12);
+    
     user.firstLogin = false;
-    user.password = await bcrypt.hash(password, 12);
+    user.password = hashedPassword;
     user.username = username;
 
-
     if (user.twoFAEnabled) {
+      await user.save();
+      
       const tokenPayload = {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role, // Toujours en français
-        ...(user.firstLogin && { firstLogin: true })
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role
       };
 
       const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: '1h' });

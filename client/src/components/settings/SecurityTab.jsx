@@ -452,17 +452,17 @@ const SecurityTab = ({ user, handleInputChange }) => {
 
       const owaspModule = await import('owasp-password-strength-test');
       const passwordTest = owaspModule.default;
-      
+
 
       passwordTest.config({
         minLength: 12,
         minOptionalTestsToPass: 3
       });
-      
+
       const testResult = passwordTest.test(newPassword);
-      
+
       if (!testResult.strong) {
-        const errorMessage = 'Le mot de passe ne respecte pas les critères de sécurité: ' + 
+        const errorMessage = 'Le mot de passe ne respecte pas les critères de sécurité: ' +
           testResult.errors.join(', ');
         setErrors({ newPassword: errorMessage });
         setLoading(false);
@@ -520,6 +520,12 @@ const SecurityTab = ({ user, handleInputChange }) => {
     );
   };
 
+  Switch.propTypes = {
+    checked: PropTypes.bool.isRequired,
+    onChange: PropTypes.func.isRequired,
+    disabled: PropTypes.bool,
+  };
+
   /**
    * Displays error message for a form field
    * 
@@ -536,6 +542,11 @@ const SecurityTab = ({ user, handleInputChange }) => {
       </p>
     );
   };
+
+  ErrorMessage.propTypes = {
+    field: PropTypes.string.isRequired,
+  };
+
 
   return (
     <div className="space-y-8">

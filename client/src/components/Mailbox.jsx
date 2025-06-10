@@ -173,7 +173,7 @@ const Mailbox = ({ role, onClose, user }) => {
             )
           );
         });
-        
+
 
         markAsRead({ messageId }).catch(error => {
           console.error("Erreur lors du marquage comme lu:", error);
@@ -1095,6 +1095,10 @@ const Mailbox = ({ role, onClose, user }) => {
     return <div ref={viewerRef}></div>;
   };
 
+  ToastViewer.propTypes = {
+    content: PropTypes.string.isRequired,
+  };
+
   /**
    * Composant squelette pour l'affichage pendant le chargement d'un message dans la liste
    * @component
@@ -1768,55 +1772,6 @@ const Mailbox = ({ role, onClose, user }) => {
 
         {/* Compose Modal */}
         {showComposeModal && <ComposeMail />}
-      </div>
-    </div>
-  );
-};
-
-
-/**
- * Composant squelette pour l'affichage pendant le chargement d'un message dans la liste
- * @component
- * @returns {JSX.Element} Animation de chargement pour un message
- */
-const MessageSkeleton = () => {
-  return (
-    <div className="w-full p-3 sm:p-4 border border-gray-100 animate-pulse">
-      <div className="flex items-start justify-between mb-1">
-        <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-        <div className="h-3 bg-gray-200 rounded w-1/6"></div>
-      </div>
-      <div className="h-4 bg-gray-200 rounded w-3/4 mt-2"></div>
-      <div className="h-3 bg-gray-200 rounded w-1/2 mt-2"></div>
-      <div className="flex mt-2 gap-1">
-        <div className="h-5 bg-gray-200 rounded-full w-16"></div>
-      </div>
-    </div>
-  );
-};
-
-
-/**
- * Composant squelette pour l'affichage pendant le chargement des détails d'un message
- * @component
- * @returns {JSX.Element} Animation de chargement pour les détails d'un message
- */
-const MessageDetailSkeleton = () => {
-  return (
-    <div className="flex-1 flex flex-col bg-white">
-      <div className="p-3 sm:p-4 border-b border-gray-200 animate-pulse">
-        <div className="h-6 bg-gray-200 rounded w-3/4 mb-3"></div>
-        <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-        <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-      </div>
-      <div className="flex-1 p-3 sm:p-6 animate-pulse">
-        <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-        <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-        <div className="mt-8 pt-4 border-t border-gray-200">
-          <div className="h-5 bg-gray-200 rounded w-1/4 mb-3"></div>
-          <div className="h-12 bg-gray-200 rounded w-full mb-2"></div>
-        </div>
       </div>
     </div>
   );

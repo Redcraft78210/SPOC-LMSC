@@ -28,13 +28,13 @@ function NotFound() {
     <div className="flex flex-col items-center justify-center h-screen bg-gray-100 text-gray-800">
       <h1 className="text-4xl font-bold mb-4">404 - Page Non Trouvée</h1>
       <p className="text-lg mb-6">
-        Désolé, la page que vous recherchez n'existe pas.
+        Désolé, la page que vous recherchez n&apos;existe pas.
       </p>
       <button
         onClick={() => navigate(authToken ? '/dashboard' : '/')}
         className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
       >
-        Retourner à la page d'accueil
+        Retourner à la page d&apos;accueil
       </button>
     </div>
   );

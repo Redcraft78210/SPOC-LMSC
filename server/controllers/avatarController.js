@@ -9,12 +9,14 @@
  * @requires uuid
  * @requires fs.promises
  * @requires path
+ * @requires crypto
  */
 
 const { UserAvatar } = require('../models');
 const sharp = require('sharp');
 const fs = require('fs').promises;
 const path = require('path');
+const crypto = require('crypto');
 
 /**
  * Taille maximale de fichier autorisée pour les avatars (5MB)
@@ -242,6 +244,21 @@ const uploadAvatar = async (req, res) => {
 };
 
 /**
+ * Génère un ETag pour une ressource avatar
+ * 
+ * @function generateETag
+ * @param {Buffer} data - Données binaires de l'avatar
+ * @param {string} lastModified - Date de dernière modification
+ * @returns {string} ETag généré
+ */
+const generateETag = (data, lastModified) => {
+  const hash = crypto.createHash('md5');
+  hash.update(data);
+  hash.update(lastModified.toString());
+  return `"${hash.digest('hex')}"`;
+};
+
+/**
  * Récupère l'avatar d'un utilisateur spécifique
  * 
  * @async
@@ -265,9 +282,18 @@ const getAvatar = async (req, res) => {
       return res.status(404).json({ message: 'Avatar non trouvé.' });
     }
 
+    // Génération de l'ETag basé sur les données et la date de mise à jour
+    const etag = generateETag(avatar.data, avatar.updatedAt);
+    
+    // Vérification du header If-None-Match pour le support du cache conditionnel
+    if (req.headers['if-none-match'] === etag) {
+      return res.status(304).send(); // Not Modified
+    }
+
     res.set('Content-Type', avatar.mime_type);
     res.set('Content-Length', avatar.compressed_size);
-    res.set('Cache-Control', 'public, max-age=86400'); // Cache d'un jour
+    res.set('Cache-Control', 'public, max-age=0, must-revalidate'); // re-télécharge l'avatar si modifié
+    res.set('ETag', etag);
     return res.send(avatar.data);
 
   } catch (error) {
@@ -300,9 +326,18 @@ const getMyAvatar = async (req, res) => {
       return res.status(404).json({ message: 'Avatar non trouvé.' });
     }
 
+    // Génération de l'ETag basé sur les données et la date de mise à jour
+    const etag = generateETag(avatar.data, avatar.updatedAt);
+    
+    // Vérification du header If-None-Match pour le support du cache conditionnel
+    if (req.headers['if-none-match'] === etag) {
+      return res.status(304).send(); // Not Modified
+    }
+
     res.set('Content-Type', avatar.mime_type);
     res.set('Content-Length', avatar.compressed_size);
     res.set('Cache-Control', 'public, max-age=86400'); // Cache d'un jour
+    res.set('ETag', etag);
     return res.send(avatar.data);
 
   } catch (error) {
